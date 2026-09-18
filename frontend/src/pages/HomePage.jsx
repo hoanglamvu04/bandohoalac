@@ -4,28 +4,23 @@ import { Link, useNavigate } from 'react-router-dom';
 import CategoryBar from '../components/CategoryBar.jsx';
 import PlaceCard from '../components/PlaceCard.jsx';
 import SearchBox from '../components/SearchBox.jsx';
-import { getPlaces } from '../services/api.js';
-
-const fallbackPlaces = [
-  { id: '1', name: 'The Lake Coffee', category: 'Cafe', rating: 4.8, address: 'Thạch Hòa, Hòa Lạc', lat: 21.007, lng: 105.525 },
-  { id: '2', name: 'Forest View Homestay', category: 'Homestay', rating: 4.9, address: 'Yên Bình, Hòa Lạc', lat: 21.028, lng: 105.497 },
-  { id: '3', name: 'Lucia Villa', category: 'Villa', rating: 4.7, address: 'Tiến Xuân, Hòa Lạc', lat: 20.994, lng: 105.478 },
-  { id: '4', name: 'Đồi ngắm hoàng hôn', category: 'Check-in', rating: 4.8, address: 'Khu vực Hòa Lạc', lat: 21.014, lng: 105.548 }
-];
+import { getCategories, getPlaces } from '../services/api.js';
+import { DEMO_FALLBACK_PLACES } from '../data/fallbackPlaces.js';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const [places, setPlaces] = useState(fallbackPlaces);
+  const [places, setPlaces] = useState(DEMO_FALLBACK_PLACES);
+  const [categories, setCategories] = useState([]);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
 
   useEffect(() => {
     getPlaces()
       .then((data) => {
-        const list = Array.isArray(data) ? data : data?.items;
-        if (Array.isArray(list) && list.length) setPlaces(list);
+        if (Array.isArray(data.items) && data.items.length) setPlaces(data.items);
       })
       .catch(() => {});
+    getCategories().then((data) => setCategories(data.items || [])).catch(() => {});
   }, []);
 
   const featured = useMemo(() => places.filter((place) => {
@@ -86,7 +81,7 @@ export default function HomePage() {
           <div><span className="eyebrow">KHÁM PHÁ THEO SỞ THÍCH</span><h2>Hôm nay bạn muốn đi đâu?</h2></div>
           <Link to="/map">Xem bản đồ <ArrowRight size={17} /></Link>
         </div>
-        <CategoryBar active={category} onChange={setCategory} />
+        <CategoryBar active={category} onChange={setCategory} categories={categories} />
       </section>
 
       <section className="home-section">

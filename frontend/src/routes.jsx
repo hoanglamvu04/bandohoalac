@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
+import RequireRole from './components/RequireRole.jsx';
 
 const HomePage = lazy(() => import('./pages/HomePage.jsx'));
 const MapPage = lazy(() => import('./pages/MapPage.jsx'));
@@ -8,6 +9,10 @@ const PlaceDetail = lazy(() => import('./pages/PlaceDetail.jsx'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard.jsx'));
 const Contribute = lazy(() => import('./pages/Contribute.jsx'));
+const Login = lazy(() => import('./pages/Login.jsx'));
+const Register = lazy(() => import('./pages/Register.jsx'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
+const AdminContributions = lazy(() => import('./pages/admin/AdminContributions.jsx'));
 
 function LoadingPage() {
   return (
@@ -28,6 +33,16 @@ function withSuspense(Page) {
     <Suspense fallback={<LoadingPage />}>
       <Page />
     </Suspense>
+  );
+}
+
+function withRole(Page, roles) {
+  return (
+    <RequireRole roles={roles}>
+      <Suspense fallback={<LoadingPage />}>
+        <Page />
+      </Suspense>
+    </RequireRole>
   );
 }
 
@@ -61,8 +76,12 @@ export const router = createBrowserRouter([
       { path: 'map', element: withSuspense(MapPage) },
       { path: 'place/:id', element: withSuspense(PlaceDetail) },
       { path: 'contribute', element: withSuspense(Contribute) },
-      { path: 'profile', element: withSuspense(ProfilePage) },
-      { path: 'leaderboard', element: withSuspense(Leaderboard) }
+      { path: 'profile', element: withRole(ProfilePage) },
+      { path: 'leaderboard', element: withSuspense(Leaderboard) },
+      { path: 'login', element: withSuspense(Login) },
+      { path: 'register', element: withSuspense(Register) },
+      { path: 'admin', element: withRole(AdminDashboard, ['MODERATOR', 'ADMIN']) },
+      { path: 'admin/contributions', element: withRole(AdminContributions, ['MODERATOR', 'ADMIN']) }
     ]
   }
 ]);

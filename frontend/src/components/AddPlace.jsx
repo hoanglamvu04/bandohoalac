@@ -1,15 +1,31 @@
-import { useState } from 'react';
-import { Camera, CheckCircle2, LocateFixed, MapPin, Send } from 'lucide-react';
-import { createContribution } from '../services/api.js';
+import { useEffect, useState } from 'react';
+import { Camera, CheckCircle2, LocateFixed, LogIn, MapPin, Send } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { createContribution, getCategories } from '../services/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
+import { useToast } from '../context/ToastContext.jsx';
+import LocationPicker from './LocationPicker.jsx';
 
-const initialForm = { name: '', category: 'Cafe', address: '', description: '', price: '', phone: '' };
+const initialForm = { name: '', categorySlug: '', address: '', description: '', price: '', openingHours: '', phone: '' };
 
 export default function AddPlace() {
+  const { user } = useAuth();
+  const { showToast } = useToast();
+  const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [location, setLocation] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    getCategories()
+      .then((data) => {
+        setCategories(data.items || []);
+        setForm((current) => (current.categorySlug ? current : { ...current, categorySlug: data.items?.[0]?.slug || '' }));
+      })
+      .catch(() => {});
+  }, []);
 
   function updateField(event) {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
@@ -58,18 +74,31 @@ export default function AddPlace() {
     try {
       await createContribution({
         type: 'CREATE_PLACE',
-        place: form,
         location,
-        photoCount: photos.length
+        place: form,
+        photos
       });
       setStatus({ type: 'success', message: 'Đã gửi đóng góp. Bạn sẽ nhận +20 điểm khi được duyệt.' });
-      setForm(initialForm);
+      showToast('Đóng góp đã được gửi để chờ duyệt!', 'success');
+      setForm((current) => ({ ...initialForm, categorySlug: current.categorySlug }));
       setPhotos([]);
-    } catch {
-      setStatus({ type: 'success', message: 'Đã ghi nhận trên giao diện. Khi backend online, dữ liệu sẽ được gửi để duyệt.' });
+      setLocation(null);
+    } catch (err) {
+      setStatus({ type: 'error', message: err.message });
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (!user) {
+    return (
+      <div className="contribution-form auth-required">
+        <LogIn size={30} />
+        <h2>Đăng nhập để đóng góp</h2>
+        <p>Bạn cần có tài khoản Hola Explorer để gửi địa điểm mới và nhận điểm thưởng.</p>
+        <Link className="primary-action" to="/login">Đăng nhập ngay</Link>
+      </div>
+    );
   }
 
   return (
@@ -95,13 +124,20 @@ export default function AddPlace() {
         </button>
 
         {location && (
-          <div className="gps-card">
-            <CheckCircle2 size={18} />
-            <div>
-              <b>Đã lấy vị trí</b>
-              <span>{location.lat.toFixed(6)}, {location.lng.toFixed(6)} · độ chính xác ±{location.accuracy} m</span>
+          <>
+            <div className="gps-card">
+              <CheckCircle2 size={18} />
+              <div>
+                <b>Đã lấy vị trí</b>
+                <span>{location.lat.toFixed(6)}, {location.lng.toFixed(6)} · độ chính xác ±{location.accuracy} m</span>
+              </div>
             </div>
-          </div>
+            <LocationPicker
+              lat={location.lat}
+              lng={location.lng}
+              onChange={({ lat, lng }) => setLocation((current) => ({ ...current, lat, lng }))}
+            />
+          </>
         )}
       </div>
 
@@ -115,19 +151,17 @@ export default function AddPlace() {
           <label className="full">Tên địa điểm<input name="name" value={form.name} onChange={updateField} placeholder="Ví dụ: The Lake Coffee" /></label>
 
           <label>Danh mục
-            <select name="category" value={form.category} onChange={updateField}>
-              <option>Cafe</option>
-              <option>Ăn uống</option>
-              <option>Homestay</option>
-              <option>Villa</option>
-              <option>Check-in</option>
-              <option>Trải nghiệm</option>
+            <select name="categorySlug" value={form.categorySlug} onChange={updateField}>
+              {categories.map((category) => (
+                <option key={category.slug} value={category.slug}>{category.name}</option>
+              ))}
             </select>
           </label>
 
           <label>Mức giá<input name="price" value={form.price} onChange={updateField} placeholder="30.000 - 70.000đ" /></label>
           <label className="full">Địa chỉ mô tả<input name="address" value={form.address} onChange={updateField} placeholder="Thôn/xã, mốc đường dễ nhận biết..." /></label>
           <label>Số điện thoại<input name="phone" value={form.phone} onChange={updateField} placeholder="Nếu có" /></label>
+          <label>Giờ mở cửa<input name="openingHours" value={form.openingHours} onChange={updateField} placeholder="07:00 - 22:00" /></label>
           <label className="full">Trải nghiệm thực tế<textarea name="description" value={form.description} onChange={updateField} rows="4" placeholder="View, chỗ đỗ xe, không gian, lưu ý khi đến..." /></label>
         </div>
       </div>
@@ -142,7 +176,7 @@ export default function AddPlace() {
           <Camera size={23} />
           <b>Chọn ảnh từ thiết bị</b>
           <span>{photos.length ? photos.length + ' ảnh đã chọn' : 'JPG, PNG hoặc WEBP'}</span>
-          <input type="file" accept="image/*" multiple onChange={selectPhotos} />
+          <input type="file" accept="image/png,image/jpeg,image/webp" multiple onChange={selectPhotos} />
         </label>
       </div>
 

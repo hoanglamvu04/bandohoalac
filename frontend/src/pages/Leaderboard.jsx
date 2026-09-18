@@ -1,14 +1,20 @@
+import { useEffect, useState } from 'react';
 import { Camera, MapPin, Medal, Trophy } from 'lucide-react';
+import { getLeaderboard } from '../services/api.js';
 
-const explorers = [
-  { rank: 1, name: 'Chinh Explorer', points: 1280, places: 62, photos: 283, badge: '🥇' },
-  { rank: 2, name: 'Diệp Local Guide', points: 1050, places: 49, photos: 214, badge: '🥈' },
-  { rank: 3, name: 'Minh Hòa Lạc', points: 920, places: 44, photos: 168, badge: '🥉' },
-  { rank: 4, name: 'Nam Explorer', points: 740, places: 31, photos: 143, badge: '4' },
-  { rank: 5, name: 'Linh Weekend', points: 680, places: 28, photos: 132, badge: '5' }
-];
+const PODIUM_BADGES = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
 export default function Leaderboard() {
+  const [explorers, setExplorers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getLeaderboard()
+      .then((data) => setExplorers(data.items || []))
+      .catch(() => setExplorers([]))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <main className="leaderboard-page page-container">
       <section className="leaderboard-hero">
@@ -20,17 +26,22 @@ export default function Leaderboard() {
 
       <section className="leaderboard-card">
         <div className="leaderboard-head">
-          <div><Medal size={20} /><b>Top Explorer tháng này</b></div>
-          <span>Tháng 9/2026</span>
+          <div><Medal size={20} /><b>Top Explorer</b></div>
+          <span>{new Date().toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}</span>
         </div>
 
+        {loading && <div className="loading-card">Đang tải xếp hạng...</div>}
+        {!loading && !explorers.length && (
+          <div className="empty-state"><Trophy size={24} /><b>Chưa có dữ liệu xếp hạng</b><span>Hãy là người đóng góp đầu tiên!</span></div>
+        )}
+
         {explorers.map((person) => (
-          <div className={person.rank <= 3 ? 'leader-row podium' : 'leader-row'} key={person.rank}>
-            <span className="rank">{person.badge}</span>
+          <div className={person.rank <= 3 ? 'leader-row podium' : 'leader-row'} key={person.id}>
+            <span className="rank">{PODIUM_BADGES[person.rank] || person.rank}</span>
             <div className="leader-avatar">{person.name.split(' ').map((word) => word[0]).slice(0, 2).join('')}</div>
             <div className="leader-name">
               <b>{person.name}</b>
-              <span><MapPin size={14} /> {person.places} địa điểm <Camera size={14} /> {person.photos} ảnh</span>
+              <span><MapPin size={14} /> {person.placesCount} địa điểm <Camera size={14} /> {person.photosCount} ảnh</span>
             </div>
             <strong>{person.points.toLocaleString('vi-VN')} <small>điểm</small></strong>
           </div>
