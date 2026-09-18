@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: hola-maps-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hola_maps
+      POSTGRES_USER: hola
+      POSTGRES_PASSWORD: hola_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  postgres_data:
