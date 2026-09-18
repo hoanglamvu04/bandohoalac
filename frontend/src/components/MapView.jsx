@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import maplibregl from 'maplibre-gl';
+import { FullscreenControl, Map as MapLibreMap, Marker, NavigationControl, Popup } from 'maplibre-gl';
 import { LocateFixed } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -21,7 +21,7 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const map = new maplibregl.Map({
+    const map = new MapLibreMap({
       container: containerRef.current,
       style: import.meta.env.VITE_MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/liberty',
       center: DEFAULT_CENTER,
@@ -29,8 +29,8 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
       attributionControl: true
     });
 
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
-    map.addControl(new maplibregl.FullscreenControl(), 'top-right');
+    map.addControl(new NavigationControl({ visualizePitch: true }), 'top-right');
+    map.addControl(new FullscreenControl(), 'top-right');
     map.on('load', () => map.resize());
     mapRef.current = map;
 
@@ -55,12 +55,12 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
       element.innerHTML = '<span></span>';
       element.addEventListener('click', () => onSelectPlace && onSelectPlace(place));
 
-      const popup = new maplibregl.Popup({ offset: 24, closeButton: false }).setHTML(
+      const popup = new Popup({ offset: 24, closeButton: false }).setHTML(
         '<div class="map-popup"><strong>' + place.name + '</strong><small>' +
         (place.category || 'Khám phá') + ' · ⭐ ' + (place.rating || '4.8') + '</small></div>'
       );
 
-      return new maplibregl.Marker({ element, anchor: 'bottom' })
+      return new Marker({ element, anchor: 'bottom' })
         .setLngLat([Number(place.lng), Number(place.lat)])
         .setPopup(popup)
         .addTo(map);
@@ -102,9 +102,9 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
           const dot = document.createElement('div');
           dot.className = 'user-location-dot';
 
-          userMarkerRef.current = new maplibregl.Marker({ element: dot })
+          userMarkerRef.current = new Marker({ element: dot })
             .setLngLat([userLocation.lng, userLocation.lat])
-            .setPopup(new maplibregl.Popup({ offset: 18 }).setHTML(
+            .setPopup(new Popup({ offset: 18 }).setHTML(
               '<div class="map-popup"><strong>Vị trí của bạn</strong><small>Độ chính xác ±' +
               userLocation.accuracy + ' m</small></div>'
             ))
