@@ -5,6 +5,7 @@ import { router } from './routes.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
 import './style.css';
+import './premium.css';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>

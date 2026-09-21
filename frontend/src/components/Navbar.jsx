@@ -18,13 +18,16 @@ export default function Navbar() {
   }
 
   return (
-    <header className="navbar">
-      <Link className="brand" to="/" aria-label="Hola Maps - Trang chủ">
+    <header className="navbar premium-navbar">
+      <Link className="brand premium-brand" to="/" aria-label="Hola Maps - Trang chủ">
         <span className="brand-mark"><MapPinned size={21} /></span>
-        <span>HOLA <b>MAPS</b></span>
+        <span className="brand-copy">
+          <strong>HOLA <b>MAPS</b></strong>
+          <small>Local discovery</small>
+        </span>
       </Link>
 
-      <nav className="desktop-nav" aria-label="Điều hướng chính">
+      <nav className="desktop-nav premium-desktop-nav" aria-label="Điều hướng chính">
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink key={to} to={to} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
             <Icon size={17} />
@@ -38,15 +41,19 @@ export default function Navbar() {
         )}
       </nav>
 
-      <div className="nav-actions">
+      <div className="nav-actions premium-nav-actions">
+        <span className="nav-live-status"><span className="live-dot" /> Hòa Lạc</span>
+
         <Link className="nav-cta" to="/contribute">
           <Plus size={18} />
-          Đóng góp địa điểm
+          Đóng góp
         </Link>
 
         {user ? (
           <button className="nav-user" type="button" onClick={handleLogout} title="Đăng xuất">
-            <UserRound size={16} /> {user.name.split(' ')[0]} <LogOut size={15} />
+            <span className="nav-user-avatar">{user.name?.charAt(0)?.toUpperCase() || 'U'}</span>
+            <span>{user.name?.split(' ')[0] || 'Explorer'}</span>
+            <LogOut size={15} />
           </button>
         ) : (
           <Link className="nav-login" to="/login">Đăng nhập</Link>

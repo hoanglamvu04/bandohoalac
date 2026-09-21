@@ -1,9 +1,36 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FullscreenControl, Map as MapLibreMap, Marker, NavigationControl, Popup } from 'maplibre-gl';
+import {
+  FullscreenControl,
+  Map as MapLibreMap,
+  Marker,
+  NavigationControl,
+  Popup,
+  ScaleControl
+} from 'maplibre-gl';
 import { LocateFixed } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const DEFAULT_CENTER = [105.525, 21.005];
+
+function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function categoryIcon(category = '') {
+  const normalized = category.toLowerCase();
+  if (normalized.includes('cafe') || normalized.includes('coffee')) return '☕';
+  if (normalized.includes('ăn') || normalized.includes('food')) return '🍜';
+  if (normalized.includes('home')) return '🏡';
+  if (normalized.includes('villa')) return '🏘️';
+  if (normalized.includes('check')) return '📸';
+  if (normalized.includes('trải')) return '🎡';
+  return '📍';
+}
 
 export default function MapView({ places = [], selectedPlaceId, onSelectPlace, onUserLocation }) {
   const mapRef = useRef(null);
@@ -25,13 +52,17 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
       container: containerRef.current,
       style: import.meta.env.VITE_MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/liberty',
       center: DEFAULT_CENTER,
-      zoom: 12,
+      zoom: 12.2,
+      minZoom: 8,
+      maxZoom: 19,
       attributionControl: true
     });
 
     map.addControl(new NavigationControl({ visualizePitch: true }), 'top-right');
     map.addControl(new FullscreenControl(), 'top-right');
+    map.addControl(new ScaleControl({ maxWidth: 110, unit: 'metric' }), 'bottom-right');
     map.on('load', () => map.resize());
+
     mapRef.current = map;
 
     return () => {
@@ -47,17 +78,36 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
     if (!map) return;
 
     markersRef.current.forEach((marker) => marker.remove());
+
     markersRef.current = validPlaces.map((place) => {
       const element = document.createElement('button');
-      element.className = selectedPlaceId === place.id ? 'map-pin active' : 'map-pin';
+      const active = selectedPlaceId === place.id;
+      element.className = active ? 'map-pin premium-map-pin active' : 'map-pin premium-map-pin';
       element.type = 'button';
       element.setAttribute('aria-label', place.name);
-      element.innerHTML = '<span></span>';
-      element.addEventListener('click', () => onSelectPlace && onSelectPlace(place));
 
-      const popup = new Popup({ offset: 24, closeButton: false }).setHTML(
-        '<div class="map-popup"><strong>' + place.name + '</strong><small>' +
-        (place.category || 'Khám phá') + ' · ⭐ ' + (place.rating || '4.8') + '</small></div>'
+      const icon = document.createElement('span');
+      icon.className = 'premium-map-pin-icon';
+      icon.textContent = categoryIcon(place.category);
+
+      const label = document.createElement('span');
+      label.className = 'premium-map-pin-label';
+      label.textContent = place.name;
+
+      element.append(icon, label);
+      element.addEventListener('click', () => onSelectPlace?.(place));
+
+      const rating = Number(place.rating);
+      const ratingLabel = Number.isFinite(rating) && rating > 0 ? rating.toFixed(1) : 'Mới';
+      const popup = new Popup({ offset: 22, closeButton: false, className: 'hola-premium-popup' }).setHTML(
+        '<div class="map-popup premium-map-popup">' +
+          '<span class="map-popup-category">' + escapeHtml(place.category || 'Khám phá') + '</span>' +
+          '<strong>' + escapeHtml(place.name) + '</strong>' +
+          '<small>' + escapeHtml(place.address || 'Hòa Lạc, Hà Nội') + '</small>' +
+          '<div><b>★ ' + escapeHtml(ratingLabel) + '</b>' +
+          (place.priceLevel ? '<span>' + escapeHtml(place.priceLevel) + '</span>' : '') +
+          '</div>' +
+        '</div>'
       );
 
       return new Marker({ element, anchor: 'bottom' })
@@ -71,10 +121,12 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
     const map = mapRef.current;
     const selected = validPlaces.find((place) => place.id === selectedPlaceId);
     if (!map || !selected) return;
+
     map.flyTo({
       center: [Number(selected.lng), Number(selected.lat)],
-      zoom: Math.max(map.getZoom(), 14),
-      duration: 850
+      zoom: Math.max(map.getZoom(), 14.4),
+      duration: 850,
+      essential: true
     });
   }, [selectedPlaceId, validPlaces]);
 
@@ -99,21 +151,31 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
         const map = mapRef.current;
         if (map) {
           if (userMarkerRef.current) userMarkerRef.current.remove();
+
           const dot = document.createElement('div');
-          dot.className = 'user-location-dot';
+          dot.className = 'user-location-dot premium-user-location-dot';
+          dot.innerHTML = '<span></span>';
 
           userMarkerRef.current = new Marker({ element: dot })
             .setLngLat([userLocation.lng, userLocation.lat])
-            .setPopup(new Popup({ offset: 18 }).setHTML(
-              '<div class="map-popup"><strong>Vị trí của bạn</strong><small>Độ chính xác ±' +
-              userLocation.accuracy + ' m</small></div>'
+            .setPopup(new Popup({ offset: 18, className: 'hola-premium-popup' }).setHTML(
+              '<div class="map-popup premium-map-popup">' +
+                '<span class="map-popup-category">VỊ TRÍ HIỆN TẠI</span>' +
+                '<strong>Bạn đang ở đây</strong>' +
+                '<small>Độ chính xác ±' + escapeHtml(userLocation.accuracy) + ' m</small>' +
+              '</div>'
             ))
             .addTo(map);
 
-          map.flyTo({ center: [userLocation.lng, userLocation.lat], zoom: 14.2, duration: 900 });
+          map.flyTo({
+            center: [userLocation.lng, userLocation.lat],
+            zoom: 14.6,
+            duration: 900,
+            essential: true
+          });
         }
 
-        if (onUserLocation) onUserLocation(userLocation);
+        onUserLocation?.(userLocation);
         setLocating(false);
       },
       (error) => {
@@ -122,6 +184,7 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
           2: 'Không thể xác định vị trí hiện tại.',
           3: 'Yêu cầu định vị đã hết thời gian.'
         };
+
         setLocationError(messages[error.code] || 'Không thể lấy vị trí.');
         setLocating(false);
       },
@@ -130,12 +193,14 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
   }
 
   return (
-    <div className="map-wrap">
+    <div className="map-wrap premium-map-wrap">
       <div ref={containerRef} className="hola-map" />
-      <button className="locate-button" type="button" onClick={locateUser} disabled={locating}>
+
+      <button className="locate-button premium-locate-button" type="button" onClick={locateUser} disabled={locating}>
         <LocateFixed size={18} />
         {locating ? 'Đang định vị...' : 'Vị trí của tôi'}
       </button>
+
       {locationError ? <div className="map-location-error">{locationError}</div> : null}
     </div>
   );

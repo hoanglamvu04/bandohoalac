@@ -9,7 +9,7 @@ client.interceptors.request.use((config) => {
   const token = getToken();
   if (token) {
     config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${token}`;
+    config.headers.Authorization = \`Bearer \${token}\`;
   }
   return config;
 });
@@ -74,14 +74,14 @@ export function getPlaces(params = {}) {
 }
 
 export function getPlace(id) {
-  return unwrap(client.get(`/places/${encodeURIComponent(id)}`));
+  return unwrap(client.get(\`/places/\${encodeURIComponent(id)}\`));
 }
 
 export function getPlaceBySlug(slug) {
-  return unwrap(client.get(`/places/slug/${encodeURIComponent(slug)}`));
+  return unwrap(client.get(\`/places/slug/\${encodeURIComponent(slug)}\`));
 }
 
-export function getNearbyPlaces(lat, lng, radius = 5003) {
+export function getNearbyPlaces(lat, lng, radius = 5000) {
   return unwrap(client.get('/places/nearby', { params: { lat, lng, radius } }));
 }
 
@@ -118,22 +118,22 @@ export function getAdminContributions(params = {}) {
 }
 
 export function getAdminContribution(id) {
-  return unwrap(client.get(`/admin/contributions/${encodeURIComponent(id)}`));
+  return unwrap(client.get(\`/admin/contributions/\${encodeURIComponent(id)}\`));
 }
 
 export function approveContribution(id) {
-  return unwrap(client.post(`/admin/contributions/${encodeURIComponent(id)}/approve`));
+  return unwrap(client.post(\`/admin/contributions/\${encodeURIComponent(id)}/approve\`));
 }
 
 export function rejectContribution(id, reason) {
-  return unwrap(client.post(`/admin/contributions/${encodeURIComponent(id)}/reject`, { reason }));
+  return unwrap(client.post(\`/admin/contributions/\${encodeURIComponent(id)}/reject\`, { reason }));
 }
 
 // ---------------------------------------------------------------------------
 // Users & leaderboard
 // ---------------------------------------------------------------------------
 export function getUserProfile(id) {
-  return unwrap(client.get(`/users/${encodeURIComponent(id)}/profile`));
+  return unwrap(client.get(\`/users/\${encodeURIComponent(id)}/profile\`));
 }
 
 export function getLeaderboard(limit = 20) {
