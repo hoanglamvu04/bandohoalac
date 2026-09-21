@@ -1,3 +1,7 @@
+# OPTIONAL. Not used by local development on this project anymore -
+# `npm run dev` expects a native PostgreSQL + PostGIS install (see README).
+# Kept only as a convenience for anyone who prefers a containerized
+# Postgres for deployment/CI; local dev does not depend on it.
 services:
   db:
     image: postgis/postgis:16-3.4-alpine

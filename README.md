@@ -24,7 +24,7 @@ workflow, and a points + trust reputation system.
 │       ├── services/       business logic + SQL
 │       ├── validators/     zod request schemas
 │       └── utils/
-├── docker-compose.yml  PostGIS-enabled PostgreSQL for local dev
+├── docker-compose.yml  optional, deploy-only (see below) - NOT needed for local dev
 └── docs/               planning notes
 ```
 
@@ -49,9 +49,49 @@ a place's detail page.
 ## Requirements
 
 - Node.js 18+
-- PostgreSQL 14+ with the PostGIS extension (via Docker, or installed
-  locally)
-- Docker (optional, but the easiest way to get PostGIS running)
+- PostgreSQL 14+ installed **natively** on your machine, with the PostGIS
+  extension available (no Docker / no virtualization required — this runs
+  the same way a plain Node+Postgres VPS project would)
+
+## Installing PostgreSQL + PostGIS natively
+
+**Windows**
+
+1. Download and run the installer from
+   https://www.postgresql.org/download/windows/ (the EDB installer). Pick a
+   password for the `postgres` superuser and keep the default port `5432`.
+2. Open **Stack Builder** (offered at the end of the installer, or launch it
+   from the Start menu) → select your PostgreSQL install → under
+   *Spatial Extensions* check **PostGIS** → install it.
+3. Confirm both are installed by opening **SQL Shell (psql)** and running:
+   ```sql
+   CREATE DATABASE hola_maps;
+   \c hola_maps
+   CREATE EXTENSION postgis;
+   SELECT postgis_version();
+   ```
+
+**macOS**
+
+```bash
+brew install postgresql@16 postgis
+brew services start postgresql@16
+createdb hola_maps
+psql -d hola_maps -c "CREATE EXTENSION postgis;"
+```
+
+**Linux (Debian/Ubuntu)**
+
+```bash
+sudo apt-get install postgresql postgresql-contrib postgis
+sudo service postgresql start
+sudo -u postgres createdb hola_maps
+sudo -u postgres psql -d hola_maps -c "CREATE EXTENSION postgis;"
+```
+
+Once the database exists and `CREATE EXTENSION postgis;` has succeeded,
+point `DATABASE_URL` in `backend/.env` at it (see below) — the app's own
+`npm run db:migrate` will create every table from there.
 
 ## Quick start
 
@@ -66,16 +106,15 @@ npm run install:all
 # 2. Configure environment variables
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
-# edit backend/.env: set JWT_SECRET to a long random string
+# edit backend/.env: set DATABASE_URL to your local Postgres password,
+# and set JWT_SECRET to a long random string
 
-# 3. Start PostgreSQL + PostGIS (via Docker)
-npm run db:up
-
-# 4. Apply schema + seed demo data
+# 3. Apply schema + seed demo data (database + PostGIS extension must
+#    already exist locally, see "Installing PostgreSQL + PostGIS" above)
 npm run db:migrate
 npm run db:seed
 
-# 5. Run both servers
+# 4. Run both servers
 npm run dev
 ```
 
@@ -99,9 +138,9 @@ npm run dev
 |---|---|
 | `PORT` | API port (default `5000`) |
 | `PUBLIC_BASE_URL` | Base URL used to build public URLs for uploaded photos |
-| `DATABASE_URL` | PostgreSQL connection string |
+| `DATABASE_URL` | Native PostgreSQL connection string, e.g. `postgresql://postgres:PASSWORD@localhost:5432/hola_maps` |
 | `JWT_SECRET` | Secret used to sign auth tokens — **must** be set in production |
-| `JWT_EXPIRES_IN` | Token lifetime (default `7d`) |
+| `JWT_EXPIRES` | Token lifetime (default `7d`) |
 | `CORS_ORIGIN` | Comma-separated list of allowed frontend origins |
 | `UPLOAD_DIR` | Local directory for uploaded photos |
 | `MAX_UPLOAD_FILE_SIZE_MB` / `MAX_UPLOAD_FILE_COUNT` | Upload limits |
@@ -112,22 +151,6 @@ npm run dev
 |---|---|
 | `VITE_API_URL` | Backend API base URL (e.g. `http://localhost:5000/api`) |
 | `VITE_MAP_STYLE_URL` | MapLibre style URL |
-
-**Docker Compose** reads `POSTGRES_USER` / `POSTGRES_PASSWORD` /
-`POSTGRES_DB` / `POSTGRES_PORT` from the environment, defaulting to
-`hola` / `hola` / `hola_maps` / `5432` — keep these in sync with
-`DATABASE_URL` in `backend/.env`.
-
-## Docker / PostGIS setup
-
-```bash
-npm run db:up     # docker compose up -d db (with healthcheck)
-npm run db:down   # docker compose down
-```
-
-Without Docker, install PostgreSQL 14+ and the PostGIS extension locally,
-create a database, then point `DATABASE_URL` at it before running
-`npm run db:migrate`.
 
 ## Frontend commands
 
@@ -206,7 +229,12 @@ Uploaded photos are served statically from `/uploads/<filename>`.
   to boot in production without one.
 - Point `DATABASE_URL` at a managed PostgreSQL instance with PostGIS
   enabled (e.g. Supabase, RDS + PostGIS, Neon does not support PostGIS —
-  pick a provider that does).
+  pick a provider that does), or run PostgreSQL/PostGIS on the VPS itself
+  the same way it's installed locally.
+- `docker-compose.yml` at the repo root is an optional convenience if you
+  ever want a containerized Postgres for CI or a Docker-based deploy — it
+  is not part of the local dev workflow and nothing in `npm run dev`
+  depends on it.
 - Photo storage currently writes to local disk (`UPLOAD_DIR`) behind a thin
   storage abstraction (`backend/src/services/storage.service.js`); swap it
   for Cloudflare R2 (or S3-compatible storage) by changing that module and
