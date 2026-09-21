@@ -1,0 +1,116 @@
+
+/* Map provider reliability + diagnostics */
+.hola-map{
+  background:#dfe7e1;
+}
+
+.map-provider-status{
+  position:absolute;
+  left:50%;
+  top:18px;
+  z-index:8;
+  max-width:min(520px,calc(100% - 180px));
+  transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:9px 12px;
+  border:1px solid rgba(15,57,48,.1);
+  border-radius:12px;
+  background:rgba(255,255,255,.94);
+  color:#49635b;
+  box-shadow:0 10px 28px rgba(15,57,48,.12);
+  backdrop-filter:blur(12px);
+  font-size:11px;
+  font-weight:800;
+}
+
+.map-provider-status.fallback{
+  top:auto;
+  bottom:18px;
+  color:#765619;
+  border-color:rgba(197,145,43,.2);
+  background:rgba(255,248,225,.95);
+}
+
+.map-provider-status.error{
+  color:#8b3428;
+  border-color:rgba(181,71,53,.2);
+  background:rgba(255,244,241,.97);
+}
+
+.map-provider-status.error button{
+  margin-left:4px;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  border:0;
+  border-radius:8px;
+  padding:6px 8px;
+  color:#fff;
+  background:#8b3428;
+  cursor:pointer;
+  font-weight:850;
+}
+
+.map-provider-spinner{
+  width:14px;
+  height:14px;
+  flex:0 0 auto;
+  border:2px solid #cbd7d1;
+  border-top-color:#0b2f28;
+  border-radius:50%;
+  animation:hm-map-spin .8s linear infinite;
+}
+
+@keyframes hm-map-spin{
+  to{transform:rotate(360deg)}
+}
+
+.maplibregl-map{
+  width:100%;
+  height:100%;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+.maplibregl-canvas{
+  outline:none;
+}
+
+.maplibregl-ctrl-top-right{
+  top:18px;
+  right:18px;
+}
+
+.maplibregl-ctrl-group{
+  overflow:hidden;
+  border:1px solid rgba(15,57,48,.09);
+  border-radius:12px!important;
+  box-shadow:0 10px 28px rgba(15,57,48,.12)!important;
+}
+
+.maplibregl-ctrl-group button{
+  width:36px;
+  height:36px;
+}
+
+.maplibregl-ctrl-attrib{
+  border-radius:8px 0 0 0;
+}
+
+@media(max-width:760px){
+  .map-provider-status{
+    top:64px;
+    max-width:calc(100% - 28px);
+  }
+
+  .map-provider-status.fallback{
+    top:auto;
+    bottom:82px;
+  }
+
+  .maplibregl-ctrl-top-right{
+    top:12px;
+    right:12px;
+  }
+}

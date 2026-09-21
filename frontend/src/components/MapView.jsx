@@ -7,10 +7,30 @@ import {
   Popup,
   ScaleControl
 } from 'maplibre-gl';
-import { LocateFixed } from 'lucide-react';
+import { AlertTriangle, LocateFixed, RefreshCcw } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const DEFAULT_CENTER = [105.525, 21.005];
+const DEFAULT_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+
+const FALLBACK_RASTER_STYLE = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '&copy; OpenStreetMap contributors'
+    }
+  },
+  layers: [
+    {
+      id: 'osm',
+      type: 'raster',
+      source: 'osm'
+    }
+  ]
+};
 
 function escapeHtml(value = '') {
   return String(value)
@@ -32,44 +52,154 @@ function categoryIcon(category = '') {
   return '📍';
 }
 
+function removeMarkers(markers) {
+  markers.forEach((marker) => marker.remove());
+}
+
 export default function MapView({ places = [], selectedPlaceId, onSelectPlace, onUserLocation }) {
   const mapRef = useRef(null);
   const containerRef = useRef(null);
   const markersRef = useRef([]);
   const userMarkerRef = useRef(null);
+  const fallbackAppliedRef = useRef(false);
+  const styleTimerRef = useRef(null);
+
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState('');
+  const [mapStatus, setMapStatus] = useState('loading');
+  const [mapError, setMapError] = useState('');
 
   const validPlaces = useMemo(
     () => places.filter((place) => Number.isFinite(Number(place.lng)) && Number.isFinite(Number(place.lat))),
     [places]
   );
 
+  function applyFallbackStyle(map, reason = '') {
+    if (!map || fallbackAppliedRef.current) return;
+
+    fallbackAppliedRef.current = true;
+    setMapStatus('fallback');
+    setMapError(reason || 'Nguồn bản đồ chính chưa tải được. Đang chuyển sang nền bản đồ dự phòng.');
+
+    try {
+      map.setStyle(FALLBACK_RASTER_STYLE);
+    } catch (error) {
+      console.error('[Hola Maps] Could not apply fallback map style:', error);
+      setMapStatus('error');
+      setMapError('Không thể khởi tạo nền bản đồ. Hãy kiểm tra kết nối mạng rồi thử lại.');
+    }
+  }
+
+  function reloadMapStyle() {
+    const map = mapRef.current;
+    if (!map) {
+      window.location.reload();
+      return;
+    }
+
+    fallbackAppliedRef.current = false;
+    setMapStatus('loading');
+    setMapError('');
+
+    try {
+      map.setStyle(import.meta.env.VITE_MAP_STYLE_URL || DEFAULT_STYLE_URL);
+
+      window.clearTimeout(styleTimerRef.current);
+      styleTimerRef.current = window.setTimeout(() => {
+        if (!map.isStyleLoaded()) applyFallbackStyle(map);
+      }, 5000);
+    } catch (error) {
+      console.error('[Hola Maps] Could not reload map style:', error);
+      applyFallbackStyle(map, 'Nguồn bản đồ chính gặp lỗi. Đang dùng bản đồ dự phòng.');
+    }
+  }
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const map = new MapLibreMap({
-      container: containerRef.current,
-      style: import.meta.env.VITE_MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/liberty',
-      center: DEFAULT_CENTER,
-      zoom: 12.2,
-      minZoom: 8,
-      maxZoom: 19,
-      attributionControl: true
-    });
+    let map;
+
+    try {
+      map = new MapLibreMap({
+        container: containerRef.current,
+        style: import.meta.env.VITE_MAP_STYLE_URL || DEFAULT_STYLE_URL,
+        center: DEFAULT_CENTER,
+        zoom: 12.2,
+        minZoom: 8,
+        maxZoom: 19,
+        attributionControl: true
+      });
+    } catch (error) {
+      console.error('[Hola Maps] MapLibre initialization failed:', error);
+      setMapStatus('error');
+      setMapError('Trình duyệt không khởi tạo được MapLibre/WebGL.');
+      return undefined;
+    }
+
+    mapRef.current = map;
 
     map.addControl(new NavigationControl({ visualizePitch: true }), 'top-right');
     map.addControl(new FullscreenControl(), 'top-right');
     map.addControl(new ScaleControl({ maxWidth: 110, unit: 'metric' }), 'bottom-right');
-    map.on('load', () => map.resize());
 
-    mapRef.current = map;
+    const handleLoad = () => {
+      window.clearTimeout(styleTimerRef.current);
+      setMapStatus(fallbackAppliedRef.current ? 'fallback-ready' : 'ready');
+      if (!fallbackAppliedRef.current) setMapError('');
+      window.setTimeout(() => map.resize(), 50);
+    };
+
+    const handleStyleData = () => {
+      if (map.isStyleLoaded()) {
+        window.clearTimeout(styleTimerRef.current);
+        setMapStatus(fallbackAppliedRef.current ? 'fallback-ready' : 'ready');
+      }
+    };
+
+    const handleError = (event) => {
+      const message = event?.error?.message || 'Map style request failed.';
+      console.error('[Hola Maps] MapLibre error:', event?.error || event);
+
+      if (!fallbackAppliedRef.current && !map.isStyleLoaded()) {
+        applyFallbackStyle(map, 'Không tải được nền OpenFreeMap. Hola Maps đã tự chuyển sang nền OpenStreetMap dự phòng.');
+        return;
+      }
+
+      if (fallbackAppliedRef.current && !map.isStyleLoaded()) {
+        setMapStatus('error');
+        setMapError('Không tải được dữ liệu bản đồ. Kiểm tra mạng, VPN hoặc tiện ích chặn nội dung.');
+      } else if (message.toLowerCase().includes('webgl')) {
+        setMapStatus('error');
+        setMapError('WebGL đang bị tắt hoặc không khả dụng trên trình duyệt này.');
+      }
+    };
+
+    map.on('load', handleLoad);
+    map.on('styledata', handleStyleData);
+    map.on('error', handleError);
+
+    styleTimerRef.current = window.setTimeout(() => {
+      if (!map.isStyleLoaded()) {
+        applyFallbackStyle(map, 'Nền bản đồ tải quá lâu. Hola Maps đã chuyển sang nguồn dự phòng.');
+      }
+    }, 5000);
 
     return () => {
-      markersRef.current.forEach((marker) => marker.remove());
-      if (userMarkerRef.current) userMarkerRef.current.remove();
+      window.clearTimeout(styleTimerRef.current);
+      removeMarkers(markersRef.current);
+      markersRef.current = [];
+
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove();
+        userMarkerRef.current = null;
+      }
+
+      map.off('load', handleLoad);
+      map.off('styledata', handleStyleData);
+      map.off('error', handleError);
       map.remove();
       mapRef.current = null;
+      fallbackAppliedRef.current = false;
     };
   }, []);
 
@@ -77,7 +207,7 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
     const map = mapRef.current;
     if (!map) return;
 
-    markersRef.current.forEach((marker) => marker.remove());
+    removeMarkers(markersRef.current);
 
     markersRef.current = validPlaces.map((place) => {
       const element = document.createElement('button');
@@ -99,7 +229,12 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
 
       const rating = Number(place.rating);
       const ratingLabel = Number.isFinite(rating) && rating > 0 ? rating.toFixed(1) : 'Mới';
-      const popup = new Popup({ offset: 22, closeButton: false, className: 'hola-premium-popup' }).setHTML(
+
+      const popup = new Popup({
+        offset: 22,
+        closeButton: false,
+        className: 'hola-premium-popup'
+      }).setHTML(
         '<div class="map-popup premium-map-popup">' +
           '<span class="map-popup-category">' + escapeHtml(place.category || 'Khám phá') + '</span>' +
           '<strong>' + escapeHtml(place.name) + '</strong>' +
@@ -149,6 +284,7 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
         };
 
         const map = mapRef.current;
+
         if (map) {
           if (userMarkerRef.current) userMarkerRef.current.remove();
 
@@ -158,13 +294,15 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
 
           userMarkerRef.current = new Marker({ element: dot })
             .setLngLat([userLocation.lng, userLocation.lat])
-            .setPopup(new Popup({ offset: 18, className: 'hola-premium-popup' }).setHTML(
-              '<div class="map-popup premium-map-popup">' +
-                '<span class="map-popup-category">VỊ TRÍ HIỆN TẠI</span>' +
-                '<strong>Bạn đang ở đây</strong>' +
-                '<small>Độ chính xác ±' + escapeHtml(userLocation.accuracy) + ' m</small>' +
-              '</div>'
-            ))
+            .setPopup(
+              new Popup({ offset: 18, className: 'hola-premium-popup' }).setHTML(
+                '<div class="map-popup premium-map-popup">' +
+                  '<span class="map-popup-category">VỊ TRÍ HIỆN TẠI</span>' +
+                  '<strong>Bạn đang ở đây</strong>' +
+                  '<small>Độ chính xác ±' + escapeHtml(userLocation.accuracy) + ' m</small>' +
+                '</div>'
+              )
+            )
             .addTo(map);
 
           map.flyTo({
@@ -192,11 +330,44 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
     );
   }
 
+  const showLoading = mapStatus === 'loading';
+  const showFallback = mapStatus === 'fallback' || mapStatus === 'fallback-ready';
+  const showError = mapStatus === 'error';
+
   return (
     <div className="map-wrap premium-map-wrap">
       <div ref={containerRef} className="hola-map" />
 
-      <button className="locate-button premium-locate-button" type="button" onClick={locateUser} disabled={locating}>
+      {showLoading && (
+        <div className="map-provider-status loading">
+          <span className="map-provider-spinner" />
+          Đang tải nền bản đồ...
+        </div>
+      )}
+
+      {showFallback && (
+        <div className="map-provider-status fallback">
+          <AlertTriangle size={15} />
+          <span>{mapError || 'Đang dùng nền bản đồ dự phòng.'}</span>
+        </div>
+      )}
+
+      {showError && (
+        <div className="map-provider-status error">
+          <AlertTriangle size={16} />
+          <span>{mapError}</span>
+          <button type="button" onClick={reloadMapStyle}>
+            <RefreshCcw size={14} /> Thử lại
+          </button>
+        </div>
+      )}
+
+      <button
+        className="locate-button premium-locate-button"
+        type="button"
+        onClick={locateUser}
+        disabled={locating}
+      >
         <LocateFixed size={18} />
         {locating ? 'Đang định vị...' : 'Vị trí của tôi'}
       </button>
