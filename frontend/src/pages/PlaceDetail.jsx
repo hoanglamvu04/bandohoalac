@@ -97,6 +97,8 @@ export default function PlaceDetail() {
     );
   }
 
+  const galleryClass = 'detail-gallery premium-detail-gallery image-count-' + Math.min(images.length, 5);
+
   return (
     <main className="detail-page premium-detail-page">
       <div className="detail-topbar">
@@ -115,7 +117,9 @@ export default function PlaceDetail() {
               <span className="detail-published-badge"><BadgeCheck size={15} /> Đã xuất bản</span>
             )}
           </div>
+
           <h1>{place.name}</h1>
+
           <div className="detail-rating">
             <Star size={18} fill={hasRating ? 'currentColor' : 'none'} />
             <b>{hasRating ? rating.toFixed(1) : 'Mới'}</b>
@@ -131,13 +135,16 @@ export default function PlaceDetail() {
         </div>
       </section>
 
-      <section className={'detail-gallery premium-detail-gallery image-count-' + Math.min(images.length, 5)}>
+      <section className={galleryClass}>
         <div
           className="gallery-main premium-gallery-main"
-          style={images[0] ? { backgroundImage: \`url(\${images[0]})\` } : undefined}
+          style={images[0] ? { backgroundImage: 'url("' + images[0] + '")' } : undefined}
         >
           {!images[0] && (
-            <div className="gallery-empty-state"><ImageIcon size={38} /><span>Chưa có ảnh đại diện</span></div>
+            <div className="gallery-empty-state">
+              <ImageIcon size={38} />
+              <span>Chưa có ảnh đại diện</span>
+            </div>
           )}
           {images.length > 0 && <span className="gallery-photo-count"><Camera size={15} /> {images.length} ảnh</span>}
         </div>
@@ -147,7 +154,7 @@ export default function PlaceDetail() {
             <div
               key={index}
               className="gallery-side-cell"
-              style={images[index] ? { backgroundImage: \`url(\${images[index]})\` } : undefined}
+              style={images[index] ? { backgroundImage: 'url("' + images[index] + '")' } : undefined}
             >
               {!images[index] && <ImageIcon size={22} />}
             </div>
@@ -222,7 +229,7 @@ export default function PlaceDetail() {
           {place.lat && place.lng && (
             <a
               className="primary-action wide premium-direction-button"
-              href={\`https://www.google.com/maps/search/?api=1&query=\${place.lat},\${place.lng}\`}
+              href={'https://www.google.com/maps/search/?api=1&query=' + place.lat + ',' + place.lng}
               target="_blank"
               rel="noreferrer"
             >

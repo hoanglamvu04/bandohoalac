@@ -11,7 +11,7 @@ const gradients = [
 function formatDistance(distance) {
   const value = Number(distance);
   if (!Number.isFinite(value) || value <= 0) return null;
-  return value >= 1000 ? \`\${(value / 1000).toFixed(1)} km\` : \`\${Math.round(value)} m\`;
+  return value >= 1000 ? (value / 1000).toFixed(1) + ' km' : Math.round(value) + ' m';
 }
 
 export default function PlaceCard({ place, index = 0, compact = false, selected = false, onSelect }) {
@@ -20,16 +20,12 @@ export default function PlaceCard({ place, index = 0, compact = false, selected 
   const photoCount = Array.isArray(place.images) ? place.images.length : 0;
   const rating = Number(place.rating);
   const hasRating = Number.isFinite(rating) && rating > 0;
+  const cardClass = 'place-card premium-place-card ' + (compact ? 'compact ' : '') + (selected ? 'selected' : '');
+  const coverStyle = cover ? { background: 'url("' + cover + '") center/cover' } : { background: gradients[index % gradients.length] };
 
   return (
-    <article
-      className={\`place-card premium-place-card \${compact ? 'compact' : ''} \${selected ? 'selected' : ''}\`}
-      onClick={() => onSelect?.(place)}
-    >
-      <div
-        className="place-cover"
-        style={{ background: cover ? \`url(\${cover}) center/cover\` : gradients[index % gradients.length] }}
-      >
+    <article className={cardClass} onClick={() => onSelect?.(place)}>
+      <div className="place-cover" style={coverStyle}>
         {!cover && (
           <div className="place-cover-placeholder" aria-hidden="true">
             <MapPin size={30} />
@@ -51,9 +47,7 @@ export default function PlaceCard({ place, index = 0, compact = false, selected 
           <Heart size={18} />
         </button>
 
-        {photoCount > 0 && (
-          <span className="photo-count"><Camera size={13} /> {photoCount}</span>
-        )}
+        {photoCount > 0 && <span className="photo-count"><Camera size={13} /> {photoCount}</span>}
       </div>
 
       <div className="place-content">
@@ -81,7 +75,7 @@ export default function PlaceCard({ place, index = 0, compact = false, selected 
 
         <div className="place-footer">
           <span className="verified"><BadgeCheck size={16} /> Dữ liệu đã xuất bản</span>
-          <Link to={\`/place/\${place.id}\`} onClick={(event) => event.stopPropagation()}>
+          <Link to={'/place/' + place.id} onClick={(event) => event.stopPropagation()}>
             Chi tiết <ArrowUpRight size={15} />
           </Link>
         </div>

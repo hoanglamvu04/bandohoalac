@@ -9,7 +9,7 @@ client.interceptors.request.use((config) => {
   const token = getToken();
   if (token) {
     config.headers = config.headers || {};
-    config.headers.Authorization = \`Bearer \${token}\`;
+    config.headers.Authorization = 'Bearer ' + token;
   }
   return config;
 });
@@ -44,9 +44,6 @@ function cleanParams(params = {}) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Auth
-// ---------------------------------------------------------------------------
 export function register(payload) {
   return unwrap(client.post('/auth/register', payload));
 }
@@ -59,26 +56,20 @@ export function getMe() {
   return unwrap(client.get('/auth/me'));
 }
 
-// ---------------------------------------------------------------------------
-// Categories
-// ---------------------------------------------------------------------------
 export function getCategories() {
   return unwrap(client.get('/categories'));
 }
 
-// ---------------------------------------------------------------------------
-// Places
-// ---------------------------------------------------------------------------
 export function getPlaces(params = {}) {
   return unwrap(client.get('/places', { params: cleanParams(params) }));
 }
 
 export function getPlace(id) {
-  return unwrap(client.get(\`/places/\${encodeURIComponent(id)}\`));
+  return unwrap(client.get('/places/' + encodeURIComponent(id)));
 }
 
 export function getPlaceBySlug(slug) {
-  return unwrap(client.get(\`/places/slug/\${encodeURIComponent(slug)}\`));
+  return unwrap(client.get('/places/slug/' + encodeURIComponent(slug)));
 }
 
 export function getNearbyPlaces(lat, lng, radius = 5000) {
@@ -89,9 +80,6 @@ export function getPlacesInBounds(bounds) {
   return unwrap(client.get('/places/bounds', { params: bounds }));
 }
 
-// ---------------------------------------------------------------------------
-// Contributions
-// ---------------------------------------------------------------------------
 export function createContribution({ type, placeId, location, place, reason, photos = [] }) {
   const formData = new FormData();
   formData.append('type', type);
@@ -110,30 +98,24 @@ export function getMyContributions() {
   return unwrap(client.get('/contributions/me'));
 }
 
-// ---------------------------------------------------------------------------
-// Admin moderation
-// ---------------------------------------------------------------------------
 export function getAdminContributions(params = {}) {
   return unwrap(client.get('/admin/contributions', { params: cleanParams(params) }));
 }
 
 export function getAdminContribution(id) {
-  return unwrap(client.get(\`/admin/contributions/\${encodeURIComponent(id)}\`));
+  return unwrap(client.get('/admin/contributions/' + encodeURIComponent(id)));
 }
 
 export function approveContribution(id) {
-  return unwrap(client.post(\`/admin/contributions/\${encodeURIComponent(id)}/approve\`));
+  return unwrap(client.post('/admin/contributions/' + encodeURIComponent(id) + '/approve'));
 }
 
 export function rejectContribution(id, reason) {
-  return unwrap(client.post(\`/admin/contributions/\${encodeURIComponent(id)}/reject\`, { reason }));
+  return unwrap(client.post('/admin/contributions/' + encodeURIComponent(id) + '/reject', { reason }));
 }
 
-// ---------------------------------------------------------------------------
-// Users & leaderboard
-// ---------------------------------------------------------------------------
 export function getUserProfile(id) {
-  return unwrap(client.get(\`/users/\${encodeURIComponent(id)}/profile\`));
+  return unwrap(client.get('/users/' + encodeURIComponent(id) + '/profile'));
 }
 
 export function getLeaderboard(limit = 20) {
