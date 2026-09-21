@@ -6,6 +6,7 @@ import { env } from './config/env.js';
 import { uploadRoot } from './middleware/upload.js';
 import { generalApiRateLimiter } from './middleware/rateLimit.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
+import { resolveCorsOrigin } from './config/cors.js';
 
 import authRoutes from './routes/auth.routes.js';
 import placesRoutes from './routes/places.routes.js';
@@ -20,7 +21,7 @@ export function createApp() {
 
   app.disable('x-powered-by');
   app.use(helmet());
-  app.use(cors({ origin: env.corsOrigin }));
+  app.use(cors({ origin: resolveCorsOrigin }));
   app.use(express.json({ limit: '1mb' }));
   if (env.nodeEnv !== 'test') {
     app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));

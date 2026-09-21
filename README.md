@@ -121,6 +121,26 @@ npm run dev
 - Frontend: http://localhost:5173
 - Backend:  http://localhost:5000/api (health check at `/api/health`)
 
+### Port auto-fallback
+
+Neither dev server hard-crashes if its default port is already taken (e.g.
+you run `npm run dev` in two terminals, or something else on your machine
+is already listening on 5173/5000):
+
+- **Frontend (Vite):** `server.strictPort` is `false` in `vite.config.js`,
+  so if `5173` is busy it automatically tries `5174`, `5175`, ... — watch
+  the terminal output for the actual URL it picked.
+- **Backend (Express):** if `PORT` (default `5000`) is busy, it retries
+  `5001`, `5002`, ... and logs both the fallback and the final address
+  (`Server running at: http://localhost:<port>`).
+- The backend's CORS policy doesn't hard-code `localhost:5173` — in
+  development it accepts any `http://localhost:<port>` / `http://127.0.0.1:<port>`
+  origin, so a frontend that fell back to a different port still works
+  against the API without any config changes.
+- The one thing that **isn't** auto-discovered is `VITE_API_URL`: if the
+  backend itself falls back to a non-default port, update
+  `frontend/.env` to match the port it actually printed.
+
 ### Seeded accounts (local dev only — change/remove before deploying)
 
 | Role       | Email                  | Password       |
