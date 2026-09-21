@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5003/api').replace(/\/$/, '');
 const TOKEN_STORAGE_KEY = 'hola_maps_token';
 
 export const client = axios.create({ baseURL: API_URL });
@@ -81,7 +81,7 @@ export function getPlaceBySlug(slug) {
   return unwrap(client.get(`/places/slug/${encodeURIComponent(slug)}`));
 }
 
-export function getNearbyPlaces(lat, lng, radius = 5000) {
+export function getNearbyPlaces(lat, lng, radius = 5003) {
   return unwrap(client.get('/places/nearby', { params: { lat, lng, radius } }));
 }
 

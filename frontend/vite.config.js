@@ -4,8 +4,8 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173,
-    // If 5173 is already taken (e.g. a second `npm run dev`), Vite tries
+    port: 5175,
+    // If 5175 is already taken (e.g. a second `npm run dev`), Vite tries
     // 5174, 5175, ... instead of crashing.
     strictPort: false,
     host: true
