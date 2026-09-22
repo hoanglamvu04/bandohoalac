@@ -13,6 +13,9 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 
 const DEFAULT_CENTER = [105.525, 21.005];
 const DEFAULT_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+const MAP_FALLBACK_DELAY_MS = 1800;
+const PROVIDER_CACHE_KEY = 'hola_maps_map_provider_v1';
+const PROVIDER_CACHE_TTL_MS = 15 * 60 * 1000;
 
 const FALLBACK_RASTER_STYLE = {
   version: 8,
@@ -21,6 +24,8 @@ const FALLBACK_RASTER_STYLE = {
       type: 'raster',
       tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
+      minzoom: 0,
+      maxzoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }
   },
@@ -28,7 +33,10 @@ const FALLBACK_RASTER_STYLE = {
     {
       id: 'osm',
       type: 'raster',
-      source: 'osm'
+      source: 'osm',
+      paint: {
+        'raster-fade-duration': 0
+      }
     }
   ]
 };
@@ -76,6 +84,36 @@ function toFeature(geometry) {
   };
 }
 
+function rememberProvider(provider) {
+  try {
+    sessionStorage.setItem(PROVIDER_CACHE_KEY, JSON.stringify({
+      provider,
+      savedAt: Date.now()
+    }));
+  } catch {
+    // Storage may be disabled; map still works without this optimization.
+  }
+}
+
+function getRememberedProvider() {
+  try {
+    const raw = sessionStorage.getItem(PROVIDER_CACHE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed?.provider || !parsed?.savedAt) return null;
+
+    if (Date.now() - parsed.savedAt > PROVIDER_CACHE_TTL_MS) {
+      sessionStorage.removeItem(PROVIDER_CACHE_KEY);
+      return null;
+    }
+
+    return parsed.provider;
+  } catch {
+    return null;
+  }
+}
+
 export default function MapView({
   places = [],
   selectedPlaceId,
@@ -106,6 +144,7 @@ export default function MapView({
     if (!map || fallbackAppliedRef.current) return;
 
     fallbackAppliedRef.current = true;
+    rememberProvider('raster');
     setMapStatus('fallback');
     setMapError(reason || 'Nguồn bản đồ chính chưa tải được. Đang chuyển sang nền bản đồ dự phòng.');
 
@@ -127,6 +166,7 @@ export default function MapView({
     }
 
     fallbackAppliedRef.current = false;
+    rememberProvider('vector');
     setMapStatus('loading');
     setMapError('');
 
@@ -136,7 +176,7 @@ export default function MapView({
       window.clearTimeout(styleTimerRef.current);
       styleTimerRef.current = window.setTimeout(() => {
         if (!map.isStyleLoaded()) applyFallbackStyle(map);
-      }, 5000);
+      }, MAP_FALLBACK_DELAY_MS);
     } catch (error) {
       console.error('[Hola Maps] Could not reload map style:', error);
       applyFallbackStyle(map, 'Nguồn bản đồ chính gặp lỗi. Đang dùng bản đồ dự phòng.');
@@ -146,17 +186,27 @@ export default function MapView({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    const rememberedProvider = getRememberedProvider();
+    const startWithRaster = rememberedProvider === 'raster';
+    fallbackAppliedRef.current = startWithRaster;
+
     let map;
 
     try {
       map = new MapLibreMap({
         container: containerRef.current,
-        style: import.meta.env.VITE_MAP_STYLE_URL || DEFAULT_STYLE_URL,
+        style: startWithRaster
+          ? FALLBACK_RASTER_STYLE
+          : (import.meta.env.VITE_MAP_STYLE_URL || DEFAULT_STYLE_URL),
         center: DEFAULT_CENTER,
         zoom: 12.2,
         minZoom: 8,
         maxZoom: 19,
-        attributionControl: true
+        attributionControl: true,
+        fadeDuration: 0,
+        refreshExpiredTiles: false,
+        renderWorldCopies: false,
+        maxTileCacheSize: 100
       });
     } catch (error) {
       console.error('[Hola Maps] MapLibre initialization failed:', error);
@@ -173,12 +223,20 @@ export default function MapView({
 
     const handleLoad = () => {
       window.clearTimeout(styleTimerRef.current);
-      setMapStatus(fallbackAppliedRef.current ? 'fallback-ready' : 'ready');
-      if (!fallbackAppliedRef.current) setMapError('');
-      window.setTimeout(() => map.resize(), 50);
+
+      if (fallbackAppliedRef.current) {
+        rememberProvider('raster');
+        setMapStatus('fallback-ready');
+      } else {
+        rememberProvider('vector');
+        setMapStatus('ready');
+        setMapError('');
+      }
+
+      window.requestAnimationFrame(() => map.resize());
     };
 
-    const handleStyleData = () => {
+    const handleIdle = () => {
       if (map.isStyleLoaded()) {
         window.clearTimeout(styleTimerRef.current);
         setMapStatus(fallbackAppliedRef.current ? 'fallback-ready' : 'ready');
@@ -192,7 +250,7 @@ export default function MapView({
       if (!fallbackAppliedRef.current && !map.isStyleLoaded()) {
         applyFallbackStyle(
           map,
-          'Không tải được nền OpenFreeMap. Hola Maps đã tự chuyển sang nền OpenStreetMap dự phòng.'
+          'Không tải được nền OpenFreeMap. Hola Maps đã tự chuyển sang OpenStreetMap để hiển thị nhanh hơn.'
         );
         return;
       }
@@ -207,14 +265,19 @@ export default function MapView({
     };
 
     map.on('load', handleLoad);
-    map.on('styledata', handleStyleData);
+    map.on('idle', handleIdle);
     map.on('error', handleError);
 
-    styleTimerRef.current = window.setTimeout(() => {
-      if (!map.isStyleLoaded()) {
-        applyFallbackStyle(map, 'Nền bản đồ tải quá lâu. Hola Maps đã chuyển sang nguồn dự phòng.');
-      }
-    }, 5000);
+    if (!startWithRaster) {
+      styleTimerRef.current = window.setTimeout(() => {
+        if (!map.isStyleLoaded()) {
+          applyFallbackStyle(
+            map,
+            'Nền vector tải quá lâu. Hola Maps đã chuyển sang OpenStreetMap để vào bản đồ nhanh hơn.'
+          );
+        }
+      }, MAP_FALLBACK_DELAY_MS);
+    }
 
     return () => {
       window.clearTimeout(styleTimerRef.current);
@@ -227,7 +290,7 @@ export default function MapView({
       }
 
       map.off('load', handleLoad);
-      map.off('styledata', handleStyleData);
+      map.off('idle', handleIdle);
       map.off('error', handleError);
       map.remove();
       mapRef.current = null;
@@ -412,7 +475,7 @@ export default function MapView({
     map.flyTo({
       center: [Number(selected.lng), Number(selected.lat)],
       zoom: Math.max(map.getZoom(), 14.4),
-      duration: 850,
+      duration: 650,
       essential: true
     });
   }, [selectedPlaceId, validPlaces, route]);
@@ -441,7 +504,7 @@ export default function MapView({
           map.flyTo({
             center: [location.lng, location.lat],
             zoom: 14.6,
-            duration: 900,
+            duration: 650,
             essential: true
           });
         }
@@ -472,16 +535,28 @@ export default function MapView({
       <div ref={containerRef} className="hola-map" />
 
       {showLoading && (
+        <div className="map-loading-skeleton" aria-hidden="true">
+          <span className="skeleton-road road-1" />
+          <span className="skeleton-road road-2" />
+          <span className="skeleton-road road-3" />
+          <span className="skeleton-water" />
+          <span className="skeleton-block block-1" />
+          <span className="skeleton-block block-2" />
+          <span className="skeleton-block block-3" />
+        </div>
+      )}
+
+      {showLoading && (
         <div className="map-provider-status loading">
           <span className="map-provider-spinner" />
-          Đang tải nền bản đồ...
+          Đang tải bản đồ Hòa Lạc...
         </div>
       )}
 
       {showFallback && (
         <div className="map-provider-status fallback">
           <AlertTriangle size={15} />
-          <span>{mapError || 'Đang dùng nền bản đồ dự phòng.'}</span>
+          <span>{mapError || 'Đang dùng OpenStreetMap để tải nhanh hơn.'}</span>
         </div>
       )}
 
