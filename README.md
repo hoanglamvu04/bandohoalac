@@ -41,10 +41,12 @@ transaction that creates/updates the place, logs the field-level diff in
 ledger. Points and trust are tracked as independent signals
 (`points_total` vs `trust_score` / `approved_count` / `rejected_count`).
 
-Map tiles come from MapLibre GL JS against an OSS vector style (configurable
-via `VITE_MAP_STYLE_URL`) — the system is not locked into Google Maps.
-Google Maps is only used as an optional external "Get directions" link on
-a place's detail page.
+The frontend renders maps with MapLibre GL JS. For fast production-style
+loading, set `VITE_MAPTILER_KEY` and Hola Maps will use MapTiler Cloud
+(`streets-v4` by default). If no MapTiler key is configured, it falls back
+to `VITE_MAP_STYLE_URL` / OpenFreeMap, with OpenStreetMap raster as the
+runtime safety fallback. Google Maps is only used as an optional external
+navigation handoff.
 
 ## Requirements
 
@@ -170,7 +172,9 @@ is already listening on 5173/5000):
 | Variable | Description |
 |---|---|
 | `VITE_API_URL` | Backend API base URL (e.g. `http://localhost:5000/api`) |
-| `VITE_MAP_STYLE_URL` | MapLibre style URL |
+| `VITE_MAPTILER_KEY` | MapTiler Cloud public browser key. When set, MapTiler becomes the primary basemap provider |
+| `VITE_MAPTILER_MAP_ID` | MapTiler map style id (default `streets-v4`) |
+| `VITE_MAP_STYLE_URL` | Optional custom/legacy MapLibre style URL used when no MapTiler key is configured |
 
 ## Frontend commands
 

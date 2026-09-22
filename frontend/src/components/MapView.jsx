@@ -12,9 +12,18 @@ import { AlertTriangle, LocateFixed, RefreshCcw } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const DEFAULT_CENTER = [105.525, 21.005];
+const MAPTILER_KEY = (import.meta.env.VITE_MAPTILER_KEY || '').trim();
+const MAPTILER_MAP_ID = (import.meta.env.VITE_MAPTILER_MAP_ID || 'streets-v4').trim();
+const CUSTOM_STYLE_URL = (import.meta.env.VITE_MAP_STYLE_URL || '').trim();
 const DEFAULT_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
-const MAP_FALLBACK_DELAY_MS = 1800;
-const PROVIDER_CACHE_KEY = 'hola_maps_map_provider_v1';
+const MAPTILER_STYLE_URL = MAPTILER_KEY
+  ? 'https://api.maptiler.com/maps/' + encodeURIComponent(MAPTILER_MAP_ID) +
+    '/style.json?key=' + encodeURIComponent(MAPTILER_KEY)
+  : '';
+const PRIMARY_STYLE_URL = MAPTILER_STYLE_URL || CUSTOM_STYLE_URL || DEFAULT_STYLE_URL;
+const PRIMARY_PROVIDER_NAME = MAPTILER_STYLE_URL ? 'MapTiler' : (CUSTOM_STYLE_URL ? 'Custom map' : 'OpenFreeMap');
+const MAP_FALLBACK_DELAY_MS = MAPTILER_STYLE_URL ? 2200 : 1600;
+const PROVIDER_CACHE_KEY = 'hola_maps_map_provider_v2';
 const PROVIDER_CACHE_TTL_MS = 15 * 60 * 1000;
 
 const FALLBACK_RASTER_STYLE = {
@@ -166,12 +175,12 @@ export default function MapView({
     }
 
     fallbackAppliedRef.current = false;
-    rememberProvider('vector');
+    rememberProvider('primary');
     setMapStatus('loading');
     setMapError('');
 
     try {
-      map.setStyle(import.meta.env.VITE_MAP_STYLE_URL || DEFAULT_STYLE_URL);
+      map.setStyle(PRIMARY_STYLE_URL);
 
       window.clearTimeout(styleTimerRef.current);
       styleTimerRef.current = window.setTimeout(() => {
@@ -197,7 +206,7 @@ export default function MapView({
         container: containerRef.current,
         style: startWithRaster
           ? FALLBACK_RASTER_STYLE
-          : (import.meta.env.VITE_MAP_STYLE_URL || DEFAULT_STYLE_URL),
+          : (PRIMARY_STYLE_URL),
         center: DEFAULT_CENTER,
         zoom: 12.2,
         minZoom: 8,
@@ -228,7 +237,7 @@ export default function MapView({
         rememberProvider('raster');
         setMapStatus('fallback-ready');
       } else {
-        rememberProvider('vector');
+        rememberProvider('primary');
         setMapStatus('ready');
         setMapError('');
       }
@@ -250,7 +259,7 @@ export default function MapView({
       if (!fallbackAppliedRef.current && !map.isStyleLoaded()) {
         applyFallbackStyle(
           map,
-          'Không tải được nền OpenFreeMap. Hola Maps đã tự chuyển sang OpenStreetMap để hiển thị nhanh hơn.'
+          'Không tải được nền ' + PRIMARY_PROVIDER_NAME + '. Hola Maps đã tự chuyển sang OpenStreetMap để hiển thị nhanh hơn.'
         );
         return;
       }
