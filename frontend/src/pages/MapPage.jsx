@@ -113,10 +113,11 @@ export default function MapPage() {
   }), [places, category, query]);
 
   useEffect(() => {
-    if (!selectedId && filtered.length) setSelectedId(filtered[0].id);
-
+    // Do not auto-select the first place on initial load. Auto-selection made
+    // MapLibre load the overview tiles and immediately load a second batch at
+    // zoom 14.4. Waiting for an explicit user click keeps first paint fast.
     if (selectedId && !filtered.some((place) => place.id === selectedId) && !routeDestination) {
-      setSelectedId(filtered[0]?.id || null);
+      setSelectedId(null);
     }
   }, [filtered, selectedId, routeDestination]);
 

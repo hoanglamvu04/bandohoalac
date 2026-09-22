@@ -12,18 +12,59 @@ import { AlertTriangle, LocateFixed, RefreshCcw } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const DEFAULT_CENTER = [105.525, 21.005];
+
+// Core Hola Maps coverage: Hòa Lạc, Yên Xuân, Thạch Thất, Tây Phương,
+// Hạ Bằng, Phú Cát and the nearby parts of Ba Vì, Quốc Oai, Hoài Đức.
+// MapLibre only requests tiles for the current viewport; these bounds keep
+// the product focused on western Hà Nội instead of encouraging world-scale
+// browsing and unnecessary tile requests.
+const WEST_HANOI_BOUNDS = [
+  [105.14, 20.76],
+  [105.86, 21.41]
+];
+
 const MAPTILER_KEY = (import.meta.env.VITE_MAPTILER_KEY || '').trim();
 const MAPTILER_MAP_ID = (import.meta.env.VITE_MAPTILER_MAP_ID || 'streets-v4').trim();
 const CUSTOM_STYLE_URL = (import.meta.env.VITE_MAP_STYLE_URL || '').trim();
 const DEFAULT_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
-const MAPTILER_STYLE_URL = MAPTILER_KEY
+
+const MAPTILER_RASTER_TILE_URL = MAPTILER_KEY
   ? 'https://api.maptiler.com/maps/' + encodeURIComponent(MAPTILER_MAP_ID) +
-    '/style.json?key=' + encodeURIComponent(MAPTILER_KEY)
+    '/256/{z}/{x}/{y}.webp?key=' + encodeURIComponent(MAPTILER_KEY)
   : '';
-const PRIMARY_STYLE_URL = MAPTILER_STYLE_URL || CUSTOM_STYLE_URL || DEFAULT_STYLE_URL;
-const PRIMARY_PROVIDER_NAME = MAPTILER_STYLE_URL ? 'MapTiler' : (CUSTOM_STYLE_URL ? 'Custom map' : 'OpenFreeMap');
-const MAP_FALLBACK_DELAY_MS = MAPTILER_STYLE_URL ? 2200 : 1600;
-const PROVIDER_CACHE_KEY = 'hola_maps_map_provider_v2';
+
+const MAPTILER_RASTER_STYLE = MAPTILER_RASTER_TILE_URL
+  ? {
+      version: 8,
+      sources: {
+        maptiler: {
+          type: 'raster',
+          tiles: [MAPTILER_RASTER_TILE_URL],
+          tileSize: 256,
+          minzoom: 0,
+          maxzoom: 18,
+          attribution: '&copy; MapTiler &copy; OpenStreetMap contributors'
+        }
+      },
+      layers: [
+        {
+          id: 'maptiler-raster',
+          type: 'raster',
+          source: 'maptiler',
+          paint: {
+            'raster-fade-duration': 0
+          }
+        }
+      ]
+    }
+  : null;
+
+const PRIMARY_STYLE = MAPTILER_RASTER_STYLE || CUSTOM_STYLE_URL || DEFAULT_STYLE_URL;
+const PRIMARY_PROVIDER_NAME = MAPTILER_RASTER_STYLE
+  ? 'MapTiler Raster'
+  : (CUSTOM_STYLE_URL ? 'Custom map' : 'OpenFreeMap');
+const MAP_FALLBACK_DELAY_MS = MAPTILER_RASTER_STYLE ? 1200 : 1600;
+const PROVIDER_CACHE_KEY = 'hola_maps_map_provider_v3';
 const PROVIDER_CACHE_TTL_MS = 15 * 60 * 1000;
 
 const FALLBACK_RASTER_STYLE = {
@@ -180,7 +221,7 @@ export default function MapView({
     setMapError('');
 
     try {
-      map.setStyle(PRIMARY_STYLE_URL);
+      map.setStyle(PRIMARY_STYLE);
 
       window.clearTimeout(styleTimerRef.current);
       styleTimerRef.current = window.setTimeout(() => {
@@ -206,16 +247,17 @@ export default function MapView({
         container: containerRef.current,
         style: startWithRaster
           ? FALLBACK_RASTER_STYLE
-          : (PRIMARY_STYLE_URL),
+          : (PRIMARY_STYLE),
         center: DEFAULT_CENTER,
-        zoom: 12.2,
-        minZoom: 8,
-        maxZoom: 19,
+        zoom: 11.7,
+        minZoom: 9.5,
+        maxZoom: 18,
+        maxBounds: WEST_HANOI_BOUNDS,
         attributionControl: true,
         fadeDuration: 0,
         refreshExpiredTiles: false,
         renderWorldCopies: false,
-        maxTileCacheSize: 100
+        maxTileCacheSize: 64
       });
     } catch (error) {
       console.error('[Hola Maps] MapLibre initialization failed:', error);
@@ -282,7 +324,7 @@ export default function MapView({
         if (!map.isStyleLoaded()) {
           applyFallbackStyle(
             map,
-            'Nền vector tải quá lâu. Hola Maps đã chuyển sang OpenStreetMap để vào bản đồ nhanh hơn.'
+            'Nền bản đồ chính tải quá lâu. Hola Maps đã chuyển sang OpenStreetMap để vào nhanh hơn.'
           );
         }
       }, MAP_FALLBACK_DELAY_MS);
