@@ -63,7 +63,12 @@ const PRIMARY_STYLE = MAPTILER_RASTER_STYLE || CUSTOM_STYLE_URL || DEFAULT_STYLE
 const PRIMARY_PROVIDER_NAME = MAPTILER_RASTER_STYLE
   ? 'MapTiler Raster'
   : (CUSTOM_STYLE_URL ? 'Custom map' : 'OpenFreeMap');
-const MAP_FALLBACK_DELAY_MS = MAPTILER_RASTER_STYLE ? 1200 : 1600;
+const MAP_FALLBACK_DELAY_MS = MAPTILER_RASTER_STYLE ? 8000 : 1600;
+const MAPTILER_STATIC_PREVIEW_URL = MAPTILER_KEY
+  ? 'https://api.maptiler.com/maps/' + encodeURIComponent(MAPTILER_MAP_ID) +
+    '/static/' + DEFAULT_CENTER[0] + ',' + DEFAULT_CENTER[1] +
+    ',11.7/1200x800.webp?attribution=false&key=' + encodeURIComponent(MAPTILER_KEY)
+  : '';
 const PROVIDER_CACHE_KEY = 'hola_maps_map_provider_v3';
 const PROVIDER_CACHE_TTL_MS = 15 * 60 * 1000;
 
@@ -184,6 +189,7 @@ export default function MapView({
   const [locationError, setLocationError] = useState('');
   const [mapStatus, setMapStatus] = useState('loading');
   const [mapError, setMapError] = useState('');
+  const [interactiveReady, setInteractiveReady] = useState(false);
 
   const validPlaces = useMemo(
     () => places.filter((place) => Number.isFinite(Number(place.lng)) && Number.isFinite(Number(place.lat))),
@@ -195,6 +201,7 @@ export default function MapView({
 
     fallbackAppliedRef.current = true;
     rememberProvider('raster');
+    setInteractiveReady(false);
     setMapStatus('fallback');
     setMapError(reason || 'Nguồn bản đồ chính chưa tải được. Đang chuyển sang nền bản đồ dự phòng.');
 
@@ -217,6 +224,7 @@ export default function MapView({
 
     fallbackAppliedRef.current = false;
     rememberProvider('primary');
+    setInteractiveReady(false);
     setMapStatus('loading');
     setMapError('');
 
@@ -284,6 +292,7 @@ export default function MapView({
         setMapError('');
       }
 
+      setInteractiveReady(true);
       window.requestAnimationFrame(() => map.resize());
     };
 
@@ -291,6 +300,7 @@ export default function MapView({
       if (map.isStyleLoaded()) {
         window.clearTimeout(styleTimerRef.current);
         setMapStatus(fallbackAppliedRef.current ? 'fallback-ready' : 'ready');
+        setInteractiveReady(true);
       }
     };
 
@@ -324,7 +334,9 @@ export default function MapView({
         if (!map.isStyleLoaded()) {
           applyFallbackStyle(
             map,
-            'Nền bản đồ chính tải quá lâu. Hola Maps đã chuyển sang OpenStreetMap để vào nhanh hơn.'
+            MAPTILER_RASTER_STYLE
+              ? 'MapTiler chưa phản hồi sau 8 giây. Hola Maps đã chuyển sang OpenStreetMap dự phòng.'
+              : 'Nền bản đồ chính tải quá lâu. Hola Maps đã chuyển sang OpenStreetMap để vào nhanh hơn.'
           );
         }
       }, MAP_FALLBACK_DELAY_MS);
@@ -347,6 +359,7 @@ export default function MapView({
       mapRef.current = null;
       fallbackAppliedRef.current = false;
       fittedRouteKeyRef.current = '';
+      setInteractiveReady(false);
     };
   }, []);
 
@@ -583,9 +596,20 @@ export default function MapView({
 
   return (
     <div className="map-wrap premium-map-wrap">
+      {MAPTILER_STATIC_PREVIEW_URL && !interactiveReady && (
+        <img
+          className="map-static-preview"
+          src={MAPTILER_STATIC_PREVIEW_URL}
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          fetchPriority="high"
+        />
+      )}
+
       <div ref={containerRef} className="hola-map" />
 
-      {showLoading && (
+      {showLoading && !MAPTILER_STATIC_PREVIEW_URL && (
         <div className="map-loading-skeleton" aria-hidden="true">
           <span className="skeleton-road road-1" />
           <span className="skeleton-road road-2" />
