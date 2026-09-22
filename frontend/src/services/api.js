@@ -80,6 +80,24 @@ export function getPlacesInBounds(bounds) {
   return unwrap(client.get('/places/bounds', { params: bounds }));
 }
 
+export function getDirections({
+  originLat,
+  originLng,
+  destinationLat,
+  destinationLng,
+  profile = 'driving'
+}) {
+  return unwrap(client.get('/directions', {
+    params: {
+      originLat,
+      originLng,
+      destinationLat,
+      destinationLng,
+      profile
+    }
+  }));
+}
+
 export function createContribution({ type, placeId, location, place, reason, photos = [] }) {
   const formData = new FormData();
   formData.append('type', type);

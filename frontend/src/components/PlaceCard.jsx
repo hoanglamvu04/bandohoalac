@@ -1,4 +1,13 @@
-import { ArrowUpRight, BadgeCheck, Camera, Clock3, Heart, MapPin, Star } from 'lucide-react';
+import {
+  ArrowUpRight,
+  BadgeCheck,
+  Camera,
+  Clock3,
+  Heart,
+  MapPin,
+  Navigation,
+  Star
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const gradients = [
@@ -14,14 +23,31 @@ function formatDistance(distance) {
   return value >= 1000 ? (value / 1000).toFixed(1) + ' km' : Math.round(value) + ' m';
 }
 
-export default function PlaceCard({ place, index = 0, compact = false, selected = false, onSelect }) {
+export default function PlaceCard({
+  place,
+  index = 0,
+  compact = false,
+  selected = false,
+  onSelect,
+  onDirections,
+  directionsActive = false,
+  directionsLoading = false
+}) {
   const distance = formatDistance(place.distance_m ?? place.distance);
   const cover = place.images?.[0] || place.image;
   const photoCount = Array.isArray(place.images) ? place.images.length : 0;
   const rating = Number(place.rating);
   const hasRating = Number.isFinite(rating) && rating > 0;
   const cardClass = 'place-card premium-place-card ' + (compact ? 'compact ' : '') + (selected ? 'selected' : '');
-  const coverStyle = cover ? { background: 'url("' + cover + '") center/cover' } : { background: gradients[index % gradients.length] };
+  const coverStyle = cover
+    ? { background: 'url("' + cover + '") center/cover' }
+    : { background: gradients[index % gradients.length] };
+
+  function handleDirections(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    onDirections?.(place);
+  }
 
   return (
     <article className={cardClass} onClick={() => onSelect?.(place)}>
@@ -35,7 +61,9 @@ export default function PlaceCard({ place, index = 0, compact = false, selected 
 
         <div className="place-cover-badges">
           <span className="place-category">{place.category || 'Khám phá'}</span>
-          {place.status === 'PUBLISHED' && <span className="place-published"><BadgeCheck size={13} /> Đã duyệt</span>}
+          {place.status === 'PUBLISHED' && (
+            <span className="place-published"><BadgeCheck size={13} /> Đã duyệt</span>
+          )}
         </div>
 
         <button
@@ -75,9 +103,24 @@ export default function PlaceCard({ place, index = 0, compact = false, selected 
 
         <div className="place-footer">
           <span className="verified"><BadgeCheck size={16} /> Dữ liệu đã xuất bản</span>
-          <Link to={'/place/' + place.id} onClick={(event) => event.stopPropagation()}>
-            Chi tiết <ArrowUpRight size={15} />
-          </Link>
+
+          <div className="place-card-actions">
+            {onDirections && (
+              <button
+                type="button"
+                className={directionsActive ? 'place-directions active' : 'place-directions'}
+                onClick={handleDirections}
+                disabled={directionsLoading}
+              >
+                <Navigation size={14} />
+                {directionsLoading ? 'Đang tính...' : directionsActive ? 'Đang chỉ đường' : 'Chỉ đường'}
+              </button>
+            )}
+
+            <Link to={'/place/' + place.id} onClick={(event) => event.stopPropagation()}>
+              Chi tiết <ArrowUpRight size={15} />
+            </Link>
+          </div>
         </div>
       </div>
     </article>

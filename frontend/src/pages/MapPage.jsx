@@ -1,19 +1,65 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Clock3,
   Compass,
+  ExternalLink,
   ListFilter,
+  LoaderCircle,
   MapPin,
   Navigation,
   PanelLeftClose,
   PanelLeftOpen,
-  RotateCcw
+  RotateCcw,
+  Route,
+  X
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import CategoryBar from '../components/CategoryBar.jsx';
 import MapView from '../components/MapView.jsx';
 import PlaceCard from '../components/PlaceCard.jsx';
 import SearchBox from '../components/SearchBox.jsx';
-import { getCategories, getNearbyPlaces, getPlaces } from '../services/api.js';
+import { getCategories, getDirections, getNearbyPlaces, getPlaces } from '../services/api.js';
+
+function getBrowserLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Trình duyệt này không hỗ trợ định vị.'));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => resolve({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracy: Math.round(position.coords.accuracy),
+        timestamp: position.timestamp
+      }),
+      (error) => {
+        const messages = {
+          1: 'Bạn cần cho phép truy cập vị trí để chỉ đường.',
+          2: 'Không thể xác định vị trí hiện tại.',
+          3: 'Yêu cầu định vị đã hết thời gian.'
+        };
+
+        reject(new Error(messages[error.code] || 'Không thể lấy vị trí hiện tại.'));
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
+    );
+  });
+}
+
+function formatRouteDistance(meters) {
+  const value = Number(meters) || 0;
+  return value >= 1000 ? (value / 1000).toFixed(1) + ' km' : Math.round(value) + ' m';
+}
+
+function formatRouteDuration(seconds) {
+  const minutes = Math.max(1, Math.round((Number(seconds) || 0) / 60));
+  if (minutes < 60) return minutes + ' phút';
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return hours + ' giờ' + (rest ? ' ' + rest + ' phút' : '');
+}
 
 export default function MapPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,6 +72,11 @@ export default function MapPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+
+  const [routeData, setRouteData] = useState(null);
+  const [routeDestination, setRouteDestination] = useState(null);
+  const [routeLoadingId, setRouteLoadingId] = useState(null);
+  const [routeError, setRouteError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -63,10 +114,11 @@ export default function MapPage() {
 
   useEffect(() => {
     if (!selectedId && filtered.length) setSelectedId(filtered[0].id);
-    if (selectedId && !filtered.some((place) => place.id === selectedId)) {
+
+    if (selectedId && !filtered.some((place) => place.id === selectedId) && !routeDestination) {
       setSelectedId(filtered[0]?.id || null);
     }
-  }, [filtered, selectedId]);
+  }, [filtered, selectedId, routeDestination]);
 
   function applySearch(term) {
     const params = new URLSearchParams(searchParams);
@@ -90,9 +142,11 @@ export default function MapPage() {
 
   async function handleUserLocation(location) {
     setUserLocation(location);
+
     try {
       const data = await getNearbyPlaces(location.lat, location.lng);
       const list = Array.isArray(data) ? data : data?.items;
+
       if (Array.isArray(list)) {
         setPlaces(list);
         setLoadError(false);
@@ -101,6 +155,52 @@ export default function MapPage() {
       setLoadError(true);
     }
   }
+
+  async function handleDirections(place) {
+    if (!Number.isFinite(Number(place.lat)) || !Number.isFinite(Number(place.lng))) {
+      setRouteError('Địa điểm này chưa có tọa độ hợp lệ.');
+      return;
+    }
+
+    setSelectedId(place.id);
+    setRouteDestination(place);
+    setRouteLoadingId(place.id);
+    setRouteError('');
+
+    try {
+      const origin = userLocation || await getBrowserLocation();
+      setUserLocation(origin);
+
+      const route = await getDirections({
+        originLat: origin.lat,
+        originLng: origin.lng,
+        destinationLat: Number(place.lat),
+        destinationLng: Number(place.lng),
+        profile: 'driving'
+      });
+
+      setRouteData(route);
+      setSidebarOpen(false);
+    } catch (error) {
+      setRouteData(null);
+      setRouteError(error.message || 'Không thể tính tuyến đường.');
+    } finally {
+      setRouteLoadingId(null);
+    }
+  }
+
+  function clearDirections() {
+    setRouteData(null);
+    setRouteDestination(null);
+    setRouteError('');
+  }
+
+  const googleDirectionsUrl = routeData && routeDestination
+    ? 'https://www.google.com/maps/dir/?api=1&origin=' +
+      routeData.origin.lat + ',' + routeData.origin.lng +
+      '&destination=' + routeDestination.lat + ',' + routeDestination.lng +
+      '&travelmode=driving'
+    : '';
 
   return (
     <main className="map-page premium-map-page">
@@ -122,7 +222,7 @@ export default function MapPage() {
         <div className="map-result-toolbar">
           <div className="map-result-meta">
             <span><ListFilter size={16} /> {filtered.length} địa điểm</span>
-            {userLocation && <span><Navigation size={15} /> Ưu tiên gần bạn</span>}
+            {userLocation && <span><Navigation size={15} /> Đã có vị trí của bạn</span>}
           </div>
 
           {(query || category !== 'all') && (
@@ -165,6 +265,9 @@ export default function MapPage() {
               compact
               selected={selectedId === place.id}
               onSelect={(item) => setSelectedId(item.id)}
+              onDirections={handleDirections}
+              directionsActive={routeDestination?.id === place.id && Boolean(routeData)}
+              directionsLoading={routeLoadingId === place.id}
             />
           ))}
         </div>
@@ -182,11 +285,57 @@ export default function MapPage() {
           <b>{filtered.length} điểm đang hiển thị</b>
         </div>
 
+        {routeDestination && (
+          <div className="directions-panel">
+            <div className="directions-panel-head">
+              <div className="directions-icon"><Route size={20} /></div>
+              <div>
+                <span>CHỈ ĐƯỜNG TỪ VỊ TRÍ CỦA BẠN</span>
+                <strong>{routeDestination.name}</strong>
+              </div>
+              <button type="button" onClick={clearDirections} aria-label="Đóng chỉ đường">
+                <X size={17} />
+              </button>
+            </div>
+
+            {routeLoadingId && (
+              <div className="directions-loading">
+                <LoaderCircle size={17} className="spin" />
+                Đang lấy GPS và tính tuyến đường...
+              </div>
+            )}
+
+            {routeError && !routeLoadingId && (
+              <div className="directions-error">{routeError}</div>
+            )}
+
+            {routeData && !routeLoadingId && (
+              <>
+                <div className="directions-stats">
+                  <div><Navigation size={16} /><span><small>Khoảng cách</small><b>{formatRouteDistance(routeData.distanceMeters)}</b></span></div>
+                  <div><Clock3 size={16} /><span><small>Dự kiến</small><b>{formatRouteDuration(routeData.durationSeconds)}</b></span></div>
+                </div>
+
+                <div className="directions-actions">
+                  <button type="button" onClick={() => setSidebarOpen(true)}>
+                    <ListFilter size={15} /> Xem danh sách
+                  </button>
+                  <a href={googleDirectionsUrl} target="_blank" rel="noreferrer">
+                    <ExternalLink size={15} /> Mở Google Maps
+                  </a>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         <MapView
           places={filtered}
           selectedPlaceId={selectedId}
           onSelectPlace={(place) => setSelectedId(place.id)}
           onUserLocation={handleUserLocation}
+          userLocation={userLocation}
+          route={routeData}
         />
       </div>
     </main>

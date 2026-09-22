@@ -1,0 +1,242 @@
+
+/* ==========================================================================
+   In-map directions
+   ========================================================================== */
+
+.place-card-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:7px;
+}
+
+.place-directions{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  min-height:30px;
+  padding:6px 9px;
+  border:1px solid rgba(15,57,48,.1);
+  border-radius:9px;
+  color:#355f54;
+  background:#edf5f0;
+  font-size:10px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.place-directions:hover{
+  color:#fff;
+  border-color:#15483d;
+  background:#15483d;
+}
+
+.place-directions.active{
+  color:#5f4510;
+  border-color:rgba(201,149,47,.25);
+  background:#fff1c8;
+}
+
+.place-directions:disabled{
+  cursor:wait;
+  opacity:.65;
+}
+
+.directions-panel{
+  position:absolute;
+  z-index:9;
+  top:70px;
+  left:18px;
+  width:min(390px,calc(100% - 120px));
+  padding:15px;
+  border:1px solid rgba(15,57,48,.09);
+  border-radius:18px;
+  color:#0b2f28;
+  background:rgba(255,254,251,.96);
+  box-shadow:0 22px 56px rgba(8,38,32,.18);
+  backdrop-filter:blur(14px);
+}
+
+.directions-panel-head{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+}
+
+.directions-icon{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  border-radius:13px;
+  color:#0b2f28;
+  background:#f6c453;
+}
+
+.directions-panel-head>div:nth-child(2){
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.directions-panel-head span{
+  color:#7d8a86;
+  font-size:8px;
+  font-weight:950;
+  letter-spacing:.12em;
+}
+
+.directions-panel-head strong{
+  overflow:hidden;
+  font-size:14px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.directions-panel-head>button{
+  width:32px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  border:0;
+  border-radius:10px;
+  color:#63746e;
+  background:#eef2ef;
+  cursor:pointer;
+}
+
+.directions-loading,
+.directions-error{
+  margin-top:12px;
+  padding:10px 11px;
+  border-radius:11px;
+  font-size:11px;
+  font-weight:800;
+}
+
+.directions-loading{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  color:#48645b;
+  background:#edf4ef;
+}
+
+.directions-error{
+  color:#8e3f30;
+  background:#fff0eb;
+  border:1px solid #f1cabc;
+}
+
+.directions-stats{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:12px;
+}
+
+.directions-stats>div{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  align-items:center;
+  gap:8px;
+  padding:10px;
+  border-radius:12px;
+  background:#f3f6f3;
+}
+
+.directions-stats>div>svg{
+  color:#39725f;
+}
+
+.directions-stats span{
+  display:flex;
+  flex-direction:column;
+  gap:1px;
+}
+
+.directions-stats small{
+  color:#7b8984;
+  font-size:9px;
+}
+
+.directions-stats b{
+  font-size:13px;
+}
+
+.directions-actions{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+}
+
+.directions-actions button,
+.directions-actions a{
+  min-height:35px;
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:8px 10px;
+  border:0;
+  border-radius:10px;
+  color:#0b2f28;
+  background:#edf3ef;
+  text-decoration:none;
+  font-size:10px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.directions-actions a{
+  color:#fff;
+  background:#0b2f28;
+}
+
+.hola-route-start-marker{
+  width:24px;
+  height:24px;
+  display:grid;
+  place-items:center;
+  border:4px solid #fff;
+  border-radius:50%;
+  color:#fff;
+  background:#2f7ef7;
+  box-shadow:0 0 0 6px rgba(47,126,247,.16),0 8px 18px rgba(47,126,247,.22);
+}
+
+.spin{
+  animation:hm-route-spin .75s linear infinite;
+}
+
+@keyframes hm-route-spin{
+  to{transform:rotate(360deg)}
+}
+
+@media(max-width:760px){
+  .directions-panel{
+    top:60px;
+    left:12px;
+    width:calc(100% - 24px);
+  }
+
+  .directions-actions{
+    flex-direction:column;
+  }
+
+  .premium-map-sidebar.open ~ .map-stage .directions-panel{
+    display:none;
+  }
+
+  .place-card-actions{
+    gap:5px;
+  }
+
+  .place-directions{
+    padding:6px 7px;
+  }
+}

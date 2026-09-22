@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FullscreenControl,
+  LngLatBounds,
   Map as MapLibreMap,
   Marker,
   NavigationControl,
@@ -32,6 +33,10 @@ const FALLBACK_RASTER_STYLE = {
   ]
 };
 
+const ROUTE_SOURCE_ID = 'hola-route-source';
+const ROUTE_CASING_LAYER_ID = 'hola-route-casing';
+const ROUTE_LAYER_ID = 'hola-route-line';
+
 function escapeHtml(value = '') {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -56,13 +61,36 @@ function removeMarkers(markers) {
   markers.forEach((marker) => marker.remove());
 }
 
-export default function MapView({ places = [], selectedPlaceId, onSelectPlace, onUserLocation }) {
+function removeRouteLayers(map) {
+  if (!map || !map.isStyleLoaded()) return;
+  if (map.getLayer(ROUTE_LAYER_ID)) map.removeLayer(ROUTE_LAYER_ID);
+  if (map.getLayer(ROUTE_CASING_LAYER_ID)) map.removeLayer(ROUTE_CASING_LAYER_ID);
+  if (map.getSource(ROUTE_SOURCE_ID)) map.removeSource(ROUTE_SOURCE_ID);
+}
+
+function toFeature(geometry) {
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry
+  };
+}
+
+export default function MapView({
+  places = [],
+  selectedPlaceId,
+  onSelectPlace,
+  onUserLocation,
+  userLocation,
+  route
+}) {
   const mapRef = useRef(null);
   const containerRef = useRef(null);
   const markersRef = useRef([]);
   const userMarkerRef = useRef(null);
   const fallbackAppliedRef = useRef(false);
   const styleTimerRef = useRef(null);
+  const fittedRouteKeyRef = useRef('');
 
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState('');
@@ -92,6 +120,7 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
 
   function reloadMapStyle() {
     const map = mapRef.current;
+
     if (!map) {
       window.location.reload();
       return;
@@ -161,7 +190,10 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
       console.error('[Hola Maps] MapLibre error:', event?.error || event);
 
       if (!fallbackAppliedRef.current && !map.isStyleLoaded()) {
-        applyFallbackStyle(map, 'Không tải được nền OpenFreeMap. Hola Maps đã tự chuyển sang nền OpenStreetMap dự phòng.');
+        applyFallbackStyle(
+          map,
+          'Không tải được nền OpenFreeMap. Hola Maps đã tự chuyển sang nền OpenStreetMap dự phòng.'
+        );
         return;
       }
 
@@ -200,6 +232,7 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
       map.remove();
       mapRef.current = null;
       fallbackAppliedRef.current = false;
+      fittedRouteKeyRef.current = '';
     };
   }, []);
 
@@ -254,8 +287,127 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
 
   useEffect(() => {
     const map = mapRef.current;
+
+    if (!map) return;
+
+    if (!userLocation || !Number.isFinite(Number(userLocation.lat)) || !Number.isFinite(Number(userLocation.lng))) {
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove();
+        userMarkerRef.current = null;
+      }
+      return;
+    }
+
+    if (userMarkerRef.current) userMarkerRef.current.remove();
+
+    const dot = document.createElement('div');
+    dot.className = 'user-location-dot premium-user-location-dot hola-route-start-marker';
+    dot.innerHTML = '<span></span>';
+
+    userMarkerRef.current = new Marker({ element: dot })
+      .setLngLat([Number(userLocation.lng), Number(userLocation.lat)])
+      .setPopup(
+        new Popup({ offset: 18, className: 'hola-premium-popup' }).setHTML(
+          '<div class="map-popup premium-map-popup">' +
+            '<span class="map-popup-category">VỊ TRÍ HIỆN TẠI</span>' +
+            '<strong>Bạn đang ở đây</strong>' +
+            '<small>' +
+              (userLocation.accuracy ? 'Độ chính xác ±' + escapeHtml(userLocation.accuracy) + ' m' : 'Điểm bắt đầu') +
+            '</small>' +
+          '</div>'
+        )
+      )
+      .addTo(map);
+  }, [userLocation]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const renderRoute = () => {
+      if (!map.isStyleLoaded()) return;
+
+      if (!route?.geometry?.coordinates?.length) {
+        removeRouteLayers(map);
+        fittedRouteKeyRef.current = '';
+        return;
+      }
+
+      const feature = toFeature(route.geometry);
+      const source = map.getSource(ROUTE_SOURCE_ID);
+
+      if (source) {
+        source.setData(feature);
+      } else {
+        map.addSource(ROUTE_SOURCE_ID, {
+          type: 'geojson',
+          data: feature
+        });
+
+        map.addLayer({
+          id: ROUTE_CASING_LAYER_ID,
+          type: 'line',
+          source: ROUTE_SOURCE_ID,
+          layout: {
+            'line-cap': 'round',
+            'line-join': 'round'
+          },
+          paint: {
+            'line-color': '#ffffff',
+            'line-width': 9,
+            'line-opacity': 0.96
+          }
+        });
+
+        map.addLayer({
+          id: ROUTE_LAYER_ID,
+          type: 'line',
+          source: ROUTE_SOURCE_ID,
+          layout: {
+            'line-cap': 'round',
+            'line-join': 'round'
+          },
+          paint: {
+            'line-color': '#d59a29',
+            'line-width': 5.5,
+            'line-opacity': 1
+          }
+        });
+      }
+
+      const routeKey =
+        route.origin?.lng + ',' + route.origin?.lat + '>' +
+        route.destination?.lng + ',' + route.destination?.lat;
+
+      if (fittedRouteKeyRef.current !== routeKey) {
+        const bounds = new LngLatBounds();
+        route.geometry.coordinates.forEach((coordinate) => bounds.extend(coordinate));
+
+        if (!bounds.isEmpty()) {
+          map.fitBounds(bounds, {
+            padding: { top: 110, right: 80, bottom: 80, left: 80 },
+            duration: 900,
+            maxZoom: 16
+          });
+        }
+
+        fittedRouteKeyRef.current = routeKey;
+      }
+    };
+
+    renderRoute();
+    map.on('styledata', renderRoute);
+
+    return () => {
+      map.off('styledata', renderRoute);
+    };
+  }, [route, mapStatus]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     const selected = validPlaces.find((place) => place.id === selectedPlaceId);
-    if (!map || !selected) return;
+
+    if (!map || !selected || route) return;
 
     map.flyTo({
       center: [Number(selected.lng), Number(selected.lat)],
@@ -263,7 +415,7 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
       duration: 850,
       essential: true
     });
-  }, [selectedPlaceId, validPlaces]);
+  }, [selectedPlaceId, validPlaces, route]);
 
   function locateUser() {
     if (!navigator.geolocation) {
@@ -276,7 +428,7 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const userLocation = {
+        const location = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
           accuracy: Math.round(position.coords.accuracy),
@@ -286,34 +438,15 @@ export default function MapView({ places = [], selectedPlaceId, onSelectPlace, o
         const map = mapRef.current;
 
         if (map) {
-          if (userMarkerRef.current) userMarkerRef.current.remove();
-
-          const dot = document.createElement('div');
-          dot.className = 'user-location-dot premium-user-location-dot';
-          dot.innerHTML = '<span></span>';
-
-          userMarkerRef.current = new Marker({ element: dot })
-            .setLngLat([userLocation.lng, userLocation.lat])
-            .setPopup(
-              new Popup({ offset: 18, className: 'hola-premium-popup' }).setHTML(
-                '<div class="map-popup premium-map-popup">' +
-                  '<span class="map-popup-category">VỊ TRÍ HIỆN TẠI</span>' +
-                  '<strong>Bạn đang ở đây</strong>' +
-                  '<small>Độ chính xác ±' + escapeHtml(userLocation.accuracy) + ' m</small>' +
-                '</div>'
-              )
-            )
-            .addTo(map);
-
           map.flyTo({
-            center: [userLocation.lng, userLocation.lat],
+            center: [location.lng, location.lat],
             zoom: 14.6,
             duration: 900,
             essential: true
           });
         }
 
-        onUserLocation?.(userLocation);
+        onUserLocation?.(location);
         setLocating(false);
       },
       (error) => {

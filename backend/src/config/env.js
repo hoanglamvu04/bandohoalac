@@ -20,5 +20,7 @@ export const env = {
   uploadDir: process.env.UPLOAD_DIR || 'uploads',
   maxUploadFileSizeMb: Number(process.env.MAX_UPLOAD_FILE_SIZE_MB) || 5,
   maxUploadFileCount: Number(process.env.MAX_UPLOAD_FILE_COUNT) || 8,
-  publicBaseUrl: process.env.PUBLIC_BASE_URL || `http://localhost:${Number(process.env.PORT) || 5000}`
+  publicBaseUrl: process.env.PUBLIC_BASE_URL || `http://localhost:${Number(process.env.PORT) || 5000}`,
+  routingBaseUrl: process.env.ROUTING_BASE_URL || 'https://router.project-osrm.org',
+  routingTimeoutMs: Number(process.env.ROUTING_TIMEOUT_MS) || 10000
 };

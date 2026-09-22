@@ -15,6 +15,7 @@ import contributionsRoutes from './routes/contributions.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import usersRoutes from './routes/users.routes.js';
 import leaderboardRoutes from './routes/leaderboard.routes.js';
+import directionsRoutes from './routes/directions.routes.js';
 
 export function createApp() {
   const app = express();
@@ -40,6 +41,7 @@ export function createApp() {
   app.use('/api/admin', adminRoutes);
   app.use('/api/users', usersRoutes);
   app.use('/api/leaderboard', leaderboardRoutes);
+  app.use('/api/directions', directionsRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
