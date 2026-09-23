@@ -60,6 +60,28 @@ function emptyFeatureCollection() {
   return { type: 'FeatureCollection', features: [] };
 }
 
+function loadExternalScript(src, globalName) {
+  if (window[globalName]) return Promise.resolve(window[globalName]);
+
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[data-hola-src="' + src + '"]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(window[globalName]), { once: true });
+      existing.addEventListener('error', reject, { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    script.dataset.holaSrc = src;
+    script.onload = () => resolve(window[globalName]);
+    script.onerror = () => reject(new Error('Không tải được thư viện bản đồ: ' + src));
+    document.head.appendChild(script);
+  });
+}
+
 function addCoverage(map) {
   if (!map.isStyleLoaded() || map.getSource(COVERAGE_SOURCE_ID)) return;
   map.addSource(COVERAGE_SOURCE_ID, { type: 'geojson', data: SERVICE_AREAS_GEOJSON });
@@ -317,13 +339,15 @@ export default function MapView({
 
     const initialize = async () => {
       try {
-        const [maplibre, pmtiles] = await Promise.all([
+        const [maplibre] = await Promise.all([
           import('maplibre-gl'),
-          import('pmtiles'),
-          import('maplibre-gl/dist/maplibre-gl.css')
+          import('maplibre-gl/dist/maplibre-gl.css'),
+          loadExternalScript('https://unpkg.com/pmtiles@3.0.7/dist/pmtiles.js', 'pmtiles'),
+          loadExternalScript('https://unpkg.com/@protomaps/basemaps@5/dist/basemaps.js', 'basemaps')
         ]);
         if (cancelled || !containerRef.current) return;
 
+        const pmtiles = window.pmtiles;
         const protocol = new pmtiles.Protocol();
         try {
           maplibre.addProtocol('pmtiles', protocol.tile);
