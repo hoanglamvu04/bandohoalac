@@ -368,6 +368,21 @@ export default function MapPage() {
                 <span><Clock3 size={16} /><b>{formatDuration(routeData.durationSeconds)}</b><small>Dự kiến</small></span>
               </div>
 
+              {!!routeData.hazards?.length && (
+                <div className="hm-route-hazards">
+                  <div className="hm-route-hazards-head">
+                    <TriangleAlert size={15} />
+                    <b>{routeData.hazards.length} cảnh báo trên tuyến</b>
+                  </div>
+                  {routeData.hazards.slice(0, 4).map((hazard) => (
+                    <div className={'hm-route-hazard severity-' + String(hazard.severity || 'INFO').toLowerCase()} key={hazard.id}>
+                      <span>{hazard.type === 'FLOOD' ? 'Ngập' : hazard.type === 'ROAD_CLOSURE' ? 'Đường cấm' : 'Cảnh báo'}</span>
+                      <b>{hazard.name || hazard.description || 'Cần lưu ý'}</b>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="hm-route-source">
                 <span>ENGINE</span>
                 <b>{routeData.provider || 'OSRM'}</b>
