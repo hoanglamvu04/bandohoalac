@@ -511,7 +511,15 @@ export default function MapView({
     <div className="hm-map-shell">
       {!interactiveReady && (
         STATIC_PREVIEW_URL ? (
-          <img className="hm-map-preview" src={STATIC_PREVIEW_URL} alt="" aria-hidden="true" />
+          <img
+            className="hm-map-preview"
+            src={STATIC_PREVIEW_URL}
+            alt=""
+            aria-hidden="true"
+            onError={(event) => {
+              event.currentTarget.style.display = 'none';
+            }}
+          />
         ) : (
           <div className="hm-map-placeholder">
             <div className="hm-map-placeholder-grid" />
