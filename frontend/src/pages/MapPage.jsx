@@ -23,7 +23,7 @@ import { Link } from 'react-router-dom';
 import MapView from '../components/MapView.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getDirections, getMapLayers, getPlaces } from '../services/api.js';
-import { BASEMAP_OPTIONS } from '../mapConfig.js';
+import { LOCAL_BASEMAP_OPTIONS as BASEMAP_OPTIONS } from '../localBasemap.js';
 
 const LAYERS = [
   { type: 'TERRAIN', label: 'Địa hình', icon: Mountain, tone: 'green' },
