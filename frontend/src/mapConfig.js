@@ -40,18 +40,18 @@ export const TILE_PROVIDER = LOCAL_STYLE_URL
 export const TILE_URL = LOCAL_TILE_URL || (
   MAPTILER_KEY
     ? 'https://api.maptiler.com/maps/' + encodeURIComponent(MAPTILER_MAP_ID) +
-      '/512/{z}/{x}/{y}.webp?key=' + encodeURIComponent(MAPTILER_KEY)
+      '/256/{z}/{x}/{y}@2x.webp?key=' + encodeURIComponent(MAPTILER_KEY)
     : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 );
 
 const TILE_SIZE = LOCAL_TILE_URL
   ? LOCAL_TILE_SIZE
-  : (MAPTILER_KEY ? 512 : 256);
+  : 256;
 
 export const STATIC_PREVIEW_URL = MAPTILER_KEY && !LOCAL_STYLE_URL && !LOCAL_TILE_URL
   ? 'https://api.maptiler.com/maps/' + encodeURIComponent(MAPTILER_MAP_ID) +
     '/static/' + DEFAULT_CENTER[0] + ',' + DEFAULT_CENTER[1] +
-    ',' + DEFAULT_ZOOM + '/1200x800.webp?attribution=false&key=' + encodeURIComponent(MAPTILER_KEY)
+    ',' + DEFAULT_ZOOM + '/1200x800@2x.webp?attribution=false&key=' + encodeURIComponent(MAPTILER_KEY)
   : '';
 
 export function isInsideServiceCoverage(lng, lat) {
