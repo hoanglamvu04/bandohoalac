@@ -330,7 +330,7 @@ export default function MapPage() {
             <button type="button" onClick={() => startDirections(selectedPlace)}>
               <Navigation size={16} /> Chỉ đường
             </button>
-            <Link to={'/places/' + (selectedPlace.slug || selectedPlace.id)}>
+            <Link to={'/place/' + selectedPlace.id}>
               Chi tiết
             </Link>
           </div>
