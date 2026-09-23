@@ -1,5 +1,3 @@
-import { layers, namedFlavor } from '@protomaps/basemaps';
-
 const GLYPHS_URL = 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf';
 const SPRITE_BASE = 'https://protomaps.github.io/basemaps-assets/sprites/v4/';
 
@@ -20,6 +18,9 @@ export const LOCAL_BASEMAP_OPTIONS = [
 ];
 
 export function createPmtilesStyle(mode = 'streets') {
+  const basemaps = window.basemaps;
+  if (!basemaps) throw new Error('Protomaps basemap assets are not loaded.');
+
   const flavorName = FLAVORS[mode] || 'light';
   return {
     version: 8,
@@ -32,7 +33,7 @@ export function createPmtilesStyle(mode = 'streets') {
         attribution: '© OpenStreetMap contributors · Protomaps'
       }
     },
-    layers: layers('protomaps', namedFlavor(flavorName), {
+    layers: basemaps.layers('protomaps', basemaps.namedFlavor(flavorName), {
       lang: 'vi'
     })
   };
