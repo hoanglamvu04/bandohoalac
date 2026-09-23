@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, LocateFixed, RefreshCcw } from 'lucide-react';
+import { LocateFixed, RefreshCcw } from 'lucide-react';
 import {
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
@@ -13,11 +13,22 @@ import {
   isInsideServiceCoverage
 } from '../mapConfig.js';
 
+const DATA_SOURCE_ID = 'hola-data-layers';
 const ROUTE_SOURCE_ID = 'hola-route-source';
-const ROUTE_CASING_LAYER_ID = 'hola-route-casing';
-const ROUTE_LAYER_ID = 'hola-route-line';
 const COVERAGE_SOURCE_ID = 'hola-service-areas';
-const COVERAGE_LINE_LAYER_ID = 'hola-service-areas-line';
+
+const DATA_LAYER_IDS = {
+  TERRAIN: 'hm-terrain',
+  WATER: 'hm-water',
+  BUILDING: 'hm-building',
+  PLANNING: 'hm-planning',
+  FLOOD: 'hm-flood',
+  ROAD: 'hm-road',
+  ROAD_CLOSURE: 'hm-road-closure',
+  LANDMARK: 'hm-landmark',
+  EVENT: 'hm-event',
+  ALERT: 'hm-alert'
+};
 
 function escapeHtml(value = '') {
   return String(value)
@@ -35,7 +46,6 @@ function categoryIcon(category = '') {
   if (normalized.includes('home')) return '🏡';
   if (normalized.includes('villa')) return '🏘️';
   if (normalized.includes('check')) return '📸';
-  if (normalized.includes('trải')) return '🎡';
   return '📍';
 }
 
@@ -43,36 +53,221 @@ function removeMarkers(markers) {
   markers.forEach((marker) => marker.remove());
 }
 
-function removeRouteLayers(map) {
-  if (!map || !map.isStyleLoaded()) return;
-  if (map.getLayer(ROUTE_LAYER_ID)) map.removeLayer(ROUTE_LAYER_ID);
-  if (map.getLayer(ROUTE_CASING_LAYER_ID)) map.removeLayer(ROUTE_CASING_LAYER_ID);
-  if (map.getSource(ROUTE_SOURCE_ID)) map.removeSource(ROUTE_SOURCE_ID);
+function emptyFeatureCollection() {
+  return { type: 'FeatureCollection', features: [] };
 }
 
-function toFeature(geometry) {
-  return { type: 'Feature', properties: {}, geometry };
-}
-
-function addCoverageOutline(map) {
-  if (!map?.isStyleLoaded() || map.getSource(COVERAGE_SOURCE_ID)) return;
-
-  map.addSource(COVERAGE_SOURCE_ID, {
-    type: 'geojson',
-    data: SERVICE_AREAS_GEOJSON
-  });
-
+function addCoverage(map) {
+  if (!map.isStyleLoaded() || map.getSource(COVERAGE_SOURCE_ID)) return;
+  map.addSource(COVERAGE_SOURCE_ID, { type: 'geojson', data: SERVICE_AREAS_GEOJSON });
   map.addLayer({
-    id: COVERAGE_LINE_LAYER_ID,
+    id: 'hm-service-area-line',
     type: 'line',
     source: COVERAGE_SOURCE_ID,
     paint: {
-      'line-color': '#0f4a3d',
-      'line-width': 1.25,
-      'line-opacity': 0.24,
+      'line-color': '#0d5144',
+      'line-width': 1.2,
+      'line-opacity': 0.22,
       'line-dasharray': [2, 2]
     }
   });
+}
+
+function addDataLayers(map, data) {
+  if (!map.isStyleLoaded()) return;
+
+  if (!map.getSource(DATA_SOURCE_ID)) {
+    map.addSource(DATA_SOURCE_ID, {
+      type: 'geojson',
+      data: data || emptyFeatureCollection()
+    });
+  }
+
+  const add = (spec) => {
+    if (!map.getLayer(spec.id)) map.addLayer(spec);
+  };
+
+  add({
+    id: DATA_LAYER_IDS.TERRAIN,
+    type: 'fill',
+    source: DATA_SOURCE_ID,
+    filter: ['==', ['get', 'layerType'], 'TERRAIN'],
+    paint: {
+      'fill-color': '#d8ddca',
+      'fill-opacity': 0.34
+    }
+  });
+
+  add({
+    id: DATA_LAYER_IDS.WATER,
+    type: 'fill',
+    source: DATA_SOURCE_ID,
+    filter: ['==', ['get', 'layerType'], 'WATER'],
+    paint: {
+      'fill-color': '#8ecbd5',
+      'fill-opacity': 0.72,
+      'fill-outline-color': '#6fb4c1'
+    }
+  });
+
+  add({
+    id: DATA_LAYER_IDS.BUILDING,
+    type: 'fill',
+    source: DATA_SOURCE_ID,
+    filter: ['==', ['get', 'layerType'], 'BUILDING'],
+    paint: {
+      'fill-color': '#c9c4b8',
+      'fill-opacity': 0.65,
+      'fill-outline-color': '#aaa397'
+    }
+  });
+
+  add({
+    id: DATA_LAYER_IDS.PLANNING,
+    type: 'fill',
+    source: DATA_SOURCE_ID,
+    filter: ['==', ['get', 'layerType'], 'PLANNING'],
+    paint: {
+      'fill-color': '#a78bfa',
+      'fill-opacity': 0.18,
+      'fill-outline-color': '#7c3aed'
+    }
+  });
+
+  add({
+    id: DATA_LAYER_IDS.FLOOD,
+    type: 'fill',
+    source: DATA_SOURCE_ID,
+    filter: ['==', ['get', 'layerType'], 'FLOOD'],
+    paint: {
+      'fill-color': [
+        'match',
+        ['get', 'severity'],
+        'CRITICAL', '#be123c',
+        'HIGH', '#dc2626',
+        'MEDIUM', '#f59e0b',
+        'LOW', '#38bdf8',
+        '#60a5fa'
+      ],
+      'fill-opacity': 0.34,
+      'fill-outline-color': '#2563eb'
+    }
+  });
+
+  add({
+    id: DATA_LAYER_IDS.ROAD,
+    type: 'line',
+    source: DATA_SOURCE_ID,
+    filter: ['==', ['get', 'layerType'], 'ROAD'],
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: {
+      'line-color': '#475569',
+      'line-width': ['interpolate', ['linear'], ['zoom'], 12, 1.4, 17, 5],
+      'line-opacity': 0.78
+    }
+  });
+
+  add({
+    id: DATA_LAYER_IDS.ROAD_CLOSURE,
+    type: 'line',
+    source: DATA_SOURCE_ID,
+    filter: ['==', ['get', 'layerType'], 'ROAD_CLOSURE'],
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: {
+      'line-color': '#dc2626',
+      'line-width': 5,
+      'line-dasharray': [1.5, 1.3]
+    }
+  });
+
+  for (const [type, color, radius] of [
+    ['LANDMARK', '#0f766e', 6],
+    ['EVENT', '#7c3aed', 7],
+    ['ALERT', '#dc2626', 8]
+  ]) {
+    add({
+      id: DATA_LAYER_IDS[type],
+      type: 'circle',
+      source: DATA_SOURCE_ID,
+      filter: ['==', ['get', 'layerType'], type],
+      paint: {
+        'circle-radius': radius,
+        'circle-color': color,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff'
+      }
+    });
+  }
+}
+
+function setLayerVisibility(map, activeLayers) {
+  if (!map?.isStyleLoaded()) return;
+  Object.entries(DATA_LAYER_IDS).forEach(([type, id]) => {
+    if (map.getLayer(id)) {
+      map.setLayoutProperty(id, 'visibility', activeLayers.includes(type) ? 'visible' : 'none');
+    }
+  });
+}
+
+function renderRoute(map, route, maplibre, fittedRouteKeyRef) {
+  if (!map?.isStyleLoaded()) return;
+
+  if (!route?.geometry?.coordinates?.length) {
+    ['hm-route-line', 'hm-route-casing'].forEach((id) => {
+      if (map.getLayer(id)) map.removeLayer(id);
+    });
+    if (map.getSource(ROUTE_SOURCE_ID)) map.removeSource(ROUTE_SOURCE_ID);
+    fittedRouteKeyRef.current = '';
+    return;
+  }
+
+  const coordinates = route.geometry.coordinates.filter(([lng, lat]) =>
+    isInsideServiceCoverage(lng, lat)
+  );
+  if (coordinates.length < 2) return;
+
+  const feature = {
+    type: 'Feature',
+    properties: {},
+    geometry: { ...route.geometry, coordinates }
+  };
+
+  const source = map.getSource(ROUTE_SOURCE_ID);
+  if (source) {
+    source.setData(feature);
+  } else {
+    map.addSource(ROUTE_SOURCE_ID, { type: 'geojson', data: feature });
+    map.addLayer({
+      id: 'hm-route-casing',
+      type: 'line',
+      source: ROUTE_SOURCE_ID,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#ffffff', 'line-width': 10, 'line-opacity': 0.95 }
+    });
+    map.addLayer({
+      id: 'hm-route-line',
+      type: 'line',
+      source: ROUTE_SOURCE_ID,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#0d5144', 'line-width': 6, 'line-opacity': 1 }
+    });
+  }
+
+  const routeKey = route.origin?.lng + ',' + route.origin?.lat + '>' +
+    route.destination?.lng + ',' + route.destination?.lat;
+
+  if (fittedRouteKeyRef.current !== routeKey) {
+    const bounds = new maplibre.LngLatBounds();
+    coordinates.forEach((coordinate) => bounds.extend(coordinate));
+    if (!bounds.isEmpty()) {
+      map.fitBounds(bounds, {
+        padding: { top: 120, right: 380, bottom: 100, left: 390 },
+        duration: 650,
+        maxZoom: 16
+      });
+    }
+    fittedRouteKeyRef.current = routeKey;
+  }
 }
 
 export default function MapView({
@@ -81,7 +276,10 @@ export default function MapView({
   onSelectPlace,
   onUserLocation,
   userLocation,
-  route
+  route,
+  mapData = emptyFeatureCollection(),
+  activeLayers = [],
+  onViewportChange
 }) {
   const mapRef = useRef(null);
   const maplibreRef = useRef(null);
@@ -90,52 +288,35 @@ export default function MapView({
   const userMarkerRef = useRef(null);
   const fittedRouteKeyRef = useRef('');
 
-  const [locating, setLocating] = useState(false);
-  const [locationError, setLocationError] = useState('');
-  const [mapStatus, setMapStatus] = useState('loading');
-  const [mapError, setMapError] = useState('');
   const [interactiveReady, setInteractiveReady] = useState(false);
+  const [mapError, setMapError] = useState('');
+  const [locating, setLocating] = useState(false);
 
   const validPlaces = useMemo(
-    () => places.filter((place) => {
-      const lng = Number(place.lng);
-      const lat = Number(place.lat);
-      return Number.isFinite(lng) && Number.isFinite(lat) && isInsideServiceCoverage(lng, lat);
-    }),
+    () => places.filter((place) =>
+      Number.isFinite(Number(place.lng)) &&
+      Number.isFinite(Number(place.lat)) &&
+      isInsideServiceCoverage(place.lng, place.lat)
+    ),
     [places]
   );
-
-  function reloadMap() {
-    window.location.reload();
-  }
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return undefined;
 
     let cancelled = false;
     let idleHandle = null;
-    let paintTimer = null;
 
-    const initializeMap = async () => {
-      if (cancelled || !containerRef.current || mapRef.current) return;
-
+    const initialize = async () => {
       try {
         const [maplibre] = await Promise.all([
           import('maplibre-gl'),
           import('maplibre-gl/dist/maplibre-gl.css')
         ]);
-
-        if (cancelled || !containerRef.current || mapRef.current) return;
+        if (cancelled || !containerRef.current) return;
 
         maplibreRef.current = maplibre;
-        const {
-          Map: MapLibreMap,
-          NavigationControl,
-          FullscreenControl,
-          ScaleControl
-        } = maplibre;
-
-        const map = new MapLibreMap({
+        const map = new maplibre.Map({
           container: containerRef.current,
           style: createLocalBasemapStyle(),
           center: DEFAULT_CENTER,
@@ -143,139 +324,125 @@ export default function MapView({
           minZoom: MIN_ZOOM,
           maxZoom: MAX_ZOOM,
           maxBounds: MAP_COVERAGE_BOUNDS,
-          attributionControl: true,
-          fadeDuration: 0,
-          refreshExpiredTiles: false,
           renderWorldCopies: false,
-          maxTileCacheSize: 18,
-          cooperativeGestures: false
+          refreshExpiredTiles: false,
+          fadeDuration: 0,
+          maxTileCacheSize: 18
         });
 
         mapRef.current = map;
-        map.addControl(new NavigationControl({ visualizePitch: false }), 'top-right');
-        map.addControl(new FullscreenControl(), 'top-right');
-        map.addControl(new ScaleControl({ maxWidth: 110, unit: 'metric' }), 'bottom-right');
+        map.addControl(new maplibre.NavigationControl({ visualizePitch: false }), 'bottom-right');
+        map.addControl(new maplibre.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-right');
 
-        const handleLoad = () => {
-          addCoverageOutline(map);
-          setMapStatus('ready');
-          setMapError('');
+        const notifyViewport = () => {
+          const b = map.getBounds();
+          onViewportChange?.({
+            west: b.getWest(),
+            south: b.getSouth(),
+            east: b.getEast(),
+            north: b.getNorth()
+          });
+        };
+
+        map.on('load', () => {
+          addCoverage(map);
+          addDataLayers(map, mapData);
+          setLayerVisibility(map, activeLayers);
           setInteractiveReady(true);
-          window.requestAnimationFrame(() => map.resize());
-        };
+          notifyViewport();
+          requestAnimationFrame(() => map.resize());
+        });
 
-        const handleError = (event) => {
+        map.on('moveend', notifyViewport);
+        map.on('error', (event) => {
           const message = event?.error?.message || '';
-          console.error('[Hola Maps] Local map error:', event?.error || event);
-
           if (message.toLowerCase().includes('webgl')) {
-            setMapStatus('error');
-            setMapError('WebGL đang bị tắt hoặc không khả dụng trên trình duyệt này.');
+            setMapError('Trình duyệt hiện không hỗ trợ WebGL cho bản đồ.');
           }
-        };
+        });
 
-        map.__holaHandlers = { handleLoad, handleError };
-        map.on('load', handleLoad);
-        map.on('error', handleError);
+        map.on('click', (event) => {
+          const ids = Object.values(DATA_LAYER_IDS).filter((id) => map.getLayer(id));
+          if (!ids.length) return;
+          const features = map.queryRenderedFeatures(event.point, { layers: ids });
+          const feature = features[0];
+          if (!feature) return;
+
+          const props = feature.properties || {};
+          new maplibre.Popup({ closeButton: true, className: 'hm-data-popup' })
+            .setLngLat(event.lngLat)
+            .setHTML(
+              '<div class="hm-popup-card">' +
+              '<span>' + escapeHtml(props.layerType || 'DATA') + '</span>' +
+              '<strong>' + escapeHtml(props.name || 'Dữ liệu Hola Maps') + '</strong>' +
+              (props.description ? '<p>' + escapeHtml(props.description) + '</p>' : '') +
+              '</div>'
+            )
+            .addTo(map);
+        });
       } catch (error) {
-        console.error('[Hola Maps] Map initialization failed:', error);
-        if (!cancelled) {
-          setMapStatus('error');
-          setMapError('Không thể khởi tạo bản đồ cục bộ.');
-        }
+        console.error('[Hola Maps] initialize error', error);
+        setMapError('Không thể khởi tạo bản đồ cục bộ.');
       }
     };
 
-    const start = () => {
-      paintTimer = window.setTimeout(initializeMap, 0);
-    };
-
     if ('requestIdleCallback' in window) {
-      idleHandle = window.requestIdleCallback(start, { timeout: 120 });
+      idleHandle = window.requestIdleCallback(initialize, { timeout: 100 });
     } else {
-      window.requestAnimationFrame(start);
+      requestAnimationFrame(initialize);
     }
 
     return () => {
       cancelled = true;
-      if (paintTimer) window.clearTimeout(paintTimer);
       if (idleHandle && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleHandle);
-
       removeMarkers(markersRef.current);
-      markersRef.current = [];
-
-      if (userMarkerRef.current) {
-        userMarkerRef.current.remove();
-        userMarkerRef.current = null;
-      }
-
-      const map = mapRef.current;
-      if (map) {
-        const handlers = map.__holaHandlers;
-        if (handlers) {
-          map.off('load', handlers.handleLoad);
-          map.off('error', handlers.handleError);
-        }
-        map.remove();
-      }
-
+      userMarkerRef.current?.remove();
+      mapRef.current?.remove();
       mapRef.current = null;
       maplibreRef.current = null;
-      fittedRouteKeyRef.current = '';
     };
   }, []);
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !interactiveReady) return;
+    const source = map.getSource(DATA_SOURCE_ID);
+    if (source) source.setData(mapData || emptyFeatureCollection());
+  }, [mapData, interactiveReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !interactiveReady) return;
+    setLayerVisibility(map, activeLayers);
+  }, [activeLayers, interactiveReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     const maplibre = maplibreRef.current;
-    if (!map || !maplibre || !interactiveReady) return undefined;
+    if (!map || !maplibre || !interactiveReady) return;
 
-    const { Marker, Popup } = maplibre;
     removeMarkers(markersRef.current);
-
     markersRef.current = validPlaces.map((place) => {
       const element = document.createElement('button');
-      const active = selectedPlaceId === place.id;
-      element.className = active ? 'map-pin premium-map-pin active' : 'map-pin premium-map-pin';
       element.type = 'button';
-      element.setAttribute('aria-label', place.name);
-
-      const icon = document.createElement('span');
-      icon.className = 'premium-map-pin-icon';
-      icon.textContent = categoryIcon(place.category);
-
-      const label = document.createElement('span');
-      label.className = 'premium-map-pin-label';
-      label.textContent = place.name;
-
-      element.append(icon, label);
+      element.className = selectedPlaceId === place.id ? 'hm-place-pin active' : 'hm-place-pin';
+      element.innerHTML = '<span>' + categoryIcon(place.category) + '</span>';
+      element.title = place.name;
       element.addEventListener('click', () => onSelectPlace?.(place));
 
-      const rating = Number(place.rating);
-      const ratingLabel = Number.isFinite(rating) && rating > 0 ? rating.toFixed(1) : 'Mới';
-
-      const popup = new Popup({
-        offset: 22,
-        closeButton: false,
-        className: 'hola-premium-popup'
-      }).setHTML(
-        '<div class="map-popup premium-map-popup">' +
-          '<span class="map-popup-category">' + escapeHtml(place.category || 'Khám phá') + '</span>' +
-          '<strong>' + escapeHtml(place.name) + '</strong>' +
-          '<small>' + escapeHtml(place.address || 'Hòa Lạc, Hà Nội') + '</small>' +
-          '<div><b>★ ' + escapeHtml(ratingLabel) + '</b>' +
-          (place.priceLevel ? '<span>' + escapeHtml(place.priceLevel) + '</span>' : '') +
-          '</div>' +
-        '</div>'
-      );
-
-      return new Marker({ element, anchor: 'bottom' })
+      return new maplibre.Marker({ element, anchor: 'bottom' })
         .setLngLat([Number(place.lng), Number(place.lat)])
-        .setPopup(popup)
+        .setPopup(
+          new maplibre.Popup({ offset: 18, closeButton: false, className: 'hm-data-popup' })
+            .setHTML(
+              '<div class="hm-popup-card"><span>' +
+              escapeHtml(place.category || 'ĐỊA ĐIỂM') +
+              '</span><strong>' + escapeHtml(place.name) +
+              '</strong><p>' + escapeHtml(place.address || 'Hòa Lạc') + '</p></div>'
+            )
+        )
         .addTo(map);
     });
-
-    return undefined;
   }, [validPlaces, selectedPlaceId, onSelectPlace, interactiveReady]);
 
   useEffect(() => {
@@ -283,145 +450,43 @@ export default function MapView({
     const maplibre = maplibreRef.current;
     if (!map || !maplibre || !interactiveReady) return;
 
-    const { Marker, Popup } = maplibre;
-
     if (!userLocation || !Number.isFinite(Number(userLocation.lat)) || !Number.isFinite(Number(userLocation.lng))) {
-      if (userMarkerRef.current) {
-        userMarkerRef.current.remove();
-        userMarkerRef.current = null;
-      }
+      userMarkerRef.current?.remove();
+      userMarkerRef.current = null;
       return;
     }
 
-    if (userMarkerRef.current) userMarkerRef.current.remove();
-
+    userMarkerRef.current?.remove();
     const dot = document.createElement('div');
-    dot.className = 'user-location-dot premium-user-location-dot hola-route-start-marker';
+    dot.className = 'hm-user-location';
     dot.innerHTML = '<span></span>';
 
-    userMarkerRef.current = new Marker({ element: dot })
+    userMarkerRef.current = new maplibre.Marker({ element: dot })
       .setLngLat([Number(userLocation.lng), Number(userLocation.lat)])
-      .setPopup(
-        new Popup({ offset: 18, className: 'hola-premium-popup' }).setHTML(
-          '<div class="map-popup premium-map-popup">' +
-            '<span class="map-popup-category">VỊ TRÍ HIỆN TẠI</span>' +
-            '<strong>Bạn đang ở đây</strong>' +
-          '</div>'
-        )
-      )
       .addTo(map);
   }, [userLocation, interactiveReady]);
 
   useEffect(() => {
     const map = mapRef.current;
     const maplibre = maplibreRef.current;
-    if (!map || !maplibre || !interactiveReady) return undefined;
-
-    const { LngLatBounds } = maplibre;
-
-    const renderRoute = () => {
-      if (!map.isStyleLoaded()) return;
-
-      if (!route?.geometry?.coordinates?.length) {
-        removeRouteLayers(map);
-        fittedRouteKeyRef.current = '';
-        return;
-      }
-
-      const localCoordinates = route.geometry.coordinates.filter(
-        ([lng, lat]) => isInsideServiceCoverage(lng, lat)
-      );
-
-      if (localCoordinates.length < 2) {
-        removeRouteLayers(map);
-        return;
-      }
-
-      const localGeometry = {
-        ...route.geometry,
-        coordinates: localCoordinates
-      };
-
-      const feature = toFeature(localGeometry);
-      const source = map.getSource(ROUTE_SOURCE_ID);
-
-      if (source) {
-        source.setData(feature);
-      } else {
-        map.addSource(ROUTE_SOURCE_ID, { type: 'geojson', data: feature });
-
-        map.addLayer({
-          id: ROUTE_CASING_LAYER_ID,
-          type: 'line',
-          source: ROUTE_SOURCE_ID,
-          layout: { 'line-cap': 'round', 'line-join': 'round' },
-          paint: {
-            'line-color': '#ffffff',
-            'line-width': 9,
-            'line-opacity': 0.96
-          }
-        });
-
-        map.addLayer({
-          id: ROUTE_LAYER_ID,
-          type: 'line',
-          source: ROUTE_SOURCE_ID,
-          layout: { 'line-cap': 'round', 'line-join': 'round' },
-          paint: {
-            'line-color': '#d59a29',
-            'line-width': 5.5,
-            'line-opacity': 1
-          }
-        });
-      }
-
-      const routeKey =
-        route.origin?.lng + ',' + route.origin?.lat + '>' +
-        route.destination?.lng + ',' + route.destination?.lat;
-
-      if (fittedRouteKeyRef.current !== routeKey) {
-        const bounds = new LngLatBounds();
-        localCoordinates.forEach((coordinate) => bounds.extend(coordinate));
-
-        if (!bounds.isEmpty()) {
-          map.fitBounds(bounds, {
-            padding: { top: 110, right: 80, bottom: 80, left: 80 },
-            duration: 650,
-            maxZoom: 16
-          });
-        }
-
-        fittedRouteKeyRef.current = routeKey;
-      }
-    };
-
-    renderRoute();
-    map.on('styledata', renderRoute);
-    return () => map.off('styledata', renderRoute);
+    if (!map || !maplibre || !interactiveReady) return;
+    renderRoute(map, route, maplibre, fittedRouteKeyRef);
   }, [route, interactiveReady]);
 
   useEffect(() => {
     const map = mapRef.current;
     const selected = validPlaces.find((place) => place.id === selectedPlaceId);
-
     if (!map || !selected || route || !interactiveReady) return;
-
     map.flyTo({
       center: [Number(selected.lng), Number(selected.lat)],
-      zoom: Math.max(map.getZoom(), 14.4),
-      duration: 500,
-      essential: true
+      zoom: Math.max(map.getZoom(), 14.5),
+      duration: 450
     });
   }, [selectedPlaceId, validPlaces, route, interactiveReady]);
 
   function locateUser() {
-    if (!navigator.geolocation) {
-      setLocationError('Trình duyệt này không hỗ trợ định vị.');
-      return;
-    }
-
+    if (!navigator.geolocation) return;
     setLocating(true);
-    setLocationError('');
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -431,100 +496,48 @@ export default function MapView({
           accuracy: Math.round(position.coords.accuracy),
           timestamp: position.timestamp
         };
-
-        if (!isInsideServiceCoverage(location.lng, location.lat)) {
-          setLocationError('Bạn đang ở ngoài vùng bản đồ Hola Maps. Vẫn có thể mở chỉ đường bằng Google Maps.');
-        } else {
-          mapRef.current?.flyTo({
-            center: [location.lng, location.lat],
-            zoom: 14.6,
-            duration: 500,
-            essential: true
-          });
-        }
-
         onUserLocation?.(location);
+        if (isInsideServiceCoverage(location.lng, location.lat)) {
+          mapRef.current?.flyTo({ center: [location.lng, location.lat], zoom: 15, duration: 500 });
+        }
         setLocating(false);
       },
-      (error) => {
-        const messages = {
-          1: 'Bạn chưa cấp quyền truy cập vị trí.',
-          2: 'Không thể xác định vị trí hiện tại.',
-          3: 'Yêu cầu định vị đã hết thời gian.'
-        };
-        setLocationError(messages[error.code] || 'Không thể lấy vị trí.');
-        setLocating(false);
-      },
+      () => setLocating(false),
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
     );
   }
 
-  const showLoading = mapStatus === 'loading';
-  const showError = mapStatus === 'error';
-
   return (
-    <div className="map-wrap premium-map-wrap">
+    <div className="hm-map-shell">
       {!interactiveReady && (
         STATIC_PREVIEW_URL ? (
-          <img
-            className="map-static-preview"
-            src={STATIC_PREVIEW_URL}
-            alt=""
-            aria-hidden="true"
-            loading="eager"
-            decoding="async"
-            fetchPriority="high"
-          />
+          <img className="hm-map-preview" src={STATIC_PREVIEW_URL} alt="" aria-hidden="true" />
         ) : (
-          <div className="map-instant-preview" aria-hidden="true">
-            <span className="preview-road preview-road-1" />
-            <span className="preview-road preview-road-2" />
-            <span className="preview-road preview-road-3" />
-            <span className="preview-water" />
-            <span className="preview-label preview-label-hola">HÒA LẠC</span>
-            <span className="preview-label preview-label-thachthat">THẠCH THẤT</span>
-            <span className="preview-label preview-label-quocoai">QUỐC OAI</span>
-            <span className="preview-pin"><b>●</b><small>Hòa Lạc</small></span>
+          <div className="hm-map-placeholder">
+            <div className="hm-map-placeholder-grid" />
+            <strong>HOLA MAPS</strong>
+            <span>Đang khởi tạo local basemap…</span>
           </div>
         )
       )}
 
-      <div ref={containerRef} className="hola-map" />
+      <div ref={containerRef} className="hm-map-canvas" />
 
-      {showLoading && (
-        <div className="map-provider-status loading">
-          <span className="map-provider-spinner" />
-          Đang mở bản đồ cục bộ...
-        </div>
-      )}
+      <div className="hm-map-provider">LOCAL MAP · {TILE_PROVIDER}</div>
 
-      {interactiveReady && (
-        <div className="map-local-provider-badge">
-          LOCAL MAP · {TILE_PROVIDER}
-        </div>
-      )}
+      <button className="hm-locate" type="button" onClick={locateUser} disabled={locating}>
+        <LocateFixed size={18} />
+        {locating ? 'Đang định vị' : 'Vị trí của tôi'}
+      </button>
 
-      {showError && (
-        <div className="map-provider-status error">
-          <AlertTriangle size={16} />
+      {mapError && (
+        <div className="hm-map-error">
           <span>{mapError}</span>
-          <button type="button" onClick={reloadMap}>
-            <RefreshCcw size={14} /> Thử lại
+          <button type="button" onClick={() => window.location.reload()}>
+            <RefreshCcw size={14} /> Tải lại
           </button>
         </div>
       )}
-
-      <button
-        className="locate-button premium-locate-button"
-        type="button"
-        onClick={locateUser}
-        disabled={locating}
-      >
-        <LocateFixed size={18} />
-        {locating ? 'Đang định vị...' : 'Vị trí của tôi'}
-      </button>
-
-      {locationError ? <div className="map-location-error">{locationError}</div> : null}
     </div>
   );
 }
