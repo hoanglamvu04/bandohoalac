@@ -35,7 +35,21 @@ const LOCAL_TILE_SIZE = Number(env.VITE_LOCAL_TILE_SIZE || 256) === 512 ? 512 : 
 
 export const TILE_PROVIDER = LOCAL_STYLE_URL
   ? 'Hola Maps vector'
-  : (LOCAL_TILE_URL ? 'Hola Maps local tiles' : (MAPTILER_KEY ? 'MapTiler' : 'OpenStreetMap'));
+  : (LOCAL_TILE_URL ? 'Hola Maps local tiles' : (MAPTILER_KEY ? 'MapTiler Vector' : 'OpenStreetMap'));
+
+export const HAS_MAPTILER_VECTOR = Boolean(MAPTILER_KEY && !LOCAL_STYLE_URL && !LOCAL_TILE_URL);
+
+export const BASEMAP_OPTIONS = [
+  { id: 'streets', label: 'Bản đồ', description: 'Đường, POI, địa danh', mapId: 'streets-v4' },
+  { id: 'satellite', label: 'Vệ tinh', description: 'Ảnh vệ tinh', mapId: 'satellite-v4' },
+  { id: 'hybrid', label: 'Hybrid', description: 'Vệ tinh + nhãn', mapId: 'hybrid-v4' },
+  { id: 'terrain', label: 'Địa hình', description: 'Địa hình, cao độ', mapId: 'topo-v4' }
+];
+
+function mapTilerStyleUrl(mapId) {
+  return 'https://api.maptiler.com/maps/' + encodeURIComponent(mapId) +
+    '/style.json?key=' + encodeURIComponent(MAPTILER_KEY);
+}
 
 export const TILE_URL = LOCAL_TILE_URL || (
   MAPTILER_KEY
@@ -65,8 +79,16 @@ export function isInsideServiceCoverage(lng, lat) {
   });
 }
 
-export function createLocalBasemapStyle() {
+export function createLocalBasemapStyle(mode = 'streets') {
   if (LOCAL_STYLE_URL) return LOCAL_STYLE_URL;
+
+  // Prefer full vector styles when a MapTiler key is available. This gives
+  // us road hierarchy, labels, POIs, landuse, parks and crisp text at every
+  // zoom level instead of a single flattened raster image.
+  if (MAPTILER_KEY && !LOCAL_TILE_URL) {
+    const selected = BASEMAP_OPTIONS.find((item) => item.id === mode) || BASEMAP_OPTIONS[0];
+    return mapTilerStyleUrl(selected.mapId);
+  }
 
   const sources = {};
   const layers = [
