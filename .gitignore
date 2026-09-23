@@ -9,3 +9,6 @@ npm-debug.log*
 backend/uploads/
 backend/src/uploads/
 coverage/
+
+# Local map archives are generated/downloaded, not committed to Git.
+frontend/public/maps/*.pmtiles
