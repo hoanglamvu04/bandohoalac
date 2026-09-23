@@ -3,271 +3,215 @@ import { LocateFixed, RefreshCcw } from 'lucide-react';
 import {
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
-  MIN_ZOOM,
-  MAX_ZOOM,
   MAP_COVERAGE_BOUNDS,
-  SERVICE_AREAS_GEOJSON,
-  STATIC_PREVIEW_URL,
-  TILE_PROVIDER,
-  createLocalBasemapStyle,
   isInsideServiceCoverage
 } from '../mapConfig.js';
 
-const DATA_SOURCE_ID = 'hola-data-layers';
-const ROUTE_SOURCE_ID = 'hola-route-source';
-const COVERAGE_SOURCE_ID = 'hola-service-areas';
+const GOOGLE_MAPS_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '').trim();
+const GOOGLE_MAP_ID = (import.meta.env.VITE_GOOGLE_MAP_ID || '').trim();
 
-const DATA_LAYER_IDS = {
-  TERRAIN: 'hm-terrain',
-  WATER: 'hm-water',
-  BUILDING: 'hm-building',
-  PLANNING: 'hm-planning',
-  FLOOD: 'hm-flood',
-  ROAD: 'hm-road',
-  ROAD_CLOSURE: 'hm-road-closure',
-  LANDMARK: 'hm-landmark',
-  EVENT: 'hm-event',
-  ALERT: 'hm-alert'
-};
+let googleMapsPromise;
 
-function escapeHtml(value = '') {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
+function loadGoogleMaps() {
+  if (window.google?.maps) return Promise.resolve(window.google.maps);
+  if (googleMapsPromise) return googleMapsPromise;
 
-function categoryIcon(category = '') {
-  const normalized = category.toLowerCase();
-  if (normalized.includes('cafe') || normalized.includes('coffee')) return '☕';
-  if (normalized.includes('ăn') || normalized.includes('food')) return '🍜';
-  if (normalized.includes('home')) return '🏡';
-  if (normalized.includes('villa')) return '🏘️';
-  if (normalized.includes('check')) return '📸';
-  return '📍';
-}
+  googleMapsPromise = new Promise((resolve, reject) => {
+    if (!GOOGLE_MAPS_KEY) {
+      reject(new Error('Thiếu VITE_GOOGLE_MAPS_API_KEY trong frontend/.env'));
+      return;
+    }
 
-function removeMarkers(markers) {
-  markers.forEach((marker) => marker.remove());
+    const existing = document.querySelector('script[data-hola-google-maps]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(window.google.maps), { once: true });
+      existing.addEventListener('error', () => reject(new Error('Không tải được Google Maps JavaScript API.')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    const params = new URLSearchParams({
+      key: GOOGLE_MAPS_KEY,
+      v: 'weekly',
+      language: 'vi',
+      region: 'VN'
+    });
+
+    script.src = 'https://maps.googleapis.com/maps/api/js?' + params.toString();
+    script.async = true;
+    script.defer = true;
+    script.dataset.holaGoogleMaps = 'true';
+    script.onload = () => resolve(window.google.maps);
+    script.onerror = () => reject(new Error('Không tải được Google Maps JavaScript API.'));
+    document.head.appendChild(script);
+  });
+
+  return googleMapsPromise;
 }
 
 function emptyFeatureCollection() {
   return { type: 'FeatureCollection', features: [] };
 }
 
-function addCoverage(map) {
-  if (!map.isStyleLoaded() || map.getSource(COVERAGE_SOURCE_ID)) return;
-  map.addSource(COVERAGE_SOURCE_ID, { type: 'geojson', data: SERVICE_AREAS_GEOJSON });
-  map.addLayer({
-    id: 'hm-service-area-line',
-    type: 'line',
-    source: COVERAGE_SOURCE_ID,
-    paint: {
-      'line-color': '#0d5144',
-      'line-width': 1.2,
-      'line-opacity': 0.22,
-      'line-dasharray': [2, 2]
-    }
-  });
+function boundsLiteral() {
+  return {
+    west: MAP_COVERAGE_BOUNDS[0][0],
+    south: MAP_COVERAGE_BOUNDS[0][1],
+    east: MAP_COVERAGE_BOUNDS[1][0],
+    north: MAP_COVERAGE_BOUNDS[1][1]
+  };
 }
 
-function addDataLayers(map, data) {
-  if (!map.isStyleLoaded()) return;
+function getGoogleMapType(mode) {
+  if (mode === 'satellite') return 'satellite';
+  if (mode === 'hybrid') return 'hybrid';
+  if (mode === 'terrain') return 'terrain';
+  return 'roadmap';
+}
 
-  if (!map.getSource(DATA_SOURCE_ID)) {
-    map.addSource(DATA_SOURCE_ID, {
-      type: 'geojson',
-      data: data || emptyFeatureCollection()
-    });
+function layerVisible(activeLayers, type) {
+  return activeLayers.includes(type);
+}
+
+function featureStyle(feature, activeLayers) {
+  const type = String(feature.getProperty('layerType') || '');
+  if (!layerVisible(activeLayers, type)) return { visible: false };
+
+  const severity = String(feature.getProperty('severity') || 'INFO');
+
+  if (type === 'FLOOD') {
+    const fillColor = severity === 'CRITICAL' ? '#be123c'
+      : severity === 'HIGH' ? '#dc2626'
+        : severity === 'MEDIUM' ? '#f59e0b'
+          : '#38bdf8';
+
+    return {
+      visible: true,
+      fillColor,
+      fillOpacity: 0.25,
+      strokeColor: fillColor,
+      strokeOpacity: 0.9,
+      strokeWeight: 2
+    };
   }
 
-  const add = (spec) => {
-    if (!map.getLayer(spec.id)) map.addLayer(spec);
-  };
+  if (type === 'ROAD_CLOSURE') {
+    return {
+      visible: true,
+      strokeColor: '#dc2626',
+      strokeOpacity: 1,
+      strokeWeight: 5
+    };
+  }
 
-  add({
-    id: DATA_LAYER_IDS.TERRAIN,
-    type: 'fill',
-    source: DATA_SOURCE_ID,
-    filter: ['==', ['get', 'layerType'], 'TERRAIN'],
-    paint: {
-      'fill-color': '#a9c2a5',
-      'fill-opacity': 0.10
-    }
-  });
+  if (type === 'ROAD') {
+    return {
+      visible: true,
+      strokeColor: '#334155',
+      strokeOpacity: 0.9,
+      strokeWeight: 4
+    };
+  }
 
-  add({
-    id: DATA_LAYER_IDS.WATER,
-    type: 'fill',
-    source: DATA_SOURCE_ID,
-    filter: ['==', ['get', 'layerType'], 'WATER'],
-    paint: {
-      'fill-color': '#62b7c9',
-      'fill-opacity': 0.52,
-      'fill-outline-color': '#3c93a5'
-    }
-  });
+  if (type === 'WATER') {
+    return {
+      visible: true,
+      fillColor: '#42a5c5',
+      fillOpacity: 0.35,
+      strokeColor: '#2587a4',
+      strokeOpacity: 0.8,
+      strokeWeight: 1.5
+    };
+  }
 
-  add({
-    id: DATA_LAYER_IDS.BUILDING,
-    type: 'fill',
-    source: DATA_SOURCE_ID,
-    filter: ['==', ['get', 'layerType'], 'BUILDING'],
-    paint: {
-      'fill-color': '#b8b0a1',
-      'fill-opacity': 0.28,
-      'fill-outline-color': '#8d8579'
-    }
-  });
+  if (type === 'BUILDING') {
+    return {
+      visible: true,
+      fillColor: '#9d9488',
+      fillOpacity: 0.18,
+      strokeColor: '#756d63',
+      strokeOpacity: 0.4,
+      strokeWeight: 1
+    };
+  }
 
-  add({
-    id: DATA_LAYER_IDS.PLANNING,
-    type: 'fill',
-    source: DATA_SOURCE_ID,
-    filter: ['==', ['get', 'layerType'], 'PLANNING'],
-    paint: {
-      'fill-color': '#8b5cf6',
-      'fill-opacity': 0.12,
-      'fill-outline-color': '#6d28d9'
-    }
-  });
+  if (type === 'PLANNING') {
+    return {
+      visible: true,
+      fillColor: '#7c3aed',
+      fillOpacity: 0.12,
+      strokeColor: '#6d28d9',
+      strokeOpacity: 0.85,
+      strokeWeight: 2
+    };
+  }
 
-  add({
-    id: DATA_LAYER_IDS.FLOOD,
-    type: 'fill',
-    source: DATA_SOURCE_ID,
-    filter: ['==', ['get', 'layerType'], 'FLOOD'],
-    paint: {
-      'fill-color': [
-        'match',
-        ['get', 'severity'],
-        'CRITICAL', '#be123c',
-        'HIGH', '#dc2626',
-        'MEDIUM', '#f59e0b',
-        'LOW', '#38bdf8',
-        '#60a5fa'
-      ],
-      'fill-opacity': 0.24,
-      'fill-outline-color': '#2563eb'
-    }
-  });
+  if (type === 'TERRAIN') {
+    return {
+      visible: true,
+      fillColor: '#72a36b',
+      fillOpacity: 0.09,
+      strokeColor: '#5b8b56',
+      strokeOpacity: 0.35,
+      strokeWeight: 1
+    };
+  }
 
-  add({
-    id: DATA_LAYER_IDS.ROAD,
-    type: 'line',
-    source: DATA_SOURCE_ID,
-    filter: ['==', ['get', 'layerType'], 'ROAD'],
-    layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: {
-      'line-color': '#334155',
-      'line-width': ['interpolate', ['linear'], ['zoom'], 12, 1.2, 17, 4.5],
-      'line-opacity': 0.88
-    }
-  });
-
-  add({
-    id: DATA_LAYER_IDS.ROAD_CLOSURE,
-    type: 'line',
-    source: DATA_SOURCE_ID,
-    filter: ['==', ['get', 'layerType'], 'ROAD_CLOSURE'],
-    layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: {
-      'line-color': '#dc2626',
-      'line-width': 5,
-      'line-dasharray': [1.5, 1.3]
-    }
-  });
-
-  for (const [type, color, radius] of [
-    ['LANDMARK', '#0f766e', 6],
-    ['EVENT', '#7c3aed', 7],
-    ['ALERT', '#dc2626', 8]
-  ]) {
-    add({
-      id: DATA_LAYER_IDS[type],
-      type: 'circle',
-      source: DATA_SOURCE_ID,
-      filter: ['==', ['get', 'layerType'], type],
-      paint: {
-        'circle-radius': radius,
-        'circle-color': color,
-        'circle-stroke-width': 2,
-        'circle-stroke-color': '#ffffff'
+  if (type === 'ALERT') {
+    return {
+      visible: true,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        fillColor: '#dc2626',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2,
+        scale: 7
       }
-    });
-  }
-}
-
-function setLayerVisibility(map, activeLayers) {
-  if (!map?.isStyleLoaded()) return;
-  Object.entries(DATA_LAYER_IDS).forEach(([type, id]) => {
-    if (map.getLayer(id)) {
-      map.setLayoutProperty(id, 'visibility', activeLayers.includes(type) ? 'visible' : 'none');
-    }
-  });
-}
-
-function renderRoute(map, route, maplibre, fittedRouteKeyRef) {
-  if (!map?.isStyleLoaded()) return;
-
-  if (!route?.geometry?.coordinates?.length) {
-    ['hm-route-line', 'hm-route-casing'].forEach((id) => {
-      if (map.getLayer(id)) map.removeLayer(id);
-    });
-    if (map.getSource(ROUTE_SOURCE_ID)) map.removeSource(ROUTE_SOURCE_ID);
-    fittedRouteKeyRef.current = '';
-    return;
+    };
   }
 
-  const coordinates = route.geometry.coordinates.filter(([lng, lat]) =>
-    isInsideServiceCoverage(lng, lat)
-  );
-  if (coordinates.length < 2) return;
+  if (type === 'EVENT') {
+    return {
+      visible: true,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        fillColor: '#7c3aed',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2,
+        scale: 7
+      }
+    };
+  }
 
-  const feature = {
-    type: 'Feature',
-    properties: {},
-    geometry: { ...route.geometry, coordinates }
+  if (type === 'LANDMARK') {
+    return {
+      visible: true,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        fillColor: '#0f766e',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2,
+        scale: 6
+      }
+    };
+  }
+
+  return { visible: true };
+}
+
+function makePlaceIcon(active) {
+  return {
+    path: 'M12 2C7.6 2 4 5.6 4 10c0 5.7 8 12 8 12s8-6.3 8-12c0-4.4-3.6-8-8-8zm0 11.2A3.2 3.2 0 1 1 12 6.8a3.2 3.2 0 0 1 0 6.4z',
+    fillColor: active ? '#103f35' : '#f6c453',
+    fillOpacity: 1,
+    strokeColor: '#ffffff',
+    strokeWeight: 2,
+    scale: 1.35,
+    anchor: new google.maps.Point(12, 22)
   };
-
-  const source = map.getSource(ROUTE_SOURCE_ID);
-  if (source) {
-    source.setData(feature);
-  } else {
-    map.addSource(ROUTE_SOURCE_ID, { type: 'geojson', data: feature });
-    map.addLayer({
-      id: 'hm-route-casing',
-      type: 'line',
-      source: ROUTE_SOURCE_ID,
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#ffffff', 'line-width': 10, 'line-opacity': 0.95 }
-    });
-    map.addLayer({
-      id: 'hm-route-line',
-      type: 'line',
-      source: ROUTE_SOURCE_ID,
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#0d5144', 'line-width': 6, 'line-opacity': 1 }
-    });
-  }
-
-  const routeKey = route.origin?.lng + ',' + route.origin?.lat + '>' +
-    route.destination?.lng + ',' + route.destination?.lat;
-
-  if (fittedRouteKeyRef.current !== routeKey) {
-    const bounds = new maplibre.LngLatBounds();
-    coordinates.forEach((coordinate) => bounds.extend(coordinate));
-    if (!bounds.isEmpty()) {
-      map.fitBounds(bounds, {
-        padding: { top: 120, right: 380, bottom: 100, left: 390 },
-        duration: 650,
-        maxZoom: 16
-      });
-    }
-    fittedRouteKeyRef.current = routeKey;
-  }
 }
 
 export default function MapView({
@@ -282,17 +226,16 @@ export default function MapView({
   basemapMode = 'streets',
   onViewportChange
 }) {
-  const mapRef = useRef(null);
-  const maplibreRef = useRef(null);
   const containerRef = useRef(null);
+  const mapRef = useRef(null);
+  const dataLayerRef = useRef(null);
   const markersRef = useRef([]);
   const userMarkerRef = useRef(null);
-  const fittedRouteKeyRef = useRef('');
-  const latestMapDataRef = useRef(mapData);
-  const latestActiveLayersRef = useRef(activeLayers);
-  const latestRouteRef = useRef(route);
+  const routePolylineRef = useRef(null);
+  const infoWindowRef = useRef(null);
+  const activeLayersRef = useRef(activeLayers);
 
-  const [interactiveReady, setInteractiveReady] = useState(false);
+  const [ready, setReady] = useState(false);
   const [mapError, setMapError] = useState('');
   const [locating, setLocating] = useState(false);
 
@@ -306,226 +249,219 @@ export default function MapView({
   );
 
   useEffect(() => {
+    activeLayersRef.current = activeLayers;
+    if (dataLayerRef.current) {
+      dataLayerRef.current.setStyle((feature) => featureStyle(feature, activeLayersRef.current));
+    }
+  }, [activeLayers]);
+
+  useEffect(() => {
     if (!containerRef.current || mapRef.current) return undefined;
 
     let cancelled = false;
-    let idleHandle = null;
+    let idleListener;
 
-    const initialize = async () => {
-      try {
-        const [maplibre] = await Promise.all([
-          import('maplibre-gl'),
-          import('maplibre-gl/dist/maplibre-gl.css')
-        ]);
+    loadGoogleMaps()
+      .then(() => {
         if (cancelled || !containerRef.current) return;
 
-        maplibreRef.current = maplibre;
-        const map = new maplibre.Map({
-          container: containerRef.current,
-          style: createLocalBasemapStyle(basemapMode),
-          center: DEFAULT_CENTER,
-          zoom: DEFAULT_ZOOM,
-          minZoom: MIN_ZOOM,
-          maxZoom: MAX_ZOOM,
-          maxBounds: MAP_COVERAGE_BOUNDS,
-          renderWorldCopies: false,
-          refreshExpiredTiles: false,
-          fadeDuration: 0,
-          maxTileCacheSize: 18
+        const map = new google.maps.Map(containerRef.current, {
+          center: { lat: DEFAULT_CENTER[1], lng: DEFAULT_CENTER[0] },
+          zoom: Math.round(DEFAULT_ZOOM),
+          mapTypeId: getGoogleMapType(basemapMode),
+          mapId: GOOGLE_MAP_ID || undefined,
+          restriction: {
+            latLngBounds: boundsLiteral(),
+            strictBounds: true
+          },
+          minZoom: 11,
+          maxZoom: 20,
+          fullscreenControl: true,
+          mapTypeControl: false,
+          streetViewControl: true,
+          zoomControl: true,
+          scaleControl: true,
+          gestureHandling: 'greedy',
+          clickableIcons: true,
+          backgroundColor: '#eef1ec'
         });
 
         mapRef.current = map;
-        map.addControl(new maplibre.NavigationControl({ visualizePitch: false }), 'bottom-right');
-        map.addControl(new maplibre.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-right');
+        infoWindowRef.current = new google.maps.InfoWindow();
+
+        const dataLayer = new google.maps.Data({ map });
+        dataLayer.setStyle((feature) => featureStyle(feature, activeLayersRef.current));
+        dataLayer.addListener('click', (event) => {
+          const type = event.feature.getProperty('layerType') || 'DATA';
+          const name = event.feature.getProperty('name') || 'Dữ liệu Hola Maps';
+          const description = event.feature.getProperty('description') || '';
+
+          infoWindowRef.current.setContent(
+            '<div class="hm-google-popup">' +
+              '<span>' + String(type) + '</span>' +
+              '<strong>' + String(name) + '</strong>' +
+              (description ? '<p>' + String(description) + '</p>' : '') +
+            '</div>'
+          );
+          infoWindowRef.current.setPosition(event.latLng);
+          infoWindowRef.current.open({ map });
+        });
+
+        dataLayerRef.current = dataLayer;
 
         const notifyViewport = () => {
-          const b = map.getBounds();
+          const bounds = map.getBounds();
+          if (!bounds) return;
+          const ne = bounds.getNorthEast();
+          const sw = bounds.getSouthWest();
           onViewportChange?.({
-            west: b.getWest(),
-            south: b.getSouth(),
-            east: b.getEast(),
-            north: b.getNorth()
+            west: sw.lng(),
+            south: sw.lat(),
+            east: ne.lng(),
+            north: ne.lat()
           });
         };
 
-        map.on('load', () => {
-          addCoverage(map);
-          addDataLayers(map, mapData);
-          setLayerVisibility(map, activeLayers);
-          setInteractiveReady(true);
-          notifyViewport();
-          requestAnimationFrame(() => map.resize());
-        });
-
-        map.on('moveend', notifyViewport);
-        map.on('error', (event) => {
-          const message = event?.error?.message || '';
-          if (message.toLowerCase().includes('webgl')) {
-            setMapError('Trình duyệt hiện không hỗ trợ WebGL cho bản đồ.');
-          }
-        });
-
-        map.on('click', (event) => {
-          const ids = Object.values(DATA_LAYER_IDS).filter((id) => map.getLayer(id));
-          if (!ids.length) return;
-          const features = map.queryRenderedFeatures(event.point, { layers: ids });
-          const feature = features[0];
-          if (!feature) return;
-
-          const props = feature.properties || {};
-          new maplibre.Popup({ closeButton: true, className: 'hm-data-popup' })
-            .setLngLat(event.lngLat)
-            .setHTML(
-              '<div class="hm-popup-card">' +
-              '<span>' + escapeHtml(props.layerType || 'DATA') + '</span>' +
-              '<strong>' + escapeHtml(props.name || 'Dữ liệu Hola Maps') + '</strong>' +
-              (props.description ? '<p>' + escapeHtml(props.description) + '</p>' : '') +
-              '</div>'
-            )
-            .addTo(map);
-        });
-      } catch (error) {
-        console.error('[Hola Maps] initialize error', error);
-        setMapError('Không thể khởi tạo bản đồ cục bộ.');
-      }
-    };
-
-    if ('requestIdleCallback' in window) {
-      idleHandle = window.requestIdleCallback(initialize, { timeout: 100 });
-    } else {
-      requestAnimationFrame(initialize);
-    }
+        idleListener = map.addListener('idle', notifyViewport);
+        setReady(true);
+        setMapError('');
+      })
+      .catch((error) => {
+        console.error('[Hola Maps] Google Maps init failed:', error);
+        if (!cancelled) setMapError(error.message || 'Không thể khởi tạo Google Maps.');
+      });
 
     return () => {
       cancelled = true;
-      if (idleHandle && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleHandle);
-      removeMarkers(markersRef.current);
-      userMarkerRef.current?.remove();
-      mapRef.current?.remove();
+      if (idleListener) google.maps.event.removeListener(idleListener);
+      markersRef.current.forEach((marker) => marker.setMap(null));
+      markersRef.current = [];
+      userMarkerRef.current?.setMap(null);
+      routePolylineRef.current?.setMap(null);
+      dataLayerRef.current?.setMap(null);
       mapRef.current = null;
-      maplibreRef.current = null;
+      dataLayerRef.current = null;
+      infoWindowRef.current = null;
     };
   }, []);
 
   useEffect(() => {
-    latestMapDataRef.current = mapData;
-  }, [mapData]);
+    if (!mapRef.current || !ready) return;
+    mapRef.current.setMapTypeId(getGoogleMapType(basemapMode));
+  }, [basemapMode, ready]);
 
   useEffect(() => {
-    latestActiveLayersRef.current = activeLayers;
-  }, [activeLayers]);
+    if (!dataLayerRef.current || !ready) return;
 
-  useEffect(() => {
-    latestRouteRef.current = route;
-  }, [route]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    const maplibre = maplibreRef.current;
-    if (!map || !maplibre || !interactiveReady) return undefined;
-
-    let cancelled = false;
-
-    const restoreHolaLayers = () => {
-      if (cancelled) return;
-      addCoverage(map);
-      addDataLayers(map, latestMapDataRef.current);
-      setLayerVisibility(map, latestActiveLayersRef.current);
-      renderRoute(map, latestRouteRef.current, maplibre, fittedRouteKeyRef);
-      setInteractiveReady(true);
-      requestAnimationFrame(() => map.resize());
-    };
-
-    setInteractiveReady(false);
-    map.once('style.load', restoreHolaLayers);
-    map.setStyle(createLocalBasemapStyle(basemapMode), { diff: false });
-
-    return () => {
-      cancelled = true;
-      map.off('style.load', restoreHolaLayers);
-    };
-  }, [basemapMode]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !interactiveReady) return;
-    const source = map.getSource(DATA_SOURCE_ID);
-    if (source) source.setData(mapData || emptyFeatureCollection());
-  }, [mapData, interactiveReady]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !interactiveReady) return;
-    setLayerVisibility(map, activeLayers);
-  }, [activeLayers, interactiveReady]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    const maplibre = maplibreRef.current;
-    if (!map || !maplibre || !interactiveReady) return;
-
-    removeMarkers(markersRef.current);
-    markersRef.current = validPlaces.map((place) => {
-      const element = document.createElement('button');
-      element.type = 'button';
-      element.className = selectedPlaceId === place.id ? 'hm-place-pin active' : 'hm-place-pin';
-      element.innerHTML = '<span>' + categoryIcon(place.category) + '</span>';
-      element.title = place.name;
-      element.addEventListener('click', () => onSelectPlace?.(place));
-
-      return new maplibre.Marker({ element, anchor: 'bottom' })
-        .setLngLat([Number(place.lng), Number(place.lat)])
-        .setPopup(
-          new maplibre.Popup({ offset: 18, closeButton: false, className: 'hm-data-popup' })
-            .setHTML(
-              '<div class="hm-popup-card"><span>' +
-              escapeHtml(place.category || 'ĐỊA ĐIỂM') +
-              '</span><strong>' + escapeHtml(place.name) +
-              '</strong><p>' + escapeHtml(place.address || 'Hòa Lạc') + '</p></div>'
-            )
-        )
-        .addTo(map);
+    dataLayerRef.current.forEach((feature) => {
+      dataLayerRef.current.remove(feature);
     });
-  }, [validPlaces, selectedPlaceId, onSelectPlace, interactiveReady]);
+
+    if (mapData?.features?.length) {
+      dataLayerRef.current.addGeoJson(mapData);
+    }
+
+    dataLayerRef.current.setStyle((feature) => featureStyle(feature, activeLayersRef.current));
+  }, [mapData, ready]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    const maplibre = maplibreRef.current;
-    if (!map || !maplibre || !interactiveReady) return;
+    if (!mapRef.current || !ready) return;
+
+    markersRef.current.forEach((marker) => marker.setMap(null));
+    markersRef.current = validPlaces.map((place) => {
+      const marker = new google.maps.Marker({
+        map: mapRef.current,
+        position: { lat: Number(place.lat), lng: Number(place.lng) },
+        title: place.name,
+        icon: makePlaceIcon(selectedPlaceId === place.id),
+        optimized: true
+      });
+
+      marker.addListener('click', () => {
+        onSelectPlace?.(place);
+        infoWindowRef.current?.setContent(
+          '<div class="hm-google-popup">' +
+            '<span>' + String(place.category || 'ĐỊA ĐIỂM') + '</span>' +
+            '<strong>' + String(place.name) + '</strong>' +
+            '<p>' + String(place.address || 'Hòa Lạc, Hà Nội') + '</p>' +
+          '</div>'
+        );
+        infoWindowRef.current?.open({ map: mapRef.current, anchor: marker });
+      });
+
+      return marker;
+    });
+  }, [validPlaces, selectedPlaceId, onSelectPlace, ready]);
+
+  useEffect(() => {
+    if (!mapRef.current || !ready) return;
+
+    userMarkerRef.current?.setMap(null);
+    userMarkerRef.current = null;
 
     if (!userLocation || !Number.isFinite(Number(userLocation.lat)) || !Number.isFinite(Number(userLocation.lng))) {
-      userMarkerRef.current?.remove();
-      userMarkerRef.current = null;
       return;
     }
 
-    userMarkerRef.current?.remove();
-    const dot = document.createElement('div');
-    dot.className = 'hm-user-location';
-    dot.innerHTML = '<span></span>';
-
-    userMarkerRef.current = new maplibre.Marker({ element: dot })
-      .setLngLat([Number(userLocation.lng), Number(userLocation.lat)])
-      .addTo(map);
-  }, [userLocation, interactiveReady]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    const maplibre = maplibreRef.current;
-    if (!map || !maplibre || !interactiveReady) return;
-    renderRoute(map, route, maplibre, fittedRouteKeyRef);
-  }, [route, interactiveReady]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    const selected = validPlaces.find((place) => place.id === selectedPlaceId);
-    if (!map || !selected || route || !interactiveReady) return;
-    map.flyTo({
-      center: [Number(selected.lng), Number(selected.lat)],
-      zoom: Math.max(map.getZoom(), 14.5),
-      duration: 450
+    userMarkerRef.current = new google.maps.Marker({
+      map: mapRef.current,
+      position: { lat: Number(userLocation.lat), lng: Number(userLocation.lng) },
+      title: 'Vị trí của tôi',
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        fillColor: '#2f7df6',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 4,
+        scale: 8
+      },
+      zIndex: 999
     });
-  }, [selectedPlaceId, validPlaces, route, interactiveReady]);
+  }, [userLocation, ready]);
+
+  useEffect(() => {
+    if (!mapRef.current || !ready) return;
+
+    routePolylineRef.current?.setMap(null);
+    routePolylineRef.current = null;
+
+    const coordinates = route?.geometry?.coordinates || [];
+    if (coordinates.length < 2) return;
+
+    const path = coordinates
+      .filter(([lng, lat]) => Number.isFinite(Number(lng)) && Number.isFinite(Number(lat)))
+      .map(([lng, lat]) => ({ lat: Number(lat), lng: Number(lng) }));
+
+    routePolylineRef.current = new google.maps.Polyline({
+      map: mapRef.current,
+      path,
+      strokeColor: '#0d5144',
+      strokeOpacity: 1,
+      strokeWeight: 6,
+      geodesic: true,
+      zIndex: 50
+    });
+
+    const bounds = new google.maps.LatLngBounds();
+    path.forEach((point) => bounds.extend(point));
+    if (!bounds.isEmpty()) {
+      mapRef.current.fitBounds(bounds, {
+        top: 110,
+        right: 360,
+        bottom: 100,
+        left: 390
+      });
+    }
+  }, [route, ready]);
+
+  useEffect(() => {
+    if (!mapRef.current || !ready || route) return;
+    const selected = validPlaces.find((place) => place.id === selectedPlaceId);
+    if (!selected) return;
+
+    mapRef.current.panTo({ lat: Number(selected.lat), lng: Number(selected.lng) });
+    if ((mapRef.current.getZoom() || 0) < 16) mapRef.current.setZoom(16);
+  }, [selectedPlaceId, validPlaces, route, ready]);
 
   function locateUser() {
     if (!navigator.geolocation) return;
@@ -539,10 +475,14 @@ export default function MapView({
           accuracy: Math.round(position.coords.accuracy),
           timestamp: position.timestamp
         };
+
         onUserLocation?.(location);
-        if (isInsideServiceCoverage(location.lng, location.lat)) {
-          mapRef.current?.flyTo({ center: [location.lng, location.lat], zoom: 15, duration: 500 });
+
+        if (isInsideServiceCoverage(location.lng, location.lat) && mapRef.current) {
+          mapRef.current.panTo({ lat: location.lat, lng: location.lng });
+          mapRef.current.setZoom(16);
         }
+
         setLocating(false);
       },
       () => setLocating(false),
@@ -551,30 +491,17 @@ export default function MapView({
   }
 
   return (
-    <div className="hm-map-shell">
-      {!interactiveReady && (
-        STATIC_PREVIEW_URL ? (
-          <img
-            className="hm-map-preview"
-            src={STATIC_PREVIEW_URL}
-            alt=""
-            aria-hidden="true"
-            onError={(event) => {
-              event.currentTarget.style.display = 'none';
-            }}
-          />
-        ) : (
-          <div className="hm-map-placeholder">
-            <div className="hm-map-placeholder-grid" />
-            <strong>HOLA MAPS</strong>
-            <span>Đang khởi tạo local basemap…</span>
-          </div>
-        )
+    <div className="hm-map-shell hm-google-map-shell">
+      <div ref={containerRef} className="hm-map-canvas hm-google-map-canvas" />
+
+      {!ready && !mapError && (
+        <div className="hm-map-placeholder">
+          <strong>HOLA MAPS</strong>
+          <span>Đang tải Google Maps…</span>
+        </div>
       )}
 
-      <div ref={containerRef} className="hm-map-canvas" />
-
-      <div className="hm-map-provider">LOCAL MAP · {TILE_PROVIDER}</div>
+      <div className="hm-map-provider">GOOGLE MAPS · HOLA DATA</div>
 
       <button className="hm-locate" type="button" onClick={locateUser} disabled={locating}>
         <LocateFixed size={18} />
