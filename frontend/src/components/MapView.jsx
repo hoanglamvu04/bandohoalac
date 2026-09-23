@@ -1,15 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  FullscreenControl,
-  LngLatBounds,
-  Map as MapLibreMap,
-  Marker,
-  NavigationControl,
-  Popup,
-  ScaleControl
-} from 'maplibre-gl';
 import { AlertTriangle, LocateFixed, RefreshCcw } from 'lucide-react';
-import 'maplibre-gl/dist/maplibre-gl.css';
 
 const DEFAULT_CENTER = [105.525, 21.005];
 
@@ -19,8 +9,8 @@ const DEFAULT_CENTER = [105.525, 21.005];
 // the product focused on western Hà Nội instead of encouraging world-scale
 // browsing and unnecessary tile requests.
 const WEST_HANOI_BOUNDS = [
-  [105.14, 20.76],
-  [105.86, 21.41]
+  [105.24, 20.82],
+  [105.79, 21.25]
 ];
 
 const MAPTILER_KEY = (import.meta.env.VITE_MAPTILER_KEY || '').trim();
@@ -63,7 +53,7 @@ const PRIMARY_STYLE = MAPTILER_RASTER_STYLE || CUSTOM_STYLE_URL || DEFAULT_STYLE
 const PRIMARY_PROVIDER_NAME = MAPTILER_RASTER_STYLE
   ? 'MapTiler Raster'
   : (CUSTOM_STYLE_URL ? 'Custom map' : 'OpenFreeMap');
-const MAP_FALLBACK_DELAY_MS = MAPTILER_RASTER_STYLE ? 8000 : 1600;
+const MAP_FALLBACK_DELAY_MS = MAPTILER_RASTER_STYLE ? 2600 : 1400;
 const MAPTILER_STATIC_PREVIEW_URL = MAPTILER_KEY
   ? 'https://api.maptiler.com/maps/' + encodeURIComponent(MAPTILER_MAP_ID) +
     '/static/' + DEFAULT_CENTER[0] + ',' + DEFAULT_CENTER[1] +
@@ -178,6 +168,7 @@ export default function MapView({
   route
 }) {
   const mapRef = useRef(null);
+  const maplibreRef = useRef(null);
   const containerRef = useRef(null);
   const markersRef = useRef([]);
   const userMarkerRef = useRef(null);
@@ -242,108 +233,148 @@ export default function MapView({
   }
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    if (!containerRef.current || mapRef.current) return undefined;
 
-    const rememberedProvider = getRememberedProvider();
-    const startWithRaster = rememberedProvider === 'raster';
-    fallbackAppliedRef.current = startWithRaster;
+    let cancelled = false;
+    let paintTimer = null;
+    let idleHandle = null;
+    let initializedMap = null;
 
-    let map;
+    const initializeMap = async () => {
+      if (cancelled || mapRef.current || !containerRef.current) return;
 
-    try {
-      map = new MapLibreMap({
-        container: containerRef.current,
-        style: startWithRaster
-          ? FALLBACK_RASTER_STYLE
-          : (PRIMARY_STYLE),
-        center: DEFAULT_CENTER,
-        zoom: 11.7,
-        minZoom: 9.5,
-        maxZoom: 18,
-        maxBounds: WEST_HANOI_BOUNDS,
-        attributionControl: true,
-        fadeDuration: 0,
-        refreshExpiredTiles: false,
-        renderWorldCopies: false,
-        maxTileCacheSize: 64
-      });
-    } catch (error) {
-      console.error('[Hola Maps] MapLibre initialization failed:', error);
-      setMapStatus('error');
-      setMapError('Trình duyệt không khởi tạo được MapLibre/WebGL.');
-      return undefined;
-    }
+      try {
+        // Keep MapLibre out of the initial JS path. The lightweight Hòa Lạc
+        // preview paints first; MapLibre + its CSS are fetched immediately
+        // after that first paint.
+        const [maplibre] = await Promise.all([
+          import('maplibre-gl'),
+          import('maplibre-gl/dist/maplibre-gl.css')
+        ]);
 
-    mapRef.current = map;
+        if (cancelled || mapRef.current || !containerRef.current) return;
 
-    map.addControl(new NavigationControl({ visualizePitch: true }), 'top-right');
-    map.addControl(new FullscreenControl(), 'top-right');
-    map.addControl(new ScaleControl({ maxWidth: 110, unit: 'metric' }), 'bottom-right');
+        maplibreRef.current = maplibre;
+        const {
+          Map: MapLibreMap,
+          NavigationControl,
+          FullscreenControl,
+          ScaleControl
+        } = maplibre;
 
-    const handleLoad = () => {
-      window.clearTimeout(styleTimerRef.current);
+        const rememberedProvider = getRememberedProvider();
+        const startWithRaster = rememberedProvider === 'raster';
+        fallbackAppliedRef.current = startWithRaster;
 
-      if (fallbackAppliedRef.current) {
-        rememberProvider('raster');
-        setMapStatus('fallback-ready');
-      } else {
-        rememberProvider('primary');
-        setMapStatus('ready');
-        setMapError('');
-      }
+        const map = new MapLibreMap({
+          container: containerRef.current,
+          style: startWithRaster ? FALLBACK_RASTER_STYLE : PRIMARY_STYLE,
+          center: DEFAULT_CENTER,
+          zoom: 11.9,
+          minZoom: 10,
+          maxZoom: 18,
+          maxBounds: WEST_HANOI_BOUNDS,
+          attributionControl: true,
+          fadeDuration: 0,
+          refreshExpiredTiles: false,
+          renderWorldCopies: false,
+          maxTileCacheSize: 48
+        });
 
-      setInteractiveReady(true);
-      window.requestAnimationFrame(() => map.resize());
-    };
+        initializedMap = map;
+        mapRef.current = map;
 
-    const handleIdle = () => {
-      if (map.isStyleLoaded()) {
-        window.clearTimeout(styleTimerRef.current);
-        setMapStatus(fallbackAppliedRef.current ? 'fallback-ready' : 'ready');
-        setInteractiveReady(true);
-      }
-    };
+        map.addControl(new NavigationControl({ visualizePitch: true }), 'top-right');
+        map.addControl(new FullscreenControl(), 'top-right');
+        map.addControl(new ScaleControl({ maxWidth: 110, unit: 'metric' }), 'bottom-right');
 
-    const handleError = (event) => {
-      const message = event?.error?.message || 'Map style request failed.';
-      console.error('[Hola Maps] MapLibre error:', event?.error || event);
+        const handleLoad = () => {
+          window.clearTimeout(styleTimerRef.current);
 
-      if (!fallbackAppliedRef.current && !map.isStyleLoaded()) {
-        applyFallbackStyle(
-          map,
-          'Không tải được nền ' + PRIMARY_PROVIDER_NAME + '. Hola Maps đã tự chuyển sang OpenStreetMap để hiển thị nhanh hơn.'
-        );
-        return;
-      }
+          if (fallbackAppliedRef.current) {
+            rememberProvider('raster');
+            setMapStatus('fallback-ready');
+          } else {
+            rememberProvider('primary');
+            setMapStatus('ready');
+            setMapError('');
+          }
 
-      if (fallbackAppliedRef.current && !map.isStyleLoaded()) {
-        setMapStatus('error');
-        setMapError('Không tải được dữ liệu bản đồ. Kiểm tra mạng, VPN hoặc tiện ích chặn nội dung.');
-      } else if (message.toLowerCase().includes('webgl')) {
-        setMapStatus('error');
-        setMapError('WebGL đang bị tắt hoặc không khả dụng trên trình duyệt này.');
-      }
-    };
+          setInteractiveReady(true);
+          window.requestAnimationFrame(() => map.resize());
+        };
 
-    map.on('load', handleLoad);
-    map.on('idle', handleIdle);
-    map.on('error', handleError);
+        const handleIdle = () => {
+          if (map.isStyleLoaded()) {
+            window.clearTimeout(styleTimerRef.current);
+            setMapStatus(fallbackAppliedRef.current ? 'fallback-ready' : 'ready');
+            setInteractiveReady(true);
+          }
+        };
 
-    if (!startWithRaster) {
-      styleTimerRef.current = window.setTimeout(() => {
-        if (!map.isStyleLoaded()) {
-          applyFallbackStyle(
-            map,
-            MAPTILER_RASTER_STYLE
-              ? 'MapTiler chưa phản hồi sau 8 giây. Hola Maps đã chuyển sang OpenStreetMap dự phòng.'
-              : 'Nền bản đồ chính tải quá lâu. Hola Maps đã chuyển sang OpenStreetMap để vào nhanh hơn.'
-          );
+        const handleError = (event) => {
+          const message = event?.error?.message || 'Map style request failed.';
+          console.error('[Hola Maps] MapLibre error:', event?.error || event);
+
+          if (!fallbackAppliedRef.current && !map.isStyleLoaded()) {
+            applyFallbackStyle(
+              map,
+              'Không tải được nền ' + PRIMARY_PROVIDER_NAME + '. Hola Maps đã tự chuyển sang OpenStreetMap để hiển thị nhanh hơn.'
+            );
+            return;
+          }
+
+          if (fallbackAppliedRef.current && !map.isStyleLoaded()) {
+            setMapStatus('error');
+            setMapError('Không tải được dữ liệu bản đồ. Kiểm tra mạng, VPN hoặc tiện ích chặn nội dung.');
+          } else if (message.toLowerCase().includes('webgl')) {
+            setMapStatus('error');
+            setMapError('WebGL đang bị tắt hoặc không khả dụng trên trình duyệt này.');
+          }
+        };
+
+        map.__holaHandlers = { handleLoad, handleIdle, handleError };
+        map.on('load', handleLoad);
+        map.on('idle', handleIdle);
+        map.on('error', handleError);
+
+        if (!startWithRaster) {
+          styleTimerRef.current = window.setTimeout(() => {
+            if (!map.isStyleLoaded()) {
+              applyFallbackStyle(
+                map,
+                MAPTILER_RASTER_STYLE
+                  ? 'MapTiler phản hồi chậm. Hola Maps đã chuyển sang OpenStreetMap dự phòng.'
+                  : 'Nền bản đồ chính tải quá lâu. Hola Maps đã chuyển sang OpenStreetMap để vào nhanh hơn.'
+              );
+            }
+          }, MAP_FALLBACK_DELAY_MS);
         }
-      }, MAP_FALLBACK_DELAY_MS);
+      } catch (error) {
+        console.error('[Hola Maps] Lazy MapLibre initialization failed:', error);
+        if (!cancelled) {
+          setMapStatus('error');
+          setMapError('Trình duyệt không khởi tạo được MapLibre/WebGL.');
+        }
+      }
+    };
+
+    const startAfterFirstPaint = () => {
+      paintTimer = window.setTimeout(initializeMap, 0);
+    };
+
+    if ('requestIdleCallback' in window) {
+      idleHandle = window.requestIdleCallback(startAfterFirstPaint, { timeout: 180 });
+    } else {
+      window.requestAnimationFrame(startAfterFirstPaint);
     }
 
     return () => {
+      cancelled = true;
+      if (paintTimer) window.clearTimeout(paintTimer);
+      if (idleHandle && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleHandle);
       window.clearTimeout(styleTimerRef.current);
+
       removeMarkers(markersRef.current);
       markersRef.current = [];
 
@@ -352,21 +383,30 @@ export default function MapView({
         userMarkerRef.current = null;
       }
 
-      map.off('load', handleLoad);
-      map.off('idle', handleIdle);
-      map.off('error', handleError);
-      map.remove();
+      const map = mapRef.current || initializedMap;
+      if (map) {
+        const handlers = map.__holaHandlers;
+        if (handlers) {
+          map.off('load', handlers.handleLoad);
+          map.off('idle', handlers.handleIdle);
+          map.off('error', handlers.handleError);
+        }
+        map.remove();
+      }
+
       mapRef.current = null;
+      maplibreRef.current = null;
       fallbackAppliedRef.current = false;
       fittedRouteKeyRef.current = '';
-      setInteractiveReady(false);
     };
   }, []);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    const maplibre = maplibreRef.current;
+    if (!map || !maplibre || !interactiveReady) return;
 
+    const { Marker, Popup } = maplibre;
     removeMarkers(markersRef.current);
 
     markersRef.current = validPlaces.map((place) => {
@@ -410,12 +450,15 @@ export default function MapView({
         .setPopup(popup)
         .addTo(map);
     });
-  }, [validPlaces, selectedPlaceId, onSelectPlace]);
+  }, [validPlaces, selectedPlaceId, onSelectPlace, interactiveReady]);
 
   useEffect(() => {
     const map = mapRef.current;
+    const maplibre = maplibreRef.current;
 
-    if (!map) return;
+    if (!map || !maplibre || !interactiveReady) return;
+
+    const { Marker, Popup } = maplibre;
 
     if (!userLocation || !Number.isFinite(Number(userLocation.lat)) || !Number.isFinite(Number(userLocation.lng))) {
       if (userMarkerRef.current) {
@@ -445,11 +488,14 @@ export default function MapView({
         )
       )
       .addTo(map);
-  }, [userLocation]);
+  }, [userLocation, interactiveReady]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    const maplibre = maplibreRef.current;
+    if (!map || !maplibre || !interactiveReady) return;
+
+    const { LngLatBounds } = maplibre;
 
     const renderRoute = () => {
       if (!map.isStyleLoaded()) return;
@@ -528,7 +574,7 @@ export default function MapView({
     return () => {
       map.off('styledata', renderRoute);
     };
-  }, [route, mapStatus]);
+  }, [route, mapStatus, interactiveReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -596,30 +642,32 @@ export default function MapView({
 
   return (
     <div className="map-wrap premium-map-wrap">
-      {MAPTILER_STATIC_PREVIEW_URL && !interactiveReady && (
-        <img
-          className="map-static-preview"
-          src={MAPTILER_STATIC_PREVIEW_URL}
-          alt=""
-          aria-hidden="true"
-          decoding="async"
-          fetchPriority="high"
-        />
+      {!interactiveReady && (
+        MAPTILER_STATIC_PREVIEW_URL ? (
+          <img
+            className="map-static-preview"
+            src={MAPTILER_STATIC_PREVIEW_URL}
+            alt=""
+            aria-hidden="true"
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+          />
+        ) : (
+          <div className="map-instant-preview" aria-hidden="true">
+            <span className="preview-road preview-road-1" />
+            <span className="preview-road preview-road-2" />
+            <span className="preview-road preview-road-3" />
+            <span className="preview-water" />
+            <span className="preview-label preview-label-hola">HÒA LẠC</span>
+            <span className="preview-label preview-label-thachthat">THẠCH THẤT</span>
+            <span className="preview-label preview-label-quocoai">QUỐC OAI</span>
+            <span className="preview-pin"><b>●</b><small>Hòa Lạc</small></span>
+          </div>
+        )
       )}
 
       <div ref={containerRef} className="hola-map" />
-
-      {showLoading && !MAPTILER_STATIC_PREVIEW_URL && (
-        <div className="map-loading-skeleton" aria-hidden="true">
-          <span className="skeleton-road road-1" />
-          <span className="skeleton-road road-2" />
-          <span className="skeleton-road road-3" />
-          <span className="skeleton-water" />
-          <span className="skeleton-block block-1" />
-          <span className="skeleton-block block-2" />
-          <span className="skeleton-block block-3" />
-        </div>
-      )}
 
       {showLoading && (
         <div className="map-provider-status loading">
