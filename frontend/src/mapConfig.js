@@ -29,11 +29,12 @@ export const SERVICE_AREAS = [
 
 const MAPTILER_KEY = (env.VITE_MAPTILER_KEY || '').trim();
 const MAPTILER_MAP_ID = (env.VITE_MAPTILER_MAP_ID || 'streets-v4').trim();
+const LOCAL_STYLE_URL = (env.VITE_LOCAL_STYLE_URL || '').trim();
 const LOCAL_TILE_URL = (env.VITE_LOCAL_TILE_URL || '').trim();
 
-export const TILE_PROVIDER = LOCAL_TILE_URL
-  ? 'Hola Maps local tiles'
-  : (MAPTILER_KEY ? 'MapTiler' : 'OpenStreetMap');
+export const TILE_PROVIDER = LOCAL_STYLE_URL
+  ? 'Hola Maps vector'
+  : (LOCAL_TILE_URL ? 'Hola Maps local tiles' : (MAPTILER_KEY ? 'MapTiler' : 'OpenStreetMap'));
 
 export const TILE_URL = LOCAL_TILE_URL || (
   MAPTILER_KEY
@@ -60,6 +61,8 @@ export function isInsideServiceCoverage(lng, lat) {
 }
 
 export function createLocalBasemapStyle() {
+  if (LOCAL_STYLE_URL) return LOCAL_STYLE_URL;
+
   const sources = {};
   const layers = [
     {
