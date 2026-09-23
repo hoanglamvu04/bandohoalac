@@ -9,6 +9,7 @@ import {
   Layers,
   Map as MapIcon,
   MapPin,
+  Mountain,
   Navigation,
   Plus,
   Route,
@@ -22,6 +23,7 @@ import MapView from '../components/MapView.jsx';
 import { getDirections, getMapLayers, getPlaces } from '../services/api.js';
 
 const LAYERS = [
+  { type: 'TERRAIN', label: 'Địa hình', icon: Mountain, tone: 'green' },
   { type: 'ROAD', label: 'Đường nội bộ', icon: Route, tone: 'slate' },
   { type: 'WATER', label: 'Sông / hồ', icon: Waves, tone: 'blue' },
   { type: 'BUILDING', label: 'Công trình', icon: Building2, tone: 'stone' },
@@ -33,7 +35,7 @@ const LAYERS = [
   { type: 'EVENT', label: 'Sự kiện', icon: CalendarDays, tone: 'purple' }
 ];
 
-const DEFAULT_ACTIVE = ['WATER', 'BUILDING', 'LANDMARK', 'FLOOD', 'ROAD_CLOSURE', 'ALERT'];
+const DEFAULT_ACTIVE = ['TERRAIN', 'WATER', 'BUILDING', 'LANDMARK', 'FLOOD', 'ROAD_CLOSURE', 'ALERT'];
 
 function getBrowserLocation() {
   return new Promise((resolve, reject) => {
