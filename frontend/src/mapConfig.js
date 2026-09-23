@@ -40,10 +40,10 @@ export const TILE_PROVIDER = LOCAL_STYLE_URL
 export const HAS_MAPTILER_VECTOR = Boolean(MAPTILER_KEY && !LOCAL_STYLE_URL && !LOCAL_TILE_URL);
 
 export const BASEMAP_OPTIONS = [
-  { id: 'streets', label: 'Bản đồ', description: 'Đường, POI, địa danh', mapId: 'streets-v4' },
-  { id: 'satellite', label: 'Vệ tinh', description: 'Ảnh vệ tinh', mapId: 'satellite-v4' },
-  { id: 'hybrid', label: 'Hybrid', description: 'Vệ tinh + nhãn', mapId: 'hybrid-v4' },
-  { id: 'terrain', label: 'Địa hình', description: 'Địa hình, cao độ', mapId: 'topo-v4' }
+  { id: 'streets', label: 'Bản đồ', description: 'Google Roadmap · đường, POI, địa danh' },
+  { id: 'satellite', label: 'Vệ tinh', description: 'Google Satellite imagery' },
+  { id: 'hybrid', label: 'Hybrid', description: 'Vệ tinh + đường + nhãn Google' },
+  { id: 'terrain', label: 'Địa hình', description: 'Google Terrain · địa hình và đường' }
 ];
 
 function mapTilerStyleUrl(mapId) {
