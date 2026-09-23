@@ -31,6 +31,7 @@ const MAPTILER_KEY = (env.VITE_MAPTILER_KEY || '').trim();
 const MAPTILER_MAP_ID = (env.VITE_MAPTILER_MAP_ID || 'streets-v4').trim();
 const LOCAL_STYLE_URL = (env.VITE_LOCAL_STYLE_URL || '').trim();
 const LOCAL_TILE_URL = (env.VITE_LOCAL_TILE_URL || '').trim();
+const LOCAL_TILE_SIZE = Number(env.VITE_LOCAL_TILE_SIZE || 256) === 512 ? 512 : 256;
 
 export const TILE_PROVIDER = LOCAL_STYLE_URL
   ? 'Hola Maps vector'
@@ -39,9 +40,13 @@ export const TILE_PROVIDER = LOCAL_STYLE_URL
 export const TILE_URL = LOCAL_TILE_URL || (
   MAPTILER_KEY
     ? 'https://api.maptiler.com/maps/' + encodeURIComponent(MAPTILER_MAP_ID) +
-      '/256/{z}/{x}/{y}.webp?key=' + encodeURIComponent(MAPTILER_KEY)
+      '/512/{z}/{x}/{y}.webp?key=' + encodeURIComponent(MAPTILER_KEY)
     : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 );
+
+const TILE_SIZE = LOCAL_TILE_URL
+  ? LOCAL_TILE_SIZE
+  : (MAPTILER_KEY ? 512 : 256);
 
 export const STATIC_PREVIEW_URL = MAPTILER_KEY && !LOCAL_STYLE_URL && !LOCAL_TILE_URL
   ? 'https://api.maptiler.com/maps/' + encodeURIComponent(MAPTILER_MAP_ID) +
@@ -68,7 +73,7 @@ export function createLocalBasemapStyle() {
     {
       id: 'hola-background',
       type: 'background',
-      paint: { 'background-color': '#eef1ec' }
+      paint: { 'background-color': '#f1f3ef' }
     }
   ];
 
@@ -78,7 +83,7 @@ export function createLocalBasemapStyle() {
     sources[sourceId] = {
       type: 'raster',
       tiles: [TILE_URL],
-      tileSize: 256,
+      tileSize: TILE_SIZE,
       minzoom: 12,
       maxzoom: 18,
       bounds: area.bounds,
@@ -95,7 +100,12 @@ export function createLocalBasemapStyle() {
       maxzoom: 19,
       paint: {
         'raster-fade-duration': 0,
-        'raster-opacity': 1
+        'raster-opacity': 1,
+        'raster-contrast': 0.12,
+        'raster-saturation': 0.08,
+        'raster-brightness-min': 0.02,
+        'raster-brightness-max': 0.98,
+        'raster-resampling': 'linear'
       }
     });
   });
