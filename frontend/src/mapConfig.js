@@ -43,7 +43,7 @@ export const TILE_URL = LOCAL_TILE_URL || (
     : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 );
 
-export const STATIC_PREVIEW_URL = MAPTILER_KEY && !LOCAL_TILE_URL
+export const STATIC_PREVIEW_URL = MAPTILER_KEY && !LOCAL_STYLE_URL && !LOCAL_TILE_URL
   ? 'https://api.maptiler.com/maps/' + encodeURIComponent(MAPTILER_MAP_ID) +
     '/static/' + DEFAULT_CENTER[0] + ',' + DEFAULT_CENTER[1] +
     ',' + DEFAULT_ZOOM + '/1200x800.webp?attribution=false&key=' + encodeURIComponent(MAPTILER_KEY)
