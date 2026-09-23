@@ -1,7 +1,56 @@
 import { env } from '../config/env.js';
 import { AppError } from '../utils/AppError.js';
+import { pool } from '../database/pool.js';
 
 const SUPPORTED_PROFILES = new Set(['driving']);
+
+async function getRouteHazards(geometry) {
+  if (!geometry?.coordinates?.length) return [];
+
+  try {
+    const { rows } = await pool.query(
+      `WITH route AS (
+         SELECT ST_SetSRID(ST_GeomFromGeoJSON($1), 4326) AS geom
+       )
+       SELECT
+         mf.id,
+         mf.layer_type,
+         mf.name,
+         mf.severity,
+         mf.properties
+       FROM map_features mf, route
+       WHERE mf.status = 'ACTIVE'
+         AND mf.layer_type IN ('FLOOD', 'ROAD_CLOSURE', 'ALERT')
+         AND (mf.valid_from IS NULL OR mf.valid_from <= NOW())
+         AND (mf.valid_until IS NULL OR mf.valid_until >= NOW())
+         AND ST_Intersects(mf.geometry, route.geom)
+       ORDER BY
+         CASE mf.severity
+           WHEN 'CRITICAL' THEN 5
+           WHEN 'HIGH' THEN 4
+           WHEN 'MEDIUM' THEN 3
+           WHEN 'LOW' THEN 2
+           ELSE 1
+         END DESC
+       LIMIT 50`,
+      [JSON.stringify(geometry)]
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      type: row.layer_type,
+      name: row.name,
+      severity: row.severity || 'INFO',
+      ...(row.properties || {})
+    }));
+  } catch (error) {
+    // Keep routing available even before the optional map_features migration
+    // has been applied on an older development database.
+    if (error?.code === '42P01') return [];
+    console.error('[Hola Maps] Hazard lookup failed:', error);
+    return [];
+  }
+}
 
 function normalizeStep(step) {
   return {
@@ -65,6 +114,7 @@ export async function getDirections({
 
     const route = data.routes[0];
     const steps = route.legs?.flatMap((leg) => leg.steps || []).map(normalizeStep) || [];
+    const hazards = await getRouteHazards(route.geometry);
 
     return {
       provider: 'OSRM',
@@ -74,7 +124,8 @@ export async function getDirections({
       distanceMeters: Math.round(Number(route.distance) || 0),
       durationSeconds: Math.round(Number(route.duration) || 0),
       geometry: route.geometry,
-      steps
+      steps,
+      hazards
     };
   } catch (error) {
     if (error?.name === 'AbortError') {
