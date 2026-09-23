@@ -541,9 +541,8 @@
 .hm-map-provider{
   position:absolute;
   z-index:8;
-  left:50%;
+  right:16px;
   bottom:14px;
-  transform:translateX(-50%);
   padding:6px 9px;
   border:1px solid rgba(16,47,41,.08);
   border-radius:999px;
@@ -687,7 +686,7 @@
     width:auto;
   }
   .hm-map-legend{display:none}
-  .hm-map-provider{left:12px;transform:none}
+  .hm-map-provider{right:auto;left:12px}
 }
 
 @media(max-width:600px){
