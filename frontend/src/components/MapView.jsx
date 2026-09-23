@@ -279,6 +279,7 @@ export default function MapView({
   route,
   mapData = emptyFeatureCollection(),
   activeLayers = [],
+  basemapMode = 'streets',
   onViewportChange
 }) {
   const mapRef = useRef(null);
@@ -287,6 +288,9 @@ export default function MapView({
   const markersRef = useRef([]);
   const userMarkerRef = useRef(null);
   const fittedRouteKeyRef = useRef('');
+  const latestMapDataRef = useRef(mapData);
+  const latestActiveLayersRef = useRef(activeLayers);
+  const latestRouteRef = useRef(route);
 
   const [interactiveReady, setInteractiveReady] = useState(false);
   const [mapError, setMapError] = useState('');
@@ -318,7 +322,7 @@ export default function MapView({
         maplibreRef.current = maplibre;
         const map = new maplibre.Map({
           container: containerRef.current,
-          style: createLocalBasemapStyle(),
+          style: createLocalBasemapStyle(basemapMode),
           center: DEFAULT_CENTER,
           zoom: DEFAULT_ZOOM,
           minZoom: MIN_ZOOM,
@@ -402,6 +406,45 @@ export default function MapView({
       maplibreRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    latestMapDataRef.current = mapData;
+  }, [mapData]);
+
+  useEffect(() => {
+    latestActiveLayersRef.current = activeLayers;
+  }, [activeLayers]);
+
+  useEffect(() => {
+    latestRouteRef.current = route;
+  }, [route]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const maplibre = maplibreRef.current;
+    if (!map || !maplibre || !interactiveReady) return undefined;
+
+    let cancelled = false;
+
+    const restoreHolaLayers = () => {
+      if (cancelled) return;
+      addCoverage(map);
+      addDataLayers(map, latestMapDataRef.current);
+      setLayerVisibility(map, latestActiveLayersRef.current);
+      renderRoute(map, latestRouteRef.current, maplibre, fittedRouteKeyRef);
+      setInteractiveReady(true);
+      requestAnimationFrame(() => map.resize());
+    };
+
+    setInteractiveReady(false);
+    map.once('style.load', restoreHolaLayers);
+    map.setStyle(createLocalBasemapStyle(basemapMode), { diff: false });
+
+    return () => {
+      cancelled = true;
+      map.off('style.load', restoreHolaLayers);
+    };
+  }, [basemapMode]);
 
   useEffect(() => {
     const map = mapRef.current;
