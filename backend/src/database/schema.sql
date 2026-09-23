@@ -184,3 +184,31 @@ CREATE TABLE IF NOT EXISTS user_badges (
 );
 
 CREATE INDEX IF NOT EXISTS user_badges_user_idx ON user_badges (user_id);
+
+
+-- ============================================================
+-- MAP FEATURES (editable local data layers)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS map_features (
+  id BIGSERIAL PRIMARY KEY,
+  layer_type TEXT NOT NULL CHECK (layer_type IN (
+    'ROAD', 'TERRAIN', 'WATER', 'BUILDING', 'LANDMARK',
+    'FLOOD', 'ROAD_CLOSURE', 'ALERT', 'PLANNING', 'EVENT'
+  )),
+  name TEXT,
+  geometry GEOMETRY(Geometry, 4326) NOT NULL,
+  properties JSONB NOT NULL DEFAULT '{}'::jsonb,
+  severity TEXT CHECK (severity IS NULL OR severity IN ('INFO', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL')),
+  status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'DRAFT', 'ARCHIVED')),
+  valid_from TIMESTAMPTZ,
+  valid_until TIMESTAMPTZ,
+  created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS map_features_geometry_idx ON map_features USING GIST (geometry);
+CREATE INDEX IF NOT EXISTS map_features_layer_type_idx ON map_features (layer_type);
+CREATE INDEX IF NOT EXISTS map_features_status_idx ON map_features (status);
+CREATE INDEX IF NOT EXISTS map_features_validity_idx ON map_features (valid_from, valid_until);
