@@ -312,3 +312,36 @@
     animation:none;
   }
 }
+
+
+.map-local-provider-badge{
+  position:absolute;
+  right:18px;
+  bottom:18px;
+  z-index:7;
+  padding:6px 9px;
+  border:1px solid rgba(15,57,48,.09);
+  border-radius:999px;
+  background:rgba(255,255,255,.88);
+  color:#527069;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.08em;
+  pointer-events:none;
+  backdrop-filter:blur(8px);
+}
+
+.location-picker-warning{
+  display:block;
+  margin-top:7px;
+  color:#8b3428;
+  font-size:12px;
+  font-weight:800;
+}
+
+@media(max-width:760px){
+  .map-local-provider-badge{
+    right:12px;
+    bottom:74px;
+  }
+}
