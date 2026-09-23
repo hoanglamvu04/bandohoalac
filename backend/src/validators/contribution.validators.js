@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isInsideServiceCoverage } from '../config/mapCoverage.js';
 
 const CONTRIBUTION_TYPES = [
   'CREATE_PLACE', 'UPDATE_PLACE', 'ADD_PHOTO', 'FIX_LOCATION',
@@ -31,6 +32,12 @@ export const createContributionSchema = z.object({
   if (data.type === 'CREATE_PLACE' || data.type === 'FIX_LOCATION') {
     if (!data.location) {
       ctx.addIssue({ code: 'custom', message: 'location is required for this contribution type.', path: ['location'] });
+    } else if (!isInsideServiceCoverage(data.location.lng, data.location.lat)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Location is outside the Hola Maps service area.',
+        path: ['location']
+      });
     }
   }
   if (data.type === 'CREATE_PLACE' && !data.place?.name) {
