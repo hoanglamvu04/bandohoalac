@@ -49,6 +49,15 @@ function loadGoogleMaps() {
   return googleMapsPromise;
 }
 
+function escapeHtml(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
 function emptyFeatureCollection() {
   return { type: 'FeatureCollection', features: [] };
 }
@@ -298,9 +307,9 @@ export default function MapView({
 
           infoWindowRef.current.setContent(
             '<div class="hm-google-popup">' +
-              '<span>' + String(type) + '</span>' +
-              '<strong>' + String(name) + '</strong>' +
-              (description ? '<p>' + String(description) + '</p>' : '') +
+              '<span>' + escapeHtml(type) + '</span>' +
+              '<strong>' + escapeHtml(name) + '</strong>' +
+              (description ? '<p>' + escapeHtml(description) + '</p>' : '') +
             '</div>'
           );
           infoWindowRef.current.setPosition(event.latLng);
@@ -381,9 +390,9 @@ export default function MapView({
         onSelectPlace?.(place);
         infoWindowRef.current?.setContent(
           '<div class="hm-google-popup">' +
-            '<span>' + String(place.category || 'ĐỊA ĐIỂM') + '</span>' +
-            '<strong>' + String(place.name) + '</strong>' +
-            '<p>' + String(place.address || 'Hòa Lạc, Hà Nội') + '</p>' +
+            '<span>' + escapeHtml(place.category || 'ĐỊA ĐIỂM') + '</span>' +
+            '<strong>' + escapeHtml(place.name) + '</strong>' +
+            '<p>' + escapeHtml(place.address || 'Hòa Lạc, Hà Nội') + '</p>' +
           '</div>'
         );
         infoWindowRef.current?.open({ map: mapRef.current, anchor: marker });
