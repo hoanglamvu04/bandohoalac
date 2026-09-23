@@ -104,7 +104,7 @@ export default function MapEditor() {
           id: 'hm-editor-draft-fill',
           type: 'fill',
           source: 'hm-editor-draft',
-          filter: ['==', '$type', 'Polygon'],
+          filter: ['==', ['geometry-type'], 'Polygon'],
           paint: {
             'fill-color': '#f59e0b',
             'fill-opacity': 0.24,
@@ -116,7 +116,7 @@ export default function MapEditor() {
           id: 'hm-editor-draft-line',
           type: 'line',
           source: 'hm-editor-draft',
-          filter: ['==', '$type', 'LineString'],
+          filter: ['==', ['geometry-type'], 'LineString'],
           paint: {
             'line-color': '#dc2626',
             'line-width': 4
@@ -127,7 +127,7 @@ export default function MapEditor() {
           id: 'hm-editor-draft-point',
           type: 'circle',
           source: 'hm-editor-draft',
-          filter: ['==', '$type', 'Point'],
+          filter: ['==', ['geometry-type'], 'Point'],
           paint: {
             'circle-radius': 7,
             'circle-color': '#0f766e',
