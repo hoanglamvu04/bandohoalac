@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, LocateFixed, RefreshCcw } from 'lucide-react';
 
 const DEFAULT_CENTER = [105.525, 21.005];
+const DEFAULT_ZOOM = 13.15;
+const MIN_ZOOM = 11.8;
 
 // Core Hola Maps coverage: Hòa Lạc, Yên Xuân, Thạch Thất, Tây Phương,
 // Hạ Bằng, Phú Cát and the nearby parts of Ba Vì, Quốc Oai, Hoài Đức.
@@ -15,8 +17,9 @@ const WEST_HANOI_BOUNDS = [
 
 const MAPTILER_KEY = (import.meta.env.VITE_MAPTILER_KEY || '').trim();
 const MAPTILER_MAP_ID = (import.meta.env.VITE_MAPTILER_MAP_ID || 'streets-v4').trim();
-const CUSTOM_STYLE_URL = (import.meta.env.VITE_MAP_STYLE_URL || '').trim();
-const DEFAULT_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+// Keep the default basemap raster-only. Vector styles such as OpenFreeMap
+// download style JSON, fonts, sprites and multiple vector sources before the
+// first useful paint, which is unnecessary for this local discovery map.
 
 const MAPTILER_RASTER_TILE_URL = MAPTILER_KEY
   ? 'https://api.maptiler.com/maps/' + encodeURIComponent(MAPTILER_MAP_ID) +
@@ -49,28 +52,15 @@ const MAPTILER_RASTER_STYLE = MAPTILER_RASTER_TILE_URL
     }
   : null;
 
-const PRIMARY_STYLE = MAPTILER_RASTER_STYLE || CUSTOM_STYLE_URL || DEFAULT_STYLE_URL;
-const PRIMARY_PROVIDER_NAME = MAPTILER_RASTER_STYLE
-  ? 'MapTiler Raster'
-  : (CUSTOM_STYLE_URL ? 'Custom map' : 'OpenFreeMap');
-const MAP_FALLBACK_DELAY_MS = MAPTILER_RASTER_STYLE ? 2600 : 1400;
-const MAPTILER_STATIC_PREVIEW_URL = MAPTILER_KEY
-  ? 'https://api.maptiler.com/maps/' + encodeURIComponent(MAPTILER_MAP_ID) +
-    '/static/' + DEFAULT_CENTER[0] + ',' + DEFAULT_CENTER[1] +
-    ',11.7/1200x800.webp?attribution=false&key=' + encodeURIComponent(MAPTILER_KEY)
-  : '';
-const PROVIDER_CACHE_KEY = 'hola_maps_map_provider_v3';
-const PROVIDER_CACHE_TTL_MS = 15 * 60 * 1000;
-
-const FALLBACK_RASTER_STYLE = {
+const LIGHT_RASTER_STYLE = {
   version: 8,
   sources: {
     osm: {
       type: 'raster',
       tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
-      minzoom: 0,
-      maxzoom: 19,
+      minzoom: 11,
+      maxzoom: 18,
       attribution: '&copy; OpenStreetMap contributors'
     }
   },
@@ -85,6 +75,18 @@ const FALLBACK_RASTER_STYLE = {
     }
   ]
 };
+
+const PRIMARY_STYLE = MAPTILER_RASTER_STYLE || LIGHT_RASTER_STYLE;
+const PRIMARY_PROVIDER_NAME = MAPTILER_RASTER_STYLE ? 'MapTiler Raster' : 'OpenStreetMap Raster';
+const MAP_FALLBACK_DELAY_MS = 1800;
+const MAPTILER_STATIC_PREVIEW_URL = MAPTILER_KEY
+  ? 'https://api.maptiler.com/maps/' + encodeURIComponent(MAPTILER_MAP_ID) +
+    '/static/' + DEFAULT_CENTER[0] + ',' + DEFAULT_CENTER[1] +
+    ',' + DEFAULT_ZOOM + '/1200x800.webp?attribution=false&key=' + encodeURIComponent(MAPTILER_KEY)
+  : '';
+const PROVIDER_CACHE_KEY = 'hola_maps_map_provider_v4';
+const PROVIDER_CACHE_TTL_MS = 15 * 60 * 1000;
+const FALLBACK_RASTER_STYLE = LIGHT_RASTER_STYLE;
 
 const ROUTE_SOURCE_ID = 'hola-route-source';
 const ROUTE_CASING_LAYER_ID = 'hola-route-casing';
@@ -223,9 +225,11 @@ export default function MapView({
       map.setStyle(PRIMARY_STYLE);
 
       window.clearTimeout(styleTimerRef.current);
-      styleTimerRef.current = window.setTimeout(() => {
-        if (!map.isStyleLoaded()) applyFallbackStyle(map);
-      }, MAP_FALLBACK_DELAY_MS);
+      if (MAPTILER_RASTER_STYLE) {
+        styleTimerRef.current = window.setTimeout(() => {
+          if (!map.isStyleLoaded()) applyFallbackStyle(map);
+        }, MAP_FALLBACK_DELAY_MS);
+      }
     } catch (error) {
       console.error('[Hola Maps] Could not reload map style:', error);
       applyFallbackStyle(map, 'Nguồn bản đồ chính gặp lỗi. Đang dùng bản đồ dự phòng.');
@@ -263,22 +267,22 @@ export default function MapView({
         } = maplibre;
 
         const rememberedProvider = getRememberedProvider();
-        const startWithRaster = rememberedProvider === 'raster';
+        const startWithRaster = Boolean(MAPTILER_RASTER_STYLE && rememberedProvider === 'raster');
         fallbackAppliedRef.current = startWithRaster;
 
         const map = new MapLibreMap({
           container: containerRef.current,
           style: startWithRaster ? FALLBACK_RASTER_STYLE : PRIMARY_STYLE,
           center: DEFAULT_CENTER,
-          zoom: 11.9,
-          minZoom: 10,
-          maxZoom: 18,
+          zoom: DEFAULT_ZOOM,
+          minZoom: MIN_ZOOM,
+          maxZoom: 17.5,
           maxBounds: WEST_HANOI_BOUNDS,
           attributionControl: true,
           fadeDuration: 0,
           refreshExpiredTiles: false,
           renderWorldCopies: false,
-          maxTileCacheSize: 48
+          maxTileCacheSize: 24
         });
 
         initializedMap = map;
@@ -316,15 +320,15 @@ export default function MapView({
           const message = event?.error?.message || 'Map style request failed.';
           console.error('[Hola Maps] MapLibre error:', event?.error || event);
 
-          if (!fallbackAppliedRef.current && !map.isStyleLoaded()) {
+          if (MAPTILER_RASTER_STYLE && !fallbackAppliedRef.current && !map.isStyleLoaded()) {
             applyFallbackStyle(
               map,
-              'Không tải được nền ' + PRIMARY_PROVIDER_NAME + '. Hola Maps đã tự chuyển sang OpenStreetMap để hiển thị nhanh hơn.'
+              'Không tải được nền ' + PRIMARY_PROVIDER_NAME + '. Hola Maps đã chuyển sang OpenStreetMap raster nhẹ.'
             );
             return;
           }
 
-          if (fallbackAppliedRef.current && !map.isStyleLoaded()) {
+          if (!map.isStyleLoaded()) {
             setMapStatus('error');
             setMapError('Không tải được dữ liệu bản đồ. Kiểm tra mạng, VPN hoặc tiện ích chặn nội dung.');
           } else if (message.toLowerCase().includes('webgl')) {
@@ -338,14 +342,12 @@ export default function MapView({
         map.on('idle', handleIdle);
         map.on('error', handleError);
 
-        if (!startWithRaster) {
+        if (MAPTILER_RASTER_STYLE && !startWithRaster) {
           styleTimerRef.current = window.setTimeout(() => {
             if (!map.isStyleLoaded()) {
               applyFallbackStyle(
                 map,
-                MAPTILER_RASTER_STYLE
-                  ? 'MapTiler phản hồi chậm. Hola Maps đã chuyển sang OpenStreetMap dự phòng.'
-                  : 'Nền bản đồ chính tải quá lâu. Hola Maps đã chuyển sang OpenStreetMap để vào nhanh hơn.'
+                'MapTiler phản hồi chậm. Hola Maps đã chuyển ngay sang OpenStreetMap raster nhẹ.'
               );
             }
           }, MAP_FALLBACK_DELAY_MS);
