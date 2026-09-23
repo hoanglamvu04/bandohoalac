@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import MapView from '../components/MapView.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { getDirections, getMapLayers, getPlaces } from '../services/api.js';
 
 const LAYERS = [
@@ -71,6 +72,7 @@ function formatDuration(seconds) {
 }
 
 export default function MapPage() {
+  const { isModerator } = useAuth();
   const [places, setPlaces] = useState([]);
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState(null);
@@ -237,6 +239,12 @@ export default function MapPage() {
           <b>LOCAL DATA</b>
           <span>{dataLoading ? 'Đang đồng bộ…' : mapData.features.length + ' đối tượng'}</span>
         </div>
+
+        {isModerator && (
+          <Link className="hm-map-edit-link" to="/admin/map-editor">
+            <MapIcon size={16} /> Biên tập
+          </Link>
+        )}
 
         <Link className="hm-add-place" to="/contribute">
           <Plus size={17} /> Thêm địa điểm
