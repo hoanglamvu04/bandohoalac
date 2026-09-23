@@ -98,6 +98,30 @@ export function getDirections({
   }));
 }
 
+export function getMapLayers({ types = [], bounds } = {}) {
+  return unwrap(client.get('/map-layers', {
+    params: cleanParams({
+      types: Array.isArray(types) ? types.join(',') : types,
+      west: bounds?.west,
+      south: bounds?.south,
+      east: bounds?.east,
+      north: bounds?.north
+    })
+  }));
+}
+
+export function createMapLayerFeature(payload) {
+  return unwrap(client.post('/map-layers', payload));
+}
+
+export function updateMapLayerFeature(id, payload) {
+  return unwrap(client.patch('/map-layers/' + encodeURIComponent(id), payload));
+}
+
+export function archiveMapLayerFeature(id) {
+  return unwrap(client.delete('/map-layers/' + encodeURIComponent(id)));
+}
+
 export function createContribution({ type, placeId, location, place, reason, photos = [] }) {
   const formData = new FormData();
   formData.append('type', type);
