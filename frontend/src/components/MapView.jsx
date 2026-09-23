@@ -93,8 +93,8 @@ function addDataLayers(map, data) {
     source: DATA_SOURCE_ID,
     filter: ['==', ['get', 'layerType'], 'TERRAIN'],
     paint: {
-      'fill-color': '#d8ddca',
-      'fill-opacity': 0.34
+      'fill-color': '#a9c2a5',
+      'fill-opacity': 0.10
     }
   });
 
@@ -104,9 +104,9 @@ function addDataLayers(map, data) {
     source: DATA_SOURCE_ID,
     filter: ['==', ['get', 'layerType'], 'WATER'],
     paint: {
-      'fill-color': '#8ecbd5',
-      'fill-opacity': 0.72,
-      'fill-outline-color': '#6fb4c1'
+      'fill-color': '#62b7c9',
+      'fill-opacity': 0.52,
+      'fill-outline-color': '#3c93a5'
     }
   });
 
@@ -116,9 +116,9 @@ function addDataLayers(map, data) {
     source: DATA_SOURCE_ID,
     filter: ['==', ['get', 'layerType'], 'BUILDING'],
     paint: {
-      'fill-color': '#c9c4b8',
-      'fill-opacity': 0.65,
-      'fill-outline-color': '#aaa397'
+      'fill-color': '#b8b0a1',
+      'fill-opacity': 0.28,
+      'fill-outline-color': '#8d8579'
     }
   });
 
@@ -128,9 +128,9 @@ function addDataLayers(map, data) {
     source: DATA_SOURCE_ID,
     filter: ['==', ['get', 'layerType'], 'PLANNING'],
     paint: {
-      'fill-color': '#a78bfa',
-      'fill-opacity': 0.18,
-      'fill-outline-color': '#7c3aed'
+      'fill-color': '#8b5cf6',
+      'fill-opacity': 0.12,
+      'fill-outline-color': '#6d28d9'
     }
   });
 
@@ -149,7 +149,7 @@ function addDataLayers(map, data) {
         'LOW', '#38bdf8',
         '#60a5fa'
       ],
-      'fill-opacity': 0.34,
+      'fill-opacity': 0.24,
       'fill-outline-color': '#2563eb'
     }
   });
@@ -161,9 +161,9 @@ function addDataLayers(map, data) {
     filter: ['==', ['get', 'layerType'], 'ROAD'],
     layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: {
-      'line-color': '#475569',
-      'line-width': ['interpolate', ['linear'], ['zoom'], 12, 1.4, 17, 5],
-      'line-opacity': 0.78
+      'line-color': '#334155',
+      'line-width': ['interpolate', ['linear'], ['zoom'], 12, 1.2, 17, 4.5],
+      'line-opacity': 0.88
     }
   });
 
