@@ -60,6 +60,27 @@ function emptyFeatureCollection() {
   return { type: 'FeatureCollection', features: [] };
 }
 
+function hasRenderedBasemapFeatures(map) {
+  if (!map?.isStyleLoaded()) return false;
+
+  try {
+    const style = map.getStyle();
+    const basemapLayerIds = (style?.layers || [])
+      .filter((layer) => layer.source === 'protomaps')
+      .map((layer) => layer.id);
+
+    if (!basemapLayerIds.length) return false;
+
+    const rendered = map.queryRenderedFeatures(undefined, {
+      layers: basemapLayerIds.slice(0, 80)
+    });
+
+    return rendered.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 function loadExternalScript(src, globalName) {
   if (window[globalName]) return Promise.resolve(window[globalName]);
 
@@ -321,6 +342,7 @@ export default function MapView({
   const [mapError, setMapError] = useState('');
   const [locating, setLocating] = useState(false);
   const [usingLocalPmtiles, setUsingLocalPmtiles] = useState(false);
+  const [basemapHealth, setBasemapHealth] = useState('checking');
 
   const validPlaces = useMemo(
     () => places.filter((place) =>
@@ -399,6 +421,35 @@ export default function MapView({
           setInteractiveReady(true);
           notifyViewport();
           requestAnimationFrame(() => map.resize());
+
+          if (!hasLocalPmtiles) {
+            setBasemapHealth('fallback');
+            return;
+          }
+
+          window.setTimeout(() => {
+            if (cancelled || !mapRef.current) return;
+
+            const healthy = hasRenderedBasemapFeatures(map);
+            if (healthy) {
+              setBasemapHealth('ok');
+              return;
+            }
+
+            console.warn('[Hola Maps] Local PMTiles has no rendered basemap features. Falling back to OpenFreeMap.');
+            setBasemapHealth('broken');
+            setUsingLocalPmtiles(false);
+            map.setStyle(createFallbackStyle(), { diff: false });
+
+            map.once('style.load', () => {
+              addCoverage(map);
+              addDataLayers(map, latestMapDataRef.current);
+              setLayerVisibility(map, latestActiveLayersRef.current);
+              renderRoute(map, latestRouteRef.current, maplibre, fittedRouteKeyRef);
+              setBasemapHealth('fallback');
+              requestAnimationFrame(() => map.resize());
+            });
+          }, 1800);
         });
 
         map.on('moveend', notifyViewport);
@@ -606,7 +657,12 @@ export default function MapView({
 
       <div ref={containerRef} className="hm-map-canvas" />
 
-      <div className="hm-map-provider">{usingLocalPmtiles ? 'LOCAL PMTILES · OSM' : 'OPEN VECTOR FALLBACK'}</div>
+      <div className={'hm-map-provider health-' + basemapHealth}>
+        {basemapHealth === 'checking' && 'CHECKING LOCAL BASEMAP'}
+        {basemapHealth === 'ok' && 'LOCAL PMTILES · OSM'}
+        {basemapHealth === 'broken' && 'LOCAL PMTILES ERROR'}
+        {basemapHealth === 'fallback' && 'OPEN VECTOR FALLBACK'}
+      </div>
 
       <button className="hm-locate" type="button" onClick={locateUser} disabled={locating}>
         <LocateFixed size={18} />
