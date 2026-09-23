@@ -936,3 +936,84 @@
 .hm-route-hazard.severity-info{
   border-left:3px solid #38bdf8;
 }
+
+
+.hm-basemap-switcher{
+  position:absolute;
+  z-index:16;
+  left:18px;
+  bottom:18px;
+  display:flex;
+  gap:8px;
+  padding:8px;
+  border:1px solid rgba(16,47,41,.10);
+  border-radius:17px;
+  background:rgba(255,255,255,.96);
+  box-shadow:0 14px 36px rgba(11,39,32,.14);
+  backdrop-filter:blur(14px);
+  transition:left .2s ease;
+}
+
+.hm-basemap-switcher.panel-open{
+  left:374px;
+}
+
+.hm-basemap-switcher button{
+  min-width:76px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:5px;
+  padding:8px 9px 7px;
+  border:1px solid transparent;
+  border-radius:12px;
+  color:#4f6860;
+  background:transparent;
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease,transform .15s ease,color .15s ease;
+}
+
+.hm-basemap-switcher button:hover{
+  transform:translateY(-1px);
+  background:#f3f7f4;
+}
+
+.hm-basemap-switcher button.active{
+  border-color:rgba(16,63,53,.16);
+  color:#103f35;
+  background:#eaf3ee;
+  box-shadow:inset 0 0 0 1px rgba(16,63,53,.04);
+}
+
+.hm-basemap-switcher button span{
+  width:34px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  border-radius:9px;
+  background:#eef3f0;
+}
+
+.hm-basemap-switcher button.active span{
+  color:#fff;
+  background:#103f35;
+}
+
+.hm-basemap-switcher button b{
+  font-size:9px;
+  white-space:nowrap;
+}
+
+@media(max-width:900px){
+  .hm-basemap-switcher,
+  .hm-basemap-switcher.panel-open{
+    left:10px;
+    bottom:12px;
+    max-width:calc(100vw - 20px);
+    overflow-x:auto;
+  }
+
+  .hm-basemap-switcher button{
+    min-width:68px;
+  }
+}
