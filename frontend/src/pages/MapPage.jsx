@@ -14,6 +14,7 @@ import {
   Plus,
   Route,
   Search,
+  Satellite,
   TriangleAlert,
   Waves,
   X
@@ -22,6 +23,7 @@ import { Link } from 'react-router-dom';
 import MapView from '../components/MapView.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getDirections, getMapLayers, getPlaces } from '../services/api.js';
+import { BASEMAP_OPTIONS } from '../mapConfig.js';
 
 const LAYERS = [
   { type: 'TERRAIN', label: 'Địa hình', icon: Mountain, tone: 'green' },
@@ -77,6 +79,7 @@ export default function MapPage() {
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [activeLayers, setActiveLayers] = useState(DEFAULT_ACTIVE);
+  const [basemapMode, setBasemapMode] = useState('streets');
   const [mapData, setMapData] = useState({ type: 'FeatureCollection', features: [] });
   const [viewport, setViewport] = useState(null);
   const [dataLoading, setDataLoading] = useState(false);
@@ -207,6 +210,7 @@ export default function MapPage() {
         route={routeData}
         mapData={mapData}
         activeLayers={activeLayers}
+        basemapMode={basemapMode}
         onViewportChange={setViewport}
       />
 
@@ -398,6 +402,31 @@ export default function MapPage() {
           )}
         </aside>
       )}
+
+      <div className={leftOpen ? 'hm-basemap-switcher panel-open' : 'hm-basemap-switcher'}>
+        {BASEMAP_OPTIONS.map((option) => {
+          const Icon = option.id === 'satellite'
+            ? Satellite
+            : option.id === 'terrain'
+              ? Mountain
+              : option.id === 'hybrid'
+                ? Layers
+                : MapIcon;
+
+          return (
+            <button
+              key={option.id}
+              type="button"
+              className={basemapMode === option.id ? 'active' : ''}
+              onClick={() => setBasemapMode(option.id)}
+              title={option.description}
+            >
+              <span><Icon size={17} /></span>
+              <b>{option.label}</b>
+            </button>
+          );
+        })}
+      </div>
 
       <div className="hm-map-legend">
         <span><i className="flood" /> Ngập</span>
