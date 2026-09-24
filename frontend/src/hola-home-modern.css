@@ -1,0 +1,127 @@
+/* Hola Maps Home modern redesign */
+
+.blue-modern-home,
+.premium-home{
+  background:#f8fbff;
+}
+
+.home-page .premium-hero{
+  width:min(1280px,calc(100% - 36px));
+  min-height:700px;
+  border-radius:38px;
+  overflow:hidden;
+  background:
+    linear-gradient(110deg,rgba(5,20,55,.92),rgba(37,99,235,.52)),
+    radial-gradient(circle at top right,#60a5fa,#102042);
+  box-shadow:0 35px 90px rgba(15,40,90,.25);
+}
+
+.premium-hero h1{
+  font-size:clamp(52px,6vw,82px);
+  letter-spacing:-.06em;
+}
+
+.premium-hero h1 span{
+  color:#60b7ff;
+}
+
+.hero-badge{
+  border-radius:999px;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.18);
+  backdrop-filter:blur(12px);
+}
+
+.hero-product-demo .hero-map-surface{
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.94),rgba(219,234,254,.96));
+  border:8px solid rgba(255,255,255,.45);
+  border-radius:32px;
+  box-shadow:0 30px 70px rgba(0,0,0,.25);
+}
+
+.hero-map-card{
+  border-radius:22px;
+  box-shadow:0 18px 45px rgba(15,23,42,.18);
+}
+
+.live-stats-strip{
+  border-radius:28px;
+  background:rgba(255,255,255,.76);
+  backdrop-filter:blur(20px);
+  border:1px solid rgba(96,165,250,.18);
+}
+
+.live-stats-strip strong{
+  color:#143b87;
+}
+
+.home-section{
+  width:min(1280px,calc(100% - 36px));
+  margin-left:auto;
+  margin-right:auto;
+  margin-top:90px;
+}
+
+.section-heading h2,
+.trust-copy h2{
+  color:#102042;
+  letter-spacing:-.045em;
+}
+
+.section-heading h2{
+  font-size:52px;
+}
+
+.category-bar,
+.discover-grid{
+  gap:18px;
+}
+
+.category-bar>*{
+  border-radius:22px!important;
+  background:#fff!important;
+  border:1px solid rgba(59,130,246,.1)!important;
+  box-shadow:0 12px 30px rgba(37,99,235,.08);
+}
+
+.place-grid{
+  gap:24px;
+}
+
+.premium-place-card{
+  border-radius:26px!important;
+  overflow:hidden;
+  background:#fff;
+  border:1px solid rgba(59,130,246,.1);
+  box-shadow:0 16px 40px rgba(15,32,66,.08);
+}
+
+.premium-place-card:hover{
+  transform:translateY(-6px);
+  box-shadow:0 24px 55px rgba(15,32,66,.15);
+}
+
+.trust-section{
+  padding:20px 0;
+}
+
+.trust-grid article{
+  border-radius:26px;
+  background:#fff;
+  border:1px solid rgba(59,130,246,.1);
+  box-shadow:0 12px 32px rgba(37,99,235,.08);
+}
+
+.premium-community-banner{
+  border-radius:32px;
+  background:
+    linear-gradient(90deg,rgba(5,20,55,.95),rgba(30,90,180,.8)),
+    #102042;
+  box-shadow:0 30px 80px rgba(15,32,66,.22);
+}
+
+@media(max-width:900px){
+ .premium-hero{padding:40px 22px!important}
+ .section-heading h2,.trust-copy h2{font-size:38px}
+}
