@@ -17,6 +17,13 @@ $OutputFile = Join-Path $OutputDir "hoalac.pmtiles"
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 
+# Always rebuild the archive from the focused coverage. Keeping an older,
+# wider PMTiles file would defeat the disk-size reduction even though the
+# runtime camera is already constrained.
+if (Test-Path $OutputFile) {
+  Remove-Item -Force $OutputFile
+}
+
 function Resolve-BuildUrl {
   param([string]$RequestedDate)
 
