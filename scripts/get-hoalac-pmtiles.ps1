@@ -1,6 +1,7 @@
 param(
   [string]$BuildDate = "",
-  [int]$MaxZoom = 16
+  [int]$MaxZoom = 16,
+  [string]$BBox = "105.30,20.86,105.70,21.16"
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,7 +9,11 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $OutputDir = Join-Path $RepoRoot "frontend\public\maps"
 $OutputFile = Join-Path $OutputDir "hoalac.pmtiles"
-$BBox = "105.24,20.84,105.80,21.27"
+
+# Tight extraction fence around the Hola Maps service polygon.
+# The frontend/backend polygon is even more precise and masks/clips the
+# outside area. This BBOX intentionally keeps a small tile buffer so roads
+# and labels do not look cut off at the product boundary.
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 
@@ -37,8 +42,10 @@ $SourceUrl = Resolve-BuildUrl -RequestedDate $BuildDate
 Write-Host ""
 Write-Host "Hola Maps local basemap"
 Write-Host "Source:  $SourceUrl"
-Write-Host "BBox:    $BBox"
-Write-Host "Zoom:    0-$MaxZoom"
+Write-Host "Coverage: Hòa Lạc, Hạ Bằng, Thạch Thất, Tây Phương, Yên Xuân, Phú Cát"
+Write-Host "Extended: nearby parts of Ba Vì + Quốc Oai"
+Write-Host "BBox:     $BBox"
+Write-Host "Zoom:     0-$MaxZoom"
 Write-Host "Output:  $OutputFile"
 Write-Host ""
 
