@@ -12,9 +12,11 @@ import {
 } from '../mapConfig.js';
 import {
   PMTILES_URL,
+  BUILDINGS_PMTILES_URL,
   createFallbackStyle,
   createPmtilesStyle,
-  localPmtilesAvailable
+  localPmtilesAvailable,
+  supplementalBuildingsAvailable
 } from '../localBasemap.js';
 
 const DATA_SOURCE_ID = 'hola-data-layers';
@@ -386,6 +388,7 @@ export default function MapView({
   const [mapError, setMapError] = useState('');
   const [locating, setLocating] = useState(false);
   const [usingLocalPmtiles, setUsingLocalPmtiles] = useState(false);
+  const [usingSupplementalBuildings, setUsingSupplementalBuildings] = useState(false);
   const [basemapHealth, setBasemapHealth] = useState('checking');
 
   const validPlaces = useMemo(
@@ -421,18 +424,31 @@ export default function MapView({
           // Protocol may already exist after a hot reload.
         }
 
-        const hasLocalPmtiles = await localPmtilesAvailable();
+        const [hasLocalPmtiles, hasSupplementalBuildings] = await Promise.all([
+          localPmtilesAvailable(),
+          supplementalBuildingsAvailable()
+        ]);
         if (cancelled) return;
+
+        const canUseSupplementalBuildings = hasLocalPmtiles && hasSupplementalBuildings;
         setUsingLocalPmtiles(hasLocalPmtiles);
+        setUsingSupplementalBuildings(canUseSupplementalBuildings);
 
         if (hasLocalPmtiles) {
           protocol.add(new pmtiles.PMTiles(PMTILES_URL));
+        }
+        if (canUseSupplementalBuildings) {
+          protocol.add(new pmtiles.PMTiles(BUILDINGS_PMTILES_URL));
         }
 
         maplibreRef.current = maplibre;
         const map = new maplibre.Map({
           container: containerRef.current,
-          style: hasLocalPmtiles ? createPmtilesStyle(basemapMode) : createFallbackStyle(),
+          style: hasLocalPmtiles
+            ? createPmtilesStyle(basemapMode, {
+                includeSupplementalBuildings: canUseSupplementalBuildings
+              })
+            : createFallbackStyle(),
           center: DEFAULT_CENTER,
           zoom: DEFAULT_ZOOM,
           minZoom: MIN_ZOOM,
@@ -578,13 +594,20 @@ export default function MapView({
 
     setInteractiveReady(false);
     map.once('style.load', restoreHolaLayers);
-    map.setStyle(usingLocalPmtiles ? createPmtilesStyle(basemapMode) : createFallbackStyle(), { diff: false });
+    map.setStyle(
+      usingLocalPmtiles
+        ? createPmtilesStyle(basemapMode, {
+            includeSupplementalBuildings: usingSupplementalBuildings
+          })
+        : createFallbackStyle(),
+      { diff: false }
+    );
 
     return () => {
       cancelled = true;
       map.off('style.load', restoreHolaLayers);
     };
-  }, [basemapMode, usingLocalPmtiles]);
+  }, [basemapMode, usingLocalPmtiles, usingSupplementalBuildings]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -709,7 +732,11 @@ export default function MapView({
 
       <div className={'hm-map-provider health-' + basemapHealth}>
         {basemapHealth === 'checking' && 'CHECKING LOCAL BASEMAP'}
-        {basemapHealth === 'ok' && 'LOCAL PMTILES · OSM'}
+        {basemapHealth === 'ok' && (
+          usingSupplementalBuildings
+            ? 'LOCAL PMTILES · OSM + OVERTURE BUILDINGS'
+            : 'LOCAL PMTILES · OSM'
+        )}
         {basemapHealth === 'broken' && 'LOCAL PMTILES ERROR'}
         {basemapHealth === 'fallback' && 'OPEN VECTOR FALLBACK'}
       </div>
