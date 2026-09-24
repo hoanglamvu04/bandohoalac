@@ -1,0 +1,58 @@
+/* Hola Maps modern visual refinement */
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell > main,
+.app-shell > .page,
+.app-shell > .content {
+  flex: 1;
+}
+
+button,
+a,
+.nav-link,
+.card,
+.place-card {
+  transition: all .22s ease;
+}
+
+button:hover,
+a:hover {
+  transform: translateY(-1px);
+}
+
+.card,
+.place-card,
+.surface-card {
+  border-radius: 22px;
+  border: 1px solid rgba(15,57,48,.08);
+  box-shadow: 0 12px 35px rgba(15,57,48,.07);
+  background: rgba(255,254,251,.9);
+}
+
+.map-workspace,
+.map-container {
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 24px 70px rgba(8,38,32,.16);
+}
+
+section {
+  scroll-margin-top: 90px;
+}
+
+.site-footer {
+  margin-top: 60px;
+  border-radius: 32px 32px 0 0;
+}
+
+@media (max-width: 768px) {
+  .site-footer {
+    margin-top: 30px;
+    border-radius: 22px 22px 0 0;
+  }
+}
