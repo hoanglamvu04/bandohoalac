@@ -21,6 +21,11 @@ export const SATELLITE_ATTRIBUTION = (
     : 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community')
 ).trim();
 
+const HAS_CUSTOM_SATELLITE_URL = Boolean((import.meta.env.VITE_SATELLITE_TILE_URL || '').trim());
+export const SATELLITE_TILE_SIZE = Number(import.meta.env.VITE_SATELLITE_TILE_SIZE) ||
+  (!HAS_CUSTOM_SATELLITE_URL && MAPTILER_KEY ? 512 : 256);
+export const SATELLITE_MAX_ZOOM = !HAS_CUSTOM_SATELLITE_URL && MAPTILER_KEY ? 22 : 19;
+
 const FLAVORS = {
   streets: 'light',
   hybrid: 'light',
@@ -390,9 +395,9 @@ export function createPmtilesStyle(mode = 'streets', options = {}) {
     sources['satellite-imagery'] = {
       type: 'raster',
       tiles: [SATELLITE_TILE_URL],
-      tileSize: 256,
+      tileSize: SATELLITE_TILE_SIZE,
       minzoom: 0,
-      maxzoom: 19,
+      maxzoom: SATELLITE_MAX_ZOOM,
       attribution: SATELLITE_ATTRIBUTION
     };
   }
