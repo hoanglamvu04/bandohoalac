@@ -15,6 +15,7 @@ import './hola-home-redesign.css';
 import './hola-blue-modern.css';
 import './hola-home-modern.css';
 import './category-modern.css';
+import './hero-search-modern.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
