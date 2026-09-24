@@ -39,7 +39,7 @@ contribution validation) will continue to use the new polygon automatically.
 - PostGIS clips `map_features` to the service polygon.
 - Public place queries always include the service polygon.
 - New places and new map features are rejected if they are outside coverage.
-- PMTiles extraction now uses a much smaller buffered BBOX.
+- PMTiles extraction now uses a much smaller buffered BBOX.\n- The default archive now includes real z17 tiles for individual buildings, local roads, POIs and available address detail.\n- Basemap detail is progressively disclosed by zoom so the overview remains light.
 
 ## Rebuild local PMTiles
 
