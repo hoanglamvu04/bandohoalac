@@ -18,6 +18,7 @@ import './hola-home-modern.css';
 import './category-modern.css';
 import './hero-search-modern.css';
 import './hero-map-polish.css';
+import './home-reference.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
@@ -26,5 +27,3 @@ createRoot(document.getElementById('root')).render(
     </AuthProvider>
   </ToastProvider>
 );
-
-import './home-reference.css';
