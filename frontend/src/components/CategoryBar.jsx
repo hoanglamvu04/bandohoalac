@@ -6,50 +6,48 @@ import {
   Sparkles,
   Utensils,
   Building2,
-  MapPin
+  Compass
 } from 'lucide-react';
 
 const DEFAULT_ITEMS = [
-  { value: 'Ăn uống', label: 'Ăn uống', icon: Utensils },
-  { value: 'Cafe', label: 'Cafe', icon: Coffee },
-  { value: 'Check-in', label: 'Check-in', icon: Camera },
-  { value: 'Homestay', label: 'Homestay', icon: Home },
-  { value: 'Trải nghiệm', label: 'Trải nghiệm', icon: FerrisWheel },
-  { value: 'Villa', label: 'Villa', icon: Building2 }
+  { value:'all', label:'Tất cả', desc:'Khám phá mọi địa điểm', icon:Compass, image:'/images/categories/all.jpg' },
+  { value:'Ăn uống', label:'Ăn uống', desc:'Nhà hàng, quán ăn địa phương', icon:Utensils, image:'/images/categories/food.jpg' },
+  { value:'Cafe', label:'Cafe', desc:'Không gian đẹp, đồ uống ngon', icon:Coffee, image:'/images/categories/cafe.jpg' },
+  { value:'Check-in', label:'Check-in', desc:'Góc sống ảo, điểm tham quan', icon:Camera, image:'/images/categories/checkin.jpg' },
+  { value:'Homestay', label:'Homestay', desc:'Nghỉ dưỡng, trải nghiệm local', icon:Home, image:'/images/categories/homestay.jpg' },
+  { value:'Trải nghiệm', label:'Trải nghiệm', desc:'Khám phá thiên nhiên', icon:FerrisWheel, image:'/images/categories/experience.jpg' },
+  { value:'Villa', label:'Villa', desc:'Không gian riêng tư', icon:Building2, image:'/images/categories/villa.jpg' }
 ];
 
-export default function CategoryBar({ active = 'all', onChange = () => {}, compact = false, categories = [] }) {
+export default function CategoryBar({ active='all', onChange=()=>{}, compact=false, categories=[] }) {
   const items = categories.length
-    ? categories.map((category) => ({
-      value: category.name,
-      label: category.name,
-      icon: MapPin
-    }))
+    ? categories.map((category,index)=>({...DEFAULT_ITEMS[(index % (DEFAULT_ITEMS.length-1))+1], value:category.name, label:category.name}))
     : DEFAULT_ITEMS;
 
+  if (compact) {
+    return (
+      <div className="category-bar compact modern-category-bar">
+        {items.map((item)=>{
+          const Icon=item.icon;
+          return <button key={item.value} type="button" className={active===item.value?'category-chip active':'category-chip'} onClick={()=>onChange(item.value)}><span className="category-icon"><Icon size={18}/></span>{item.label}</button>;
+        })}
+      </div>
+    );
+  }
+
   return (
-    <div className={compact ? 'category-bar compact modern-category-bar' : 'category-bar modern-category-bar'}>
-      <button
-        className={active === 'all' ? 'category-chip active' : 'category-chip'}
-        onClick={() => onChange('all')}
-        type="button"
-      >
-        <span className="category-icon"><Sparkles size={18} /></span>
-        Tất cả
-      </button>
-
-      {items.map((item) => {
-        const Icon = item.icon;
-
+    <div className="category-card-grid">
+      {items.map((item)=>{
+        const Icon=item.icon;
         return (
-          <button
-            key={item.value}
-            className={active === item.value ? 'category-chip active' : 'category-chip'}
-            onClick={() => onChange(item.value)}
-            type="button"
-          >
-            <span className="category-icon"><Icon size={18} /></span>
-            {item.label}
+          <button key={item.value} type="button" className={active===item.value?'category-card active':'category-card'} onClick={()=>onChange(item.value)}>
+            <div className="category-card-media" style={{backgroundImage:`url(${item.image})`}}>
+              <div className="category-card-icon"><Icon size={20}/></div>
+            </div>
+            <div className="category-card-body">
+              <h3>{item.label}</h3>
+              <p>{item.desc}</p>
+            </div>
           </button>
         );
       })}
