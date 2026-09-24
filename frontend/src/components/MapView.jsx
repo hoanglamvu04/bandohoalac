@@ -7,6 +7,7 @@ import {
   MAX_ZOOM,
   MAP_COVERAGE_BOUNDS,
   SERVICE_AREAS_GEOJSON,
+  SERVICE_AREA_MASK_GEOJSON,
   isInsideServiceCoverage
 } from '../mapConfig.js';
 import {
@@ -19,6 +20,7 @@ import {
 const DATA_SOURCE_ID = 'hola-data-layers';
 const ROUTE_SOURCE_ID = 'hola-route-source';
 const COVERAGE_SOURCE_ID = 'hola-service-areas';
+const COVERAGE_MASK_SOURCE_ID = 'hola-service-area-mask';
 
 const DATA_LAYER_IDS = {
   TERRAIN: 'hm-terrain',
@@ -104,19 +106,53 @@ function loadExternalScript(src, globalName) {
 }
 
 function addCoverage(map) {
-  if (!map.isStyleLoaded() || map.getSource(COVERAGE_SOURCE_ID)) return;
-  map.addSource(COVERAGE_SOURCE_ID, { type: 'geojson', data: SERVICE_AREAS_GEOJSON });
-  map.addLayer({
-    id: 'hm-service-area-line',
-    type: 'line',
-    source: COVERAGE_SOURCE_ID,
-    paint: {
-      'line-color': '#0d5144',
-      'line-width': 1.2,
-      'line-opacity': 0.22,
-      'line-dasharray': [2, 2]
-    }
-  });
+  if (!map.isStyleLoaded()) return;
+
+  if (!map.getSource(COVERAGE_MASK_SOURCE_ID)) {
+    map.addSource(COVERAGE_MASK_SOURCE_ID, {
+      type: 'geojson',
+      data: SERVICE_AREA_MASK_GEOJSON
+    });
+
+    map.addLayer({
+      id: 'hm-service-area-mask',
+      type: 'fill',
+      source: COVERAGE_MASK_SOURCE_ID,
+      paint: {
+        'fill-color': '#f3f7f5',
+        'fill-opacity': 0.72
+      }
+    });
+  }
+
+  if (!map.getSource(COVERAGE_SOURCE_ID)) {
+    map.addSource(COVERAGE_SOURCE_ID, {
+      type: 'geojson',
+      data: SERVICE_AREAS_GEOJSON
+    });
+
+    map.addLayer({
+      id: 'hm-service-area-fill',
+      type: 'fill',
+      source: COVERAGE_SOURCE_ID,
+      paint: {
+        'fill-color': '#0d7a5f',
+        'fill-opacity': 0.025
+      }
+    });
+
+    map.addLayer({
+      id: 'hm-service-area-line',
+      type: 'line',
+      source: COVERAGE_SOURCE_ID,
+      paint: {
+        'line-color': '#0d6a56',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 12, 1.4, 16, 2.4],
+        'line-opacity': 0.62,
+        'line-dasharray': [2, 1.5]
+      }
+    });
+  }
 }
 
 function addDataLayers(map, data) {
@@ -136,6 +172,7 @@ function addDataLayers(map, data) {
   add({
     id: DATA_LAYER_IDS.TERRAIN,
     type: 'fill',
+    minzoom: 12,
     source: DATA_SOURCE_ID,
     filter: ['==', ['get', 'layerType'], 'TERRAIN'],
     paint: {
@@ -147,6 +184,7 @@ function addDataLayers(map, data) {
   add({
     id: DATA_LAYER_IDS.WATER,
     type: 'fill',
+    minzoom: 12,
     source: DATA_SOURCE_ID,
     filter: ['==', ['get', 'layerType'], 'WATER'],
     paint: {
@@ -159,6 +197,7 @@ function addDataLayers(map, data) {
   add({
     id: DATA_LAYER_IDS.BUILDING,
     type: 'fill',
+    minzoom: 14,
     source: DATA_SOURCE_ID,
     filter: ['==', ['get', 'layerType'], 'BUILDING'],
     paint: {
@@ -171,6 +210,7 @@ function addDataLayers(map, data) {
   add({
     id: DATA_LAYER_IDS.PLANNING,
     type: 'fill',
+    minzoom: 12.5,
     source: DATA_SOURCE_ID,
     filter: ['==', ['get', 'layerType'], 'PLANNING'],
     paint: {
@@ -183,6 +223,7 @@ function addDataLayers(map, data) {
   add({
     id: DATA_LAYER_IDS.FLOOD,
     type: 'fill',
+    minzoom: 12.5,
     source: DATA_SOURCE_ID,
     filter: ['==', ['get', 'layerType'], 'FLOOD'],
     paint: {
@@ -203,6 +244,7 @@ function addDataLayers(map, data) {
   add({
     id: DATA_LAYER_IDS.ROAD,
     type: 'line',
+    minzoom: 13,
     source: DATA_SOURCE_ID,
     filter: ['==', ['get', 'layerType'], 'ROAD'],
     layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -216,6 +258,7 @@ function addDataLayers(map, data) {
   add({
     id: DATA_LAYER_IDS.ROAD_CLOSURE,
     type: 'line',
+    minzoom: 13,
     source: DATA_SOURCE_ID,
     filter: ['==', ['get', 'layerType'], 'ROAD_CLOSURE'],
     layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -234,6 +277,7 @@ function addDataLayers(map, data) {
     add({
       id: DATA_LAYER_IDS[type],
       type: 'circle',
+      minzoom: type === 'LANDMARK' ? 12.5 : 13,
       source: DATA_SOURCE_ID,
       filter: ['==', ['get', 'layerType'], type],
       paint: {
@@ -588,7 +632,12 @@ export default function MapView({
     const maplibre = maplibreRef.current;
     if (!map || !maplibre || !interactiveReady) return;
 
-    if (!userLocation || !Number.isFinite(Number(userLocation.lat)) || !Number.isFinite(Number(userLocation.lng))) {
+    if (
+      !userLocation ||
+      !Number.isFinite(Number(userLocation.lat)) ||
+      !Number.isFinite(Number(userLocation.lng)) ||
+      !isInsideServiceCoverage(userLocation.lng, userLocation.lat)
+    ) {
       userMarkerRef.current?.remove();
       userMarkerRef.current = null;
       return;
