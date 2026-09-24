@@ -8,6 +8,7 @@ import './premium.css';
 import './map-fix.css';
 import './directions.css';
 import './map-workspace.css';
+import './footer.css';
 
 // Do not wrap the whole app in React.StrictMode here.
 // In React 18 development, StrictMode intentionally mounts effects twice.
