@@ -1102,3 +1102,45 @@
     bottom:58px;
   }
 }
+
+
+/* Satellite / Hybrid basemap previews */
+.hm-basemap-switcher button.basemap-satellite span,
+.hm-basemap-switcher button.basemap-hybrid span{
+  position:relative;
+  overflow:hidden;
+  color:#fff;
+  background:
+    linear-gradient(135deg,rgba(7,42,50,.12),rgba(7,42,50,.3)),
+    radial-gradient(circle at 24% 32%,#6f965f 0 18%,transparent 19%),
+    radial-gradient(circle at 74% 67%,#748b51 0 20%,transparent 21%),
+    linear-gradient(145deg,#477b5f 0 37%,#557f94 38% 52%,#8b9166 53% 100%);
+}
+
+.hm-basemap-switcher button.basemap-hybrid span::after{
+  content:"";
+  position:absolute;
+  inset:-5px;
+  border-top:2px solid rgba(255,255,255,.92);
+  border-bottom:2px solid rgba(255,215,102,.88);
+  transform:rotate(-28deg) translateY(3px);
+  pointer-events:none;
+}
+
+.hm-basemap-switcher button.basemap-satellite.active span,
+.hm-basemap-switcher button.basemap-hybrid.active span{
+  color:#fff;
+  background:
+    linear-gradient(135deg,rgba(4,31,37,.08),rgba(4,31,37,.28)),
+    radial-gradient(circle at 24% 32%,#7da269 0 18%,transparent 19%),
+    radial-gradient(circle at 74% 67%,#87985f 0 20%,transparent 21%),
+    linear-gradient(145deg,#4f8868 0 37%,#5a8ca2 38% 52%,#989d72 53% 100%);
+  box-shadow:0 0 0 2px rgba(255,255,255,.68),0 4px 10px rgba(10,49,44,.18);
+}
+
+.hm-map-provider{
+  max-width:min(320px,calc(100vw - 32px));
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
