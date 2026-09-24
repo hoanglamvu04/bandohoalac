@@ -11,11 +11,8 @@ import './directions.css';
 import './map-workspace.css';
 import './footer.css';
 import './hola-ui-overhaul.css';
+import './hola-home-redesign.css';
 
-// Do not wrap the whole app in React.StrictMode here.
-// In React 18 development, StrictMode intentionally mounts effects twice.
-// That caused MapLibre to initialize twice, request the first viewport twice,
-// and duplicate /places + /categories calls during local development.
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
     <AuthProvider>
