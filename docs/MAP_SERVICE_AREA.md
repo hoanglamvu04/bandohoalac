@@ -39,7 +39,9 @@ contribution validation) will continue to use the new polygon automatically.
 - PostGIS clips `map_features` to the service polygon.
 - Public place queries always include the service polygon.
 - New places and new map features are rejected if they are outside coverage.
-- PMTiles extraction now uses a much smaller buffered BBOX.\n- The default archive now includes real z17 tiles for individual buildings, local roads, POIs and available address detail.\n- Basemap detail is progressively disclosed by zoom so the overview remains light.
+- PMTiles extraction now uses a much smaller buffered BBOX.
+- The default archive now includes real z17 tiles for individual buildings, local roads, POIs and available address detail.
+- Basemap detail is progressively disclosed by zoom so the overview remains light.
 
 ## Rebuild local PMTiles
 
@@ -48,6 +50,8 @@ From PowerShell:
 ```powershell
 .\scripts\get-hoalac-pmtiles.ps1
 ```
+
+The default `MaxZoom` is now `17`. Use `-MaxZoom 16` only for a smaller low-detail development archive.
 
 Default buffered tile extraction bounds:
 
