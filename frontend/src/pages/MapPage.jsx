@@ -22,7 +22,7 @@ import {
 import { Link } from 'react-router-dom';
 import MapView from '../components/MapView.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { getDirections, getMapLayers, getPlaces } from '../services/api.js';
+import { getDirections, getMapLayers, getPlaces, getPlacesInBounds } from '../services/api.js';
 import { LOCAL_BASEMAP_OPTIONS as BASEMAP_OPTIONS } from '../localBasemap.js';
 
 const LAYERS = [
@@ -92,16 +92,29 @@ export default function MapPage() {
   const [routeError, setRouteError] = useState('');
 
   useEffect(() => {
+    if (!viewport) return undefined;
+
     let active = true;
-    getPlaces({ limit: 100 })
-      .then((data) => {
-        if (active) setPlaces(Array.isArray(data?.items) ? data.items : []);
-      })
-      .catch(() => {
-        if (active) setPlaces([]);
-      });
-    return () => { active = false; };
-  }, []);
+    const timer = window.setTimeout(() => {
+      const needle = query.trim();
+      const request = needle
+        ? getPlaces({ q: needle, limit: 80 })
+        : getPlacesInBounds(viewport);
+
+      request
+        .then((data) => {
+          if (active) setPlaces(Array.isArray(data?.items) ? data.items : []);
+        })
+        .catch(() => {
+          if (active) setPlaces([]);
+        });
+    }, query.trim() ? 220 : 120);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [viewport, query]);
 
   useEffect(() => {
     if (!viewport || !activeLayers.length) {
