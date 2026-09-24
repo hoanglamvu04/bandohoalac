@@ -12,6 +12,7 @@ import './map-workspace.css';
 import './footer.css';
 import './hola-ui-overhaul.css';
 import './hola-home-redesign.css';
+import './hola-blue-modern.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
