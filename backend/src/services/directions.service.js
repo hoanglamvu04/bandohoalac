@@ -1,6 +1,7 @@
 import { env } from '../config/env.js';
 import { AppError } from '../utils/AppError.js';
 import { pool } from '../database/pool.js';
+import { SERVICE_AREA_GEOJSON_STRING, isInsideServiceCoverage } from '../config/mapCoverage.js';
 
 const SUPPORTED_PROFILES = new Set(['driving']);
 
@@ -11,6 +12,9 @@ async function getRouteHazards(geometry) {
     const { rows } = await pool.query(
       `WITH route AS (
          SELECT ST_SetSRID(ST_GeomFromGeoJSON($1), 4326) AS geom
+       ),
+       service_area AS (
+         SELECT ST_SetSRID(ST_GeomFromGeoJSON($2), 4326) AS geom
        )
        SELECT
          mf.id,
@@ -18,12 +22,13 @@ async function getRouteHazards(geometry) {
          mf.name,
          mf.severity,
          mf.properties
-       FROM map_features mf, route
+       FROM map_features mf, route, service_area
        WHERE mf.status = 'ACTIVE'
          AND mf.layer_type IN ('FLOOD', 'ROAD_CLOSURE', 'ALERT')
          AND (mf.valid_from IS NULL OR mf.valid_from <= NOW())
          AND (mf.valid_until IS NULL OR mf.valid_until >= NOW())
          AND ST_Intersects(mf.geometry, route.geom)
+         AND ST_Intersects(mf.geometry, service_area.geom)
        ORDER BY
          CASE mf.severity
            WHEN 'CRITICAL' THEN 5
@@ -33,7 +38,7 @@ async function getRouteHazards(geometry) {
            ELSE 1
          END DESC
        LIMIT 50`,
-      [JSON.stringify(geometry)]
+      [JSON.stringify(geometry), SERVICE_AREA_GEOJSON_STRING]
     );
 
     return rows.map((row) => ({
@@ -78,6 +83,10 @@ export async function getDirections({
 }) {
   if (!SUPPORTED_PROFILES.has(profile)) {
     throw new AppError('Unsupported routing profile.', 400);
+  }
+
+  if (!isInsideServiceCoverage(destinationLng, destinationLat)) {
+    throw new AppError('Destination is outside the Hola Maps service area.', 400);
   }
 
   const baseUrl = env.routingBaseUrl.replace(/\/$/, '');
