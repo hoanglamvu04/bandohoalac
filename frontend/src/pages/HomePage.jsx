@@ -1,47 +1,181 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
-  BadgeCheck,
+  Building2,
   Camera,
   Compass,
-  MapPinned,
+  GraduationCap,
+  Heart,
+  Layers3,
+  LocateFixed,
+  Map,
+  MapPin,
   Navigation,
-  Sparkles,
+  Plus,
+  Search,
   Star,
-  Users
+  TreePine,
+  Trophy,
+  UtensilsCrossed,
+  UsersRound,
+  Waves
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import CategoryBar from '../components/CategoryBar.jsx';
-import PlaceCard from '../components/PlaceCard.jsx';
-import SearchBox from '../components/SearchBox.jsx';
-import { getCategories, getPlaces } from '../services/api.js';
+import { getLeaderboard, getPlaces } from '../services/api.js';
+
+const FALLBACK_IMAGES = [
+  'https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=900&q=84',
+  'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=900&q=84',
+  'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=900&q=84',
+  'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=900&q=84'
+];
+
+const DEMO_PLACES = [
+  {
+    id: 'demo-fpt',
+    name: 'Đại học FPT Hòa Lạc',
+    category: 'Giáo dục',
+    address: 'Hòa Lạc, Thạch Thất',
+    description: 'Khuôn viên hiện đại, không gian xanh rộng lớn.',
+    rating: 4.8,
+    reviews: 125,
+    images: [FALLBACK_IMAGES[0]]
+  },
+  {
+    id: 'demo-dong-mo',
+    name: 'Hồ Đồng Mô',
+    category: 'Thiên nhiên',
+    address: 'Hòa Lạc, Thạch Thất',
+    description: 'Điểm đến lý tưởng cho dã ngoại, nghỉ dưỡng cuối tuần.',
+    rating: 4.6,
+    reviews: 89,
+    images: [FALLBACK_IMAGES[1]]
+  },
+  {
+    id: 'demo-lake-coffee',
+    name: 'The Lake Coffee',
+    category: 'Ẩm thực',
+    address: 'Hòa Lạc, Thạch Thất',
+    description: 'Quán cà phê view hồ, không gian thoáng đãng.',
+    rating: 4.7,
+    reviews: 64,
+    images: [FALLBACK_IMAGES[2]]
+  },
+  {
+    id: 'demo-hi-tech',
+    name: 'Khu Công nghệ cao Hòa Lạc',
+    category: 'Công nghệ',
+    address: 'Hòa Lạc, Thạch Thất',
+    description: 'Trung tâm công nghệ và đổi mới sáng tạo của Việt Nam.',
+    rating: 4.5,
+    reviews: 98,
+    images: [FALLBACK_IMAGES[3]]
+  }
+];
+
+const FEATURE_CARDS = [
+  {
+    icon: MapPin,
+    title: 'Địa điểm nổi bật',
+    text: 'Khám phá các địa điểm quan trọng, tiện ích xung quanh Hòa Lạc.',
+    tone: 'blue',
+    to: '/map'
+  },
+  {
+    icon: Layers3,
+    title: 'Lớp dữ liệu',
+    text: 'Xem bản đồ theo nhiều lớp dữ liệu: địa hình, công trình, sông hồ, quy hoạch...',
+    tone: 'green',
+    to: '/map'
+  },
+  {
+    icon: UsersRound,
+    title: 'Cộng đồng Explorer',
+    text: 'Kết nối những người cùng quan tâm và xây dựng Hòa Lạc tốt hơn.',
+    tone: 'orange',
+    to: '/leaderboard'
+  },
+  {
+    icon: Navigation,
+    title: 'Dẫn đường thông minh',
+    text: 'Tìm đường nhanh chóng với thông tin giao thông cập nhật.',
+    tone: 'purple',
+    to: '/map'
+  }
+];
+
+const MAP_LAYERS = [
+  { icon: TreePine, label: 'Địa hình', active: true },
+  { icon: Navigation, label: 'Đường nội bộ', active: false },
+  { icon: Waves, label: 'Sông / hồ', active: true },
+  { icon: Building2, label: 'Công trình', active: true },
+  { icon: MapPin, label: 'Địa danh', active: true },
+  { icon: Navigation, label: 'Đường cấm', active: false }
+];
+
+const MAP_TILES = [
+  [6496, 3606], [6497, 3606], [6498, 3606],
+  [6496, 3607], [6497, 3607], [6498, 3607]
+];
+
+function initials(name = '') {
+  return String(name)
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || 'HM';
+}
+
+function FeaturedPlaceCard({ place, index }) {
+  const cover = place.images?.[0] || place.image || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
+  const categoryTone = ['blue', 'green', 'orange', 'purple'][index % 4];
+  const detailHref = String(place.id).startsWith('demo-') ? '/map' : '/place/' + place.id;
+
+  return (
+    <article className="home-place-card">
+      <div className="home-place-cover">
+        <img src={cover} alt="" loading="lazy" />
+        <span className={'home-place-category ' + categoryTone}>{place.category || 'Khám phá'}</span>
+        <button className="home-place-heart" type="button" aria-label="Lưu địa điểm">
+          <Heart size={17} />
+        </button>
+      </div>
+      <div className="home-place-content">
+        <Link to={detailHref} className="home-place-title">{place.name}</Link>
+        <span className="home-place-address"><MapPin size={13} /> {place.address || 'Hòa Lạc, Thạch Thất'}</span>
+        <p>{place.description || 'Địa điểm đáng khám phá trong khu vực Hòa Lạc và vùng phụ cận.'}</p>
+        <div className="home-place-footer">
+          <strong><Star size={14} fill="currentColor" /> {Number(place.rating || 4.8).toFixed(1)}</strong>
+          <span><Camera size={13} /> {Number(place.reviews || place.ratingCount || 0)} đóng góp</span>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [places, setPlaces] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [leaders, setLeaders] = useState([]);
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('all');
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     let active = true;
 
-    Promise.allSettled([getPlaces(), getCategories()])
-      .then(([placesResult, categoriesResult]) => {
+    Promise.allSettled([getPlaces({ limit: 12 }), getLeaderboard(3)])
+      .then(([placesResult, leaderboardResult]) => {
         if (!active) return;
 
         if (placesResult.status === 'fulfilled') {
           setPlaces(Array.isArray(placesResult.value?.items) ? placesResult.value.items : []);
-          setLoadError(false);
-        } else {
-          setPlaces([]);
-          setLoadError(true);
         }
 
-        if (categoriesResult.status === 'fulfilled') {
-          setCategories(categoriesResult.value?.items || []);
+        if (leaderboardResult.status === 'fulfilled') {
+          setLeaders(Array.isArray(leaderboardResult.value?.items) ? leaderboardResult.value.items : []);
         }
       })
       .finally(() => {
@@ -53,229 +187,200 @@ export default function HomePage() {
     };
   }, []);
 
-  const featured = useMemo(() => places.filter((place) => {
-    const categoryOk = category === 'all' || place.category === category;
-    const haystack = (place.name + ' ' + (place.category || '') + ' ' + (place.address || '')).toLowerCase();
-    const queryOk = !query.trim() || haystack.includes(query.trim().toLowerCase());
-    return categoryOk && queryOk;
-  }).slice(0, 8), [places, query, category]);
-
-  const stats = useMemo(() => {
-    const ratings = places.map((place) => Number(place.rating)).filter((rating) => Number.isFinite(rating) && rating > 0);
-    const photoCount = places.reduce((sum, place) => sum + (Array.isArray(place.images) ? place.images.length : 0), 0);
-    const categoryCount = new Set(places.map((place) => place.category).filter(Boolean)).size;
-
-    return {
-      places: places.length,
-      photos: photoCount,
-      categories: categoryCount,
-      rating: ratings.length ? (ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1) : '—'
-    };
+  const displayPlaces = useMemo(() => {
+    const source = places.length ? places : DEMO_PLACES;
+    return source.slice(0, 4);
   }, [places]);
 
-  const heroPlaces = places.slice(0, 3);
+  const displayLeaders = useMemo(() => {
+    if (leaders.length) return leaders.slice(0, 3);
 
-  function search(term) {
+    return [
+      { id: 'demo-1', rank: 1, name: 'Chinh Explorer', placesCount: 5, photosCount: 0, points: 1280 },
+      { id: 'demo-2', rank: 2, name: 'Diep Local Guide', placesCount: 0, photosCount: 0, points: 40 },
+      { id: 'demo-3', rank: 3, name: 'Hola Admin', placesCount: 0, photosCount: 0, points: 0 }
+    ];
+  }, [leaders]);
+
+  function submitSearch(event) {
+    event?.preventDefault();
     const params = new URLSearchParams();
-    if (term) params.set('q', term);
-    if (category !== 'all') params.set('category', category);
-    navigate('/map?' + params.toString());
+    if (query.trim()) params.set('q', query.trim());
+    navigate('/map' + (params.toString() ? '?' + params.toString() : ''));
   }
 
   return (
-    <main className="home-page premium-home">
-      <section className="premium-hero">
-        <div className="hero-noise" />
-        <div className="hero-orbit hero-orbit-one" />
-        <div className="hero-orbit hero-orbit-two" />
-
-        <div className="premium-hero-copy">
-          <div className="hero-badge">
-            <span className="live-dot" />
-            <span>Dữ liệu địa phương · Hòa Lạc</span>
-          </div>
-
-          <span className="eyebrow light"><Sparkles size={15} /> HOLA MAPS · LOCAL DISCOVERY</span>
-          <h1>
-            Khám phá Hòa Lạc
-            <span> bằng trải nghiệm thật.</span>
-          </h1>
+    <main className="reference-home">
+      <section className="reference-home-hero">
+        <div className="reference-hero-copy">
+          <span className="reference-kicker">Bản đồ Hòa Lạc</span>
+          <h1>Khám phá Hòa Lạc<br />thông minh hơn.</h1>
           <p>
-            Tìm quán cafe, homestay, villa, góc check-in và những địa điểm đáng thử
-            trên một bản đồ được cập nhật bởi cộng đồng địa phương.
+            Bản đồ số khu vực Hòa Lạc - Thạch Thất và vùng phụ cận.
+            Khám phá địa điểm, kết nối cộng đồng và cùng xây dựng
+            bản đồ phong phú, chính xác hơn mỗi ngày.
           </p>
 
-          <SearchBox
-            value={query}
-            onChange={setQuery}
-            onSubmit={search}
-            placeholder="Tìm cafe, homestay, villa, địa điểm check-in..."
-          />
+          <form className="reference-search" onSubmit={submitSearch}>
+            <Search size={18} />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Tìm địa điểm, tuyến đường, khu vực..."
+            />
+          </form>
 
-          <div className="hero-actions-row">
-            <Link to="/map" className="hero-primary-link">
-              <Compass size={18} /> Mở bản đồ khám phá
+          <div className="reference-hero-actions">
+            <Link to="/map" className="reference-primary-action">
+              <Map size={19} /> Mở bản đồ <ArrowRight size={17} />
             </Link>
-            <Link to="/contribute" className="hero-secondary-link">
-              <Camera size={18} /> Đóng góp địa điểm
+            <Link to="/contribute" className="reference-secondary-action">
+              <Plus size={20} /> Đóng góp địa điểm
             </Link>
           </div>
 
-          <div className="hero-quick">
-            <span>Đang được tìm:</span>
-            <button onClick={() => search('cafe')}>Cafe</button>
-            <button onClick={() => search('homestay')}>Homestay</button>
-            <button onClick={() => search('villa')}>Villa</button>
-            <button onClick={() => search('check-in')}>Check-in</button>
+          <div className="reference-proof-grid">
+            <div>
+              <span className="proof-icon"><MapPin size={21} /></span>
+              <p><b>Hàng trăm<br />địa điểm</b><small>Được cộng đồng đóng góp</small></p>
+            </div>
+            <div>
+              <span className="proof-icon"><UsersRound size={21} /></span>
+              <p><b>Cộng đồng<br />đang phát triển</b><small>Cùng xây dựng Hòa Lạc</small></p>
+            </div>
+            <div>
+              <span className="proof-icon"><Layers3 size={21} /></span>
+              <p><b>Đa dạng<br />lớp dữ liệu</b><small>Phục vụ học tập, làm việc</small></p>
+            </div>
           </div>
         </div>
 
-        <div className="hero-product-demo" aria-label="Xem trước Hola Maps">
-          <div className="hero-map-surface">
-            <span className="map-grid-line map-grid-a" />
-            <span className="map-grid-line map-grid-b" />
-            <span className="map-grid-line map-grid-c" />
-            <span className="map-lake" />
+        <div className="reference-map-demo" aria-label="Xem trước bản đồ Hola Maps">
+          <div className="home-map-tiles" aria-hidden="true">
+            {MAP_TILES.map(([x, y]) => (
+              <img
+                key={x + '-' + y}
+                src={'https://tile.openstreetmap.org/13/' + x + '/' + y + '.png'}
+                alt=""
+              />
+            ))}
+          </div>
+          <div className="home-map-wash" />
 
-            <div className="hero-map-topbar">
-              <span><MapPinned size={15} /> Hola Maps</span>
-              <b>Hòa Lạc</b>
+          <div className="home-map-search">
+            <Search size={16} />
+            <span>Tìm địa điểm, tuyến đường, khu vực...</span>
+          </div>
+
+          <div className="home-map-status"><i /> LOCAL DATA <span>⌄</span></div>
+
+          <div className="home-layer-panel">
+            <div className="home-layer-title">
+              <span>LỚP DỮ LIỆU</span><b>7/10</b>
             </div>
-
-            {heroPlaces.map((place, index) => (
-              <div className={'hero-place-dot hero-place-dot-' + (index + 1)} key={place.id}>
-                <span>{index === 0 ? '☕' : index === 1 ? '🏡' : '📍'}</span>
+            {MAP_LAYERS.map(({ icon: Icon, label, active }) => (
+              <div className={active ? 'home-layer-row active' : 'home-layer-row'} key={label}>
+                <span><Icon size={15} /></span>
+                <div><b>{label}</b><small>{active ? 'Đang hiển thị' : 'Đang ẩn'}</small></div>
+                <i />
               </div>
             ))}
-
-            <div className="hero-map-card">
-              <div className="hero-map-card-cover">
-                {heroPlaces[0]?.images?.[0]
-                  ? <img src={heroPlaces[0].images[0]} alt="" />
-                  : <MapPinned size={25} />}
-              </div>
-              <div>
-                <small>Đề xuất gần đây</small>
-                <b>{heroPlaces[0]?.name || (loading ? 'Đang tải địa điểm...' : 'Khám phá Hòa Lạc')}</b>
-                <span>
-                  <Star size={13} fill="currentColor" />
-                  {heroPlaces[0]?.rating || 'Mới'} · {heroPlaces[0]?.category || 'Local discovery'}
-                </span>
-              </div>
-            </div>
-
-            <div className="hero-map-compass">
-              <Navigation size={17} />
-            </div>
           </div>
 
-          <div className="hero-floating-card verification-card">
-            <BadgeCheck size={19} />
-            <div><b>Community verified</b><span>Dữ liệu có nguồn đóng góp</span></div>
+          <span className="map-demo-pin pin-yellow"><Building2 size={17} /></span>
+          <span className="map-demo-pin pin-green"><TreePine size={17} /></span>
+          <span className="map-demo-pin pin-blue"><GraduationCap size={17} /></span>
+          <span className="map-demo-pin pin-orange"><UtensilsCrossed size={17} /></span>
+
+          <div className="home-map-modes">
+            <button className="active" type="button"><Map size={15} /><span>Bản đồ</span></button>
+            <button type="button"><Waves size={15} /><span>Vệ tinh</span></button>
+            <button type="button"><TreePine size={15} /><span>Địa hình</span></button>
           </div>
 
-          <div className="hero-floating-card explorer-card-mini">
-            <Users size={19} />
-            <div><b>Hola Explorer</b><span>Cùng xây bản đồ địa phương</span></div>
-          </div>
+          <button className="home-map-locate" type="button"><LocateFixed size={17} /> Vị trí của tôi</button>
+          <small className="home-map-attribution">© OpenStreetMap</small>
         </div>
       </section>
 
-      <section className="live-stats-strip">
-        <div><strong>{stats.places}</strong><span>Địa điểm đang hiển thị</span></div>
-        <div><strong>{stats.categories}</strong><span>Nhóm trải nghiệm</span></div>
-        <div><strong>{stats.photos}</strong><span>Ảnh cộng đồng</span></div>
-        <div><strong>{stats.rating}</strong><span>Điểm đánh giá TB</span></div>
+      <section className="reference-feature-grid">
+        {FEATURE_CARDS.map(({ icon: Icon, title, text, tone, to }) => (
+          <Link to={to} className="reference-feature-card" key={title}>
+            <span className={'reference-feature-icon ' + tone}><Icon size={25} /></span>
+            <div><h3>{title}</h3><p>{text}</p></div>
+            <span className="reference-card-arrow"><ArrowRight size={16} /></span>
+          </Link>
+        ))}
       </section>
 
-      <section className="home-section premium-category-section">
-        <div className="section-heading premium-section-heading">
+      <section className="reference-featured-section">
+        <div className="reference-section-head">
           <div>
-            <span className="eyebrow">KHÁM PHÁ THEO SỞ THÍCH</span>
-            <h2>Một Hòa Lạc, nhiều cách trải nghiệm.</h2>
-            <p>Chọn nhanh một chủ đề để lọc những địa điểm phù hợp với chuyến đi của bạn.</p>
+            <h2>Khám phá nổi bật</h2>
+            <p>Những địa điểm được cộng đồng yêu thích tại Hòa Lạc</p>
           </div>
-          <Link to="/map">Xem toàn bản đồ <ArrowRight size={17} /></Link>
+          <Link to="/map">Xem tất cả địa điểm <ArrowRight size={16} /></Link>
         </div>
-        <CategoryBar active={category} onChange={setCategory} categories={categories} />
+
+        {loading && !places.length ? (
+          <div className="reference-place-grid">
+            {Array.from({ length: 4 }).map((_, index) => <div className="home-card-skeleton" key={index} />)}
+          </div>
+        ) : (
+          <div className="reference-place-grid">
+            {displayPlaces.map((place, index) => (
+              <FeaturedPlaceCard place={place} index={index} key={place.id} />
+            ))}
+          </div>
+        )}
       </section>
 
-      <section className="home-section premium-featured-section">
-        <div className="section-heading premium-section-heading">
+      <section className="reference-community-card">
+        <div className="reference-community-copy">
           <div>
-            <span className="eyebrow">LOCAL PICKS</span>
-            <h2>Địa điểm nổi bật quanh Hòa Lạc</h2>
-            <p>Thông tin lấy trực tiếp từ hệ thống Hola Maps và dữ liệu đã được xuất bản.</p>
+            <span className="reference-community-trophy"><Trophy size={24} /></span>
+            <span className="reference-kicker">Cộng đồng Hola Explorer</span>
           </div>
-          <span className="result-note">{featured.length} địa điểm phù hợp</span>
-        </div>
-
-        {loading && (
-          <div className="premium-loading-grid">
-            {Array.from({ length: 4 }).map((_, index) => <div className="premium-skeleton" key={index} />)}
+          <h2>Cùng xây dựng bản đồ Hòa Lạc</h2>
+          <p>
+            Mỗi đóng góp của bạn đều giúp bản đồ chính xác và hữu ích hơn cho cộng đồng.
+            Tham gia ngay để trở thành một phần của Hola Explorer!
+          </p>
+          <div className="reference-community-actions">
+            <Link to="/leaderboard" className="reference-community-primary">
+              <UsersRound size={17} /> Tham gia cộng đồng
+            </Link>
+            <Link to="/leaderboard" className="reference-community-secondary">Tìm hiểu thêm</Link>
           </div>
-        )}
 
-        {!loading && loadError && (
-          <div className="premium-empty-block">
-            <MapPinned size={28} />
-            <div><b>Chưa kết nối được dữ liệu địa điểm</b><span>Kiểm tra backend rồi tải lại trang.</span></div>
-          </div>
-        )}
-
-        {!loading && !loadError && !featured.length && (
-          <div className="premium-empty-block">
-            <Compass size={28} />
-            <div><b>Chưa có địa điểm phù hợp</b><span>Thử đổi danh mục hoặc mở bản đồ để tìm rộng hơn.</span></div>
-          </div>
-        )}
-
-        {!loading && featured.length > 0 && (
-          <div className="place-grid premium-place-grid">
-            {featured.map((place, index) => <PlaceCard key={place.id} place={place} index={index} />)}
-          </div>
-        )}
-      </section>
-
-      <section className="home-section trust-section">
-        <div className="trust-copy">
-          <span className="eyebrow">WHY HOLA MAPS</span>
-          <h2>Bản đồ địa phương không chỉ là một danh sách địa chỉ.</h2>
-          <p>Hola Maps tập trung vào thông tin thực tế: vị trí chính xác, ảnh tại chỗ, trải nghiệm cộng đồng và dữ liệu được kiểm duyệt.</p>
-        </div>
-
-        <div className="trust-grid">
-          <article>
-            <span><MapPinned size={22} /></span>
-            <h3>GPS chính xác</h3>
-            <p>Địa điểm được gắn tọa độ để tìm kiếm gần bạn và hiển thị trực tiếp trên MapLibre.</p>
-          </article>
-          <article>
-            <span><Camera size={22} /></span>
-            <h3>Ảnh thực tế</h3>
-            <p>Khuyến khích Explorer bổ sung ảnh tại địa điểm thay vì chỉ dựa vào nội dung quảng cáo.</p>
-          </article>
-          <article>
-            <span><BadgeCheck size={22} /></span>
-            <h3>Có kiểm duyệt</h3>
-            <p>Đóng góp mới đi qua luồng duyệt trước khi được xuất bản ra cộng đồng.</p>
-          </article>
-        </div>
-      </section>
-
-      <section className="community-banner premium-community-banner">
-        <div className="community-icon"><Users size={32} /></div>
-        <div>
-          <span className="eyebrow light">HOLA EXPLORER</span>
-          <h2>Biến trải nghiệm của bạn thành dữ liệu hữu ích cho cả cộng đồng.</h2>
-          <p>Gửi địa điểm, ảnh, vị trí GPS và cập nhật thông tin. Điểm đóng góp được ghi nhận sau khi nội dung được duyệt.</p>
-          <div className="community-features">
-            <span><MapPinned size={16} /> Tạo địa điểm</span>
-            <span><Camera size={16} /> Bổ sung ảnh thật</span>
-            <span><BadgeCheck size={16} /> Xây uy tín Explorer</span>
+          <div className="reference-route-art" aria-hidden="true">
+            <span className="route-line" />
+            <span className="route-node one"><MapPin size={19} /></span>
+            <span className="route-node two"><UsersRound size={19} /></span>
+            <span className="route-node three"><MapPin size={19} /></span>
           </div>
         </div>
-        <Link className="primary-action premium-cta" to="/contribute">Bắt đầu đóng góp <ArrowRight size={18} /></Link>
+
+        <div className="reference-top-explorer">
+          <div className="reference-top-head">
+            <div><span><Trophy size={17} /></span><b>Top Explorer</b></div>
+            <small>Tháng {new Date().getMonth() + 1} năm {new Date().getFullYear()}⌄</small>
+          </div>
+
+          <div className="reference-top-list">
+            {displayLeaders.map((person, index) => (
+              <div className="reference-top-row" key={person.id}>
+                <span className={'reference-mini-medal medal-' + (index + 1)}>{index + 1}</span>
+                <span className="reference-mini-avatar">{initials(person.name)}</span>
+                <div>
+                  <b>{person.name}</b>
+                  <small><MapPin size={10} /> {Number(person.placesCount) || 0} địa điểm <Camera size={10} /> {Number(person.photosCount) || 0} ảnh</small>
+                </div>
+                <strong>{Number(person.points || 0).toLocaleString('vi-VN')} <small>điểm</small></strong>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
     </main>
   );
