@@ -12,3 +12,6 @@ coverage/
 
 # Local map archives are generated/downloaded, not committed to Git.
 frontend/public/maps/*.pmtiles
+
+# Temporary source used while generating supplemental Overture buildings.
+frontend/public/maps/.buildings-build/
