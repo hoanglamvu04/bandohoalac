@@ -3,7 +3,6 @@ import {
   CalendarDays,
   Camera,
   KeyRound,
-  MapPinned,
   MapPin,
   Trophy,
   UsersRound
@@ -183,10 +182,6 @@ export default function Leaderboard() {
           )}
         </div>
       </section>
-
-      <div aria-hidden="true" style={{ height: 20 }}>
-        <MapPinned size={1} />
-      </div>
     </main>
   );
 }
