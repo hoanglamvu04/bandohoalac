@@ -1,0 +1,129 @@
+/* Hola Maps landing page redesign inspired by premium local discovery apps */
+
+.premium-home {
+  background: linear-gradient(180deg,#fbf8f1 0%,#fffdf8 100%);
+}
+
+.premium-hero {
+  border-radius:0 0 42px 42px;
+  min-height:680px;
+  padding:80px clamp(24px,5vw,72px);
+  background:
+    linear-gradient(90deg,rgba(4,35,29,.94),rgba(4,35,29,.55)),
+    radial-gradient(circle at top,#3d7962,#082c25);
+}
+
+.premium-hero h1 {
+  font-size:clamp(48px,5.5vw,76px);
+  max-width:650px;
+}
+
+.premium-hero h1 span {color:#f5c84b;}
+
+.hero-map-surface {
+  border-radius:34px;
+  border:10px solid rgba(255,255,255,.18);
+  box-shadow:0 40px 90px rgba(0,0,0,.3);
+}
+
+.live-stats-strip {
+  border-radius:26px;
+  margin-top:-35px;
+  padding:8px;
+}
+
+.live-stats-strip>div {
+  text-align:center;
+}
+
+.home-section {
+  width:min(1240px,calc(100% - 40px));
+  margin:80px auto;
+}
+
+.section-heading h2,
+.trust-copy h2,
+.community-banner h2 {
+  letter-spacing:-.04em;
+  color:#103b31;
+  font-size:clamp(30px,3vw,48px);
+}
+
+.premium-section-heading {
+  display:flex;
+  justify-content:space-between;
+  align-items:end;
+  margin-bottom:32px;
+}
+
+.category-bar,
+.place-grid {
+  gap:18px;
+}
+
+.premium-place-card {
+  border-radius:24px;
+  overflow:hidden;
+  background:white;
+  box-shadow:0 15px 40px rgba(15,57,48,.1);
+  transition:.25s ease;
+}
+
+.premium-place-card:hover {
+  transform:translateY(-8px);
+  box-shadow:0 25px 60px rgba(15,57,48,.16);
+}
+
+.place-cover {
+  border-radius:22px 22px 0 0;
+}
+
+.trust-section {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:50px;
+  align-items:center;
+}
+
+.trust-grid {
+  display:grid;
+  gap:16px;
+}
+
+.trust-grid article {
+  padding:22px;
+  border-radius:24px;
+  background:white;
+  box-shadow:0 12px 35px rgba(15,57,48,.08);
+}
+
+.trust-grid span {
+  width:46px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  border-radius:16px;
+  background:#f6c453;
+}
+
+.community-banner {
+  width:min(1240px,calc(100% - 40px));
+  margin:70px auto;
+  padding:45px;
+  border-radius:34px;
+  background:linear-gradient(120deg,#082c25,#1d5948);
+  color:white;
+}
+
+.community-banner h2 {color:white;}
+
+.site-footer {
+  border-radius:32px 32px 0 0;
+}
+
+@media(max-width:768px){
+ .premium-hero{padding:50px 20px;}
+ .premium-section-heading,.trust-section{display:block;}
+ .home-section{margin:45px auto;}
+ .community-banner{padding:28px 22px;}
+}
