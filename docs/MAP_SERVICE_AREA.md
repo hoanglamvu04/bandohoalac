@@ -119,3 +119,30 @@ working local map.
 Map attribution for the supplemental archive remains Overture/OpenStreetMap
 attribution from the official tileset. The project does not copy building
 geometry from the Google Maps UI or tiles.
+
+
+## Satellite and Hybrid basemaps
+
+Hola Maps supports two imagery modes in addition to the local vector basemap:
+
+- `satellite`: imagery only, with Hola Maps data/markers/routes rendered above it.
+- `hybrid`: imagery plus local Protomaps road lines, road labels, place labels and POIs.
+
+The imagery source is resolved in this order:
+
+1. `VITE_SATELLITE_TILE_URL` when explicitly configured.
+2. MapTiler Satellite when `VITE_MAPTILER_KEY` exists.
+3. Esri World Imagery as the default online fallback.
+
+Optional environment overrides:
+
+```dotenv
+VITE_SATELLITE_TILE_URL=https://provider.example/{z}/{x}/{y}.jpg
+VITE_SATELLITE_TILE_SIZE=256
+VITE_SATELLITE_ATTRIBUTION=Imagery attribution text
+```
+
+Satellite imagery is intentionally kept online instead of being copied into
+the local PMTiles archive. This keeps the local Hòa Lạc package small while
+the vector PMTiles, Overture buildings, Hola Maps data layers, route and
+service-area mask continue to work above the imagery.
