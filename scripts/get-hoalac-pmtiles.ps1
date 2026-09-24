@@ -5,24 +5,15 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "pmtiles-tools.ps1")
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $OutputDir = Join-Path $RepoRoot "frontend\public\maps"
 $OutputFile = Join-Path $OutputDir "hoalac.pmtiles"
-
-# Tight extraction fence around the Hola Maps service polygon.
-# The frontend/backend polygon is even more precise and masks/clips the
-# outside area. This BBOX intentionally keeps a small tile buffer so roads
-# and labels do not look cut off at the product boundary.
+$TempFile = Join-Path $OutputDir "hoalac.building.pmtiles"
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
-
-# Always rebuild the archive from the focused coverage. Keeping an older,
-# wider PMTiles file would defeat the disk-size reduction even though the
-# runtime camera is already constrained.
-if (Test-Path $OutputFile) {
-  Remove-Item -Force $OutputFile
-}
+Remove-Item -Force $TempFile -ErrorAction SilentlyContinue
 
 function Resolve-BuildUrl {
   param([string]$RequestedDate)
@@ -35,7 +26,7 @@ function Resolve-BuildUrl {
     $date = (Get-Date).AddDays(-$i).ToString("yyyyMMdd")
     $url = "https://build.protomaps.com/$date.pmtiles"
     try {
-      Invoke-WebRequest -Uri $url -Method Head -TimeoutSec 15 | Out-Null
+      Invoke-WebRequest -Uri $url -Method Head -TimeoutSec 15 -UseBasicParsing | Out-Null
       return $url
     } catch {
       Write-Host "Build $date not available, trying older build..."
@@ -45,37 +36,31 @@ function Resolve-BuildUrl {
   throw "Could not find a Protomaps daily build from the last 7 days."
 }
 
+$PmtilesExe = Get-HolaPmtilesCli
 $SourceUrl = Resolve-BuildUrl -RequestedDate $BuildDate
+
 Write-Host ""
 Write-Host "Hola Maps local basemap"
-Write-Host "Source:  $SourceUrl"
-Write-Host "Coverage: Hòa Lạc, Hạ Bằng, Thạch Thất, Tây Phương, Yên Xuân, Phú Cát"
-Write-Host "Extended: nearby parts of Ba Vì + Quốc Oai"
+Write-Host "Source:   $SourceUrl"
+Write-Host "Coverage: Hoa Lac / Thach That focused service area"
 Write-Host "BBox:     $BBox"
 Write-Host "Zoom:     0-$MaxZoom"
-Write-Host "Detail:   z15 buildings · z16 local roads/POI · z17 addresses/local detail"
-Write-Host "Output:  $OutputFile"
+Write-Host "Output:   $OutputFile"
 Write-Host ""
 
-$Pmtiles = Get-Command pmtiles -ErrorAction SilentlyContinue
-
-if ($Pmtiles) {
-  & pmtiles extract $SourceUrl $OutputFile "--bbox=$BBox" "--maxzoom=$MaxZoom" "--download-threads=8"
-} else {
-  $Docker = Get-Command docker -ErrorAction SilentlyContinue
-  if (-not $Docker) {
-    throw "Install either the pmtiles CLI or Docker Desktop, then run this script again."
-  }
-
-  $Mount = ($OutputDir -replace "\\", "/")
-  & docker run --rm -v "$($Mount):/data" protomaps/go-pmtiles extract $SourceUrl /data/hoalac.pmtiles "--bbox=$BBox" "--maxzoom=$MaxZoom" "--download-threads=8"
+& $PmtilesExe extract $SourceUrl $TempFile "--bbox=$BBox" "--maxzoom=$MaxZoom" "--download-threads=8"
+if ($LASTEXITCODE -ne 0) {
+  Remove-Item -Force $TempFile -ErrorAction SilentlyContinue
+  throw "Protomaps extraction failed with exit code $LASTEXITCODE."
 }
 
-if (-not (Test-Path $OutputFile)) {
-  throw "Extraction finished but hoalac.pmtiles was not created."
+if (-not (Test-Path $TempFile)) {
+  throw "Extraction finished but the temporary basemap archive was not created."
 }
+
+Move-Item -Force $TempFile $OutputFile
 
 $SizeMb = [math]::Round((Get-Item $OutputFile).Length / 1MB, 1)
 Write-Host ""
 Write-Host "DONE: $OutputFile ($SizeMb MB)"
-Write-Host "Restart Vite and open http://localhost:5175/map"
+Write-Host "Basemap z17 is ready."
