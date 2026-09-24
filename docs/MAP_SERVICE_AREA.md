@@ -73,50 +73,49 @@ polygon so roads and labels do not look cut off at the edge.
 
 The Protomaps basemap is primarily sourced from OpenStreetMap. Some parts of
 Hòa Lạc have roads and POIs but incomplete OSM building footprints. Hola Maps
-can therefore load a second, optional PMTiles archive containing Overture Maps
-building footprints.
+therefore loads a second optional PMTiles archive extracted from Overture Maps'
+official Buildings PMTiles release.
 
-Overture's Buildings theme combines open sources including OpenStreetMap,
-Microsoft Global ML Building Footprints, Google Open Buildings and other
-compatible datasets. The Buildings theme is published under ODbL.
+No Python, `overturemaps`, Tippecanoe or Docker installation is required by
+the current Windows build pipeline. The scripts automatically download the
+official `pmtiles.exe` into `scripts/.tools/` when it is not already
+installed.
 
-Build both the basemap and supplemental buildings in one command:
+Build both archives:
 
 ```powershell
 .\scripts\get-hoalac-map-data.ps1
 ```
 
-Or build only the supplemental buildings:
+Or only rebuild the building layer:
 
 ```powershell
 .\scripts\get-hoalac-buildings.ps1
 ```
 
-The building script requires the official Overture Python client:
-
-```powershell
-pip install overturemaps
-```
-
-For tiling it uses a local `tippecanoe` command when available. If Tippecanoe
-is not installed but Docker Desktop is available, the script builds the
-official Felt Tippecanoe Docker image on the first run.
-
-Generated archive:
+The building script resolves Overture's latest release from its STAC catalog
+and extracts the Hòa Lạc BBOX directly from the official remote archive:
 
 ```text
+https://overturemaps-extras-us-west-2.s3.us-west-2.amazonaws.com/tiles/<RELEASE>/buildings.pmtiles
+```
+
+Generated files:
+
+```text
+frontend/public/maps/hoalac.pmtiles
 frontend/public/maps/hoalac-buildings.pmtiles
 ```
 
-The browser checks for that archive automatically. If it exists, the normal
-OSM/Protomaps building fill is replaced at local zoom levels with the denser
-Overture layer. If it does not exist, the app falls back to the existing
-Protomaps buildings without failing.
+The supplemental archive keeps Overture's official source layers
+`building` and `building_part`. The browser detects the archive
+automatically and swaps the sparse OSM building fill for the denser Overture
+building layer at local zoom levels.
 
-Map attribution for the supplemental archive:
+The scripts build to temporary files first and only replace existing PMTiles
+after a successful extraction, so a network/tool failure no longer deletes a
+working local map.
 
-```text
-© OpenStreetMap contributors, Overture Maps Foundation
-```
-
-The project does not copy building geometry from the Google Maps UI or tiles.
+Map attribution for the supplemental archive remains Overture/OpenStreetMap
+attribution from the official tileset. The project does not copy building
+geometry from the Google Maps UI or tiles.
