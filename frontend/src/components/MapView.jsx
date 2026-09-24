@@ -444,7 +444,7 @@ export default function MapView({
         maplibreRef.current = maplibre;
         const map = new maplibre.Map({
           container: containerRef.current,
-          style: hasLocalPmtiles
+          style: (hasLocalPmtiles || basemapMode === 'satellite')
             ? createPmtilesStyle(basemapMode, {
                 includeSupplementalBuildings: canUseSupplementalBuildings
               })
@@ -482,6 +482,11 @@ export default function MapView({
           setInteractiveReady(true);
           notifyViewport();
           requestAnimationFrame(() => map.resize());
+
+          if (basemapMode === 'satellite') {
+            setBasemapHealth('ok');
+            return;
+          }
 
           if (!hasLocalPmtiles) {
             setBasemapHealth('fallback');
@@ -594,8 +599,10 @@ export default function MapView({
 
     setInteractiveReady(false);
     map.once('style.load', restoreHolaLayers);
+    const canRenderSelectedStyle = usingLocalPmtiles || basemapMode === 'satellite';
+
     map.setStyle(
-      usingLocalPmtiles
+      canRenderSelectedStyle
         ? createPmtilesStyle(basemapMode, {
             includeSupplementalBuildings: usingSupplementalBuildings
           })
@@ -731,14 +738,16 @@ export default function MapView({
       <div ref={containerRef} className="hm-map-canvas" />
 
       <div className={'hm-map-provider health-' + basemapHealth}>
-        {basemapHealth === 'checking' && 'CHECKING LOCAL BASEMAP'}
-        {basemapHealth === 'ok' && (
+        {basemapMode === 'satellite' && 'SATELLITE IMAGERY'}
+        {basemapMode === 'hybrid' && 'HYBRID · SATELLITE + LOCAL LABELS'}
+        {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'checking' && 'CHECKING LOCAL BASEMAP'}
+        {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'ok' && (
           usingSupplementalBuildings
             ? 'LOCAL PMTILES · OSM + OVERTURE BUILDINGS'
             : 'LOCAL PMTILES · OSM'
         )}
-        {basemapHealth === 'broken' && 'LOCAL PMTILES ERROR'}
-        {basemapHealth === 'fallback' && 'OPEN VECTOR FALLBACK'}
+        {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'broken' && 'LOCAL PMTILES ERROR'}
+        {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'fallback' && 'OPEN VECTOR FALLBACK'}
       </div>
 
       <button className="hm-locate" type="button" onClick={locateUser} disabled={locating}>
