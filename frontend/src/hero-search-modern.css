@@ -1,0 +1,70 @@
+/* Hola Maps hero + search refinement */
+
+.modern-hero .search-box,
+.premium-hero .search-box{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  min-height:72px;
+  padding:10px 12px 10px 22px;
+  border-radius:24px;
+  background:rgba(255,255,255,.96);
+  border:1px solid rgba(255,255,255,.5);
+  box-shadow:0 22px 55px rgba(15,23,42,.18);
+}
+
+.modern-hero .search-box svg,
+.premium-hero .search-box svg{
+  color:#2563eb;
+  flex:none;
+}
+
+.modern-hero .search-box input,
+.premium-hero .search-box input{
+  flex:1;
+  border:0;
+  outline:none;
+  background:transparent;
+  color:#102042;
+  font-size:15px;
+}
+
+.modern-hero .search-filter,
+.premium-hero .search-filter{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  border-radius:14px;
+  border:0;
+  background:#eef5ff;
+  color:#2563eb;
+}
+
+.modern-hero .search-submit,
+.premium-hero .search-submit{
+  height:52px;
+  padding:0 28px;
+  border-radius:18px;
+  border:0;
+  background:linear-gradient(135deg,#2563eb,#60a5fa);
+  color:#fff;
+  font-weight:800;
+  box-shadow:0 12px 28px rgba(37,99,235,.28);
+}
+
+.hero-product-demo{
+  filter:drop-shadow(0 30px 70px rgba(15,23,42,.25));
+}
+
+.hero-map-surface{
+  position:relative;
+}
+
+.hero-map-surface:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:radial-gradient(circle at 50% 45%,rgba(59,130,246,.14),transparent 30%);
+  pointer-events:none;
+}
