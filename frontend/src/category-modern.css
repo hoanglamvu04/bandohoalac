@@ -1,36 +1,99 @@
-.modern-category-bar {
-  display:flex;
-  flex-wrap:wrap;
+/* Modern Hola Maps category cards */
+
+.category-card-grid {
+  display:grid;
+  grid-template-columns:repeat(7,minmax(0,1fr));
   gap:18px;
-  align-items:center;
+}
+
+.category-card {
+  position:relative;
+  overflow:hidden;
+  padding:0;
+  min-height:260px;
+  border:1px solid rgba(37,99,235,.10);
+  border-radius:26px;
+  background:#fff;
+  text-align:left;
+  cursor:pointer;
+  box-shadow:0 12px 35px rgba(15,23,42,.06);
+  transition:all .25s ease;
+}
+
+.category-card:hover {
+  transform:translateY(-6px);
+  box-shadow:0 22px 45px rgba(37,99,235,.14);
+}
+
+.category-card.active {
+  border-color:#2563eb;
+  box-shadow:0 22px 50px rgba(37,99,235,.18);
+}
+
+.category-card-media {
+  position:relative;
+  height:150px;
+  background-size:cover;
+  background-position:center;
+}
+
+.category-card-media::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.45));
+}
+
+.category-card-icon {
+  position:absolute;
+  z-index:2;
+  top:16px;
+  left:16px;
+  width:48px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  border-radius:16px;
+  background:rgba(255,255,255,.92);
+  color:#2563eb;
+  box-shadow:0 10px 25px rgba(15,23,42,.12);
+}
+
+.category-card-body {
+  padding:16px 18px 18px;
+}
+
+.category-card-body h3 {
+  margin:0 0 8px;
+  color:#102042;
+  font-size:20px;
+  font-weight:900;
+}
+
+.category-card-body p {
+  margin:0;
+  color:#64748b;
+  font-size:14px;
+  line-height:1.5;
 }
 
 .modern-category-bar .category-chip {
   display:flex;
   align-items:center;
   gap:10px;
-  min-height:64px;
-  padding:0 26px;
+  min-height:58px;
+  padding:0 22px;
   border-radius:999px;
   border:1px solid rgba(37,99,235,.12);
-  background:rgba(255,255,255,.92);
+  background:#fff;
   color:#102042;
-  font-size:18px;
+  font-size:17px;
   font-weight:800;
-  box-shadow:0 10px 28px rgba(30,64,175,.06);
-  transition:.25s ease;
-}
-
-.modern-category-bar .category-chip:hover {
-  transform:translateY(-3px);
-  border-color:rgba(37,99,235,.3);
 }
 
 .modern-category-bar .category-chip.active {
   color:#fff;
   background:linear-gradient(135deg,#2563eb,#60a5fa);
-  border-color:transparent;
-  box-shadow:0 16px 35px rgba(37,99,235,.28);
 }
 
 .category-icon {
@@ -39,26 +102,19 @@
   display:grid;
   place-items:center;
   border-radius:12px;
-  color:#2563eb;
   background:#eff6ff;
+  color:#2563eb;
 }
 
 .category-chip.active .category-icon {
+  background:#fff;
   color:#2563eb;
-  background:rgba(255,255,255,.92);
+}
+
+@media(max-width:1200px){
+  .category-card-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
 }
 
 @media(max-width:768px){
-  .modern-category-bar{
-    overflow-x:auto;
-    flex-wrap:nowrap;
-    padding-bottom:8px;
-  }
-
-  .modern-category-bar .category-chip{
-    flex:none;
-    min-height:52px;
-    padding:0 18px;
-    font-size:15px;
-  }
+  .category-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
 }
