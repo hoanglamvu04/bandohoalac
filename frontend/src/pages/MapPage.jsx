@@ -452,7 +452,7 @@ export default function MapPage() {
             <button
               key={option.id}
               type="button"
-              className={basemapMode === option.id ? 'active' : ''}
+              className={(basemapMode === option.id ? 'active ' : '') + 'basemap-' + option.id}
               onClick={() => setBasemapMode(option.id)}
               title={option.description}
             >
