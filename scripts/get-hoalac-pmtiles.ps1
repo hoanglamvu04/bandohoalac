@@ -1,7 +1,7 @@
 param(
   [string]$BuildDate = "",
   [int]$MaxZoom = 16,
-  [string]$BBox = "105.30,20.86,105.70,21.16"
+  [string]$BBox = "105.30,20.86,105.69,21.16"
 )
 
 $ErrorActionPreference = "Stop"
