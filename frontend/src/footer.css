@@ -1,0 +1,73 @@
+/* Hola Maps Footer */
+.site-footer {
+  width: 100%;
+  margin-top: 48px;
+  padding: 36px clamp(20px, 5vw, 72px) 24px;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  color: #e2e8f0;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 28px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.footer-brand strong {
+  display: block;
+  font-size: 26px;
+  color: #ffffff;
+  letter-spacing: .3px;
+  margin-bottom: 10px;
+}
+
+.footer-brand p {
+  margin: 0;
+  max-width: 420px;
+  line-height: 1.6;
+  color: #cbd5e1;
+  font-size: 15px;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-content: start;
+}
+
+.footer-links span {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  color: #f8fafc;
+  font-size: 14px;
+  transition: .2s ease;
+}
+
+.footer-links span:hover {
+  background: rgba(59,130,246,.35);
+}
+
+.footer-copy {
+  grid-column: 1 / -1;
+  padding-top: 18px;
+  margin-top: 10px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+@media (max-width: 700px) {
+  .site-footer {
+    grid-template-columns: 1fr;
+    margin-top: 24px;
+    padding: 28px 20px 20px;
+  }
+
+  .footer-brand strong {
+    font-size: 22px;
+  }
+
+  .footer-copy {
+    grid-column: auto;
+  }
+}
