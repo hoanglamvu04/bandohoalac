@@ -1,5 +1,6 @@
 param(
   [string]$BuildDate = "",
+  [string]$OvertureRelease = "",
   [string]$BBox = "105.30,20.86,105.69,21.16",
   [int]$MaxZoom = 17
 )
@@ -16,9 +17,10 @@ Write-Host ""
   -MaxZoom $MaxZoom
 
 & (Join-Path $PSScriptRoot "get-hoalac-buildings.ps1") `
+  -Release $OvertureRelease `
   -BBox $BBox `
   -MaxZoom $MaxZoom
 
 Write-Host ""
 Write-Host "=== Hola Maps local map data is ready ==="
-Write-Host "Restart Vite or reload /map."
+Write-Host "Reload /map."
