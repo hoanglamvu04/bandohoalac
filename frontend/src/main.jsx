@@ -10,6 +10,7 @@ import './map-fix.css';
 import './directions.css';
 import './map-workspace.css';
 import './footer.css';
+import './hola-ui-overhaul.css';
 
 // Do not wrap the whole app in React.StrictMode here.
 // In React 18 development, StrictMode intentionally mounts effects twice.
