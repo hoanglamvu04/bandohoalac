@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
 import './style.css';
 import './premium.css';
+import './modern-ui.css';
 import './map-fix.css';
 import './directions.css';
 import './map-workspace.css';
