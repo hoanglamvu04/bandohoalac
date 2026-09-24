@@ -1,6 +1,6 @@
 param(
   [string]$BuildDate = "",
-  [int]$MaxZoom = 16,
+  [int]$MaxZoom = 17,
   [string]$BBox = "105.30,20.86,105.69,21.16"
 )
 
@@ -53,6 +53,7 @@ Write-Host "Coverage: Hòa Lạc, Hạ Bằng, Thạch Thất, Tây Phương, Y�
 Write-Host "Extended: nearby parts of Ba Vì + Quốc Oai"
 Write-Host "BBox:     $BBox"
 Write-Host "Zoom:     0-$MaxZoom"
+Write-Host "Detail:   z15 buildings · z16 local roads/POI · z17 addresses/local detail"
 Write-Host "Output:  $OutputFile"
 Write-Host ""
 
