@@ -2,6 +2,9 @@ const GLYPHS_URL = 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack
 const SPRITE_BASE = 'https://protomaps.github.io/basemaps-assets/sprites/v4/';
 
 export const PMTILES_URL = (import.meta.env.VITE_PMTILES_URL || '/maps/hoalac.pmtiles').trim();
+export const BUILDINGS_PMTILES_URL = (
+  import.meta.env.VITE_BUILDINGS_PMTILES_URL || '/maps/hoalac-buildings.pmtiles'
+).trim();
 
 const FLAVORS = {
   streets: 'light',
@@ -48,10 +51,36 @@ function cloneLayer(layer) {
  * The source itself is still the same compact PMTiles archive. This function
  * only changes cartography / progressive disclosure by zoom.
  */
-function enhanceLocalDetailLayers(baseLayers, mode) {
+function createSupplementalBuildingLayer(mode) {
   const palette = DETAIL_PALETTES[mode] || DETAIL_PALETTES.streets;
 
-  return baseLayers.map((baseLayer) => {
+  return {
+    id: 'hola-overture-buildings',
+    type: 'fill',
+    source: 'overture-buildings',
+    'source-layer': 'buildings',
+    minzoom: 14.4,
+    paint: {
+      'fill-color': mode === 'dark' ? '#6b747d' : '#d8dee5',
+      'fill-opacity': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        14.4, 0,
+        15, 0.46,
+        16, 0.58,
+        17, 0.68,
+        18, 0.74
+      ],
+      'fill-outline-color': palette.buildingOutline
+    }
+  };
+}
+
+function enhanceLocalDetailLayers(baseLayers, mode, includeSupplementalBuildings = false) {
+  const palette = DETAIL_PALETTES[mode] || DETAIL_PALETTES.streets;
+
+  const enhanced = baseLayers.map((baseLayer) => {
     const layer = cloneLayer(baseLayer);
     const sourceLayer = layer['source-layer'];
 
@@ -218,9 +247,20 @@ function enhanceLocalDetailLayers(baseLayers, mode) {
 
     return layer;
   });
+
+  if (!includeSupplementalBuildings) return enhanced;
+
+  const buildingIndex = enhanced.findIndex((layer) => layer.id === 'buildings');
+  if (buildingIndex >= 0) {
+    enhanced.splice(buildingIndex, 1, createSupplementalBuildingLayer(mode));
+  } else {
+    enhanced.push(createSupplementalBuildingLayer(mode));
+  }
+
+  return enhanced;
 }
 
-export function createPmtilesStyle(mode = 'streets') {
+export function createPmtilesStyle(mode = 'streets', options = {}) {
   const basemaps = window.basemaps;
   if (!basemaps) throw new Error('Protomaps basemap assets are not loaded.');
 
@@ -228,19 +268,30 @@ export function createPmtilesStyle(mode = 'streets') {
   const baseLayers = basemaps.layers('protomaps', basemaps.namedFlavor(flavorName), {
     lang: 'vi'
   });
+  const includeSupplementalBuildings = Boolean(options.includeSupplementalBuildings);
+
+  const sources = {
+    protomaps: {
+      type: 'vector',
+      url: 'pmtiles://' + PMTILES_URL,
+      attribution: '© OpenStreetMap contributors · Protomaps'
+    }
+  };
+
+  if (includeSupplementalBuildings) {
+    sources['overture-buildings'] = {
+      type: 'vector',
+      url: 'pmtiles://' + BUILDINGS_PMTILES_URL,
+      attribution: '© OpenStreetMap contributors · Overture Maps Foundation'
+    };
+  }
 
   return {
     version: 8,
     glyphs: GLYPHS_URL,
     sprite: SPRITE_BASE + flavorName,
-    sources: {
-      protomaps: {
-        type: 'vector',
-        url: 'pmtiles://' + PMTILES_URL,
-        attribution: '© OpenStreetMap contributors · Protomaps'
-      }
-    },
-    layers: enhanceLocalDetailLayers(baseLayers, mode)
+    sources,
+    layers: enhanceLocalDetailLayers(baseLayers, mode, includeSupplementalBuildings)
   };
 }
 
@@ -248,13 +299,21 @@ export function createFallbackStyle() {
   return 'https://tiles.openfreemap.org/styles/liberty';
 }
 
-export async function localPmtilesAvailable() {
-  if (/^https?:\/\//i.test(PMTILES_URL)) return true;
+async function archiveAvailable(url) {
+  if (/^https?:\/\//i.test(url)) return true;
 
   try {
-    const response = await fetch(PMTILES_URL, { method: 'HEAD', cache: 'no-store' });
+    const response = await fetch(url, { method: 'HEAD', cache: 'no-store' });
     return response.ok;
   } catch {
     return false;
   }
+}
+
+export function localPmtilesAvailable() {
+  return archiveAvailable(PMTILES_URL);
+}
+
+export function supplementalBuildingsAvailable() {
+  return archiveAvailable(BUILDINGS_PMTILES_URL);
 }
