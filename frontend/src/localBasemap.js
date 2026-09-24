@@ -6,8 +6,25 @@ export const BUILDINGS_PMTILES_URL = (
   import.meta.env.VITE_BUILDINGS_PMTILES_URL || '/maps/hoalac-buildings.pmtiles'
 ).trim();
 
+const MAPTILER_KEY = (import.meta.env.VITE_MAPTILER_KEY || '').trim();
+export const SATELLITE_TILE_URL = (
+  import.meta.env.VITE_SATELLITE_TILE_URL ||
+  (MAPTILER_KEY
+    ? 'https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=' + encodeURIComponent(MAPTILER_KEY)
+    : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
+).trim();
+
+export const SATELLITE_ATTRIBUTION = (
+  import.meta.env.VITE_SATELLITE_ATTRIBUTION ||
+  (MAPTILER_KEY
+    ? '© MapTiler © OpenStreetMap contributors'
+    : 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community')
+).trim();
+
 const FLAVORS = {
   streets: 'light',
+  hybrid: 'light',
+  satellite: 'light',
   contrast: 'grayscale',
   dark: 'dark',
   clean: 'white'
@@ -30,6 +47,8 @@ const DETAIL_PALETTES = {
 
 export const LOCAL_BASEMAP_OPTIONS = [
   { id: 'streets', label: 'Bản đồ', description: 'Chi tiết đường, nhà cửa, POI, địa danh' },
+  { id: 'satellite', label: 'Vệ tinh', description: 'Ảnh vệ tinh độ phân giải cao' },
+  { id: 'hybrid', label: 'Hybrid', description: 'Vệ tinh + đường, địa danh và POI' },
   { id: 'contrast', label: 'Tương phản', description: 'Nền xám, dễ đọc dữ liệu' },
   { id: 'dark', label: 'Ban đêm', description: 'Nền tối' },
   { id: 'clean', label: 'Tối giản', description: 'Nền trắng cho quy hoạch / dữ liệu' }
@@ -284,6 +303,62 @@ function enhanceLocalDetailLayers(baseLayers, mode, includeSupplementalBuildings
   return enhanced;
 }
 
+function createSatelliteRasterLayer() {
+  return {
+    id: 'hola-satellite-imagery',
+    type: 'raster',
+    source: 'satellite-imagery',
+    minzoom: 0,
+    maxzoom: 22,
+    paint: {
+      'raster-opacity': 1,
+      'raster-fade-duration': 120,
+      'raster-resampling': 'linear',
+      'raster-saturation': 0.04,
+      'raster-contrast': 0.05,
+      'raster-brightness-min': 0.01,
+      'raster-brightness-max': 0.98
+    }
+  };
+}
+
+function createHybridOverlayLayers(layers) {
+  return layers
+    .filter((layer) => {
+      if (layer.type === 'symbol') return true;
+      if (layer.type === 'line' && layer['source-layer'] === 'roads') return true;
+      return false;
+    })
+    .map((baseLayer) => {
+      const layer = cloneLayer(baseLayer);
+
+      if (layer.type === 'symbol') {
+        layer.paint = {
+          ...layer.paint,
+          ...(layer.paint?.['text-color'] !== undefined
+            ? {
+                'text-color': '#17202a',
+                'text-halo-color': 'rgba(255,255,255,0.94)',
+                'text-halo-width': 1.6,
+                'text-halo-blur': 0.25
+              }
+            : {})
+        };
+      }
+
+      if (layer.type === 'line' && layer['source-layer'] === 'roads') {
+        const isCasing = String(layer.id).includes('casing');
+        layer.paint = {
+          ...layer.paint,
+          'line-opacity': isCasing ? 0.72 : 0.88,
+          ...(isCasing ? { 'line-color': 'rgba(255,255,255,0.9)' } : {})
+        };
+      }
+
+      return layer;
+    });
+}
+
 export function createPmtilesStyle(mode = 'streets', options = {}) {
   const basemaps = window.basemaps;
   if (!basemaps) throw new Error('Protomaps basemap assets are not loaded.');
@@ -293,6 +368,7 @@ export function createPmtilesStyle(mode = 'streets', options = {}) {
     lang: 'vi'
   });
   const includeSupplementalBuildings = Boolean(options.includeSupplementalBuildings);
+  const imageryMode = mode === 'satellite' || mode === 'hybrid';
 
   const sources = {
     protomaps: {
@@ -302,7 +378,7 @@ export function createPmtilesStyle(mode = 'streets', options = {}) {
     }
   };
 
-  if (includeSupplementalBuildings) {
+  if (includeSupplementalBuildings && !imageryMode) {
     sources['overture-buildings'] = {
       type: 'vector',
       url: 'pmtiles://' + BUILDINGS_PMTILES_URL,
@@ -310,12 +386,40 @@ export function createPmtilesStyle(mode = 'streets', options = {}) {
     };
   }
 
+  if (imageryMode) {
+    sources['satellite-imagery'] = {
+      type: 'raster',
+      tiles: [SATELLITE_TILE_URL],
+      tileSize: 256,
+      minzoom: 0,
+      maxzoom: 19,
+      attribution: SATELLITE_ATTRIBUTION
+    };
+  }
+
+  const detailedLayers = enhanceLocalDetailLayers(
+    baseLayers,
+    mode,
+    includeSupplementalBuildings && !imageryMode
+  );
+
+  let layers = detailedLayers;
+
+  if (mode === 'satellite') {
+    layers = [createSatelliteRasterLayer()];
+  } else if (mode === 'hybrid') {
+    layers = [
+      createSatelliteRasterLayer(),
+      ...createHybridOverlayLayers(detailedLayers)
+    ];
+  }
+
   return {
     version: 8,
     glyphs: GLYPHS_URL,
     sprite: SPRITE_BASE + flavorName,
     sources,
-    layers: enhanceLocalDetailLayers(baseLayers, mode, includeSupplementalBuildings)
+    layers
   };
 }
 
