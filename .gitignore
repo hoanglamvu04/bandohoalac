@@ -15,3 +15,6 @@ frontend/public/maps/*.pmtiles
 
 # Temporary source used while generating supplemental Overture buildings.
 frontend/public/maps/.buildings-build/
+
+# Auto-downloaded local CLI tools used by map build scripts.
+scripts/.tools/
