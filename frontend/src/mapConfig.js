@@ -30,9 +30,9 @@ export const SERVICE_AREA_RING = [
   [105.610, 20.900],
   [105.640, 20.935],
   [105.660, 20.975],
-  [105.675, 21.015],
-  [105.682, 21.055],
-  [105.650, 21.095],
+  [105.665, 21.015],
+  [105.650, 21.055],
+  [105.640, 21.095],
   [105.590, 21.110],
   [105.520, 21.122],
   [105.455, 21.118],
@@ -61,10 +61,10 @@ export const EXTENDED_SERVICE_AREAS = [
  */
 export const MAP_COVERAGE_BOUNDS = [
   [105.30, 20.86],
-  [105.70, 21.16]
+  [105.69, 21.16]
 ];
 
-export const SERVICE_AREA_BOUNDS = [105.325, 20.885, 105.682, 21.145];
+export const SERVICE_AREA_BOUNDS = [105.325, 20.885, 105.665, 21.145];
 
 export const SERVICE_AREA_GEOJSON = {
   type: 'Feature',
