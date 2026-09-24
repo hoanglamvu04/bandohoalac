@@ -454,7 +454,8 @@ export default function MapView({
             west: b.getWest(),
             south: b.getSouth(),
             east: b.getEast(),
-            north: b.getNorth()
+            north: b.getNorth(),
+            zoom: map.getZoom()
           });
         };
 
