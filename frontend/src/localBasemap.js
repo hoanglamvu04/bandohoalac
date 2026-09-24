@@ -51,30 +51,53 @@ function cloneLayer(layer) {
  * The source itself is still the same compact PMTiles archive. This function
  * only changes cartography / progressive disclosure by zoom.
  */
-function createSupplementalBuildingLayer(mode) {
+function createSupplementalBuildingLayers(mode) {
   const palette = DETAIL_PALETTES[mode] || DETAIL_PALETTES.streets;
+  const fillOpacity = [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    14.4, 0,
+    15, 0.46,
+    16, 0.58,
+    17, 0.68,
+    18, 0.74
+  ];
 
-  return {
-    id: 'hola-overture-buildings',
-    type: 'fill',
-    source: 'overture-buildings',
-    'source-layer': 'buildings',
-    minzoom: 14.4,
-    paint: {
-      'fill-color': mode === 'dark' ? '#6b747d' : '#d8dee5',
-      'fill-opacity': [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        14.4, 0,
-        15, 0.46,
-        16, 0.58,
-        17, 0.68,
-        18, 0.74
-      ],
-      'fill-outline-color': palette.buildingOutline
+  return [
+    {
+      id: 'hola-overture-building',
+      type: 'fill',
+      source: 'overture-buildings',
+      'source-layer': 'building',
+      minzoom: 14.4,
+      paint: {
+        'fill-color': mode === 'dark' ? '#6b747d' : '#d8dee5',
+        'fill-opacity': fillOpacity,
+        'fill-outline-color': palette.buildingOutline
+      }
+    },
+    {
+      id: 'hola-overture-building-part',
+      type: 'fill',
+      source: 'overture-buildings',
+      'source-layer': 'building_part',
+      minzoom: 15,
+      paint: {
+        'fill-color': mode === 'dark' ? '#737d87' : '#e3e7eb',
+        'fill-opacity': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          15, 0.18,
+          16, 0.30,
+          17, 0.42,
+          18, 0.5
+        ],
+        'fill-outline-color': palette.buildingOutline
+      }
     }
-  };
+  ];
 }
 
 function enhanceLocalDetailLayers(baseLayers, mode, includeSupplementalBuildings = false) {
@@ -250,11 +273,12 @@ function enhanceLocalDetailLayers(baseLayers, mode, includeSupplementalBuildings
 
   if (!includeSupplementalBuildings) return enhanced;
 
+  const supplementalLayers = createSupplementalBuildingLayers(mode);
   const buildingIndex = enhanced.findIndex((layer) => layer.id === 'buildings');
   if (buildingIndex >= 0) {
-    enhanced.splice(buildingIndex, 1, createSupplementalBuildingLayer(mode));
+    enhanced.splice(buildingIndex, 1, ...supplementalLayers);
   } else {
-    enhanced.push(createSupplementalBuildingLayer(mode));
+    enhanced.push(...supplementalLayers);
   }
 
   return enhanced;
