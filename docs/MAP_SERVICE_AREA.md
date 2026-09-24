@@ -52,7 +52,7 @@ From PowerShell:
 Default buffered tile extraction bounds:
 
 ```text
-105.30,20.86,105.70,21.16
+105.30,20.86,105.69,21.16
 ```
 
 To override them temporarily:
