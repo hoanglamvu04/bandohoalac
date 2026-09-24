@@ -115,13 +115,23 @@ export async function getPlaceBySlug(slug) {
 }
 
 export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
-  const sql = BASE_SELECT + [
-    ', ST_Distance(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography) AS distance_m',
-    'WHERE p.status = $3',
-    '  AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
-    '  AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
-    'ORDER BY distance_m ASC',
-    'LIMIT 100'
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
   ].join('\n');
 
   const { rows } = await pool.query(sql, [
