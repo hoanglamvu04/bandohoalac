@@ -10,6 +10,7 @@ import './map-fix.css';
 import './directions.css';
 import './map-workspace.css';
 import './footer.css';
+import './community.css';
 import './hola-ui-overhaul.css';
 import './hola-home-redesign.css';
 import './hola-blue-modern.css';
