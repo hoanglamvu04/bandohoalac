@@ -67,3 +67,56 @@ To override them temporarily:
 
 The tile BBOX deliberately has a small buffer outside the exact product
 polygon so roads and labels do not look cut off at the edge.
+
+
+## Supplemental building footprints
+
+The Protomaps basemap is primarily sourced from OpenStreetMap. Some parts of
+Hòa Lạc have roads and POIs but incomplete OSM building footprints. Hola Maps
+can therefore load a second, optional PMTiles archive containing Overture Maps
+building footprints.
+
+Overture's Buildings theme combines open sources including OpenStreetMap,
+Microsoft Global ML Building Footprints, Google Open Buildings and other
+compatible datasets. The Buildings theme is published under ODbL.
+
+Build both the basemap and supplemental buildings in one command:
+
+```powershell
+.\scripts\get-hoalac-map-data.ps1
+```
+
+Or build only the supplemental buildings:
+
+```powershell
+.\scripts\get-hoalac-buildings.ps1
+```
+
+The building script requires the official Overture Python client:
+
+```powershell
+pip install overturemaps
+```
+
+For tiling it uses a local `tippecanoe` command when available. If Tippecanoe
+is not installed but Docker Desktop is available, the script builds the
+official Felt Tippecanoe Docker image on the first run.
+
+Generated archive:
+
+```text
+frontend/public/maps/hoalac-buildings.pmtiles
+```
+
+The browser checks for that archive automatically. If it exists, the normal
+OSM/Protomaps building fill is replaced at local zoom levels with the denser
+Overture layer. If it does not exist, the app falls back to the existing
+Protomaps buildings without failing.
+
+Map attribution for the supplemental archive:
+
+```text
+© OpenStreetMap contributors, Overture Maps Foundation
+```
+
+The project does not copy building geometry from the Google Maps UI or tiles.
