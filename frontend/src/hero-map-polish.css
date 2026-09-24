@@ -1,0 +1,65 @@
+/* Hola Maps hero final polish */
+
+.premium-hero { position: relative; }
+
+.hero-product-demo {
+  filter: drop-shadow(0 30px 60px rgba(15,23,42,.22));
+}
+
+.hero-map-surface {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-map-surface::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.55),transparent 35%),
+    radial-gradient(circle at 70% 20%,rgba(37,99,235,.18),transparent 180px);
+}
+
+.hero-place-dot {
+  animation: floatMarker 3s ease-in-out infinite;
+}
+.hero-place-dot-2 { animation-delay:.4s; }
+.hero-place-dot-3 { animation-delay:.8s; }
+
+@keyframes floatMarker {
+  50% { transform:translateY(-6px); }
+}
+
+.hero-map-card {
+  border:1px solid rgba(37,99,235,.12);
+  background:rgba(255,255,255,.96);
+}
+
+.search-box {
+  min-height:64px;
+  border-radius:22px;
+  padding:8px 10px 8px 20px;
+  background:rgba(255,255,255,.96);
+  box-shadow:0 20px 45px rgba(15,23,42,.18);
+}
+
+.search-filter {
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  background:#eff6ff;
+  color:#2563eb;
+}
+
+.search-submit {
+  height:48px;
+  min-width:90px;
+  border-radius:16px;
+  background:linear-gradient(135deg,#2563eb,#60a5fa);
+  color:white;
+  font-weight:800;
+}
+
+@media(max-width:768px){
+ .search-box { border-radius:18px; }
+}
