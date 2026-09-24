@@ -40,6 +40,19 @@ const LAYERS = [
 
 const DEFAULT_ACTIVE = ['TERRAIN', 'WATER', 'BUILDING', 'LANDMARK', 'FLOOD', 'ROAD_CLOSURE', 'ALERT'];
 
+const LAYER_MIN_ZOOM = {
+  TERRAIN: 12,
+  WATER: 12,
+  PLANNING: 12.5,
+  FLOOD: 12.5,
+  LANDMARK: 12.5,
+  ROAD: 13,
+  ROAD_CLOSURE: 13,
+  ALERT: 13,
+  EVENT: 13,
+  BUILDING: 14
+};
+
 function getBrowserLocation() {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -122,10 +135,19 @@ export default function MapPage() {
       return undefined;
     }
 
+    const visibleLayerTypes = activeLayers.filter((type) =>
+      Number(viewport.zoom || 12) >= (LAYER_MIN_ZOOM[type] || 12)
+    );
+
+    if (!visibleLayerTypes.length) {
+      setMapData({ type: 'FeatureCollection', features: [] });
+      return undefined;
+    }
+
     let active = true;
     const timer = window.setTimeout(() => {
       setDataLoading(true);
-      getMapLayers({ types: activeLayers, bounds: viewport })
+      getMapLayers({ types: visibleLayerTypes, bounds: viewport })
         .then((data) => {
           if (active && data?.type === 'FeatureCollection') setMapData(data);
         })
