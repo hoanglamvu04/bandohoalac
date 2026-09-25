@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Building2,
   CalendarDays,
+  ChevronDown,
   Clock3,
   Construction,
   ExternalLink,
@@ -97,6 +98,7 @@ export default function MapPage() {
   const [viewport, setViewport] = useState(null);
   const [dataLoading, setDataLoading] = useState(false);
   const [leftOpen, setLeftOpen] = useState(true);
+  const [layersExpanded, setLayersExpanded] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
 
   const [routeDestination, setRouteDestination] = useState(null);
@@ -184,6 +186,11 @@ export default function MapPage() {
     [places, selectedId]
   );
 
+  function togglePlaceSelection(place) {
+    if (!place) return;
+    setSelectedId((current) => current === place.id ? null : place.id);
+  }
+
   function toggleLayer(type) {
     setActiveLayers((current) =>
       current.includes(type)
@@ -239,7 +246,7 @@ export default function MapPage() {
       <MapView
         places={filteredPlaces}
         selectedPlaceId={selectedId}
-        onSelectPlace={(place) => setSelectedId(place.id)}
+        onSelectPlace={togglePlaceSelection}
         onUserLocation={setUserLocation}
         userLocation={userLocation}
         route={routeData}
@@ -311,7 +318,7 @@ export default function MapPage() {
                 key={place.id}
                 type="button"
                 className={selectedId === place.id ? 'hm-place-row active' : 'hm-place-row'}
-                onClick={() => setSelectedId(place.id)}
+                onClick={() => togglePlaceSelection(place)}
               >
                 <span className="hm-place-thumb">
                   {place.images?.[0]
@@ -329,32 +336,45 @@ export default function MapPage() {
           </div>
         </section>
 
-        <section className="hm-panel-section">
-          <div className="hm-section-title">
-            <span>LỚP DỮ LIỆU</span>
-            <b>{activeLayers.length}/{LAYERS.length}</b>
-          </div>
+        <section className={layersExpanded ? 'hm-panel-section hm-layer-section expanded' : 'hm-panel-section hm-layer-section collapsed'}>
+          <button
+            type="button"
+            className="hm-layer-section-toggle"
+            onClick={() => setLayersExpanded((value) => !value)}
+            aria-expanded={layersExpanded}
+          >
+            <span className="hm-layer-section-copy">
+              <b>LỚP DỮ LIỆU</b>
+              <small>{activeLayers.length} lớp đang hiển thị</small>
+            </span>
+            <span className="hm-layer-section-meta">
+              <b>{activeLayers.length}/{LAYERS.length}</b>
+              <ChevronDown size={16} />
+            </span>
+          </button>
 
-          <div className="hm-layer-grid">
-            {LAYERS.map(({ type, label, icon: Icon, tone }) => {
-              const active = activeLayers.includes(type);
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  className={active ? 'hm-layer-card active ' + tone : 'hm-layer-card ' + tone}
-                  onClick={() => toggleLayer(type)}
-                >
-                  <span className="hm-layer-icon"><Icon size={17} /></span>
-                  <span>
-                    <b>{label}</b>
-                    <small>{active ? 'Đang hiển thị' : 'Đang ẩn'}</small>
-                  </span>
-                  <i />
-                </button>
-              );
-            })}
-          </div>
+          {layersExpanded && (
+            <div className="hm-layer-grid">
+              {LAYERS.map(({ type, label, icon: Icon, tone }) => {
+                const active = activeLayers.includes(type);
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    className={active ? 'hm-layer-card active ' + tone : 'hm-layer-card ' + tone}
+                    onClick={() => toggleLayer(type)}
+                  >
+                    <span className="hm-layer-icon"><Icon size={17} /></span>
+                    <span>
+                      <b>{label}</b>
+                      <small>{active ? 'Đang hiển thị' : 'Đang ẩn'}</small>
+                    </span>
+                    <i />
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </section>
       </aside>
 
