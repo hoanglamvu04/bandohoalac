@@ -25,6 +25,7 @@ import MapView from '../components/MapView.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getDirections, getMapLayers, getPlaces, getPlacesInBounds } from '../services/api.js';
 import { LOCAL_BASEMAP_OPTIONS as BASEMAP_OPTIONS } from '../localBasemap.js';
+import { getBestBrowserLocation } from '../utils/geolocation.js';
 
 const LAYERS = [
   { type: 'TERRAIN', label: 'Địa hình', icon: Mountain, tone: 'green' },
@@ -54,25 +55,6 @@ const LAYER_MIN_ZOOM = {
   BUILDING: 14
 };
 
-function getBrowserLocation() {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Trình duyệt không hỗ trợ định vị.'));
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => resolve({
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-        accuracy: Math.round(position.coords.accuracy),
-        timestamp: position.timestamp
-      }),
-      () => reject(new Error('Không thể lấy vị trí hiện tại.')),
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
-    );
-  });
-}
 
 function formatDistance(meters) {
   const value = Number(meters) || 0;
@@ -208,7 +190,10 @@ export default function MapPage() {
     setRouteError('');
 
     try {
-      const origin = userLocation || await getBrowserLocation();
+      const origin = userLocation || await getBestBrowserLocation({
+        timeout: 10000,
+        targetAccuracy: 50
+      });
       setUserLocation(origin);
 
       const route = await getDirections({
