@@ -7,6 +7,7 @@ import {
   MAX_ZOOM,
   MAP_COVERAGE_BOUNDS,
   SERVICE_AREAS_GEOJSON,
+  isInsideMapCoverageBounds,
   isInsideServiceCoverage
 } from '../mapConfig.js';
 import {
@@ -19,6 +20,7 @@ import {
   localPmtilesAvailable,
   supplementalBuildingsAvailable
 } from '../localBasemap.js';
+import { getBestBrowserLocation } from '../utils/geolocation.js';
 
 const DATA_SOURCE_ID = 'hola-data-layers';
 const ROUTE_SOURCE_ID = 'hola-route-source';
@@ -351,11 +353,13 @@ export default function MapView({
   const styleSwitchIdRef = useRef(0);
   const styleSwitchTimerRef = useRef(null);
   const appliedStyleKeyRef = useRef('');
+  const locationNoticeTimerRef = useRef(null);
 
   const [interactiveReady, setInteractiveReady] = useState(false);
   const [mapBooted, setMapBooted] = useState(false);
   const [mapError, setMapError] = useState('');
   const [locating, setLocating] = useState(false);
+  const [locationNotice, setLocationNotice] = useState(null);
   const [usingLocalPmtiles, setUsingLocalPmtiles] = useState(false);
   const [usingSupplementalBuildings, setUsingSupplementalBuildings] = useState(false);
   const [basemapHealth, setBasemapHealth] = useState('checking');
@@ -551,6 +555,7 @@ export default function MapView({
       cancelled = true;
       if (idleHandle && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleHandle);
       if (styleSwitchTimerRef.current) window.clearTimeout(styleSwitchTimerRef.current);
+      if (locationNoticeTimerRef.current) window.clearTimeout(locationNoticeTimerRef.current);
       removeMarkers(markersRef.current);
       userMarkerRef.current?.remove();
       mapRef.current?.remove();
@@ -707,7 +712,7 @@ export default function MapView({
       !userLocation ||
       !Number.isFinite(Number(userLocation.lat)) ||
       !Number.isFinite(Number(userLocation.lng)) ||
-      !isInsideServiceCoverage(userLocation.lng, userLocation.lat)
+      !isInsideMapCoverageBounds(userLocation.lng, userLocation.lat)
     ) {
       userMarkerRef.current?.remove();
       userMarkerRef.current = null;
@@ -717,7 +722,13 @@ export default function MapView({
     userMarkerRef.current?.remove();
     const dot = document.createElement('div');
     dot.className = 'hm-user-location';
-    dot.innerHTML = '<span></span>';
+    dot.title = userLocation.accuracy
+      ? 'Độ chính xác khoảng ±' + userLocation.accuracy + ' m'
+      : 'Vị trí hiện tại';
+    dot.innerHTML = '<span></span>' +
+      (userLocation.accuracy
+        ? '<i>±' + Math.max(1, Math.round(userLocation.accuracy)) + 'm</i>'
+        : '');
 
     userMarkerRef.current = new maplibre.Marker({ element: dot })
       .setLngLat([Number(userLocation.lng), Number(userLocation.lat)])
@@ -742,27 +753,69 @@ export default function MapView({
     });
   }, [selectedPlaceId, validPlaces, route, interactiveReady]);
 
-  function locateUser() {
-    if (!navigator.geolocation) return;
-    setLocating(true);
+  function showLocationNotice(type, text, timeout = 5500) {
+    setLocationNotice({ type, text });
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const location = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          accuracy: Math.round(position.coords.accuracy),
-          timestamp: position.timestamp
-        };
-        onUserLocation?.(location);
-        if (isInsideServiceCoverage(location.lng, location.lat)) {
-          mapRef.current?.flyTo({ center: [location.lng, location.lat], zoom: 15, duration: 500 });
-        }
-        setLocating(false);
-      },
-      () => setLocating(false),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
-    );
+    if (locationNoticeTimerRef.current) {
+      window.clearTimeout(locationNoticeTimerRef.current);
+    }
+
+    if (timeout > 0) {
+      locationNoticeTimerRef.current = window.setTimeout(() => {
+        setLocationNotice(null);
+        locationNoticeTimerRef.current = null;
+      }, timeout);
+    }
+  }
+
+  async function locateUser() {
+    if (locating) return;
+
+    setLocating(true);
+    setLocationNotice(null);
+
+    try {
+      const location = await getBestBrowserLocation({
+        timeout: 10000,
+        targetAccuracy: 40
+      });
+
+      onUserLocation?.(location);
+
+      if (!isInsideMapCoverageBounds(location.lng, location.lat)) {
+        showLocationNotice(
+          'warning',
+          'Đã lấy được vị trí, nhưng bạn đang ngoài phạm vi bản đồ Hòa Lạc.',
+          7000
+        );
+        return;
+      }
+
+      const accuracy = Math.max(1, Math.round(Number(location.accuracy) || 0));
+      const coarse = accuracy > 120;
+
+      mapRef.current?.flyTo({
+        center: [location.lng, location.lat],
+        zoom: coarse ? 14.5 : 16,
+        duration: 650,
+        essential: true
+      });
+
+      showLocationNotice(
+        coarse ? 'warning' : 'success',
+        coarse
+          ? 'Đã định vị nhưng sai số khoảng ±' + accuracy + ' m. Hãy bật vị trí chính xác trên thiết bị.'
+          : 'Đã định vị · độ chính xác khoảng ±' + accuracy + ' m'
+      );
+    } catch (error) {
+      showLocationNotice(
+        'error',
+        error?.message || 'Không thể lấy vị trí hiện tại.',
+        7500
+      );
+    } finally {
+      setLocating(false);
+    }
   }
 
   return (
@@ -799,8 +852,15 @@ export default function MapView({
 
       <button className="hm-locate" type="button" onClick={locateUser} disabled={locating}>
         <LocateFixed size={18} />
-        {locating ? 'Đang định vị' : 'Vị trí của tôi'}
+        {locating ? 'Đang lấy GPS…' : 'Vị trí của tôi'}
       </button>
+
+      {locationNotice && (
+        <div className={'hm-location-notice ' + locationNotice.type}>
+          <LocateFixed size={14} />
+          <span>{locationNotice.text}</span>
+        </div>
+      )}
 
       {mapError && (
         <div className="hm-map-error">
