@@ -1144,3 +1144,48 @@
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+
+
+/* Dedicated /map application shell.
+   The map route is an app-like fullscreen workspace: no page footer, no
+   mobile bottom navigation and no document scrolling underneath MapLibre. */
+body.map-route-active{
+  height:100dvh;
+  min-height:100dvh;
+  overflow:hidden;
+  padding-bottom:0!important;
+}
+
+.map-app-shell{
+  height:100dvh;
+  min-height:100dvh;
+  max-height:100dvh;
+  overflow:hidden;
+}
+
+.map-app-shell>.app-main,
+.map-app-main{
+  min-height:0;
+  flex:1 1 auto;
+  position:relative;
+  overflow:hidden;
+}
+
+.map-app-main>.hm-workspace{
+  width:100%;
+  height:100%;
+  min-height:0;
+}
+
+/* MapLibre owns the whole remaining viewport below the shared header. */
+.map-app-main .hm-map-shell,
+.map-app-main .hm-map-canvas{
+  width:100%;
+  height:100%;
+}
+
+/* Prevent page-layout styles from reintroducing whitespace under the map. */
+.map-app-shell .site-footer,
+.map-app-shell .bottom-nav{
+  display:none!important;
+}
