@@ -1189,3 +1189,53 @@ body.map-route-active{
 .map-app-shell .bottom-nav{
   display:none!important;
 }
+
+
+/* Scroll the entire layer/place drawer instead of clipping lower controls.
+   This keeps Quy hoạch / Sự kiện and place results reachable on shorter
+   laptops and browser windows. */
+.hm-left-panel{
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:#b9c9c3 transparent;
+}
+
+.hm-left-panel::-webkit-scrollbar{
+  width:7px;
+}
+
+.hm-left-panel::-webkit-scrollbar-track{
+  background:transparent;
+}
+
+.hm-left-panel::-webkit-scrollbar-thumb{
+  border:2px solid transparent;
+  border-radius:999px;
+  background:#b9c9c3;
+  background-clip:padding-box;
+}
+
+.hm-panel-heading{
+  position:sticky;
+  top:0;
+  z-index:3;
+  background:rgba(252,253,250,.985);
+  backdrop-filter:blur(10px);
+}
+
+.hm-panel-section{
+  flex:0 0 auto;
+}
+
+.hm-place-results{
+  min-height:auto;
+  flex:0 0 auto;
+}
+
+.hm-place-list{
+  min-height:auto;
+  overflow:visible;
+  padding-bottom:18px;
+}
