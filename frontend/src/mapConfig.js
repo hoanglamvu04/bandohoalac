@@ -66,6 +66,15 @@ export const MAP_COVERAGE_BOUNDS = [
 
 export const SERVICE_AREA_BOUNDS = [105.325, 20.885, 105.665, 21.145];
 
+export function isInsideMapCoverageBounds(lng, lat) {
+  const x = Number(lng);
+  const y = Number(lat);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+
+  const [[west, south], [east, north]] = MAP_COVERAGE_BOUNDS;
+  return x >= west && x <= east && y >= south && y <= north;
+}
+
 export const SERVICE_AREA_GEOJSON = {
   type: 'Feature',
   properties: {
