@@ -64,27 +64,6 @@ function emptyFeatureCollection() {
   return { type: 'FeatureCollection', features: [] };
 }
 
-function hasRenderedBasemapFeatures(map) {
-  if (!map?.isStyleLoaded()) return false;
-
-  try {
-    const style = map.getStyle();
-    const basemapLayerIds = (style?.layers || [])
-      .filter((layer) => layer.source === 'protomaps')
-      .map((layer) => layer.id);
-
-    if (!basemapLayerIds.length) return false;
-
-    const rendered = map.queryRenderedFeatures(undefined, {
-      layers: basemapLayerIds.slice(0, 80)
-    });
-
-    return rendered.length > 0;
-  } catch {
-    return false;
-  }
-}
-
 function loadExternalScript(src, globalName) {
   if (window[globalName]) return Promise.resolve(window[globalName]);
 
@@ -493,37 +472,52 @@ export default function MapView({
             return;
           }
 
-          window.setTimeout(() => {
-            if (cancelled || !mapRef.current) return;
-
-            const healthy = hasRenderedBasemapFeatures(map);
-            if (healthy) {
-              setBasemapHealth('ok');
-              return;
-            }
-
-            console.warn('[Hola Maps] Local PMTiles has no rendered basemap features. Falling back to OpenFreeMap.');
-            setBasemapHealth('broken');
-            setUsingLocalPmtiles(false);
-            map.setStyle(createFallbackStyle(), { diff: false });
-
-            map.once('style.load', () => {
-              addCoverage(map);
-              addDataLayers(map, latestMapDataRef.current);
-              setLayerVisibility(map, latestActiveLayersRef.current);
-              renderRoute(map, latestRouteRef.current, maplibre, fittedRouteKeyRef);
-              setBasemapHealth('fallback');
-              requestAnimationFrame(() => map.resize());
-            });
-          }, 1800);
+          // A valid local archive is enough to keep the local renderer active.
+          // Do not fall back merely because vector features have not rendered
+          // within a short timeout: after a Vite restart / cold browser cache,
+          // z15-z17 PMTiles can legitimately take longer than 1.8 seconds.
+          setBasemapHealth('ok');
         });
 
         map.on('moveend', notifyViewport);
+        let localSourceErrorCount = 0;
+
         map.on('error', (event) => {
           const message = event?.error?.message || '';
+          const sourceId = event?.sourceId || event?.source?.id || '';
+
           if (message.toLowerCase().includes('webgl')) {
             setMapError('Trình duyệt hiện không hỗ trợ WebGL cho bản đồ.');
+            return;
           }
+
+          // Supplemental buildings are optional. If their archive is broken,
+          // disable only that source instead of throwing away the whole local
+          // basemap and all Overture/OSM detail.
+          if (
+            sourceId === 'overture-buildings' ||
+            message.toLowerCase().includes('hoalac-buildings.pmtiles')
+          ) {
+            console.warn('[Hola Maps] Supplemental building archive failed:', message);
+            setUsingSupplementalBuildings(false);
+            return;
+          }
+
+          const isLocalPmtilesError =
+            sourceId === 'protomaps' ||
+            message.toLowerCase().includes('hoalac.pmtiles') ||
+            message.toLowerCase().includes('pmtiles://');
+
+          if (!isLocalPmtilesError) return;
+
+          localSourceErrorCount += 1;
+          console.warn('[Hola Maps] Local PMTiles source error', localSourceErrorCount, message);
+
+          // Only abandon the local map after repeated real source failures.
+          if (localSourceErrorCount < 3 || !mapRef.current) return;
+
+          setBasemapHealth('broken');
+          setUsingLocalPmtiles(false);
         });
 
         map.on('click', (event) => {
