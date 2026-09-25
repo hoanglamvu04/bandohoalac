@@ -1,30 +1,53 @@
 const GLYPHS_URL = 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf';
 const SPRITE_BASE = 'https://protomaps.github.io/basemaps-assets/sprites/v4/';
 
-export const PMTILES_URL = (import.meta.env.VITE_PMTILES_URL || '/maps/hoalac.pmtiles').trim();
-export const BUILDINGS_PMTILES_URL = (
+function versionLocalArchive(url, tag) {
+  const value = String(url || '').trim();
+  if (!value || /^https?:\/\//i.test(value)) return value;
+
+  const separator = value.includes('?') ? '&' : '?';
+  return value + separator + 'hola-archive=' + encodeURIComponent(tag);
+}
+
+const RAW_PMTILES_URL = (import.meta.env.VITE_PMTILES_URL || '/maps/hoalac.pmtiles').trim();
+const RAW_BUILDINGS_PMTILES_URL = (
   import.meta.env.VITE_BUILDINGS_PMTILES_URL || '/maps/hoalac-buildings.pmtiles'
 ).trim();
 
+export const PMTILES_URL = versionLocalArchive(RAW_PMTILES_URL, 'basemap-v2');
+export const BUILDINGS_PMTILES_URL = versionLocalArchive(
+  RAW_BUILDINGS_PMTILES_URL,
+  'buildings-v2'
+);
+
 const MAPTILER_KEY = (import.meta.env.VITE_MAPTILER_KEY || '').trim();
+const CUSTOM_SATELLITE_URL = (import.meta.env.VITE_SATELLITE_TILE_URL || '').trim();
+
+export const SATELLITE_PROVIDER = CUSTOM_SATELLITE_URL
+  ? 'custom'
+  : String(import.meta.env.VITE_SATELLITE_PROVIDER || 'esri').trim().toLowerCase();
+
+const USE_MAPTILER_SATELLITE = SATELLITE_PROVIDER === 'maptiler' && Boolean(MAPTILER_KEY);
+
 export const SATELLITE_TILE_URL = (
-  import.meta.env.VITE_SATELLITE_TILE_URL ||
-  (MAPTILER_KEY
+  CUSTOM_SATELLITE_URL ||
+  (USE_MAPTILER_SATELLITE
     ? 'https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=' + encodeURIComponent(MAPTILER_KEY)
     : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
 ).trim();
 
 export const SATELLITE_ATTRIBUTION = (
   import.meta.env.VITE_SATELLITE_ATTRIBUTION ||
-  (MAPTILER_KEY
+  (USE_MAPTILER_SATELLITE
     ? '© MapTiler © OpenStreetMap contributors'
     : 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community')
 ).trim();
 
-const HAS_CUSTOM_SATELLITE_URL = Boolean((import.meta.env.VITE_SATELLITE_TILE_URL || '').trim());
+const HAS_CUSTOM_SATELLITE_URL = Boolean(CUSTOM_SATELLITE_URL);
 export const SATELLITE_TILE_SIZE = Number(import.meta.env.VITE_SATELLITE_TILE_SIZE) ||
-  (!HAS_CUSTOM_SATELLITE_URL && MAPTILER_KEY ? 512 : 256);
-export const SATELLITE_MAX_ZOOM = !HAS_CUSTOM_SATELLITE_URL && MAPTILER_KEY ? 22 : 19;
+  (!HAS_CUSTOM_SATELLITE_URL && USE_MAPTILER_SATELLITE ? 512 : 256);
+export const SATELLITE_MAX_ZOOM =
+  !HAS_CUSTOM_SATELLITE_URL && USE_MAPTILER_SATELLITE ? 22 : 19;
 
 const FLAVORS = {
   streets: 'light',
