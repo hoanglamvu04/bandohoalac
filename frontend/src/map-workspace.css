@@ -1239,3 +1239,80 @@ body.map-route-active{
   overflow:visible;
   padding-bottom:18px;
 }
+
+
+/* Secondary data-layer controls: keep places visually primary. */
+.hm-layer-section{
+  padding:10px 16px 14px;
+}
+
+.hm-layer-section-toggle{
+  width:100%;
+  min-height:48px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 11px;
+  border:1px solid rgba(16,47,41,.08);
+  border-radius:13px;
+  color:#173e35;
+  background:#f5f8f6;
+  cursor:pointer;
+  text-align:left;
+}
+
+.hm-layer-section-toggle:hover{
+  border-color:rgba(16,63,53,.16);
+  background:#f0f6f2;
+}
+
+.hm-layer-section-copy{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.hm-layer-section-copy>b{
+  color:#60766f;
+  font-size:9px;
+  font-weight:950;
+  letter-spacing:.13em;
+}
+
+.hm-layer-section-copy>small{
+  color:#8a9a95;
+  font-size:8px;
+  font-weight:750;
+}
+
+.hm-layer-section-meta{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  flex:0 0 auto;
+}
+
+.hm-layer-section-meta>b{
+  min-width:34px;
+  padding:4px 7px;
+  border-radius:999px;
+  text-align:center;
+  color:#536a62;
+  background:#e7efeb;
+  font-size:9px;
+}
+
+.hm-layer-section-meta svg{
+  color:#687e76;
+  transition:transform .18s ease;
+}
+
+.hm-layer-section.expanded .hm-layer-section-meta svg{
+  transform:rotate(180deg);
+}
+
+.hm-layer-section .hm-layer-grid{
+  margin-top:10px;
+}
