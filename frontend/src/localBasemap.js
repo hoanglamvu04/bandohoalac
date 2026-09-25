@@ -21,6 +21,7 @@ export const BUILDINGS_PMTILES_URL = versionLocalArchive(
 );
 
 const MAPTILER_KEY = (import.meta.env.VITE_MAPTILER_KEY || '').trim();
+const MAPBOX_TOKEN = (import.meta.env.VITE_MAPBOX_TOKEN || '').trim();
 const CUSTOM_SATELLITE_URL = (import.meta.env.VITE_SATELLITE_TILE_URL || '').trim();
 
 export const SATELLITE_PROVIDER = CUSTOM_SATELLITE_URL
@@ -28,26 +29,42 @@ export const SATELLITE_PROVIDER = CUSTOM_SATELLITE_URL
   : String(import.meta.env.VITE_SATELLITE_PROVIDER || 'esri').trim().toLowerCase();
 
 const USE_MAPTILER_SATELLITE = SATELLITE_PROVIDER === 'maptiler' && Boolean(MAPTILER_KEY);
+const USE_MAPBOX_SATELLITE = SATELLITE_PROVIDER === 'mapbox' && Boolean(MAPBOX_TOKEN);
+
+function builtInSatelliteUrl() {
+  if (USE_MAPBOX_SATELLITE) {
+    return 'https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90?access_token=' +
+      encodeURIComponent(MAPBOX_TOKEN);
+  }
+
+  if (USE_MAPTILER_SATELLITE) {
+    return 'https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=' +
+      encodeURIComponent(MAPTILER_KEY);
+  }
+
+  return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+}
 
 export const SATELLITE_TILE_URL = (
-  CUSTOM_SATELLITE_URL ||
-  (USE_MAPTILER_SATELLITE
-    ? 'https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=' + encodeURIComponent(MAPTILER_KEY)
-    : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
+  CUSTOM_SATELLITE_URL || builtInSatelliteUrl()
 ).trim();
 
 export const SATELLITE_ATTRIBUTION = (
   import.meta.env.VITE_SATELLITE_ATTRIBUTION ||
-  (USE_MAPTILER_SATELLITE
-    ? '© MapTiler © OpenStreetMap contributors'
-    : 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community')
+  (USE_MAPBOX_SATELLITE
+    ? '© Mapbox © OpenStreetMap contributors'
+    : USE_MAPTILER_SATELLITE
+      ? '© MapTiler © OpenStreetMap contributors'
+      : 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community')
 ).trim();
 
 const HAS_CUSTOM_SATELLITE_URL = Boolean(CUSTOM_SATELLITE_URL);
 export const SATELLITE_TILE_SIZE = Number(import.meta.env.VITE_SATELLITE_TILE_SIZE) ||
   (!HAS_CUSTOM_SATELLITE_URL && USE_MAPTILER_SATELLITE ? 512 : 256);
 export const SATELLITE_MAX_ZOOM =
-  !HAS_CUSTOM_SATELLITE_URL && USE_MAPTILER_SATELLITE ? 22 : 19;
+  !HAS_CUSTOM_SATELLITE_URL && USE_MAPTILER_SATELLITE
+    ? 22
+    : (!HAS_CUSTOM_SATELLITE_URL && USE_MAPBOX_SATELLITE ? 20 : 19);
 
 const FLAVORS = {
   streets: 'light',
