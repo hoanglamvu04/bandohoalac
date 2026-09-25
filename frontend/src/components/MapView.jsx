@@ -7,7 +7,6 @@ import {
   MAX_ZOOM,
   MAP_COVERAGE_BOUNDS,
   SERVICE_AREAS_GEOJSON,
-  SERVICE_AREA_MASK_GEOJSON,
   isInsideServiceCoverage
 } from '../mapConfig.js';
 import {
@@ -23,7 +22,6 @@ import {
 const DATA_SOURCE_ID = 'hola-data-layers';
 const ROUTE_SOURCE_ID = 'hola-route-source';
 const COVERAGE_SOURCE_ID = 'hola-service-areas';
-const COVERAGE_MASK_SOURCE_ID = 'hola-service-area-mask';
 
 const DATA_LAYER_IDS = {
   TERRAIN: 'hm-terrain',
@@ -73,15 +71,6 @@ function basemapStyleKey(mode, usingLocalPmtiles, usingSupplementalBuildings) {
   ].join(':');
 }
 
-function removeCoverageMask(map) {
-  if (!map?.isStyleLoaded()) return;
-  if (map.getLayer('hm-service-area-mask')) {
-    map.removeLayer('hm-service-area-mask');
-  }
-  if (map.getSource(COVERAGE_MASK_SOURCE_ID)) {
-    map.removeSource(COVERAGE_MASK_SOURCE_ID);
-  }
-}
 
 function loadExternalScript(src, globalName) {
   if (window[globalName]) return Promise.resolve(window[globalName]);
@@ -105,50 +94,17 @@ function loadExternalScript(src, globalName) {
   });
 }
 
-function addCoverage(map, basemapMode = 'streets') {
+function addCoverage(map) {
   if (!map.isStyleLoaded()) return;
 
-  const imageryMode = basemapMode === 'satellite' || basemapMode === 'hybrid';
-
-  if (imageryMode) {
-    removeCoverageMask(map);
-  }
-
-  // The strong outside-area mask works well on vector styles, but on imagery
-  // it looks like a broken/blank raster tile. Camera maxBounds already keeps
-  // users inside the product region, so imagery modes keep the photograph
-  // continuous and show only the service boundary.
-  if (!imageryMode && !map.getSource(COVERAGE_MASK_SOURCE_ID)) {
-    map.addSource(COVERAGE_MASK_SOURCE_ID, {
-      type: 'geojson',
-      data: SERVICE_AREA_MASK_GEOJSON
-    });
-
-    map.addLayer({
-      id: 'hm-service-area-mask',
-      type: 'fill',
-      source: COVERAGE_MASK_SOURCE_ID,
-      paint: {
-        'fill-color': '#f3f7f5',
-        'fill-opacity': 0.56
-      }
-    });
-  }
-
+  // Do not use a filled outside-area mask. It can reappear during asynchronous
+  // style switches and looks like missing satellite tiles. maxBounds already
+  // constrains navigation, while this lightweight outline keeps the product
+  // coverage visible without covering imagery.
   if (!map.getSource(COVERAGE_SOURCE_ID)) {
     map.addSource(COVERAGE_SOURCE_ID, {
       type: 'geojson',
       data: SERVICE_AREAS_GEOJSON
-    });
-
-    map.addLayer({
-      id: 'hm-service-area-fill',
-      type: 'fill',
-      source: COVERAGE_SOURCE_ID,
-      paint: {
-        'fill-color': '#0d7a5f',
-        'fill-opacity': 0.025
-      }
     });
 
     map.addLayer({
@@ -157,8 +113,8 @@ function addCoverage(map, basemapMode = 'streets') {
       source: COVERAGE_SOURCE_ID,
       paint: {
         'line-color': '#0d6a56',
-        'line-width': ['interpolate', ['linear'], ['zoom'], 12, 1.4, 16, 2.4],
-        'line-opacity': 0.62,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 12, 1.25, 16, 2],
+        'line-opacity': 0.46,
         'line-dasharray': [2, 1.5]
       }
     });
@@ -488,7 +444,7 @@ export default function MapView({
         };
 
         map.on('load', () => {
-          addCoverage(map, basemapMode);
+          addCoverage(map);
           addDataLayers(map, mapData);
           setLayerVisibility(map, activeLayers);
           appliedStyleKeyRef.current = basemapStyleKey(
@@ -655,11 +611,7 @@ export default function MapView({
       restoreHandler = () => {
         if (switchId !== styleSwitchIdRef.current || !mapRef.current) return;
 
-        if (basemapMode === 'satellite' || basemapMode === 'hybrid') {
-          removeCoverageMask(map);
-        }
-
-        addCoverage(map, basemapMode);
+        addCoverage(map);
         addDataLayers(map, latestMapDataRef.current);
         setLayerVisibility(map, latestActiveLayersRef.current);
         renderRoute(map, latestRouteRef.current, maplibre, fittedRouteKeyRef);
