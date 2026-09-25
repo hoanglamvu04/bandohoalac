@@ -13,6 +13,7 @@ import {
   PMTILES_URL,
   BUILDINGS_PMTILES_URL,
   SATELLITE_PROVIDER,
+  HAS_SATELLITE_FALLBACK,
   createFallbackStyle,
   createPmtilesStyle,
   localPmtilesAvailable,
@@ -778,10 +779,13 @@ export default function MapView({
 
       <div className={'hm-map-provider health-' + basemapHealth}>
         {basemapMode === 'satellite' && (
-          'SATELLITE · ' + SATELLITE_PROVIDER.toUpperCase()
+          'SATELLITE · ' + SATELLITE_PROVIDER.toUpperCase() +
+          (HAS_SATELLITE_FALLBACK ? ' · ESRI BACKUP' : '')
         )}
         {basemapMode === 'hybrid' && (
-          'HYBRID · ' + SATELLITE_PROVIDER.toUpperCase() + ' + LOCAL LABELS'
+          'HYBRID · ' + SATELLITE_PROVIDER.toUpperCase() +
+          (HAS_SATELLITE_FALLBACK ? ' · ESRI BACKUP' : '') +
+          ' + LOCAL LABELS'
         )}
         {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'checking' && 'CHECKING LOCAL BASEMAP'}
         {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'ok' && (
