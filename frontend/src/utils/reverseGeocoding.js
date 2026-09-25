@@ -77,87 +77,17 @@ async function reverseWithMapTiler(lat, lng) {
   return summarizeMapTiler(data?.features?.[0]);
 }
 
-function summarizeNominatim(data) {
-  if (!data) return null;
-  const address = data.address || {};
-
-  const locality =
-    address.village ||
-    address.hamlet ||
-    address.suburb ||
-    address.neighbourhood ||
-    address.town ||
-    address.municipality ||
-    address.city_district ||
-    address.city ||
-    null;
-
-  const district =
-    address.county ||
-    address.state_district ||
-    address.city_district ||
-    null;
-
-  const region = address.state || null;
-  const country = address.country || null;
-  const shortLabel = unique([locality, district, region]).join(', ');
-
-  return {
-    label: data.display_name || shortLabel,
-    shortLabel: shortLabel || data.display_name || '',
-    locality,
-    district,
-    region,
-    country,
-    source: 'OpenStreetMap / Nominatim',
-    sourceUrl: 'https://www.openstreetmap.org/'
-  };
-}
-
-async function reverseWithNominatim(lat, lng) {
-  const params = new URLSearchParams({
-    format: 'jsonv2',
-    lat: String(lat),
-    lon: String(lng),
-    zoom: '18',
-    addressdetails: '1',
-    'accept-language': 'vi'
-  });
-
-  const response = await withTimeout(
-    fetch('https://nominatim.openstreetmap.org/reverse?' + params.toString(), {
-      headers: {
-        Accept: 'application/json'
-      }
-    }),
-    7000
-  );
-
-  if (!response.ok) {
-    throw new Error('Nominatim reverse geocoding failed: ' + response.status);
-  }
-
-  return summarizeNominatim(await response.json());
-}
 
 export async function reverseGeocodeLocation(lat, lng) {
   const y = Number(lat);
   const x = Number(lng);
-  if (!Number.isFinite(y) || !Number.isFinite(x)) return null;
+  if (!Number.isFinite(y) || !Number.isFinite(x) || !MAPTILER_KEY) return null;
 
   try {
     const mapTiler = await reverseWithMapTiler(y, x);
-    if (mapTiler?.label) return mapTiler;
+    return mapTiler?.label ? mapTiler : null;
   } catch (error) {
     console.warn('[Hola Maps] MapTiler reverse geocoding failed', error);
+    return null;
   }
-
-  try {
-    const nominatim = await reverseWithNominatim(y, x);
-    if (nominatim?.label) return nominatim;
-  } catch (error) {
-    console.warn('[Hola Maps] Nominatim reverse geocoding failed', error);
-  }
-
-  return null;
 }
