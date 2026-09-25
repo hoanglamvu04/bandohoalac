@@ -13,6 +13,7 @@ import {
 import {
   PMTILES_URL,
   BUILDINGS_PMTILES_URL,
+  SATELLITE_PROVIDER,
   createFallbackStyle,
   createPmtilesStyle,
   localPmtilesAvailable,
@@ -732,8 +733,12 @@ export default function MapView({
       <div ref={containerRef} className="hm-map-canvas" />
 
       <div className={'hm-map-provider health-' + basemapHealth}>
-        {basemapMode === 'satellite' && 'SATELLITE IMAGERY'}
-        {basemapMode === 'hybrid' && 'HYBRID · SATELLITE + LOCAL LABELS'}
+        {basemapMode === 'satellite' && (
+          'SATELLITE · ' + SATELLITE_PROVIDER.toUpperCase()
+        )}
+        {basemapMode === 'hybrid' && (
+          'HYBRID · ' + SATELLITE_PROVIDER.toUpperCase() + ' + LOCAL LABELS'
+        )}
         {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'checking' && 'CHECKING LOCAL BASEMAP'}
         {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'ok' && (
           usingSupplementalBuildings
