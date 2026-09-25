@@ -390,7 +390,7 @@ export default function MapView({
         const [maplibre] = await Promise.all([
           import('maplibre-gl'),
           import('maplibre-gl/dist/maplibre-gl.css'),
-          loadExternalScript('https://unpkg.com/pmtiles@3.0.7/dist/pmtiles.js', 'pmtiles'),
+          loadExternalScript('https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js', 'pmtiles'),
           loadExternalScript('https://unpkg.com/@protomaps/basemaps@5/dist/basemaps.js', 'basemaps')
         ]);
         if (cancelled || !containerRef.current) return;
