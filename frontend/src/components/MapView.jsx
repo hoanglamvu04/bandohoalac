@@ -87,10 +87,16 @@ function loadExternalScript(src, globalName) {
   });
 }
 
-function addCoverage(map) {
+function addCoverage(map, basemapMode = 'streets') {
   if (!map.isStyleLoaded()) return;
 
-  if (!map.getSource(COVERAGE_MASK_SOURCE_ID)) {
+  const imageryMode = basemapMode === 'satellite' || basemapMode === 'hybrid';
+
+  // The strong outside-area mask works well on vector styles, but on imagery
+  // it looks like a broken/blank raster tile. Camera maxBounds already keeps
+  // users inside the product region, so imagery modes keep the photograph
+  // continuous and show only the service boundary.
+  if (!imageryMode && !map.getSource(COVERAGE_MASK_SOURCE_ID)) {
     map.addSource(COVERAGE_MASK_SOURCE_ID, {
       type: 'geojson',
       data: SERVICE_AREA_MASK_GEOJSON
@@ -102,7 +108,7 @@ function addCoverage(map) {
       source: COVERAGE_MASK_SOURCE_ID,
       paint: {
         'fill-color': '#f3f7f5',
-        'fill-opacity': 0.72
+        'fill-opacity': 0.56
       }
     });
   }
@@ -365,6 +371,7 @@ export default function MapView({
   const latestRouteRef = useRef(route);
 
   const [interactiveReady, setInteractiveReady] = useState(false);
+  const [mapBooted, setMapBooted] = useState(false);
   const [mapError, setMapError] = useState('');
   const [locating, setLocating] = useState(false);
   const [usingLocalPmtiles, setUsingLocalPmtiles] = useState(false);
@@ -456,10 +463,11 @@ export default function MapView({
         };
 
         map.on('load', () => {
-          addCoverage(map);
+          addCoverage(map, basemapMode);
           addDataLayers(map, mapData);
           setLayerVisibility(map, activeLayers);
           setInteractiveReady(true);
+          setMapBooted(true);
           notifyViewport();
           requestAnimationFrame(() => map.resize());
 
@@ -584,7 +592,7 @@ export default function MapView({
 
     const restoreHolaLayers = () => {
       if (cancelled) return;
-      addCoverage(map);
+      addCoverage(map, basemapMode);
       addDataLayers(map, latestMapDataRef.current);
       setLayerVisibility(map, latestActiveLayersRef.current);
       renderRoute(map, latestRouteRef.current, maplibre, fittedRouteKeyRef);
@@ -722,7 +730,7 @@ export default function MapView({
 
   return (
     <div className="hm-map-shell">
-      {!interactiveReady && (
+      {!mapBooted && (
         <div className="hm-map-placeholder">
             <div className="hm-map-placeholder-grid" />
             <strong>HOLA MAPS</strong>
