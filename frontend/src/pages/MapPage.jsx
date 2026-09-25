@@ -299,34 +299,6 @@ export default function MapPage() {
           <button type="button" onClick={() => setLeftOpen(false)}><X size={17} /></button>
         </div>
 
-        <section className="hm-panel-section">
-          <div className="hm-section-title">
-            <span>LỚP DỮ LIỆU</span>
-            <b>{activeLayers.length}/{LAYERS.length}</b>
-          </div>
-
-          <div className="hm-layer-grid">
-            {LAYERS.map(({ type, label, icon: Icon, tone }) => {
-              const active = activeLayers.includes(type);
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  className={active ? 'hm-layer-card active ' + tone : 'hm-layer-card ' + tone}
-                  onClick={() => toggleLayer(type)}
-                >
-                  <span className="hm-layer-icon"><Icon size={17} /></span>
-                  <span>
-                    <b>{label}</b>
-                    <small>{active ? 'Đang hiển thị' : 'Đang ẩn'}</small>
-                  </span>
-                  <i />
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
         <section className="hm-panel-section hm-place-results">
           <div className="hm-section-title">
             <span>ĐỊA ĐIỂM</span>
@@ -354,6 +326,34 @@ export default function MapPage() {
                 <span className="hm-place-rating">★ {Number(place.rating || 0).toFixed(1)}</span>
               </button>
             ))}
+          </div>
+        </section>
+
+        <section className="hm-panel-section">
+          <div className="hm-section-title">
+            <span>LỚP DỮ LIỆU</span>
+            <b>{activeLayers.length}/{LAYERS.length}</b>
+          </div>
+
+          <div className="hm-layer-grid">
+            {LAYERS.map(({ type, label, icon: Icon, tone }) => {
+              const active = activeLayers.includes(type);
+              return (
+                <button
+                  key={type}
+                  type="button"
+                  className={active ? 'hm-layer-card active ' + tone : 'hm-layer-card ' + tone}
+                  onClick={() => toggleLayer(type)}
+                >
+                  <span className="hm-layer-icon"><Icon size={17} /></span>
+                  <span>
+                    <b>{label}</b>
+                    <small>{active ? 'Đang hiển thị' : 'Đang ẩn'}</small>
+                  </span>
+                  <i />
+                </button>
+              );
+            })}
           </div>
         </section>
       </aside>
