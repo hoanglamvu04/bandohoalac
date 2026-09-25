@@ -190,10 +190,22 @@ export default function MapPage() {
     setRouteError('');
 
     try {
-      const origin = userLocation || await getBestBrowserLocation({
-        timeout: 10000,
-        targetAccuracy: 50
-      });
+      const locationAge = userLocation?.timestamp
+        ? Date.now() - Number(userLocation.timestamp)
+        : Number.POSITIVE_INFINITY;
+      const cachedAccuracy = Number(userLocation?.accuracy) || Number.POSITIVE_INFINITY;
+      const canReuseLocation =
+        userLocation &&
+        locationAge < 60000 &&
+        cachedAccuracy <= 100;
+
+      const origin = canReuseLocation
+        ? userLocation
+        : await getBestBrowserLocation({
+            timeout: 10000,
+            targetAccuracy: 50
+          });
+
       setUserLocation(origin);
 
       const route = await getDirections({
