@@ -65,6 +65,24 @@ function emptyFeatureCollection() {
   return { type: 'FeatureCollection', features: [] };
 }
 
+function basemapStyleKey(mode, usingLocalPmtiles, usingSupplementalBuildings) {
+  return [
+    mode,
+    usingLocalPmtiles ? 'local' : 'fallback',
+    usingSupplementalBuildings ? 'buildings' : 'no-buildings'
+  ].join(':');
+}
+
+function removeCoverageMask(map) {
+  if (!map?.isStyleLoaded()) return;
+  if (map.getLayer('hm-service-area-mask')) {
+    map.removeLayer('hm-service-area-mask');
+  }
+  if (map.getSource(COVERAGE_MASK_SOURCE_ID)) {
+    map.removeSource(COVERAGE_MASK_SOURCE_ID);
+  }
+}
+
 function loadExternalScript(src, globalName) {
   if (window[globalName]) return Promise.resolve(window[globalName]);
 
@@ -91,6 +109,10 @@ function addCoverage(map, basemapMode = 'streets') {
   if (!map.isStyleLoaded()) return;
 
   const imageryMode = basemapMode === 'satellite' || basemapMode === 'hybrid';
+
+  if (imageryMode) {
+    removeCoverageMask(map);
+  }
 
   // The strong outside-area mask works well on vector styles, but on imagery
   // it looks like a broken/blank raster tile. Camera maxBounds already keeps
@@ -369,6 +391,9 @@ export default function MapView({
   const latestMapDataRef = useRef(mapData);
   const latestActiveLayersRef = useRef(activeLayers);
   const latestRouteRef = useRef(route);
+  const styleSwitchIdRef = useRef(0);
+  const styleSwitchTimerRef = useRef(null);
+  const appliedStyleKeyRef = useRef('');
 
   const [interactiveReady, setInteractiveReady] = useState(false);
   const [mapBooted, setMapBooted] = useState(false);
@@ -466,6 +491,11 @@ export default function MapView({
           addCoverage(map, basemapMode);
           addDataLayers(map, mapData);
           setLayerVisibility(map, activeLayers);
+          appliedStyleKeyRef.current = basemapStyleKey(
+            basemapMode,
+            hasLocalPmtiles,
+            canUseSupplementalBuildings
+          );
           setInteractiveReady(true);
           setMapBooted(true);
           notifyViewport();
@@ -563,6 +593,7 @@ export default function MapView({
     return () => {
       cancelled = true;
       if (idleHandle && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleHandle);
+      if (styleSwitchTimerRef.current) window.clearTimeout(styleSwitchTimerRef.current);
       removeMarkers(markersRef.current);
       userMarkerRef.current?.remove();
       mapRef.current?.remove();
@@ -586,38 +617,91 @@ export default function MapView({
   useEffect(() => {
     const map = mapRef.current;
     const maplibre = maplibreRef.current;
-    if (!map || !maplibre || !interactiveReady) return undefined;
+    if (!map || !maplibre || !mapBooted) return undefined;
 
-    let cancelled = false;
+    const nextStyleKey = basemapStyleKey(
+      basemapMode,
+      usingLocalPmtiles,
+      usingSupplementalBuildings
+    );
 
-    const restoreHolaLayers = () => {
-      if (cancelled) return;
-      addCoverage(map, basemapMode);
-      addDataLayers(map, latestMapDataRef.current);
-      setLayerVisibility(map, latestActiveLayersRef.current);
-      renderRoute(map, latestRouteRef.current, maplibre, fittedRouteKeyRef);
-      setInteractiveReady(true);
-      requestAnimationFrame(() => map.resize());
-    };
+    if (appliedStyleKeyRef.current === nextStyleKey) return undefined;
 
-    setInteractiveReady(false);
-    map.once('style.load', restoreHolaLayers);
-    const canRenderSelectedStyle = usingLocalPmtiles || basemapMode === 'satellite';
+    const switchId = ++styleSwitchIdRef.current;
+    let restoreHandler = null;
+    let resizeTimer = null;
 
-    map.setStyle(
-      canRenderSelectedStyle
+    if (styleSwitchTimerRef.current) {
+      window.clearTimeout(styleSwitchTimerRef.current);
+    }
+
+    // Small debounce means clicking Satellite → Hybrid → Vector quickly only
+    // applies the last requested mode. Previously interactiveReady=false made
+    // later clicks get ignored until the first style.load completed.
+    styleSwitchTimerRef.current = window.setTimeout(() => {
+      if (switchId !== styleSwitchIdRef.current || !mapRef.current) return;
+
+      const canRenderSelectedStyle =
+        usingLocalPmtiles ||
+        basemapMode === 'satellite' ||
+        basemapMode === 'hybrid';
+
+      const nextStyle = canRenderSelectedStyle
         ? createPmtilesStyle(basemapMode, {
             includeSupplementalBuildings: usingSupplementalBuildings
           })
-        : createFallbackStyle(),
-      { diff: false }
-    );
+        : createFallbackStyle();
+
+      restoreHandler = () => {
+        if (switchId !== styleSwitchIdRef.current || !mapRef.current) return;
+
+        if (basemapMode === 'satellite' || basemapMode === 'hybrid') {
+          removeCoverageMask(map);
+        }
+
+        addCoverage(map, basemapMode);
+        addDataLayers(map, latestMapDataRef.current);
+        setLayerVisibility(map, latestActiveLayersRef.current);
+        renderRoute(map, latestRouteRef.current, maplibre, fittedRouteKeyRef);
+
+        appliedStyleKeyRef.current = nextStyleKey;
+        setInteractiveReady(true);
+
+        requestAnimationFrame(() => {
+          map.resize();
+          resizeTimer = window.setTimeout(() => {
+            if (switchId === styleSwitchIdRef.current && mapRef.current) {
+              map.resize();
+            }
+          }, 120);
+        });
+      };
+
+      map.once('style.load', restoreHandler);
+
+      try {
+        map.setStyle(nextStyle, { diff: false });
+      } catch (error) {
+        map.off('style.load', restoreHandler);
+        console.error('[Hola Maps] basemap switch failed', error);
+        setMapError('Không thể chuyển chế độ bản đồ. Hãy thử lại.');
+      }
+    }, 120);
 
     return () => {
-      cancelled = true;
-      map.off('style.load', restoreHolaLayers);
+      if (styleSwitchTimerRef.current) {
+        window.clearTimeout(styleSwitchTimerRef.current);
+        styleSwitchTimerRef.current = null;
+      }
+      if (resizeTimer) window.clearTimeout(resizeTimer);
+      if (restoreHandler) map.off('style.load', restoreHandler);
     };
-  }, [basemapMode, usingLocalPmtiles, usingSupplementalBuildings]);
+  }, [
+    basemapMode,
+    usingLocalPmtiles,
+    usingSupplementalBuildings,
+    mapBooted
+  ]);
 
   useEffect(() => {
     const map = mapRef.current;
