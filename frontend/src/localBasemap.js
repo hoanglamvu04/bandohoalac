@@ -24,6 +24,11 @@ const MAPTILER_KEY = (import.meta.env.VITE_MAPTILER_KEY || '').trim();
 const MAPBOX_TOKEN = (import.meta.env.VITE_MAPBOX_TOKEN || '').trim();
 const CUSTOM_SATELLITE_URL = (import.meta.env.VITE_SATELLITE_TILE_URL || '').trim();
 
+const ESRI_SATELLITE_TILE_URL =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const ESRI_SATELLITE_ATTRIBUTION =
+  'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community';
+
 export const SATELLITE_PROVIDER = CUSTOM_SATELLITE_URL
   ? 'custom'
   : String(import.meta.env.VITE_SATELLITE_PROVIDER || 'esri').trim().toLowerCase();
@@ -42,7 +47,7 @@ function builtInSatelliteUrl() {
       encodeURIComponent(MAPTILER_KEY);
   }
 
-  return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  return ESRI_SATELLITE_TILE_URL;
 }
 
 export const SATELLITE_TILE_URL = (
@@ -55,8 +60,11 @@ export const SATELLITE_ATTRIBUTION = (
     ? '© Mapbox © OpenStreetMap contributors'
     : USE_MAPTILER_SATELLITE
       ? '© MapTiler © OpenStreetMap contributors'
-      : 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community')
+      : ESRI_SATELLITE_ATTRIBUTION)
 ).trim();
+
+export const HAS_SATELLITE_FALLBACK =
+  !CUSTOM_SATELLITE_URL && SATELLITE_PROVIDER !== 'esri';
 
 const HAS_CUSTOM_SATELLITE_URL = Boolean(CUSTOM_SATELLITE_URL);
 export const SATELLITE_TILE_SIZE = Number(import.meta.env.VITE_SATELLITE_TILE_SIZE) ||
@@ -348,23 +356,48 @@ function enhanceLocalDetailLayers(baseLayers, mode, includeSupplementalBuildings
   return enhanced;
 }
 
-function createSatelliteRasterLayer() {
+function createSatelliteRasterLayer({
+  id = 'hola-satellite-imagery',
+  source = 'satellite-imagery',
+  opacity = 1,
+  enhance = true
+} = {}) {
   return {
-    id: 'hola-satellite-imagery',
+    id,
     type: 'raster',
-    source: 'satellite-imagery',
+    source,
     minzoom: 0,
     maxzoom: 22,
     paint: {
-      'raster-opacity': 1,
-      'raster-fade-duration': 120,
+      'raster-opacity': opacity,
+      // Zero fade avoids temporary white seams while zooming/panning between
+      // remote raster tiles. Failed primary tiles reveal the fallback layer.
+      'raster-fade-duration': 0,
       'raster-resampling': 'linear',
-      'raster-saturation': 0.04,
-      'raster-contrast': 0.05,
+      'raster-saturation': enhance ? 0.04 : 0,
+      'raster-contrast': enhance ? 0.05 : 0,
       'raster-brightness-min': 0.01,
       'raster-brightness-max': 0.98
     }
   };
+}
+
+function createSatelliteRasterLayers() {
+  const layers = [];
+
+  if (HAS_SATELLITE_FALLBACK) {
+    layers.push(
+      createSatelliteRasterLayer({
+        id: 'hola-satellite-fallback',
+        source: 'satellite-fallback',
+        opacity: 1,
+        enhance: false
+      })
+    );
+  }
+
+  layers.push(createSatelliteRasterLayer());
+  return layers;
 }
 
 function createHybridOverlayLayers(layers) {
@@ -432,6 +465,17 @@ export function createPmtilesStyle(mode = 'streets', options = {}) {
   }
 
   if (imageryMode) {
+    if (HAS_SATELLITE_FALLBACK) {
+      sources['satellite-fallback'] = {
+        type: 'raster',
+        tiles: [ESRI_SATELLITE_TILE_URL],
+        tileSize: 256,
+        minzoom: 0,
+        maxzoom: 19,
+        attribution: ESRI_SATELLITE_ATTRIBUTION
+      };
+    }
+
     sources['satellite-imagery'] = {
       type: 'raster',
       tiles: [SATELLITE_TILE_URL],
@@ -451,10 +495,10 @@ export function createPmtilesStyle(mode = 'streets', options = {}) {
   let layers = detailedLayers;
 
   if (mode === 'satellite') {
-    layers = [createSatelliteRasterLayer()];
+    layers = createSatelliteRasterLayers();
   } else if (mode === 'hybrid') {
     layers = [
-      createSatelliteRasterLayer(),
+      ...createSatelliteRasterLayers(),
       ...createHybridOverlayLayers(detailedLayers)
     ];
   }
