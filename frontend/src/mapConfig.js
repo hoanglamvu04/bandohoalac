@@ -54,6 +54,18 @@ export const EXTENDED_SERVICE_AREAS = [
   'Một phần Quốc Oai'
 ];
 
+// Product camera presets for discovery. These are navigation presets, not
+// legal administrative boundary definitions.
+export const REGION_PRESETS = [
+  { id: 'all', label: 'Toàn vùng', center: DEFAULT_CENTER, zoom: 12.7 },
+  { id: 'hoa-lac', label: 'Hòa Lạc', center: [105.515, 21.015], zoom: 14.0 },
+  { id: 'ha-bang', label: 'Hạ Bằng', center: [105.558, 21.055], zoom: 14.2 },
+  { id: 'thach-that', label: 'Thạch Thất', center: [105.585, 21.030], zoom: 13.9 },
+  { id: 'tay-phuong', label: 'Tây Phương', center: [105.575, 20.995], zoom: 14.0 },
+  { id: 'yen-xuan', label: 'Yên Xuân', center: [105.405, 21.015], zoom: 13.8 },
+  { id: 'phu-cat', label: 'Phú Cát', center: [105.475, 20.985], zoom: 13.9 }
+];
+
 /**
  * Tight camera fence with a small visual buffer around the actual service
  * polygon. This replaces the old Hanoi-scale 105.24..105.80 / 20.84..21.27
