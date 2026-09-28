@@ -18,7 +18,29 @@ export const contributionRateLimiter = rateLimit({
 
 export const generalApiRateLimiter = rateLimit({
   windowMs: 60 * 1000,
-  limit: 120,
+  limit: 180,
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip(req) {
+    // Interactive map reads naturally fire more often while users pan/zoom.
+    // They have a separate limiter below so they do not consume the budget
+    // for login/profile/admin APIs.
+    return (
+      req.method === 'GET' &&
+      (
+        req.path === '/places/bounds' ||
+        req.path === '/map-layers'
+      )
+    );
+  }
+});
+
+export const mapReadRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 900,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Map data is being requested too quickly. Please wait a moment.'
+  }
 });
