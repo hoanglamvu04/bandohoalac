@@ -33,8 +33,17 @@ export function setToken(token) {
 
 function unwrap(promise) {
   return promise.then((res) => res.data).catch((error) => {
+    if (axios.isCancel(error) || error?.code === 'ERR_CANCELED') {
+      const cancelled = new Error('Request cancelled.');
+      cancelled.name = 'AbortError';
+      throw cancelled;
+    }
+
     const message = error.response?.data?.error || error.message || 'Đã có lỗi xảy ra.';
-    throw new Error(message);
+    const wrapped = new Error(message);
+    wrapped.status = error.response?.status;
+    wrapped.retryAfter = error.response?.headers?.['retry-after'];
+    throw wrapped;
   });
 }
 
@@ -60,8 +69,11 @@ export function getCategories() {
   return unwrap(client.get('/categories'));
 }
 
-export function getPlaces(params = {}) {
-  return unwrap(client.get('/places', { params: cleanParams(params) }));
+export function getPlaces(params = {}, options = {}) {
+  return unwrap(client.get('/places', {
+    params: cleanParams(params),
+    signal: options.signal
+  }));
 }
 
 export function getPlace(id) {
@@ -76,8 +88,11 @@ export function getNearbyPlaces(lat, lng, radius = 5000) {
   return unwrap(client.get('/places/nearby', { params: { lat, lng, radius } }));
 }
 
-export function getPlacesInBounds(bounds) {
-  return unwrap(client.get('/places/bounds', { params: bounds }));
+export function getPlacesInBounds(bounds, options = {}) {
+  return unwrap(client.get('/places/bounds', {
+    params: bounds,
+    signal: options.signal
+  }));
 }
 
 export function getDirections({
@@ -98,7 +113,7 @@ export function getDirections({
   }));
 }
 
-export function getMapLayers({ types = [], bounds } = {}) {
+export function getMapLayers({ types = [], bounds } = {}, options = {}) {
   return unwrap(client.get('/map-layers', {
     params: cleanParams({
       types: Array.isArray(types) ? types.join(',') : types,
@@ -106,7 +121,8 @@ export function getMapLayers({ types = [], bounds } = {}) {
       south: bounds?.south,
       east: bounds?.east,
       north: bounds?.north
-    })
+    }),
+    signal: options.signal
   }));
 }
 
