@@ -2052,3 +2052,309 @@ body.map-route-active{
     font-size:12px;
   }
 }
+
+
+/* ============================================================
+   Mobile map workspace v2
+   Keep the map primary; discovery becomes a bottom sheet.
+   ============================================================ */
+.hm-mobile-panel-backdrop{
+  display:none;
+}
+
+@media(max-width:760px){
+  .hm-workspace{
+    height:calc(100dvh - 64px);
+    min-height:0;
+  }
+
+  /* Two-row mobile command bar:
+     row 1 = layers / search / add
+     row 2 = horizontally scrollable discovery filters. */
+  .hm-map-topbar{
+    top:8px;
+    left:8px;
+    right:8px;
+    display:grid;
+    grid-template-columns:42px minmax(0,1fr) 42px;
+    align-items:center;
+    gap:7px;
+  }
+
+  .hm-map-menu{
+    width:42px;
+    height:42px;
+    border-radius:13px;
+  }
+
+  .hm-map-search{
+    width:100%;
+    min-height:42px;
+    padding:0 11px;
+    gap:8px;
+    border-radius:13px;
+  }
+
+  .hm-map-search input,
+  .hm-map-search input::placeholder{
+    font-size:13px;
+  }
+
+  .hm-map-edit-link,
+  .hm-topbar-status{
+    display:none;
+  }
+
+  .hm-add-place{
+    width:42px;
+    min-height:42px;
+    padding:0;
+    justify-content:center;
+    border-radius:13px;
+    font-size:0;
+  }
+
+  .hm-add-place svg{
+    width:19px;
+    height:19px;
+  }
+
+  .hm-discovery-filters{
+    position:static!important;
+    grid-column:1/-1;
+    width:100%;
+    left:auto!important;
+    right:auto!important;
+    top:auto!important;
+    display:flex;
+    gap:7px;
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+    padding:1px 1px 5px;
+    scrollbar-width:none;
+    scroll-snap-type:x proximity;
+  }
+
+  .hm-discovery-filters::-webkit-scrollbar{
+    display:none;
+  }
+
+  .hm-discovery-filters select,
+  .hm-quick-filter{
+    flex:0 0 auto;
+    min-height:36px;
+    height:36px;
+    max-width:150px;
+    border-radius:11px;
+    font-size:12px;
+    scroll-snap-align:start;
+    box-shadow:0 7px 20px rgba(14,42,36,.09);
+  }
+
+  .hm-quick-filter{
+    padding:0 10px;
+  }
+
+  /* Mobile discovery is a bottom sheet instead of a desktop side drawer. */
+  .hm-left-panel{
+    top:auto;
+    left:8px;
+    right:8px;
+    bottom:8px;
+    width:auto;
+    height:min(62dvh,560px);
+    max-height:calc(100dvh - 154px);
+    min-height:270px;
+    z-index:18;
+    border-radius:22px;
+    overflow-x:hidden;
+    overflow-y:auto;
+    transform:translateY(calc(100% + 28px));
+    transition:transform .24s cubic-bezier(.2,.8,.2,1);
+    box-shadow:0 24px 64px rgba(8,35,28,.24);
+  }
+
+  .hm-left-panel.open{
+    transform:translateY(0);
+  }
+
+  .hm-mobile-panel-backdrop{
+    position:absolute;
+    inset:0;
+    z-index:17;
+    display:block;
+    border:0;
+    padding:0;
+    background:rgba(9,35,29,.16);
+    backdrop-filter:blur(1px);
+    cursor:pointer;
+  }
+
+  .hm-panel-heading{
+    padding:14px 16px 12px;
+    border-radius:22px 22px 0 0;
+  }
+
+  .hm-panel-heading span{
+    display:none;
+  }
+
+  .hm-panel-heading h1{
+    margin:0;
+    font-size:20px;
+  }
+
+  .hm-panel-heading button{
+    width:34px;
+    height:34px;
+  }
+
+  .hm-panel-section{
+    padding:13px 14px;
+  }
+
+  .hm-section-title{
+    margin-bottom:9px;
+  }
+
+  .hm-section-title span{
+    font-size:13px;
+    letter-spacing:.08em;
+  }
+
+  .hm-place-list{
+    padding-bottom:8px;
+  }
+
+  .hm-place-row{
+    grid-template-columns:48px minmax(0,1fr) auto;
+    gap:9px;
+    padding:9px 7px;
+  }
+
+  .hm-place-thumb{
+    width:48px;
+    height:48px;
+  }
+
+  .hm-place-copy small{
+    font-size:11px;
+  }
+
+  .hm-place-copy b{
+    font-size:16px;
+  }
+
+  .hm-place-copy em,
+  .hm-open-status,
+  .hm-place-rating{
+    font-size:12px;
+  }
+
+  .hm-layer-section{
+    padding:8px 14px 12px;
+  }
+
+  .hm-layer-section-toggle{
+    min-height:44px;
+  }
+
+  /* Keep map controls out of the way of the bottom sheet. */
+  .hm-basemap-switcher,
+  .hm-basemap-switcher.panel-open{
+    left:50%;
+    right:auto;
+    bottom:10px;
+    max-width:calc(100vw - 16px);
+    transform:translateX(-50%);
+    gap:3px;
+    padding:5px;
+    border-radius:15px;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+
+  .hm-basemap-switcher::-webkit-scrollbar{
+    display:none;
+  }
+
+  .hm-basemap-switcher.panel-open{
+    opacity:0;
+    pointer-events:none;
+    transform:translate(-50%,16px);
+  }
+
+  .hm-basemap-switcher button{
+    min-width:54px;
+    gap:3px;
+    padding:6px 5px 5px;
+    border-radius:10px;
+  }
+
+  .hm-basemap-switcher button span{
+    width:30px;
+    height:25px;
+  }
+
+  .hm-basemap-switcher button b{
+    font-size:10px;
+  }
+
+  .hm-locate{
+    right:9px;
+    bottom:82px;
+    min-height:38px;
+    padding:0 10px;
+    font-size:12px;
+  }
+
+  .hm-map-provider{
+    left:9px;
+    right:auto;
+    bottom:73px;
+    max-width:52vw;
+    font-size:10px;
+  }
+
+  /* Selected place / routing stays a manageable bottom card. */
+  .hm-place-inspector,
+  .hm-route-panel{
+    left:8px;
+    right:8px;
+    bottom:8px;
+    width:auto;
+    max-height:68dvh;
+    overflow-y:auto;
+    border-radius:22px;
+  }
+
+  .hm-place-inspector.has-gallery{
+    width:auto;
+  }
+
+  .hm-inspector-gallery-main{
+    height:150px;
+  }
+
+  .hm-location-notice{
+    left:8px;
+    right:8px;
+    bottom:78px;
+    max-width:none;
+  }
+}
+
+@media(max-width:420px){
+  .hm-discovery-filters select,
+  .hm-quick-filter{
+    font-size:11px;
+  }
+
+  .hm-left-panel{
+    height:min(60dvh,520px);
+  }
+
+  .hm-basemap-switcher button{
+    min-width:51px;
+  }
+}
