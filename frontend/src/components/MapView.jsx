@@ -355,6 +355,7 @@ export default function MapView({
   const styleSwitchTimerRef = useRef(null);
   const appliedStyleKeyRef = useRef('');
   const locationNoticeTimerRef = useRef(null);
+  const lastFocusRegionRef = useRef('');
 
   const [interactiveReady, setInteractiveReady] = useState(false);
   const [mapBooted, setMapBooted] = useState(false);
@@ -746,7 +747,9 @@ export default function MapView({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !interactiveReady || !focusRegion?.center) return;
+    if (lastFocusRegionRef.current === focusRegion.id) return;
 
+    lastFocusRegionRef.current = focusRegion.id;
     map.flyTo({
       center: focusRegion.center,
       zoom: Number(focusRegion.zoom) || DEFAULT_ZOOM,
