@@ -21,7 +21,15 @@ import {
   Waves
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getLeaderboard, getPlaces } from '../services/api.js';
+import {
+  addFavorite,
+  getLeaderboard,
+  getPlaceMe,
+  getPlaces,
+  removeFavorite
+} from '../services/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
+import { useToast } from '../context/ToastContext.jsx';
 
 const FALLBACK_IMAGES = [
   'https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=900&q=84',
@@ -130,17 +138,64 @@ function initials(name = '') {
 }
 
 function FeaturedPlaceCard({ place, index }) {
+  const { user } = useAuth();
+  const { showToast } = useToast();
+  const [favorite, setFavorite] = useState(false);
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
   const cover = place.images?.[0] || place.image || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
   const categoryTone = ['blue', 'green', 'orange', 'purple'][index % 4];
   const detailHref = String(place.id).startsWith('demo-') ? '/map' : '/place/' + place.id;
+  const canFavorite = !String(place.id).startsWith('demo-');
+
+  useEffect(() => {
+    if (!user || !canFavorite) {
+      setFavorite(false);
+      return;
+    }
+
+    getPlaceMe(place.id)
+      .then((data) => setFavorite(Boolean(data?.favorite)))
+      .catch(() => setFavorite(false));
+  }, [user?.id, place.id, canFavorite]);
+
+  async function toggleFavorite(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!canFavorite) return;
+    if (!user) {
+      showToast('Đăng nhập để lưu địa điểm.', 'info');
+      return;
+    }
+    if (favoriteBusy) return;
+
+    setFavoriteBusy(true);
+    try {
+      const data = favorite
+        ? await removeFavorite(place.id)
+        : await addFavorite(place.id);
+      setFavorite(Boolean(data?.favorite));
+      showToast(data?.favorite ? 'Đã lưu địa điểm.' : 'Đã bỏ lưu địa điểm.', 'success');
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setFavoriteBusy(false);
+    }
+  }
 
   return (
     <article className="home-place-card">
       <div className="home-place-cover">
         <img src={cover} alt="" loading="lazy" />
         <span className={'home-place-category ' + categoryTone}>{place.category || 'Khám phá'}</span>
-        <button className="home-place-heart" type="button" aria-label="Lưu địa điểm">
-          <Heart size={17} />
+        <button
+          className={favorite ? 'home-place-heart active' : 'home-place-heart'}
+          type="button"
+          aria-label={favorite ? 'Bỏ lưu địa điểm' : 'Lưu địa điểm'}
+          onClick={toggleFavorite}
+          disabled={favoriteBusy}
+        >
+          <Heart size={17} fill={favorite ? 'currentColor' : 'none'} />
         </button>
       </div>
       <div className="home-place-content">
