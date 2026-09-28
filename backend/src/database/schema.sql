@@ -222,6 +222,26 @@ ALTER TABLE place_images
   ADD COLUMN IF NOT EXISTS storage_public_id TEXT,
   ADD COLUMN IF NOT EXISTS storage_asset_folder TEXT;
 
+-- Old data could contain more than one cover because each photo contribution
+-- used to mark its first image as cover. Keep the oldest cover and normalize
+-- the rest before enforcing the invariant.
+WITH ranked_covers AS (
+  SELECT
+    id,
+    ROW_NUMBER() OVER (PARTITION BY place_id ORDER BY id ASC) AS rn
+  FROM place_images
+  WHERE is_cover = TRUE
+)
+UPDATE place_images
+SET is_cover = FALSE
+WHERE id IN (
+  SELECT id FROM ranked_covers WHERE rn > 1
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS place_images_single_cover_idx
+  ON place_images (place_id)
+  WHERE is_cover = TRUE;
+
 CREATE INDEX IF NOT EXISTS favorites_user_idx ON favorites (user_id);
 CREATE INDEX IF NOT EXISTS reviews_user_idx ON reviews (user_id);
 
