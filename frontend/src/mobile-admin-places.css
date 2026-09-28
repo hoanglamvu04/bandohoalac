@@ -1,0 +1,377 @@
+/* Hola Maps mobile admin place management v2
+   List-first mobile flow: browse -> edit -> back to browse.
+*/
+
+.admin-place-mobile-back{
+  display:none;
+}
+
+.admin-place-editor-title{
+  min-width:0;
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+}
+
+.admin-place-editor-title>div{
+  min-width:0;
+}
+
+@media(max-width:760px){
+  .admin-places-page.page-container{
+    width:calc(100% - 16px);
+    padding:12px 0 132px;
+  }
+
+  .admin-places-heading{
+    align-items:flex-start!important;
+    gap:10px;
+    margin-bottom:12px;
+  }
+
+  .admin-places-heading>div{
+    min-width:0;
+    flex:1;
+  }
+
+  .admin-places-heading .eyebrow{
+    font-size:10px;
+    letter-spacing:.11em;
+  }
+
+  .admin-places-heading h2{
+    margin:4px 0 5px;
+    font-size:28px;
+    line-height:1.05;
+    letter-spacing:-.04em;
+  }
+
+  .admin-places-heading p{
+    max-width:220px;
+    margin:0;
+    font-size:12px!important;
+    line-height:1.45;
+  }
+
+  .admin-places-heading>.primary-action{
+    flex:0 0 auto;
+    min-height:44px;
+    gap:5px;
+    padding:0 11px;
+    border-radius:12px;
+    font-size:12px;
+    line-height:1.15;
+  }
+
+  /* When editing, the editor becomes the page. */
+  .admin-places-page.editor-active .admin-places-heading{
+    display:none;
+  }
+
+  .admin-places-layout{
+    display:block!important;
+    min-height:0!important;
+  }
+
+  .admin-places-layout:not(.editing) .admin-place-editor{
+    display:none;
+  }
+
+  .admin-places-layout.editing .admin-place-browser{
+    display:none;
+  }
+
+  .admin-place-browser,
+  .admin-place-editor{
+    width:100%;
+    border-radius:18px;
+    box-shadow:0 10px 30px rgba(16,47,41,.06);
+  }
+
+  .admin-place-browser{
+    padding:10px;
+  }
+
+  .admin-place-search{
+    min-height:46px;
+    padding:0 12px;
+    border-radius:12px;
+  }
+
+  .admin-place-search svg{
+    width:17px;
+    height:17px;
+    flex:0 0 auto;
+  }
+
+  .admin-place-search input{
+    min-height:44px;
+    font-size:16px!important;
+  }
+
+  .admin-place-status-tabs{
+    gap:6px;
+    margin:9px -1px 10px;
+    padding:1px 1px 4px;
+    scroll-snap-type:x proximity;
+  }
+
+  .admin-place-status-tabs button{
+    flex:0 0 auto;
+    min-height:36px;
+    padding:0 11px;
+    border-radius:10px;
+    font-size:11px!important;
+    scroll-snap-align:start;
+  }
+
+  .admin-place-list{
+    max-height:none!important;
+    overflow:visible!important;
+    gap:6px;
+    padding:0;
+  }
+
+  .admin-place-row{
+    grid-template-columns:50px minmax(0,1fr) auto;
+    gap:9px;
+    min-height:66px;
+    padding:7px;
+    border-color:#edf1ee;
+    border-radius:12px;
+    background:#fff;
+  }
+
+  .admin-place-row.active{
+    border-color:#b9d2c9;
+    background:#f1f7f4;
+  }
+
+  .admin-place-row-cover{
+    width:50px;
+    height:50px;
+    border-radius:10px;
+  }
+
+  .admin-place-row small{
+    font-size:9px;
+    line-height:1.25;
+  }
+
+  .admin-place-row b{
+    font-size:14px!important;
+    line-height:1.2;
+  }
+
+  .admin-place-row em{
+    margin-top:1px;
+    font-size:11px;
+    line-height:1.25;
+  }
+
+  .admin-place-row strong{
+    align-self:start;
+    margin-top:4px;
+    font-size:11px;
+  }
+
+  .admin-place-row strong svg{
+    width:11px;
+    height:11px;
+  }
+
+  .admin-place-browser>.loading-card,
+  .admin-place-browser>.empty-state{
+    min-height:180px;
+    border-radius:13px;
+  }
+
+  /* Editor */
+  .admin-place-editor{
+    padding:12px;
+  }
+
+  .admin-place-placeholder{
+    display:none;
+  }
+
+  .admin-place-editor-head{
+    display:block!important;
+    margin-bottom:12px;
+  }
+
+  .admin-place-mobile-back{
+    width:max-content;
+    min-height:36px;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom:10px;
+    border:0;
+    border-radius:10px;
+    padding:0 9px;
+    color:#315f53;
+    background:#edf4f1;
+    font-size:12px;
+    font-weight:900;
+    cursor:pointer;
+  }
+
+  .admin-place-editor-title{
+    align-items:flex-start;
+    gap:9px;
+  }
+
+  .admin-place-editor-title .eyebrow{
+    font-size:9px;
+    letter-spacing:.1em;
+  }
+
+  .admin-place-editor-title h2{
+    max-width:210px;
+    margin:4px 0 0;
+    overflow:hidden;
+    font-size:22px;
+    line-height:1.1;
+    letter-spacing:-.03em;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .admin-archive-button{
+    flex:0 0 auto;
+    min-height:36px;
+    padding:0 9px;
+    border-radius:10px;
+    font-size:10px;
+  }
+
+  .admin-place-form-grid{
+    grid-template-columns:1fr!important;
+    gap:10px;
+    margin-top:12px;
+  }
+
+  .admin-place-form-grid .full{
+    grid-column:auto!important;
+  }
+
+  .admin-place-form-grid label{
+    gap:5px;
+    font-size:12px!important;
+  }
+
+  .admin-place-form-grid input,
+  .admin-place-form-grid textarea,
+  .admin-place-form-grid select{
+    min-height:46px;
+    padding:11px 12px;
+    border-radius:11px;
+    font-size:16px!important;
+  }
+
+  .admin-place-form-grid textarea{
+    min-height:110px;
+  }
+
+  .admin-place-location,
+  .admin-place-images{
+    margin-top:14px;
+    padding-top:14px;
+  }
+
+  .admin-place-location>div:first-child,
+  .admin-place-images-head>div{
+    margin-bottom:8px;
+  }
+
+  .admin-place-location b,
+  .admin-place-images-head b{
+    font-size:14px;
+  }
+
+  .admin-place-location span,
+  .admin-place-images-head span{
+    font-size:11px;
+  }
+
+  .admin-place-images-head{
+    gap:8px;
+  }
+
+  .admin-image-picker{
+    min-height:38px;
+    padding:0 9px;
+    font-size:11px;
+  }
+
+  .admin-place-image-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:7px;
+  }
+
+  .admin-place-image{
+    border-radius:11px;
+  }
+
+  .admin-place-save-row{
+    position:sticky;
+    bottom:78px;
+    z-index:8;
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:7px;
+    margin:14px -4px -4px;
+    padding:10px 4px 4px;
+    background:linear-gradient(180deg,rgba(255,255,255,0),#fff 28%);
+  }
+
+  .admin-place-save-row .primary-action{
+    min-height:46px;
+    justify-content:center;
+    border-radius:12px;
+    font-size:14px;
+  }
+
+  .admin-place-save-row .secondary-action{
+    min-height:46px;
+    padding:0 13px;
+    border-radius:12px;
+    font-size:13px;
+  }
+}
+
+@media(max-width:380px){
+  .admin-places-page.page-container{
+    width:calc(100% - 12px);
+  }
+
+  .admin-places-heading h2{
+    font-size:26px;
+  }
+
+  .admin-places-heading p{
+    max-width:190px;
+  }
+
+  .admin-places-heading>.primary-action{
+    width:76px;
+    padding:0 8px;
+  }
+
+  .admin-place-row{
+    grid-template-columns:46px minmax(0,1fr) auto;
+  }
+
+  .admin-place-row-cover{
+    width:46px;
+    height:46px;
+  }
+
+  .admin-place-editor-title h2{
+    max-width:180px;
+    font-size:20px;
+  }
+}
