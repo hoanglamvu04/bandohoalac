@@ -247,15 +247,10 @@ export default function HomePage() {
     return source.slice(0, 4);
   }, [places]);
 
-  const displayLeaders = useMemo(() => {
-    if (leaders.length) return leaders.slice(0, 3);
-
-    return [
-      { id: 'demo-1', rank: 1, name: 'Chinh Explorer', placesCount: 5, photosCount: 0, points: 1280 },
-      { id: 'demo-2', rank: 2, name: 'Diep Local Guide', placesCount: 0, photosCount: 0, points: 40 },
-      { id: 'demo-3', rank: 3, name: 'Hola Admin', placesCount: 0, photosCount: 0, points: 0 }
-    ];
-  }, [leaders]);
+  const displayLeaders = useMemo(
+    () => leaders.slice(0, 3),
+    [leaders]
+  );
 
   function submitSearch(event) {
     event?.preventDefault();
@@ -423,6 +418,11 @@ export default function HomePage() {
           </div>
 
           <div className="reference-top-list">
+            {!loading && !displayLeaders.length && (
+              <div className="reference-top-empty">
+                Chưa có hoạt động được duyệt trong tháng này.
+              </div>
+            )}
             {displayLeaders.map((person, index) => (
               <div className="reference-top-row" key={person.id}>
                 <span className={'reference-mini-medal medal-' + (index + 1)}>{index + 1}</span>
