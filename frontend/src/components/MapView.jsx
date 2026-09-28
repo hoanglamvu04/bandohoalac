@@ -339,7 +339,8 @@ export default function MapView({
   mapData = emptyFeatureCollection(),
   activeLayers = [],
   basemapMode = 'streets',
-  onViewportChange
+  onViewportChange,
+  focusRegion
 }) {
   const mapRef = useRef(null);
   const maplibreRef = useRef(null);
@@ -741,6 +742,18 @@ export default function MapView({
     if (!map || !maplibre || !interactiveReady) return;
     renderRoute(map, route, maplibre, fittedRouteKeyRef);
   }, [route, interactiveReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !interactiveReady || !focusRegion?.center) return;
+
+    map.flyTo({
+      center: focusRegion.center,
+      zoom: Number(focusRegion.zoom) || DEFAULT_ZOOM,
+      duration: 650,
+      essential: true
+    });
+  }, [focusRegion?.id, interactiveReady]);
 
   useEffect(() => {
     const map = mapRef.current;
