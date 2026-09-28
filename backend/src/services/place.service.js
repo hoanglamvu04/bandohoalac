@@ -337,22 +337,19 @@ export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = 
 }
 
 export async function setPlaceImageCover(placeId, imageId, client = pool) {
-  await client.query(
-    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
-    [placeId]
-  );
-
-  const { rows } = await client.query(
-    `UPDATE place_images
-     SET is_cover = TRUE
-     WHERE id = $1 AND place_id = $2
-     RETURNING id`,
+  const { rows: targetRows } = await client.query(
+    'SELECT id FROM place_images WHERE id = $1 AND place_id = $2',
     [imageId, placeId]
   );
 
-  if (!rows[0]) {
+  if (!targetRows[0]) {
     throw new AppError('Place image not found.', 404);
   }
+
+  await client.query(
+    'UPDATE place_images SET is_cover = (id = $2) WHERE place_id = $1',
+    [placeId, imageId]
+  );
 }
 
 export async function removePlaceImage(placeId, imageId, client = pool) {
