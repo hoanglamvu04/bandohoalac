@@ -1702,3 +1702,59 @@ body.map-route-active{
     height:39px;
   }
 }
+
+
+/* Discovery filters */
+.hm-discovery-filters{
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+
+.hm-discovery-filters select{
+  height:39px;
+  max-width:150px;
+  border:1px solid rgba(20,70,58,.12);
+  border-radius:11px;
+  outline:0;
+  padding:0 28px 0 10px;
+  color:#365f54;
+  background:rgba(255,255,255,.94);
+  font-size:9px;
+  font-weight:850;
+  box-shadow:0 6px 20px rgba(16,47,41,.05);
+}
+
+.hm-discovery-filters select:focus{
+  border-color:#8bb0a5;
+}
+
+@media(max-width:1280px){
+  .hm-discovery-filters{
+    position:absolute;
+    top:64px;
+    left:72px;
+    z-index:2;
+  }
+
+  .hm-discovery-filters select{
+    height:34px;
+    max-width:135px;
+  }
+}
+
+@media(max-width:760px){
+  .hm-discovery-filters{
+    left:14px;
+    right:14px;
+    top:64px;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+
+  .hm-discovery-filters::-webkit-scrollbar{display:none}
+
+  .hm-discovery-filters select{
+    flex:0 0 auto;
+  }
+}
