@@ -1553,3 +1553,152 @@ body.map-route-active{
     grid-template-columns:1fr;
   }
 }
+
+
+/* Place inspector photo gallery */
+.hm-place-inspector.has-gallery{
+  width:360px;
+}
+
+.hm-place-inspector.has-gallery .hm-inspector-close{
+  z-index:4;
+  color:#fff;
+  background:rgba(14,42,36,.64);
+  backdrop-filter:blur(8px);
+}
+
+.hm-inspector-gallery{
+  margin:-18px -18px 14px;
+}
+
+.hm-inspector-gallery-main{
+  position:relative;
+  height:178px;
+  overflow:hidden;
+  border-radius:20px 20px 14px 14px;
+  background:#dfe7e2;
+}
+
+.hm-inspector-gallery-main::after{
+  content:"";
+  position:absolute;
+  inset:auto 0 0;
+  height:54px;
+  pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(5,24,20,.22));
+}
+
+.hm-inspector-gallery-main>img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+}
+
+.hm-gallery-arrow{
+  position:absolute;
+  z-index:3;
+  top:50%;
+  width:32px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  transform:translateY(-50%);
+  border:1px solid rgba(255,255,255,.38);
+  border-radius:50%;
+  color:#fff;
+  background:rgba(12,39,33,.58);
+  box-shadow:0 6px 16px rgba(0,0,0,.14);
+  backdrop-filter:blur(8px);
+  cursor:pointer;
+}
+
+.hm-gallery-arrow:hover{
+  background:rgba(12,39,33,.78);
+}
+
+.hm-gallery-arrow.prev{left:10px}
+.hm-gallery-arrow.next{right:10px}
+
+.hm-gallery-count{
+  position:absolute;
+  z-index:3;
+  right:10px;
+  bottom:9px;
+  min-width:38px;
+  padding:4px 7px;
+  border:1px solid rgba(255,255,255,.26);
+  border-radius:999px;
+  color:#fff;
+  background:rgba(8,31,26,.58);
+  backdrop-filter:blur(8px);
+  text-align:center;
+  font-size:8px;
+  font-weight:900;
+}
+
+.hm-inspector-thumbs{
+  display:flex;
+  gap:7px;
+  max-width:100%;
+  overflow-x:auto;
+  padding:8px 2px 1px;
+  scrollbar-width:none;
+}
+
+.hm-inspector-thumbs::-webkit-scrollbar{
+  display:none;
+}
+
+.hm-inspector-thumbs>button{
+  width:54px;
+  height:42px;
+  flex:0 0 auto;
+  overflow:hidden;
+  padding:0;
+  border:2px solid transparent;
+  border-radius:9px;
+  background:#e7eeea;
+  opacity:.7;
+  cursor:pointer;
+  transition:opacity .15s ease,border-color .15s ease,transform .15s ease;
+}
+
+.hm-inspector-thumbs>button:hover{
+  opacity:1;
+  transform:translateY(-1px);
+}
+
+.hm-inspector-thumbs>button.active{
+  opacity:1;
+  border-color:#174d41;
+  box-shadow:0 0 0 2px rgba(23,77,65,.10);
+}
+
+.hm-inspector-thumbs img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+}
+
+@media(max-width:900px){
+  .hm-place-inspector.has-gallery{
+    width:auto;
+  }
+
+  .hm-inspector-gallery-main{
+    height:190px;
+  }
+}
+
+@media(max-width:600px){
+  .hm-inspector-gallery-main{
+    height:166px;
+  }
+
+  .hm-inspector-thumbs>button{
+    width:50px;
+    height:39px;
+  }
+}
