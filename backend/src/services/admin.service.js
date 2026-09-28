@@ -9,6 +9,7 @@ import {
 } from './contribution.service.js';
 import { awardPointsForApproval, penalizeRejection } from './points.service.js';
 import { findUserById } from './user.service.js';
+import { deleteStoredAssets } from './storage.service.js';
 
 function sourceForRole(role) {
   if (role === 'ADMIN' || role === 'MODERATOR') return 'ADMIN';
@@ -132,7 +133,7 @@ export async function approveContribution(contributionId, moderatorId) {
 }
 
 export async function rejectContribution(contributionId, moderatorId, reason) {
-  return withTransaction(async (client) => {
+  const reviewed = await withTransaction(async (client) => {
     const contribution = await getContributionForUpdate(contributionId, client);
     if (!contribution) throw new AppError('Contribution not found.', 404);
     if (contribution.status !== 'PENDING') throw new AppError('Contribution has already been reviewed.', 409);
@@ -147,4 +148,14 @@ export async function rejectContribution(contributionId, moderatorId, reason) {
 
     return getContributionById(contributionId, client);
   });
+
+  // Rejected submissions should not consume Cloudinary/local storage forever.
+  // Cleanup happens after the DB transaction so a storage outage cannot roll
+  // back the moderation decision.
+  const assets = reviewed?.payload?.photoAssets;
+  if (Array.isArray(assets) && assets.length) {
+    await deleteStoredAssets(assets);
+  }
+
+  return reviewed;
 }
