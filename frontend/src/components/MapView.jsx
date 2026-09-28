@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LocateFixed, RefreshCcw } from 'lucide-react';
+import * as maplibre from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
@@ -495,15 +497,11 @@ export default function MapView({
         // Previously Hola Maps loaded MapLibre/CDN scripts first and only then
         // probed the local archives, which added a second serial wait.
         const [
-          maplibre,
-          ,
           ,
           ,
           hasLocalPmtiles,
           hasSupplementalBuildings
         ] = await Promise.all([
-          import('maplibre-gl'),
-          import('maplibre-gl/dist/maplibre-gl.css'),
           loadExternalScript('https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js', 'pmtiles'),
           loadExternalScript('https://unpkg.com/@protomaps/basemaps@5/dist/basemaps.js', 'basemaps'),
           localPmtilesAvailable(),
