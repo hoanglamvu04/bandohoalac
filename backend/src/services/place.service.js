@@ -328,7 +328,7 @@ export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = 
         uploadedBy || null,
         shouldAssignCover,
         asset.provider || null,
-        asset.publicId || null,
+        asset.publicId || asset.filename || null,
         asset.assetFolder || null
       ]
     );
@@ -387,6 +387,7 @@ export async function removePlaceImage(placeId, imageId, client = pool) {
     url: removed.url,
     provider: removed.storage_provider,
     publicId: removed.storage_public_id,
+    filename: removed.storage_provider === 'local' ? removed.storage_public_id : undefined,
     assetFolder: removed.storage_asset_folder
   };
 }
