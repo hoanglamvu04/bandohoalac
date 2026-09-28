@@ -103,6 +103,11 @@ export default function AdminContributions() {
               {place.address && <p className="place-meta"><MapPin size={15} /> {place.address}</p>}
               {location && <p className="place-meta"><MapPin size={15} /> GPS: {Number(location.lat).toFixed(6)}, {Number(location.lng).toFixed(6)}</p>}
               {place.description && <p className="detail-description">{place.description}</p>}
+              {item.payload?.reason && (
+                <div className="form-status info">
+                  Nội dung báo cáo: {item.payload.reason}
+                </div>
+              )}
               {(place.price || place.openingHours || place.phone) && (
                 <p className="place-meta">
                   {place.price ? <>Giá: {place.price}</> : null}
