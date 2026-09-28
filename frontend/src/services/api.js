@@ -76,6 +76,12 @@ export function getPlaces(params = {}, options = {}) {
   }));
 }
 
+export function getFeaturedPlaces(limit = 4) {
+  return unwrap(client.get('/places/featured', {
+    params: { limit }
+  }));
+}
+
 export function getPlace(id) {
   return unwrap(client.get('/places/' + encodeURIComponent(id)));
 }
