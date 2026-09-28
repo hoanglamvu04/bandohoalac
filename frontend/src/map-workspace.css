@@ -1866,3 +1866,189 @@ body.map-route-active{
     min-width:max-content;
   }
 }
+
+
+/* ---------- Map typography scale v2 ----------
+   Sidebar và workspace dùng cùng hierarchy 20 / 18 / 16 / 14 / 12.
+------------------------------------------------ */
+.hm-panel-heading span{
+  font-size:14px;
+}
+.hm-panel-heading h1{
+  font-size:28px;
+}
+
+.hm-section-title span{
+  font-size:16px;
+  letter-spacing:.1em;
+}
+.hm-section-title b{
+  font-size:14px;
+}
+
+.hm-place-row{
+  grid-template-columns:54px minmax(0,1fr) auto;
+  gap:12px;
+  padding:11px 10px;
+}
+.hm-place-thumb{
+  width:54px;
+  height:54px;
+}
+.hm-place-copy{
+  gap:3px;
+}
+.hm-place-copy small{
+  font-size:14px;
+}
+.hm-place-copy b{
+  font-size:18px;
+  line-height:1.25;
+}
+.hm-place-copy em{
+  font-size:14px;
+  line-height:1.35;
+}
+.hm-place-rating{
+  font-size:14px;
+}
+.hm-open-status{
+  font-size:13px;
+  line-height:1.35;
+}
+
+.hm-layer-card{
+  min-height:72px;
+  gap:10px;
+  padding:11px;
+}
+.hm-layer-icon{
+  width:36px;
+  height:36px;
+}
+.hm-layer-card b{
+  font-size:16px;
+}
+.hm-layer-card small{
+  font-size:14px;
+}
+
+.hm-place-inspector{
+  font-size:16px;
+}
+.hm-inspector-kicker{
+  font-size:14px;
+}
+.hm-place-inspector h2{
+  font-size:24px;
+}
+.hm-place-inspector>p{
+  font-size:14px;
+}
+.hm-inspector-stats b{
+  font-size:18px;
+}
+.hm-inspector-stats small{
+  font-size:14px;
+}
+.hm-inspector-actions button,
+.hm-inspector-actions a{
+  font-size:16px;
+}
+.hm-inspector-open{
+  font-size:14px;
+}
+.hm-inspector-open span{
+  font-size:14px;
+}
+
+.hm-route-head small{
+  font-size:14px;
+}
+.hm-route-head b{
+  font-size:18px;
+}
+.hm-route-panel{
+  font-size:16px;
+}
+
+.hm-discovery-filters select,
+.hm-quick-filter{
+  font-size:14px;
+  min-height:42px;
+}
+.hm-search input{
+  font-size:16px;
+}
+.hm-search input::placeholder{
+  font-size:16px;
+}
+
+.hm-place-scope-bar>span{
+  font-size:14px;
+}
+.hm-place-scope-bar>button{
+  font-size:14px;
+}
+.hm-place-empty>b{
+  font-size:18px;
+}
+.hm-place-empty>p{
+  font-size:14px;
+}
+.hm-place-empty-actions>button,
+.hm-place-empty-reset{
+  font-size:14px;
+}
+.hm-place-scope-loading{
+  font-size:14px;
+}
+
+.hm-basemap-switcher button,
+.hm-map-action{
+  font-size:14px;
+}
+
+.hm-gallery-count{
+  font-size:14px;
+}
+
+@media(max-width:900px){
+  .hm-panel-heading h1{
+    font-size:25px;
+  }
+
+  .hm-place-copy b{
+    font-size:17px;
+  }
+
+  .hm-section-title span,
+  .hm-layer-card b,
+  .hm-inspector-actions button,
+  .hm-inspector-actions a{
+    font-size:15px;
+  }
+}
+
+@media(max-width:600px){
+  .hm-place-row{
+    grid-template-columns:48px minmax(0,1fr) auto;
+    gap:9px;
+  }
+
+  .hm-place-thumb{
+    width:48px;
+    height:48px;
+  }
+
+  .hm-place-copy b{
+    font-size:16px;
+  }
+
+  .hm-place-copy small,
+  .hm-place-copy em,
+  .hm-place-rating,
+  .hm-open-status{
+    font-size:12px;
+  }
+}
