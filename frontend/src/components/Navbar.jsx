@@ -4,6 +4,7 @@ import {
   Check,
   ChevronDown,
   Compass,
+  Download,
   LogOut,
   MapPinned,
   Plus,
@@ -41,6 +42,13 @@ export default function Navbar() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [installed, setInstalled] = useState(() =>
+    typeof window !== 'undefined' && (
+      window.matchMedia?.('(display-mode: standalone)').matches ||
+      window.navigator?.standalone === true
+    )
+  );
   const regionRef = useRef(null);
   const notificationRef = useRef(null);
 
@@ -72,6 +80,26 @@ export default function Navbar() {
     const timer = window.setInterval(loadNotifications, 60000);
     return () => window.clearInterval(timer);
   }, [user?.id]);
+
+  useEffect(() => {
+    function onBeforeInstallPrompt(event) {
+      event.preventDefault();
+      setInstallPrompt(event);
+    }
+
+    function onAppInstalled() {
+      setInstalled(true);
+      setInstallPrompt(null);
+    }
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+    window.addEventListener('appinstalled', onAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', onAppInstalled);
+    };
+  }, []);
 
   useEffect(() => {
     function onPointerDown(event) {
@@ -112,6 +140,20 @@ export default function Navbar() {
 
     setNotificationsOpen(false);
     navigate(notificationTarget(item));
+  }
+
+  async function installApp() {
+    if (!installPrompt) return;
+
+    try {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice?.outcome === 'accepted') {
+        setInstalled(true);
+      }
+    } finally {
+      setInstallPrompt(null);
+    }
   }
 
   async function markAllRead() {
@@ -188,6 +230,13 @@ export default function Navbar() {
         </div>
 
         <Link className="nav-cta" to="/contribute"><Plus size={17}/>Đóng góp</Link>
+
+        {!installed && installPrompt && (
+          <button className="nav-install" type="button" onClick={installApp}>
+            <Download size={16} />
+            <span>Cài app</span>
+          </button>
+        )}
 
         {user && (
           <div className="nav-notification-control" ref={notificationRef}>
