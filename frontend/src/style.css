@@ -8,6 +8,13 @@
   --muted:#6f7e79;
   --line:#e5ded0;
   --shadow:0 20px 60px rgba(16,47,41,.12);
+
+  /* Hola Maps typography scale */
+  --text-highlight:20px;
+  --text-level-2:18px;
+  --text-body:16px;
+  --text-secondary:14px;
+  --text-meta:12px;
 }
 
 *{box-sizing:border-box}
@@ -1472,5 +1479,204 @@ a{color:inherit}
 @media(max-width:760px){
   .nav-install{
     display:none;
+  }
+}
+
+
+/* ---------- Typography scale v2 ----------
+   20px: điểm nhấn nội dung
+   18px: cấp 2 / card title
+   16px: nội dung chính / controls
+   14px: nội dung phụ
+   12px: metadata nhỏ
+   Hero/page titles lớn giữ scale riêng.
+------------------------------------------------ */
+body{
+  font-size:var(--text-body);
+  line-height:1.5;
+}
+
+/* Shared navigation */
+.nav-link,
+.nav-cta,
+.nav-login{
+  font-size:var(--text-body);
+}
+.nav-user,
+.nav-install{
+  font-size:var(--text-secondary);
+}
+.brand-copy strong{
+  font-size:var(--text-highlight);
+}
+.brand-copy small{
+  font-size:var(--text-meta);
+}
+
+/* Shared labels / controls */
+.eyebrow{
+  font-size:var(--text-secondary);
+}
+.primary-action,
+.secondary-action{
+  font-size:var(--text-body);
+}
+input,
+select,
+textarea,
+button{
+  font-size:inherit;
+}
+
+/* Auth */
+.auth-subtitle,
+.auth-switch{
+  font-size:var(--text-body);
+}
+.auth-card label{
+  font-size:var(--text-secondary);
+}
+.auth-card input{
+  font-size:var(--text-body);
+}
+
+/* Home discovery */
+.search-box input{
+  font-size:var(--text-body);
+}
+.hero-quick{
+  font-size:var(--text-secondary);
+}
+.result-note{
+  font-size:var(--text-body);
+}
+.category-chip,
+.category-bar.compact .category-chip{
+  font-size:var(--text-body);
+}
+.place-category{
+  font-size:var(--text-secondary);
+}
+.place-title-row h3{
+  font-size:var(--text-level-2);
+}
+.place-rating{
+  font-size:var(--text-secondary);
+}
+.place-meta{
+  font-size:var(--text-secondary);
+}
+.place-footer{
+  font-size:var(--text-secondary);
+}
+.community-features span{
+  font-size:var(--text-secondary);
+}
+
+/* Place detail */
+.place-kicker{
+  font-size:var(--text-secondary);
+}
+.detail-rating,
+.detail-description{
+  font-size:var(--text-body);
+}
+.detail-address span{
+  font-size:var(--text-body);
+}
+.highlight-grid span{
+  font-size:var(--text-body);
+}
+.contributor-box p{
+  font-size:var(--text-secondary);
+}
+.detail-info-card{
+  font-size:var(--text-body);
+}
+.detail-info-card small{
+  font-size:var(--text-secondary);
+}
+
+/* Profile / leaderboard / contribution */
+.explorer-badge,
+.explorer-stats span{
+  font-size:var(--text-secondary);
+}
+.explorer-stats b{
+  font-size:var(--text-highlight);
+}
+.activity-row b,
+.badge-grid b{
+  font-size:var(--text-body);
+}
+.activity-row div span,
+.badge-grid small{
+  font-size:var(--text-secondary);
+}
+.panel-heading h2{
+  font-size:var(--text-highlight);
+}
+.leaderboard-head span,
+.leader-name span,
+.leader-row>strong small{
+  font-size:var(--text-secondary);
+}
+.leader-name b{
+  font-size:var(--text-level-2);
+}
+.contribute-intro>p,
+.contribution-form{
+  font-size:var(--text-body);
+}
+.contribute-points span{
+  font-size:var(--text-body);
+}
+
+/* Admin */
+.admin-hero p{
+  font-size:var(--text-body);
+}
+.admin-stat-card b{
+  font-size:var(--text-highlight);
+}
+.admin-stat-card span,
+.admin-status-tabs button{
+  font-size:var(--text-secondary);
+}
+.contribution-card{
+  font-size:var(--text-body);
+}
+.contribution-card h3{
+  font-size:var(--text-level-2);
+}
+.reject-panel textarea{
+  font-size:var(--text-body);
+}
+.location-picker-hint{
+  font-size:var(--text-secondary);
+}
+
+/* Toasts & small feedback */
+.toast{
+  font-size:var(--text-secondary);
+}
+.loading-card,
+.empty-state{
+  font-size:var(--text-body);
+}
+.empty-state b{
+  font-size:var(--text-level-2);
+}
+.reference-top-empty{
+  font-size:var(--text-secondary);
+}
+
+@media(max-width:760px){
+  :root{
+    --text-highlight:19px;
+    --text-level-2:17px;
+    --text-body:15px;
+    --text-secondary:13px;
+    --text-meta:11px;
   }
 }
