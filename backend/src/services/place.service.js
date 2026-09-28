@@ -241,3 +241,153 @@ export async function countPhotosByUser(userId, client = pool) {
   );
   return rows[0].count;
 }
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
