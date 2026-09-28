@@ -23,63 +23,13 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import {
   addFavorite,
+  getFeaturedPlaces,
   getLeaderboard,
   getPlaceMe,
-  getPlaces,
   removeFavorite
 } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-
-const FALLBACK_IMAGES = [
-  'https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=900&q=84',
-  'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=900&q=84',
-  'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=900&q=84',
-  'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=900&q=84'
-];
-
-const DEMO_PLACES = [
-  {
-    id: 'demo-fpt',
-    name: 'Đại học FPT Hòa Lạc',
-    category: 'Giáo dục',
-    address: 'Hòa Lạc, Thạch Thất',
-    description: 'Khuôn viên hiện đại, không gian xanh rộng lớn.',
-    rating: 4.8,
-    reviews: 125,
-    images: [FALLBACK_IMAGES[0]]
-  },
-  {
-    id: 'demo-dong-mo',
-    name: 'Hồ Đồng Mô',
-    category: 'Thiên nhiên',
-    address: 'Hòa Lạc, Thạch Thất',
-    description: 'Điểm đến lý tưởng cho dã ngoại, nghỉ dưỡng cuối tuần.',
-    rating: 4.6,
-    reviews: 89,
-    images: [FALLBACK_IMAGES[1]]
-  },
-  {
-    id: 'demo-lake-coffee',
-    name: 'The Lake Coffee',
-    category: 'Ẩm thực',
-    address: 'Hòa Lạc, Thạch Thất',
-    description: 'Quán cà phê view hồ, không gian thoáng đãng.',
-    rating: 4.7,
-    reviews: 64,
-    images: [FALLBACK_IMAGES[2]]
-  },
-  {
-    id: 'demo-hi-tech',
-    name: 'Khu Công nghệ cao Hòa Lạc',
-    category: 'Công nghệ',
-    address: 'Hòa Lạc, Thạch Thất',
-    description: 'Trung tâm công nghệ và đổi mới sáng tạo của Việt Nam.',
-    rating: 4.5,
-    reviews: 98,
-    images: [FALLBACK_IMAGES[3]]
-  }
-];
 
 const FEATURE_CARDS = [
   {
@@ -142,10 +92,10 @@ function FeaturedPlaceCard({ place, index }) {
   const { showToast } = useToast();
   const [favorite, setFavorite] = useState(false);
   const [favoriteBusy, setFavoriteBusy] = useState(false);
-  const cover = place.images?.[0] || place.image || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
+  const cover = place.images?.[0] || place.image || null;
   const categoryTone = ['blue', 'green', 'orange', 'purple'][index % 4];
-  const detailHref = String(place.id).startsWith('demo-') ? '/map' : '/place/' + place.id;
-  const canFavorite = !String(place.id).startsWith('demo-');
+  const detailHref = '/place/' + place.id;
+  const canFavorite = true;
 
   useEffect(() => {
     if (!user || !canFavorite) {
@@ -186,7 +136,15 @@ function FeaturedPlaceCard({ place, index }) {
   return (
     <article className="home-place-card">
       <div className="home-place-cover">
-        <img src={cover} alt="" loading="lazy" />
+        {cover ? (
+          <img src={cover} alt={place.name || 'Ảnh địa điểm'} loading="lazy" />
+        ) : (
+          <div className="home-place-cover-empty" aria-label="Địa điểm chưa có ảnh thực tế">
+            <Camera size={28} />
+            <b>Chưa có ảnh thực tế</b>
+            <span>Ảnh sẽ xuất hiện sau khi được cộng đồng đóng góp và duyệt.</span>
+          </div>
+        )}
         <span className={'home-place-category ' + categoryTone}>{place.category || 'Khám phá'}</span>
         <button
           className={favorite ? 'home-place-heart active' : 'home-place-heart'}
@@ -203,8 +161,12 @@ function FeaturedPlaceCard({ place, index }) {
         <span className="home-place-address"><MapPin size={13} /> {place.address || 'Hòa Lạc, Thạch Thất'}</span>
         <p>{place.description || 'Địa điểm đáng khám phá trong khu vực Hòa Lạc và vùng phụ cận.'}</p>
         <div className="home-place-footer">
-          <strong><Star size={14} fill="currentColor" /> {Number(place.rating || 4.8).toFixed(1)}</strong>
-          <span><Camera size={13} /> {Number(place.reviews || place.ratingCount || 0)} đóng góp</span>
+          <strong>
+            <Star size={14} fill="currentColor" />
+            {Number(place.rating || 0).toFixed(1)}
+            <small>({Number(place.reviews || place.ratingCount || 0)} đánh giá)</small>
+          </strong>
+          <span><Heart size={13} /> {Number(place.favoriteCount || 0)} lượt lưu</span>
         </div>
       </div>
     </article>
@@ -221,7 +183,7 @@ export default function HomePage() {
   useEffect(() => {
     let active = true;
 
-    Promise.allSettled([getPlaces({ limit: 12 }), getLeaderboard(3, 'month')])
+    Promise.allSettled([getFeaturedPlaces(4), getLeaderboard(3, 'month')])
       .then(([placesResult, leaderboardResult]) => {
         if (!active) return;
 
@@ -242,10 +204,10 @@ export default function HomePage() {
     };
   }, []);
 
-  const displayPlaces = useMemo(() => {
-    const source = places.length ? places : DEMO_PLACES;
-    return source.slice(0, 4);
-  }, [places]);
+  const displayPlaces = useMemo(
+    () => places.slice(0, 4),
+    [places]
+  );
 
   const displayLeaders = useMemo(
     () => leaders.slice(0, 3),
@@ -376,11 +338,20 @@ export default function HomePage() {
           <div className="reference-place-grid">
             {Array.from({ length: 4 }).map((_, index) => <div className="home-card-skeleton" key={index} />)}
           </div>
-        ) : (
+        ) : displayPlaces.length ? (
           <div className="reference-place-grid">
             {displayPlaces.map((place, index) => (
               <FeaturedPlaceCard place={place} index={index} key={place.id} />
             ))}
+          </div>
+        ) : (
+          <div className="reference-featured-empty">
+            <MapPin size={24} />
+            <div>
+              <b>Chưa có địa điểm nổi bật đủ dữ liệu</b>
+              <p>Khu vực này chưa có địa điểm đã duyệt để xếp hạng. Hola Maps sẽ không dùng dữ liệu hoặc ảnh minh họa giả.</p>
+            </div>
+            <Link to="/contribute">Đóng góp địa điểm <ArrowRight size={15} /></Link>
           </div>
         )}
       </section>
