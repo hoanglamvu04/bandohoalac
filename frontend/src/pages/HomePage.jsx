@@ -166,7 +166,7 @@ export default function HomePage() {
   useEffect(() => {
     let active = true;
 
-    Promise.allSettled([getPlaces({ limit: 12 }), getLeaderboard(3)])
+    Promise.allSettled([getPlaces({ limit: 12 }), getLeaderboard(3, 'month')])
       .then(([placesResult, leaderboardResult]) => {
         if (!active) return;
 
