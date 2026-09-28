@@ -25,11 +25,12 @@ export const generalApiRateLimiter = rateLimit({
     // Interactive map reads naturally fire more often while users pan/zoom.
     // They have a separate limiter below so they do not consume the budget
     // for login/profile/admin APIs.
+    const url = String(req.originalUrl || req.url || '').split('?')[0];
     return (
       req.method === 'GET' &&
       (
-        req.path === '/places/bounds' ||
-        req.path === '/map-layers'
+        url === '/api/places/bounds' ||
+        url === '/api/map-layers'
       )
     );
   }
