@@ -222,6 +222,18 @@ export default function PlaceDetail() {
             </div>
           ))}
         </div>
+
+        {images.length > 1 && (
+          <div className="detail-mobile-gallery-strip" aria-label="Ảnh địa điểm">
+            {images.slice(0, 6).map((image, index) => (
+              <span
+                key={image + index}
+                style={{ backgroundImage: 'url("' + image + '")' }}
+                aria-label={'Ảnh ' + (index + 1)}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="detail-fact-strip">
@@ -229,6 +241,23 @@ export default function PlaceDetail() {
         <div><span><MapPin size={18} /></span><small>Khu vực</small><b>Hòa Lạc</b></div>
         <div><span><Star size={18} /></span><small>Đánh giá</small><b>{hasRating ? rating.toFixed(1) + '/5' : 'Mới'}</b></div>
         <div><span><Camera size={18} /></span><small>Ảnh cộng đồng</small><b>{images.length}</b></div>
+      </section>
+
+      <section className="detail-mobile-quick-actions">
+        {place.lat && place.lng && (
+          <a
+            href={'https://www.google.com/maps/search/?api=1&query=' + place.lat + ',' + place.lng}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Navigation size={18} />
+            <span>Chỉ đường</span>
+          </a>
+        )}
+        <Link to="/map">
+          <MapPin size={18} />
+          <span>Xem bản đồ</span>
+        </Link>
       </section>
 
       <section className="detail-layout premium-detail-layout">
