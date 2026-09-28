@@ -516,15 +516,39 @@ export function createFallbackStyle() {
   return 'https://tiles.openfreemap.org/styles/liberty';
 }
 
+const archiveAvailabilityCache = new Map();
+
 async function archiveAvailable(url) {
   if (/^https?:\/\//i.test(url)) return true;
 
-  try {
-    const response = await fetch(url, { method: 'HEAD', cache: 'no-store' });
-    return response.ok;
-  } catch {
-    return false;
+  if (archiveAvailabilityCache.has(url)) {
+    return archiveAvailabilityCache.get(url);
   }
+
+  const check = (async () => {
+    try {
+      const key = 'hola-map-archive:' + String(url);
+      const stored = window.sessionStorage?.getItem(key);
+      if (stored === '1') return true;
+      if (stored === '0') return false;
+
+      const response = await fetch(url, { method: 'HEAD', cache: 'default' });
+      const available = response.ok;
+
+      try {
+        window.sessionStorage?.setItem(key, available ? '1' : '0');
+      } catch {
+        // Ignore storage restrictions.
+      }
+
+      return available;
+    } catch {
+      return false;
+    }
+  })();
+
+  archiveAvailabilityCache.set(url, check);
+  return check;
 }
 
 export function localPmtilesAvailable() {
