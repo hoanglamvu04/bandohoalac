@@ -3,6 +3,8 @@ import {
   Building2,
   CalendarDays,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Construction,
   ExternalLink,
@@ -113,6 +115,7 @@ export default function MapPage() {
   const [placeScope, setPlaceScope] = useState('viewport');
   const [placeScopeLoading, setPlaceScopeLoading] = useState(false);
   const [nearbyRadius, setNearbyRadius] = useState(0);
+  const [galleryIndex, setGalleryIndex] = useState(0);
 
   const [routeDestination, setRouteDestination] = useState(null);
   const [routeData, setRouteData] = useState(null);
@@ -255,6 +258,41 @@ export default function MapPage() {
     () => places.find((place) => place.id === selectedId) || null,
     [places, selectedId]
   );
+
+  const selectedImages = useMemo(
+    () => Array.from(new Set(
+      (selectedPlace?.images || []).filter(
+        (image) => typeof image === 'string' && image.trim()
+      )
+    )),
+    [selectedPlace]
+  );
+
+  useEffect(() => {
+    setGalleryIndex(0);
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (!selectedImages.length) {
+      setGalleryIndex(0);
+      return;
+    }
+    setGalleryIndex((current) => Math.min(current, selectedImages.length - 1));
+  }, [selectedImages.length]);
+
+  function showPreviousImage() {
+    if (selectedImages.length < 2) return;
+    setGalleryIndex((current) =>
+      current <= 0 ? selectedImages.length - 1 : current - 1
+    );
+  }
+
+  function showNextImage() {
+    if (selectedImages.length < 2) return;
+    setGalleryIndex((current) =>
+      current >= selectedImages.length - 1 ? 0 : current + 1
+    );
+  }
 
   function resetToViewportPlaces() {
     lastPlacesRequestKeyRef.current = '';
@@ -617,10 +655,61 @@ export default function MapPage() {
       </aside>
 
       {selectedPlace && !routeDestination && (
-        <section className="hm-place-inspector">
+        <section className={selectedImages.length ? 'hm-place-inspector has-gallery' : 'hm-place-inspector'}>
           <button className="hm-inspector-close" type="button" onClick={() => setSelectedId(null)}>
             <X size={16} />
           </button>
+
+          {selectedImages.length > 0 && (
+            <div className="hm-inspector-gallery">
+              <div className="hm-inspector-gallery-main">
+                <img
+                  src={selectedImages[galleryIndex]}
+                  alt={selectedPlace.name + ' · ảnh ' + (galleryIndex + 1)}
+                />
+
+                {selectedImages.length > 1 && (
+                  <>
+                    <button
+                      className="hm-gallery-arrow prev"
+                      type="button"
+                      onClick={showPreviousImage}
+                      aria-label="Ảnh trước"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <button
+                      className="hm-gallery-arrow next"
+                      type="button"
+                      onClick={showNextImage}
+                      aria-label="Ảnh tiếp theo"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                    <span className="hm-gallery-count">
+                      {galleryIndex + 1}/{selectedImages.length}
+                    </span>
+                  </>
+                )}
+              </div>
+
+              {selectedImages.length > 1 && (
+                <div className="hm-inspector-thumbs">
+                  {selectedImages.map((image, index) => (
+                    <button
+                      key={image}
+                      type="button"
+                      className={index === galleryIndex ? 'active' : ''}
+                      onClick={() => setGalleryIndex(index)}
+                      aria-label={'Xem ảnh ' + (index + 1)}
+                    >
+                      <img src={image} alt="" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="hm-inspector-kicker">
             <MapPin size={14} /> {selectedPlace.category || 'ĐỊA ĐIỂM'}
