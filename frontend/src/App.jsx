@@ -22,7 +22,7 @@ export default function App() {
       </main>
 
       {!isMapRoute && <Footer />}
-      {!isMapRoute && <BottomNav />}
+      <BottomNav />
     </div>
   );
 }
