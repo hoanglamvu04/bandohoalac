@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Archive,
+  ArrowLeft,
   Camera,
   Check,
   ImagePlus,
@@ -122,6 +123,15 @@ export default function AdminPlaces() {
     setPhotos([]);
   }
 
+  function closeEditor() {
+    setCreating(false);
+    setSelectedId(null);
+    setDetail(null);
+    setPhotos([]);
+  }
+
+  const editorOpen = creating || Boolean(selectedId);
+
   function update(name, value) {
     setForm((current) => ({ ...current, [name]: value }));
   }
@@ -227,7 +237,9 @@ export default function AdminPlaces() {
   }
 
   return (
-    <main className="admin-page admin-places-page page-container">
+    <main className={editorOpen
+      ? 'admin-page admin-places-page page-container editor-active'
+      : 'admin-page admin-places-page page-container'}>
       <div className="section-heading admin-places-heading">
         <div>
           <span className="eyebrow">PLACE MANAGEMENT</span>
@@ -239,7 +251,7 @@ export default function AdminPlaces() {
         </button>
       </div>
 
-      <section className="admin-places-layout">
+      <section className={editorOpen ? 'admin-places-layout editing' : 'admin-places-layout'}>
         <aside className="admin-place-browser">
           <div className="admin-place-search">
             <Search size={16} />
@@ -306,15 +318,26 @@ export default function AdminPlaces() {
           ) : (
             <form onSubmit={save}>
               <div className="admin-place-editor-head">
-                <div>
-                  <span className="eyebrow">{creating ? 'NEW PLACE' : 'EDIT PLACE #' + selectedId}</span>
-                  <h2>{creating ? 'Tạo địa điểm' : (detail?.name || form.name)}</h2>
+                <button
+                  className="admin-place-mobile-back"
+                  type="button"
+                  onClick={closeEditor}
+                >
+                  <ArrowLeft size={16} />
+                  Quay lại danh sách
+                </button>
+
+                <div className="admin-place-editor-title">
+                  <div>
+                    <span className="eyebrow">{creating ? 'NEW PLACE' : 'EDIT PLACE #' + selectedId}</span>
+                    <h2>{creating ? 'Tạo địa điểm' : (detail?.name || form.name)}</h2>
+                  </div>
+                  {!creating && (
+                    <button className="admin-archive-button" type="button" onClick={archivePlace}>
+                      <Archive size={16} /> Archive
+                    </button>
+                  )}
                 </div>
-                {!creating && (
-                  <button className="admin-archive-button" type="button" onClick={archivePlace}>
-                    <Archive size={16} /> Archive
-                  </button>
-                )}
               </div>
 
               <div className="admin-place-form-grid">
