@@ -124,6 +124,7 @@ export default function MapPage() {
 
   const lastPlacesRequestKeyRef = useRef('');
   const lastLayersRequestKeyRef = useRef('');
+  const galleryTouchStartRef = useRef(null);
 
   useEffect(() => {
     if (!viewport) return undefined;
@@ -292,6 +293,23 @@ export default function MapPage() {
     setGalleryIndex((current) =>
       current >= selectedImages.length - 1 ? 0 : current + 1
     );
+  }
+
+  function startGallerySwipe(event) {
+    galleryTouchStartRef.current = event.touches?.[0]?.clientX ?? null;
+  }
+
+  function endGallerySwipe(event) {
+    const startX = galleryTouchStartRef.current;
+    const endX = event.changedTouches?.[0]?.clientX;
+    galleryTouchStartRef.current = null;
+
+    if (!Number.isFinite(startX) || !Number.isFinite(endX)) return;
+    const delta = endX - startX;
+    if (Math.abs(delta) < 42) return;
+
+    if (delta < 0) showNextImage();
+    else showPreviousImage();
   }
 
   function resetToViewportPlaces() {
@@ -662,7 +680,11 @@ export default function MapPage() {
 
           {selectedImages.length > 0 && (
             <div className="hm-inspector-gallery">
-              <div className="hm-inspector-gallery-main">
+              <div
+                className="hm-inspector-gallery-main"
+                onTouchStart={startGallerySwipe}
+                onTouchEnd={endGallerySwipe}
+              >
                 <img
                   src={selectedImages[galleryIndex]}
                   alt={selectedPlace.name + ' · ảnh ' + (galleryIndex + 1)}
