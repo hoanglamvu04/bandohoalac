@@ -148,6 +148,13 @@ export default function MapPage() {
   }, []);
 
   useEffect(() => {
+    lastPlacesRequestKeyRef.current = '';
+    setPlaceScope('viewport');
+    setNearbyRadius(0);
+    setSelectedId(null);
+  }, [regionId]);
+
+  useEffect(() => {
     const nextQuery = searchParams.get('q') || '';
     if (nextQuery !== query) setQuery(nextQuery);
 
