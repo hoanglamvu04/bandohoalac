@@ -1,0 +1,353 @@
+/* Hola Maps mobile profile v2
+   Compact explorer identity + horizontal stats + touch-friendly content cards.
+*/
+@media(max-width:760px){
+  .profile-page.page-container{
+    width:calc(100% - 16px);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding:12px 0 132px;
+  }
+
+  /* Explorer identity card */
+  .profile-page .explorer-card{
+    border-radius:20px;
+    overflow:hidden;
+    box-shadow:0 16px 38px rgba(11,52,43,.16);
+  }
+
+  .profile-page .explorer-cover{
+    height:88px;
+  }
+
+  .profile-page .explorer-avatar{
+    left:15px;
+    bottom:-27px;
+    width:58px;
+    height:58px;
+    border-width:4px;
+    border-radius:18px;
+    font-size:18px;
+  }
+
+  .profile-page .trusted-badge{
+    right:12px;
+    bottom:13px;
+    gap:4px;
+    padding:6px 8px;
+    font-size:10px;
+  }
+
+  .profile-page .trusted-badge svg{
+    width:13px;
+    height:13px;
+  }
+
+  .profile-page .explorer-body{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:10px;
+    align-items:end;
+    padding:38px 15px 14px!important;
+  }
+
+  .profile-page .explorer-body .eyebrow{
+    font-size:10px;
+    letter-spacing:.11em;
+  }
+
+  .profile-page .explorer-body h1{
+    margin:4px 0 4px;
+    font-size:24px;
+    line-height:1.08;
+    letter-spacing:-.035em;
+  }
+
+  .profile-page .explorer-body p{
+    max-width:205px;
+    overflow:hidden;
+    color:#c9dad4;
+    font-size:12px;
+    line-height:1.45;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+  }
+
+  .profile-page .explorer-score{
+    display:grid;
+    grid-template-columns:auto auto;
+    align-items:center;
+    align-self:center;
+    gap:1px 5px;
+    margin:0!important;
+    padding:8px 9px;
+    border:1px solid rgba(255,255,255,.09);
+    border-radius:12px;
+    background:rgba(255,255,255,.07);
+  }
+
+  .profile-page .explorer-score svg{
+    width:15px;
+    height:15px;
+  }
+
+  .profile-page .explorer-score strong{
+    font-size:20px;
+    line-height:1;
+  }
+
+  .profile-page .explorer-score span{
+    grid-column:1/-1;
+    margin-top:2px;
+    color:#c8dcd5;
+    font-size:10px!important;
+    text-align:center;
+  }
+
+  /* The 3 stats must stay horizontal on phones. */
+  .profile-page .explorer-stats{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    border-top:1px solid rgba(255,255,255,.10);
+  }
+
+  .profile-page .explorer-stats>div{
+    min-width:0;
+    display:grid;
+    grid-template-columns:1fr;
+    justify-items:center;
+    gap:2px;
+    padding:11px 5px!important;
+    border-top:0!important;
+    border-right:1px solid rgba(255,255,255,.09);
+    text-align:center;
+  }
+
+  .profile-page .explorer-stats>div:last-child{
+    border-right:0;
+  }
+
+  .profile-page .explorer-stats svg{
+    width:15px;
+    height:15px;
+    margin-bottom:1px;
+  }
+
+  .profile-page .explorer-stats b{
+    font-size:16px;
+    line-height:1.1;
+  }
+
+  .profile-page .explorer-stats span{
+    grid-column:auto;
+    overflow:hidden;
+    color:#c9dad4;
+    font-size:10px!important;
+    line-height:1.2;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  /* Content panels */
+  .profile-page .profile-grid{
+    grid-template-columns:1fr;
+    gap:10px;
+    margin-top:0;
+  }
+
+  .profile-page .profile-panel{
+    padding:14px;
+    border-radius:17px;
+    box-shadow:0 10px 28px rgba(16,47,41,.055);
+  }
+
+  .profile-page .panel-heading{
+    align-items:center;
+    margin-bottom:9px;
+  }
+
+  .profile-page .panel-heading .eyebrow{
+    font-size:10px;
+    letter-spacing:.11em;
+  }
+
+  .profile-page .panel-heading h2{
+    margin-top:3px;
+    font-size:19px;
+    line-height:1.18;
+  }
+
+  .profile-page .panel-heading>svg{
+    width:19px;
+    height:19px;
+    color:#365f54;
+  }
+
+  .profile-page .activity-row{
+    grid-template-columns:36px minmax(0,1fr) auto;
+    gap:9px;
+    padding:10px 0;
+  }
+
+  .profile-page .activity-icon{
+    width:36px;
+    height:36px;
+    border-radius:11px;
+  }
+
+  .profile-page .activity-icon svg{
+    width:16px;
+    height:16px;
+  }
+
+  .profile-page .activity-row b{
+    overflow:hidden;
+    font-size:14px;
+    line-height:1.25;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .profile-page .activity-row div span{
+    margin-top:2px;
+    font-size:11px!important;
+    line-height:1.3;
+  }
+
+  .profile-page .activity-row strong{
+    font-size:13px;
+  }
+
+  /* Badges: compact 2-column collection on normal phones. */
+  .profile-page .badge-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:7px;
+  }
+
+  .profile-page .badge-grid>div{
+    min-width:0;
+    grid-template-columns:28px minmax(0,1fr);
+    gap:2px 7px;
+    align-items:start;
+    padding:9px;
+    border-radius:12px;
+  }
+
+  .profile-page .badge-grid svg{
+    width:20px;
+    height:20px;
+  }
+
+  .profile-page .badge-grid b{
+    overflow:hidden;
+    font-size:12px;
+    line-height:1.25;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .profile-page .badge-grid small{
+    font-size:10px!important;
+    line-height:1.35;
+    display:-webkit-box;
+    overflow:hidden;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+  }
+
+  /* Saved places */
+  .profile-page .profile-favorites-panel{
+    margin-top:0;
+  }
+
+  .profile-page .profile-favorite-grid{
+    grid-template-columns:1fr;
+    gap:7px;
+  }
+
+  .profile-page .profile-favorite-card{
+    grid-template-columns:64px minmax(0,1fr);
+    gap:9px;
+    min-height:70px;
+    padding:7px;
+    border-radius:12px;
+  }
+
+  .profile-page .profile-favorite-cover{
+    width:64px;
+    height:56px;
+    border-radius:9px;
+  }
+
+  .profile-page .profile-favorite-card small{
+    font-size:10px;
+  }
+
+  .profile-page .profile-favorite-card b{
+    font-size:14px;
+    line-height:1.25;
+  }
+
+  .profile-page .profile-favorite-card em{
+    margin-top:1px;
+    font-size:11px;
+  }
+
+  .profile-page .empty-state{
+    min-height:130px;
+    padding:20px 12px;
+    border-radius:13px;
+  }
+
+  .profile-page .empty-state b{
+    font-size:16px;
+  }
+
+  .profile-page .empty-state span{
+    max-width:250px;
+    font-size:12px;
+    line-height:1.45;
+  }
+
+  .profile-page .loading-card{
+    min-height:220px;
+    border-radius:18px;
+  }
+}
+
+@media(max-width:380px){
+  .profile-page.page-container{
+    width:calc(100% - 12px);
+  }
+
+  .profile-page .explorer-body{
+    grid-template-columns:minmax(0,1fr) 70px;
+    padding-left:13px!important;
+    padding-right:13px!important;
+  }
+
+  .profile-page .explorer-body h1{
+    font-size:22px;
+  }
+
+  .profile-page .explorer-body p{
+    max-width:190px;
+  }
+
+  .profile-page .explorer-score{
+    padding:7px 6px;
+  }
+
+  .profile-page .explorer-score strong{
+    font-size:18px;
+  }
+
+  .profile-page .explorer-stats span{
+    font-size:9px!important;
+  }
+
+  .profile-page .badge-grid{
+    grid-template-columns:1fr;
+  }
+}
