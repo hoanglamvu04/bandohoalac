@@ -74,18 +74,200 @@ export async function generateUniqueSlug(name, client = pool) {
   return base + '-' + Date.now();
 }
 
-export async function listPlaces({ q, category, status = 'PUBLISHED', limit = 50, offset = 0 } = {}) {
+export async function listPlaces({
+  q,
+  category,
+  minRating,
+  status = 'PUBLISHED',
+  limit = 50,
+  offset = 0
+} = {}) {
   const conditions = ['p.status = $1', COVERAGE_SQL];
   const params = [status, SERVICE_AREA_GEOJSON_STRING];
 
   if (q) {
     params.push('%' + q + '%');
-    conditions.push('(p.name ILIKE $' + params.length + ' OR p.address ILIKE $' + params.length + ')');
-  }
+    const ref = '
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({
+  lat,
+  lng,
+  radius = 5000,
+  status = 'PUBLISHED',
+  category,
+  minRating
+}) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const params = [lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING];
+  const conditions = [
+    'p.status = $3',
+    'ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))'
+  ];
 
   if (category && category !== 'all') {
     params.push(category);
-    conditions.push('c.slug = $' + params.length);
+    conditions.push('c.slug = 
+
+export async function getPlacesInBounds({
+  north,
+  south,
+  east,
+  west,
+  status = 'PUBLISHED',
+  category,
+  minRating
+}) {
+  const params = [status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING];
+  const conditions = [
+    'p.status = $1',
+    'p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))'
+  ];
+
+  if (category && category !== 'all') {
+    params.push(category);
+    conditions.push('c.slug = 
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
   }
 
   params.push(Math.min(Number(limit) || 50, 100));
@@ -93,8 +275,15323 @@ export async function listPlaces({ q, category, status = 'PUBLISHED', limit = 50
 
   const sql = BASE_SELECT +
     ' WHERE ' + conditions.join(' AND ') +
-    ' ORDER BY p.created_at DESC LIMIT $' + (params.length - 1) +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
     ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+    conditions.push(
+      '(p.name ILIKE ' + ref +
+      ' OR p.address ILIKE ' + ref +
+      ' OR p.description ILIKE ' + ref +
+      ' OR c.name ILIKE ' + ref + ')'
+    );
+  }
+
+  if (category && category !== 'all') {
+    params.push(category);
+    conditions.push('c.slug = 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  if (minRating !== undefined && minRating !== '') {
+    params.push(Math.max(0, Math.min(5, Number(minRating) || 0)));
+    conditions.push('p.rating_avg >= 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.rating_avg DESC, p.created_at DESC LIMIT 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + (params.length - 1) +
+    ' OFFSET 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  if (minRating !== undefined && minRating !== '') {
+    params.push(Math.max(0, Math.min(5, Number(minRating) || 0)));
+    conditions.push('p.rating_avg >= 
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+    conditions.push(
+      '(p.name ILIKE ' + ref +
+      ' OR p.address ILIKE ' + ref +
+      ' OR p.description ILIKE ' + ref +
+      ' OR c.name ILIKE ' + ref + ')'
+    );
+  }
+
+  if (category && category !== 'all') {
+    params.push(category);
+    conditions.push('c.slug = 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  if (minRating !== undefined && minRating !== '') {
+    params.push(Math.max(0, Math.min(5, Number(minRating) || 0)));
+    conditions.push('p.rating_avg >= 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.rating_avg DESC, p.created_at DESC LIMIT 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + (params.length - 1) +
+    ' OFFSET 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  const sql = selectWithDistance +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY distance_m ASC LIMIT 100';
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+    conditions.push(
+      '(p.name ILIKE ' + ref +
+      ' OR p.address ILIKE ' + ref +
+      ' OR p.description ILIKE ' + ref +
+      ' OR c.name ILIKE ' + ref + ')'
+    );
+  }
+
+  if (category && category !== 'all') {
+    params.push(category);
+    conditions.push('c.slug = 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  if (minRating !== undefined && minRating !== '') {
+    params.push(Math.max(0, Math.min(5, Number(minRating) || 0)));
+    conditions.push('p.rating_avg >= 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.rating_avg DESC, p.created_at DESC LIMIT 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + (params.length - 1) +
+    ' OFFSET 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  if (minRating !== undefined && minRating !== '') {
+    params.push(Math.max(0, Math.min(5, Number(minRating) || 0)));
+    conditions.push('p.rating_avg >= 
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+    conditions.push(
+      '(p.name ILIKE ' + ref +
+      ' OR p.address ILIKE ' + ref +
+      ' OR p.description ILIKE ' + ref +
+      ' OR c.name ILIKE ' + ref + ')'
+    );
+  }
+
+  if (category && category !== 'all') {
+    params.push(category);
+    conditions.push('c.slug = 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  if (minRating !== undefined && minRating !== '') {
+    params.push(Math.max(0, Math.min(5, Number(minRating) || 0)));
+    conditions.push('p.rating_avg >= 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.rating_avg DESC, p.created_at DESC LIMIT 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + (params.length - 1) +
+    ' OFFSET 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  if (minRating !== undefined && minRating !== '') {
+    params.push(Math.max(0, Math.min(5, Number(minRating) || 0)));
+    conditions.push('p.rating_avg >= 
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+    conditions.push(
+      '(p.name ILIKE ' + ref +
+      ' OR p.address ILIKE ' + ref +
+      ' OR p.description ILIKE ' + ref +
+      ' OR c.name ILIKE ' + ref + ')'
+    );
+  }
+
+  if (category && category !== 'all') {
+    params.push(category);
+    conditions.push('c.slug = 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  if (minRating !== undefined && minRating !== '') {
+    params.push(Math.max(0, Math.min(5, Number(minRating) || 0)));
+    conditions.push('p.rating_avg >= 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.rating_avg DESC, p.created_at DESC LIMIT 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + (params.length - 1) +
+    ' OFFSET 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  const sql = selectWithDistance +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY distance_m ASC LIMIT 100';
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+    conditions.push(
+      '(p.name ILIKE ' + ref +
+      ' OR p.address ILIKE ' + ref +
+      ' OR p.description ILIKE ' + ref +
+      ' OR c.name ILIKE ' + ref + ')'
+    );
+  }
+
+  if (category && category !== 'all') {
+    params.push(category);
+    conditions.push('c.slug = 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  if (minRating !== undefined && minRating !== '') {
+    params.push(Math.max(0, Math.min(5, Number(minRating) || 0)));
+    conditions.push('p.rating_avg >= 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.rating_avg DESC, p.created_at DESC LIMIT 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + (params.length - 1) +
+    ' OFFSET 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.rating_avg DESC, p.created_at DESC LIMIT 200';
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+    conditions.push(
+      '(p.name ILIKE ' + ref +
+      ' OR p.address ILIKE ' + ref +
+      ' OR p.description ILIKE ' + ref +
+      ' OR c.name ILIKE ' + ref + ')'
+    );
+  }
+
+  if (category && category !== 'all') {
+    params.push(category);
+    conditions.push('c.slug = 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  if (minRating !== undefined && minRating !== '') {
+    params.push(Math.max(0, Math.min(5, Number(minRating) || 0)));
+    conditions.push('p.rating_avg >= 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.rating_avg DESC, p.created_at DESC LIMIT 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + (params.length - 1) +
+    ' OFFSET 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  if (minRating !== undefined && minRating !== '') {
+    params.push(Math.max(0, Math.min(5, Number(minRating) || 0)));
+    conditions.push('p.rating_avg >= 
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+    conditions.push(
+      '(p.name ILIKE ' + ref +
+      ' OR p.address ILIKE ' + ref +
+      ' OR p.description ILIKE ' + ref +
+      ' OR c.name ILIKE ' + ref + ')'
+    );
+  }
+
+  if (category && category !== 'all') {
+    params.push(category);
+    conditions.push('c.slug = 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  if (minRating !== undefined && minRating !== '') {
+    params.push(Math.max(0, Math.min(5, Number(minRating) || 0)));
+    conditions.push('p.rating_avg >= 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.rating_avg DESC, p.created_at DESC LIMIT 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + (params.length - 1) +
+    ' OFFSET 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  const sql = selectWithDistance +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY distance_m ASC LIMIT 100';
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
+    conditions.push(
+      '(p.name ILIKE ' + ref +
+      ' OR p.address ILIKE ' + ref +
+      ' OR p.description ILIKE ' + ref +
+      ' OR c.name ILIKE ' + ref + ')'
+    );
+  }
+
+  if (category && category !== 'all') {
+    params.push(category);
+    conditions.push('c.slug = 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  if (minRating !== undefined && minRating !== '') {
+    params.push(Math.max(0, Math.min(5, Number(minRating) || 0)));
+    conditions.push('p.rating_avg >= 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length);
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.rating_avg DESC, p.created_at DESC LIMIT 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + (params.length - 1) +
+    ' OFFSET 
+
+export async function getPlaceById(id) {
+  const sql = BASE_SELECT +
+    ' WHERE p.id = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [id, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getPlaceBySlug(slug) {
+  const sql = BASE_SELECT +
+    ' WHERE p.slug = $1 AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))';
+  const { rows } = await pool.query(sql, [slug, SERVICE_AREA_GEOJSON_STRING]);
+  return mapRow(rows[0]);
+}
+
+export async function getNearbyPlaces({ lat, lng, radius = 5000, status = 'PUBLISHED' }) {
+  const selectWithDistance = BASE_SELECT.replace(
+    'FROM places p',
+    [
+      ', ST_Distance(',
+      '    p.location::geography,',
+      '    ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography',
+      '  ) AS distance_m',
+      'FROM places p'
+    ].join('\n')
+  );
+
+  const sql = selectWithDistance + [
+    ' WHERE p.status = $3',
+    ' AND ST_DWithin(p.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $4)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($5), 4326))',
+    ' ORDER BY distance_m ASC',
+    ' LIMIT 100'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    lat, lng, status, radius, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function getPlacesInBounds({ north, south, east, west, status = 'PUBLISHED' }) {
+  const sql = BASE_SELECT + [
+    ' WHERE p.status = $1',
+    ' AND p.location && ST_MakeEnvelope($2, $3, $4, $5, 4326)',
+    ' AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($6), 4326))',
+    ' LIMIT 200'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    status, west, south, east, north, SERVICE_AREA_GEOJSON_STRING
+  ]);
+  return rows.map(mapRow);
+}
+
+export async function createPlace(data, client = pool) {
+  if (!isInsideServiceCoverage(data.lng, data.lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  const slug = await generateUniqueSlug(data.name, client);
+  const sql = [
+    'INSERT INTO places (',
+    '  name, slug, description, category_id, address, location, phone, website,',
+    '  price_level, opening_hours, status, source, created_by',
+    ') VALUES (',
+    '  $1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326), $8, $9,',
+    '  $10, $11, $12, $13, $14',
+    ') RETURNING id'
+  ].join('\n');
+
+  const { rows } = await client.query(sql, [
+    data.name, slug, data.description || null, data.categoryId || null, data.address || null,
+    data.lng, data.lat, data.phone || null, data.website || null,
+    data.priceLevel || null, data.openingHours || null, data.status || 'PENDING',
+    data.source || 'USER', data.createdBy || null
+  ]);
+  return rows[0].id;
+}
+
+export async function updatePlaceFields(placeId, fields, client = pool) {
+  const allowed = ['name', 'description', 'address', 'phone', 'website', 'price_level', 'opening_hours', 'category_id', 'status'];
+  const setClauses = [];
+  const params = [];
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (!allowed.includes(key)) continue;
+    params.push(value);
+    setClauses.push(key + ' = $' + params.length);
+  }
+
+  if (setClauses.length === 0) return;
+
+  params.push(placeId);
+  await client.query(
+    'UPDATE places SET ' + setClauses.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+}
+
+export async function updatePlaceLocation(placeId, lat, lng, client = pool) {
+  if (!isInsideServiceCoverage(lng, lat)) {
+    throw new AppError('Place is outside the Hola Maps service area.', 400);
+  }
+
+  await client.query(
+    'UPDATE places SET location = ST_SetSRID(ST_MakePoint($1, $2), 4326), updated_at = NOW() WHERE id = $3',
+    [lng, lat, placeId]
+  );
+}
+
+export async function addPlaceImages(placeId, urls, uploadedBy, client = pool) {
+  if (!urls.length) return;
+  const values = [];
+  const params = [];
+
+  urls.forEach((url, index) => {
+    params.push(placeId, url, uploadedBy, index === 0);
+    values.push('($' + (params.length - 3) + ', $' + (params.length - 2) + ', $' + (params.length - 1) + ', $' + params.length + ')');
+  });
+
+  await client.query(
+    'INSERT INTO place_images (place_id, url, uploaded_by, is_cover) VALUES ' + values.join(', '),
+    params
+  );
+}
+
+export async function countPublishedPlacesByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
+    [userId]
+  );
+  return rows[0].count;
+}
+
+export async function countPhotosByUser(userId, client = pool) {
+  const { rows } = await client.query(
+    'SELECT COUNT(*)::int AS count FROM place_images WHERE uploaded_by = $1',
+    [userId]
+  );
+  return rows[0].count;
+}
+
+
+export async function listAdminPlaces({
+  q,
+  status,
+  limit = 50,
+  offset = 0
+} = {}) {
+  const conditions = [COVERAGE_SQL];
+  const params = [null, SERVICE_AREA_GEOJSON_STRING];
+
+  if (status && status !== 'ALL') {
+    params[0] = status;
+    conditions.unshift('p.status = $1');
+  } else {
+    params.shift();
+    // COVERAGE_SQL expects the service GeoJSON as $2 in public queries.
+    // Build the admin coverage predicate with its own positional parameter.
+    conditions[0] = 'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))';
+  }
+
+  if (q) {
+    params.push('%' + q + '%');
+    conditions.push(
+      '(p.name ILIKE $' + params.length +
+      ' OR p.address ILIKE $' + params.length +
+      ' OR p.description ILIKE $' + params.length + ')'
+    );
+  }
+
+  params.push(Math.min(Number(limit) || 50, 100));
+  params.push(Number(offset) || 0);
+
+  const sql = BASE_SELECT +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY p.updated_at DESC LIMIT $' + (params.length - 1) +
+    ' OFFSET $' + params.length;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function getAdminPlaceImages(placeId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       id, place_id, url, is_cover, uploaded_by, created_at,
+       storage_provider, storage_public_id, storage_asset_folder
+     FROM place_images
+     WHERE place_id = $1
+     ORDER BY is_cover DESC, id ASC`,
+    [placeId]
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    url: row.url,
+    isCover: row.is_cover,
+    uploadedBy: row.uploaded_by,
+    createdAt: row.created_at,
+    storageProvider: row.storage_provider,
+    storagePublicId: row.storage_public_id,
+    storageAssetFolder: row.storage_asset_folder
+  }));
+}
+
+export async function addPlaceImageAssets(placeId, assets, uploadedBy, client = pool) {
+  if (!Array.isArray(assets) || !assets.length) return;
+
+  const { rows: coverRows } = await client.query(
+    'SELECT 1 FROM place_images WHERE place_id = $1 AND is_cover = TRUE LIMIT 1',
+    [placeId]
+  );
+  let shouldAssignCover = coverRows.length === 0;
+
+  for (const asset of assets) {
+    await client.query(
+      `INSERT INTO place_images (
+         place_id, url, uploaded_by, is_cover,
+         storage_provider, storage_public_id, storage_asset_folder
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        placeId,
+        asset.url,
+        uploadedBy || null,
+        shouldAssignCover,
+        asset.provider || null,
+        asset.publicId || null,
+        asset.assetFolder || null
+      ]
+    );
+    shouldAssignCover = false;
+  }
+}
+
+export async function setPlaceImageCover(placeId, imageId, client = pool) {
+  await client.query(
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+
+  const { rows } = await client.query(
+    `UPDATE place_images
+     SET is_cover = TRUE
+     WHERE id = $1 AND place_id = $2
+     RETURNING id`,
+    [imageId, placeId]
+  );
+
+  if (!rows[0]) {
+    throw new AppError('Place image not found.', 404);
+  }
+}
+
+export async function removePlaceImage(placeId, imageId, client = pool) {
+  const { rows } = await client.query(
+    `DELETE FROM place_images
+     WHERE id = $1 AND place_id = $2
+     RETURNING
+       id, url, is_cover,
+       storage_provider, storage_public_id, storage_asset_folder`,
+    [imageId, placeId]
+  );
+
+  const removed = rows[0];
+  if (!removed) throw new AppError('Place image not found.', 404);
+
+  if (removed.is_cover) {
+    await client.query(
+      `UPDATE place_images
+       SET is_cover = TRUE
+       WHERE id = (
+         SELECT id FROM place_images
+         WHERE place_id = $1
+         ORDER BY id ASC
+         LIMIT 1
+       )`,
+      [placeId]
+    );
+  }
+
+  return {
+    id: removed.id,
+    url: removed.url,
+    provider: removed.storage_provider,
+    publicId: removed.storage_public_id,
+    assetFolder: removed.storage_asset_folder
+  };
+}
+ + params.length;
 
   const { rows } = await pool.query(sql, params);
   return rows.map(mapRow);
