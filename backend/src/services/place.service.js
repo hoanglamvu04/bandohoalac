@@ -50,6 +50,10 @@ function mapRow(row) {
     createdBy: row.created_by,
     rating: Number(row.rating_avg) || 0,
     reviews: Number(row.rating_count) || 0,
+    favoriteCount: Number(row.favorite_count) || 0,
+    featuredScore: row.featured_score !== undefined && row.featured_score !== null
+      ? Number(row.featured_score)
+      : undefined,
     lat: Number(row.lat),
     lng: Number(row.lng),
     category: row.category,
@@ -129,6 +133,68 @@ export async function listPlaces({
     ' LIMIT ' + limitRef + ' OFFSET ' + offsetRef;
 
   const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
+
+export async function listFeaturedPlaces({ limit = 4 } = {}) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 4, 1), 12);
+
+  // In Hola Maps, PUBLISHED is the public/approved state for places.
+  // Contributions use APPROVED, but once accepted the resulting place is published.
+  const sql = [
+    'SELECT',
+    '  p.id,',
+    '  p.name,',
+    '  p.slug,',
+    '  p.description,',
+    '  p.address,',
+    '  p.phone,',
+    '  p.website,',
+    '  p.price_level,',
+    '  p.opening_hours,',
+    '  p.status,',
+    '  p.source,',
+    '  p.created_by,',
+    '  p.rating_avg,',
+    '  p.rating_count,',
+    '  p.created_at,',
+    '  p.updated_at,',
+    '  ST_X(p.location) AS lng,',
+    '  ST_Y(p.location) AS lat,',
+    '  c.name AS category,',
+    '  c.slug AS category_slug,',
+    "  COALESCE(img.images, '[]'::json) AS images,",
+    '  COALESCE(fav.favorite_count, 0)::int AS favorite_count,',
+    '  (',
+    '    COALESCE(p.rating_avg, 0) * 20',
+    '    + LN(1 + COALESCE(p.rating_count, 0)) * 8',
+    '    + LN(1 + COALESCE(fav.favorite_count, 0)) * 6',
+    '  ) AS featured_score',
+    'FROM places p',
+    'LEFT JOIN categories c ON c.id = p.category_id',
+    'LEFT JOIN LATERAL (',
+    '  SELECT',
+    '    json_agg(pi.url ORDER BY pi.is_cover DESC, pi.id ASC) AS images,',
+    '    COUNT(*)::int AS image_count',
+    '  FROM place_images pi',
+    '  WHERE pi.place_id = p.id',
+    ') img ON TRUE',
+    'LEFT JOIN LATERAL (',
+    '  SELECT COUNT(*)::int AS favorite_count',
+    '  FROM favorites f',
+    '  WHERE f.place_id = p.id',
+    ') fav ON TRUE',
+    "WHERE p.status = 'PUBLISHED'",
+    '  AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))',
+    'ORDER BY',
+    '  CASE WHEN COALESCE(img.image_count, 0) > 0 THEN 1 ELSE 0 END DESC,',
+    '  featured_score DESC,',
+    '  p.rating_count DESC,',
+    '  p.updated_at DESC',
+    'LIMIT $2'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [SERVICE_AREA_GEOJSON_STRING, safeLimit]);
   return rows.map(mapRow);
 }
 
