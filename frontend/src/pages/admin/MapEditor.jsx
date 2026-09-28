@@ -6,7 +6,9 @@ import {
   MousePointer2,
   RotateCcw,
   Save,
-  Trash2
+  SlidersHorizontal,
+  Trash2,
+  X
 } from 'lucide-react';
 import { createMapLayerFeature } from '../../services/api.js';
 import {
@@ -59,6 +61,12 @@ function draftFeature(mode, points) {
 export default function MapEditor() {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
+  const geometryTypeRef = useRef('Polygon');
+  const [toolsOpen, setToolsOpen] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches
+      ? false
+      : true
+  );
   const [layerType, setLayerType] = useState('FLOOD');
   const [geometryType, setGeometryType] = useState('Polygon');
   const [points, setPoints] = useState([]);
@@ -144,7 +152,7 @@ export default function MapEditor() {
         }
 
         setPoints((current) => {
-          if (geometryType === 'Point') {
+          if (geometryTypeRef.current === 'Point') {
             return [[event.lngLat.lng, event.lngLat.lat]];
           }
           return [...current, [event.lngLat.lng, event.lngLat.lat]];
@@ -159,9 +167,10 @@ export default function MapEditor() {
       mapRef.current?.remove();
       mapRef.current = null;
     };
-  }, [geometryType, showToast]);
+  }, [showToast]);
 
   useEffect(() => {
+    geometryTypeRef.current = geometryType;
     const source = mapRef.current?.getSource('hm-editor-draft');
     if (source) source.setData(draftFeature(geometryType, points));
   }, [points, geometryType]);
@@ -213,12 +222,31 @@ export default function MapEditor() {
   }
 
   return (
-    <main className="hm-editor-page">
+    <main className={toolsOpen ? 'hm-editor-page tools-open' : 'hm-editor-page'}>
+      {toolsOpen && (
+        <button
+          className="hm-editor-mobile-backdrop"
+          type="button"
+          aria-label="Đóng bảng công cụ"
+          onClick={() => setToolsOpen(false)}
+        />
+      )}
+
       <aside className="hm-editor-sidebar">
         <div className="hm-editor-title">
-          <span>HOLA MAPS STUDIO</span>
-          <h1>Biên tập bản đồ</h1>
-          <p>Vẽ trực tiếp dữ liệu local và lưu vào PostGIS.</p>
+          <div>
+            <span>HOLA MAPS STUDIO</span>
+            <h1>Biên tập bản đồ</h1>
+            <p>Vẽ trực tiếp dữ liệu local và lưu vào PostGIS.</p>
+          </div>
+          <button
+            className="hm-editor-mobile-close"
+            type="button"
+            aria-label="Đóng công cụ"
+            onClick={() => setToolsOpen(false)}
+          >
+            <X size={18} />
+          </button>
         </div>
 
         <div className="hm-editor-block">
@@ -282,6 +310,31 @@ export default function MapEditor() {
 
       <section className="hm-editor-map">
         <div ref={containerRef} className="hm-editor-canvas" />
+
+        <button
+          className="hm-editor-mobile-tools"
+          type="button"
+          onClick={() => setToolsOpen(true)}
+        >
+          <SlidersHorizontal size={17} />
+          Công cụ
+          {points.length > 0 && <span>{points.length}</span>}
+        </button>
+
+        <div className="hm-editor-mobile-draw-actions">
+          <button type="button" onClick={undo} disabled={!points.length}>
+            <CornerDownLeft size={16} />
+            <span>Hoàn tác</span>
+          </button>
+          <button type="button" onClick={reset}>
+            <RotateCcw size={16} />
+            <span>Làm lại</span>
+          </button>
+          <button type="button" className="save" onClick={save} disabled={saving}>
+            {saving ? <Save size={16} /> : <Check size={16} />}
+            <span>{saving ? 'Đang lưu' : 'Lưu'}</span>
+          </button>
+        </div>
       </section>
     </main>
   );
