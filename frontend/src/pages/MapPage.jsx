@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
   CalendarDays,
@@ -55,6 +55,34 @@ const LAYER_MIN_ZOOM = {
   BUILDING: 14
 };
 
+function normalizeViewport(viewport) {
+  const round = (value, digits = 4) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return 0;
+    const factor = 10 ** digits;
+    return Math.round(n * factor) / factor;
+  };
+
+  return {
+    west: round(viewport.west),
+    south: round(viewport.south),
+    east: round(viewport.east),
+    north: round(viewport.north),
+    zoom: round(viewport.zoom, 2)
+  };
+}
+
+function viewportKey(viewport) {
+  const normalized = normalizeViewport(viewport);
+  return [
+    normalized.west,
+    normalized.south,
+    normalized.east,
+    normalized.north,
+    normalized.zoom
+  ].join(':');
+}
+
 
 function formatDistance(meters) {
   const value = Number(meters) || 0;
@@ -88,28 +116,59 @@ export default function MapPage() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState('');
 
+  const lastPlacesRequestKeyRef = useRef('');
+  const lastLayersRequestKeyRef = useRef('');
+
   useEffect(() => {
     if (!viewport) return undefined;
 
     let active = true;
+    const controller = new AbortController();
+    const needle = query.trim();
+    const normalizedViewport = normalizeViewport(viewport);
+    const requestKey = needle
+      ? 'q:' + needle.toLowerCase()
+      : 'bounds:' + viewportKey(normalizedViewport);
+
+    if (lastPlacesRequestKeyRef.current === requestKey) {
+      return () => controller.abort();
+    }
+
     const timer = window.setTimeout(() => {
-      const needle = query.trim();
       const request = needle
-        ? getPlaces({ q: needle, limit: 80 })
-        : getPlacesInBounds(viewport);
+        ? getPlaces(
+            { q: needle, limit: 80 },
+            { signal: controller.signal }
+          )
+        : getPlacesInBounds(
+            normalizedViewport,
+            { signal: controller.signal }
+          );
 
       request
         .then((data) => {
-          if (active) setPlaces(Array.isArray(data?.items) ? data.items : []);
+          if (!active) return;
+          lastPlacesRequestKeyRef.current = requestKey;
+          setPlaces(Array.isArray(data?.items) ? data.items : []);
         })
-        .catch(() => {
-          if (active) setPlaces([]);
+        .catch((error) => {
+          if (!active || error?.name === 'AbortError') return;
+
+          // Keep the previous map data on transient 429/network errors instead
+          // of making the UI look like the backend crashed.
+          if (error?.status === 429) {
+            console.warn('[Hola Maps] places read rate-limited; keeping cached view');
+            return;
+          }
+
+          console.warn('[Hola Maps] places request failed:', error);
         });
-    }, query.trim() ? 220 : 120);
+    }, needle ? 320 : 280);
 
     return () => {
       active = false;
       window.clearTimeout(timer);
+      controller.abort();
     };
   }, [viewport, query]);
 
@@ -119,8 +178,9 @@ export default function MapPage() {
       return undefined;
     }
 
+    const normalizedViewport = normalizeViewport(viewport);
     const visibleLayerTypes = activeLayers.filter((type) =>
-      Number(viewport.zoom || 12) >= (LAYER_MIN_ZOOM[type] || 12)
+      Number(normalizedViewport.zoom || 12) >= (LAYER_MIN_ZOOM[type] || 12)
     );
 
     if (!visibleLayerTypes.length) {
@@ -128,24 +188,47 @@ export default function MapPage() {
       return undefined;
     }
 
+    const sortedTypes = [...visibleLayerTypes].sort();
+    const requestKey =
+      'layers:' + sortedTypes.join(',') + ':' + viewportKey(normalizedViewport);
+
+    if (lastLayersRequestKeyRef.current === requestKey) {
+      return undefined;
+    }
+
     let active = true;
+    const controller = new AbortController();
     const timer = window.setTimeout(() => {
       setDataLoading(true);
-      getMapLayers({ types: visibleLayerTypes, bounds: viewport })
+
+      getMapLayers(
+        { types: sortedTypes, bounds: normalizedViewport },
+        { signal: controller.signal }
+      )
         .then((data) => {
-          if (active && data?.type === 'FeatureCollection') setMapData(data);
+          if (!active) return;
+          lastLayersRequestKeyRef.current = requestKey;
+          if (data?.type === 'FeatureCollection') setMapData(data);
         })
-        .catch(() => {
-          if (active) setMapData({ type: 'FeatureCollection', features: [] });
+        .catch((error) => {
+          if (!active || error?.name === 'AbortError') return;
+
+          if (error?.status === 429) {
+            console.warn('[Hola Maps] layer read rate-limited; keeping cached view');
+            return;
+          }
+
+          console.warn('[Hola Maps] layer request failed:', error);
         })
         .finally(() => {
           if (active) setDataLoading(false);
         });
-    }, 140);
+    }, 320);
 
     return () => {
       active = false;
       window.clearTimeout(timer);
+      controller.abort();
     };
   }, [viewport, activeLayers]);
 
