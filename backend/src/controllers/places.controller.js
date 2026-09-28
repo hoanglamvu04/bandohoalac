@@ -5,8 +5,8 @@ import {
 } from '../services/place.service.js';
 
 export const getPlaces = asyncHandler(async (req, res) => {
-  const { q, category, limit, offset } = req.query;
-  const items = await listPlaces({ q, category, limit, offset });
+  const { q, category, minRating, limit, offset } = req.query;
+  const items = await listPlaces({ q, category, minRating, limit, offset });
   res.json({ items });
 });
 
@@ -26,14 +26,25 @@ export const getNearby = asyncHandler(async (req, res) => {
   const lat = Number(req.query.lat);
   const lng = Number(req.query.lng);
   const radius = Number(req.query.radius) || 5000;
-  const items = await getNearbyPlaces({ lat, lng, radius });
+  const items = await getNearbyPlaces({
+    lat,
+    lng,
+    radius,
+    category: req.query.category,
+    minRating: req.query.minRating
+  });
   res.json({ center: { lat, lng }, radius, items });
 });
 
 export const getBounds = asyncHandler(async (req, res) => {
   const { north, south, east, west } = req.query;
   const items = await getPlacesInBounds({
-    north: Number(north), south: Number(south), east: Number(east), west: Number(west)
+    north: Number(north),
+    south: Number(south),
+    east: Number(east),
+    west: Number(west),
+    category: req.query.category,
+    minRating: req.query.minRating
   });
   res.json({ items });
 });
