@@ -212,3 +212,35 @@ CREATE INDEX IF NOT EXISTS map_features_geometry_idx ON map_features USING GIST 
 CREATE INDEX IF NOT EXISTS map_features_layer_type_idx ON map_features (layer_type);
 CREATE INDEX IF NOT EXISTS map_features_status_idx ON map_features (status);
 CREATE INDEX IF NOT EXISTS map_features_validity_idx ON map_features (valid_from, valid_until);
+
+
+-- ============================================================
+-- STORAGE METADATA FOR MANAGED PLACE IMAGES
+-- ============================================================
+ALTER TABLE place_images
+  ADD COLUMN IF NOT EXISTS storage_provider TEXT,
+  ADD COLUMN IF NOT EXISTS storage_public_id TEXT,
+  ADD COLUMN IF NOT EXISTS storage_asset_folder TEXT;
+
+CREATE INDEX IF NOT EXISTS favorites_user_idx ON favorites (user_id);
+CREATE INDEX IF NOT EXISTS reviews_user_idx ON reviews (user_id);
+
+-- ============================================================
+-- USER NOTIFICATIONS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS notifications (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  read_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS notifications_user_created_idx
+  ON notifications (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS notifications_user_unread_idx
+  ON notifications (user_id, read_at)
+  WHERE read_at IS NULL;
