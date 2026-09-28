@@ -1,0 +1,628 @@
+/* Hola Maps final mobile pass
+   Auth + Admin dashboard + moderation + map editor.
+*/
+
+.hm-editor-mobile-backdrop,
+.hm-editor-mobile-close,
+.hm-editor-mobile-tools,
+.hm-editor-mobile-draw-actions{
+  display:none;
+}
+
+@media(max-width:760px){
+  /* =========================================================
+     AUTH
+     ========================================================= */
+  .auth-page.page-container{
+    width:calc(100% - 16px);
+    min-height:calc(100dvh - 62px);
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:18px 0 126px;
+  }
+
+  .auth-card{
+    width:100%;
+    max-width:none;
+    gap:13px;
+    padding:20px 16px;
+    border-radius:20px;
+    box-shadow:0 14px 34px rgba(16,47,41,.08);
+  }
+
+  .auth-card .eyebrow{
+    font-size:10px;
+    letter-spacing:.11em;
+  }
+
+  .auth-card h1{
+    margin:1px 0 0;
+    font-size:28px;
+    line-height:1.08;
+    letter-spacing:-.04em;
+  }
+
+  .auth-subtitle{
+    font-size:13px!important;
+    line-height:1.55;
+  }
+
+  .auth-card label{
+    gap:6px;
+    font-size:12px!important;
+  }
+
+  .auth-card input{
+    width:100%;
+    min-height:48px;
+    padding:11px 12px;
+    border-radius:12px;
+    font-size:16px!important;
+  }
+
+  .auth-card .primary-action.wide{
+    min-height:48px;
+    justify-content:center;
+    border-radius:13px;
+    font-size:15px;
+  }
+
+  .auth-switch{
+    font-size:13px!important;
+  }
+
+  /* =========================================================
+     ADMIN DASHBOARD
+     ========================================================= */
+  .admin-page.page-container{
+    width:calc(100% - 16px);
+    gap:12px;
+    padding:12px 0 132px;
+  }
+
+  .admin-hero{
+    position:relative;
+    gap:11px;
+    align-items:flex-start;
+    padding:16px;
+    border-radius:18px;
+    box-shadow:0 12px 30px rgba(16,47,41,.12);
+  }
+
+  .admin-hero-icon{
+    width:44px;
+    height:44px;
+    border-radius:13px;
+  }
+
+  .admin-hero-icon svg{
+    width:20px;
+    height:20px;
+  }
+
+  .admin-hero .eyebrow{
+    font-size:9px;
+    letter-spacing:.1em;
+  }
+
+  .admin-hero h1{
+    margin:4px 0 4px;
+    font-size:21px;
+    line-height:1.12;
+  }
+
+  .admin-hero p{
+    font-size:11px!important;
+    line-height:1.45;
+  }
+
+  .admin-stat-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:7px;
+  }
+
+  .admin-stat-card{
+    min-width:0;
+    gap:4px;
+    align-items:center;
+    padding:11px 7px;
+    border-radius:14px;
+    text-align:center;
+  }
+
+  .admin-stat-card svg{
+    width:18px;
+    height:18px;
+  }
+
+  .admin-stat-card b{
+    max-width:100%;
+    overflow:hidden;
+    font-size:17px!important;
+    line-height:1.15;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .admin-stat-card span{
+    font-size:9px!important;
+    line-height:1.3;
+  }
+
+  .admin-dashboard-actions{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:8px;
+  }
+
+  .admin-dashboard-actions a{
+    min-height:48px;
+    justify-content:flex-start;
+    border-radius:13px;
+    padding:0 14px;
+    font-size:14px;
+  }
+
+  .admin-dashboard-actions a svg{
+    width:18px;
+    height:18px;
+  }
+
+  /* =========================================================
+     ADMIN CONTRIBUTIONS
+     ========================================================= */
+  .admin-page>.section-heading{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:10px;
+    margin-bottom:0;
+  }
+
+  .admin-page>.section-heading .eyebrow{
+    font-size:10px;
+  }
+
+  .admin-page>.section-heading h2{
+    margin:4px 0 0;
+    font-size:25px;
+    line-height:1.08;
+    letter-spacing:-.035em;
+  }
+
+  .admin-status-tabs{
+    width:100%;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:5px;
+    padding:4px;
+    border:1px solid #e3e9e5;
+    border-radius:13px;
+    background:#f4f7f5;
+  }
+
+  .admin-status-tabs button{
+    min-width:0;
+    min-height:36px;
+    padding:0 5px;
+    border:0;
+    border-radius:9px;
+    background:transparent;
+    font-size:10px!important;
+  }
+
+  .admin-status-tabs button.active{
+    background:#174d41;
+    box-shadow:0 4px 10px rgba(23,77,65,.15);
+  }
+
+  .contribution-list{
+    gap:9px;
+  }
+
+  .contribution-card{
+    gap:7px;
+    padding:13px;
+    border-radius:16px;
+    box-shadow:0 8px 24px rgba(16,47,41,.045);
+  }
+
+  .contribution-card-head{
+    gap:8px;
+    align-items:flex-start;
+  }
+
+  .contribution-card-head .place-kicker{
+    min-width:0;
+    overflow:hidden;
+    font-size:10px!important;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .contribution-card-head .result-note{
+    flex:0 0 auto;
+    font-size:9px!important;
+  }
+
+  .contribution-card h3{
+    margin:2px 0 0;
+    font-size:18px!important;
+    line-height:1.18;
+  }
+
+  .contribution-card .detail-description{
+    margin:0;
+    font-size:12px!important;
+    line-height:1.5;
+  }
+
+  .contribution-card .place-meta{
+    margin:0;
+    gap:5px;
+    font-size:11px!important;
+    line-height:1.4;
+  }
+
+  .contribution-card .place-meta svg{
+    width:13px;
+    height:13px;
+    flex:0 0 auto;
+  }
+
+  .contribution-photos{
+    flex-wrap:nowrap;
+    gap:7px;
+    margin:4px -2px 0;
+    padding:0 2px 4px;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+
+  .contribution-photos::-webkit-scrollbar{
+    display:none;
+  }
+
+  .contribution-photos img{
+    width:88px;
+    height:72px;
+    flex:0 0 auto;
+    border-radius:10px;
+  }
+
+  .contribution-photos .result-note{
+    flex:0 0 auto;
+    align-self:center;
+    font-size:10px!important;
+  }
+
+  .contribution-card>.contribution-actions{
+    position:sticky;
+    bottom:78px;
+    z-index:3;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:7px;
+    margin:7px -4px -4px;
+    padding:8px 4px 4px;
+    background:linear-gradient(180deg,rgba(255,253,248,0),#fffdf8 30%);
+  }
+
+  .contribution-actions .primary-action,
+  .contribution-actions .secondary-action{
+    min-height:42px;
+    justify-content:center;
+    padding:0 10px;
+    border-radius:11px;
+    font-size:12px;
+  }
+
+  .reject-panel{
+    position:fixed;
+    left:10px;
+    right:10px;
+    bottom:82px;
+    z-index:160;
+    gap:9px;
+    margin:0;
+    padding:14px;
+    border-radius:18px;
+    box-shadow:0 24px 70px rgba(15,35,30,.28);
+  }
+
+  .reject-panel::before{
+    content:"Lý do từ chối";
+    color:#743929;
+    font-size:15px;
+    font-weight:900;
+  }
+
+  .reject-panel textarea{
+    min-height:96px;
+    padding:11px;
+    border-radius:11px;
+    font-size:16px!important;
+  }
+
+  .reject-panel .contribution-actions{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:7px;
+    margin:0;
+  }
+
+  /* =========================================================
+     MAP EDITOR
+     ========================================================= */
+  .hm-editor-page{
+    position:relative;
+    min-height:calc(100dvh - 62px)!important;
+    height:calc(100dvh - 62px);
+    display:block!important;
+    overflow:hidden;
+    background:#e8efea;
+  }
+
+  .hm-editor-map{
+    position:absolute;
+    inset:0;
+    min-height:0!important;
+  }
+
+  .hm-editor-canvas{
+    position:absolute;
+    inset:0;
+  }
+
+  .hm-editor-sidebar{
+    position:absolute;
+    left:8px;
+    right:8px;
+    bottom:82px;
+    z-index:30;
+    width:auto;
+    max-height:min(68dvh,590px);
+    padding:14px;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    border:1px solid rgba(16,47,41,.10);
+    border-radius:20px;
+    background:rgba(252,253,250,.985);
+    box-shadow:0 24px 70px rgba(14,42,36,.25);
+    transform:translateY(calc(100% + 110px));
+    transition:transform .24s cubic-bezier(.2,.8,.2,1);
+  }
+
+  .hm-editor-page.tools-open .hm-editor-sidebar{
+    transform:translateY(0);
+  }
+
+  .hm-editor-mobile-backdrop{
+    position:absolute;
+    inset:0;
+    z-index:29;
+    display:block;
+    border:0;
+    background:rgba(9,35,29,.16);
+    backdrop-filter:blur(1px);
+  }
+
+  .hm-editor-title{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+  }
+
+  .hm-editor-title>div{
+    min-width:0;
+  }
+
+  .hm-editor-title span{
+    font-size:9px;
+    letter-spacing:.11em;
+  }
+
+  .hm-editor-title h1{
+    margin:3px 0 3px;
+    font-size:21px;
+  }
+
+  .hm-editor-title p{
+    margin:0 0 11px;
+    font-size:11px;
+  }
+
+  .hm-editor-mobile-close{
+    width:34px;
+    height:34px;
+    flex:0 0 auto;
+    display:grid;
+    place-items:center;
+    border:0;
+    border-radius:10px;
+    color:#41665c;
+    background:#edf3f0;
+  }
+
+  .hm-editor-block{
+    gap:5px;
+    margin-bottom:9px;
+  }
+
+  .hm-editor-block label{
+    font-size:10px;
+  }
+
+  .hm-editor-block input,
+  .hm-editor-block select,
+  .hm-editor-block textarea{
+    min-height:44px;
+    padding:10px 11px;
+    border-radius:11px;
+    font-size:16px!important;
+  }
+
+  .hm-editor-block textarea{
+    min-height:82px;
+  }
+
+  .hm-editor-guide{
+    gap:8px;
+    margin-top:10px;
+    padding:10px;
+    border-radius:12px;
+  }
+
+  .hm-editor-guide b{
+    font-size:11px;
+  }
+
+  .hm-editor-guide span{
+    font-size:11px;
+  }
+
+  .hm-editor-points{
+    gap:5px;
+    margin-top:9px;
+  }
+
+  .hm-editor-points>span,
+  .hm-editor-points button{
+    min-height:34px;
+    font-size:10px;
+  }
+
+  .hm-editor-save{
+    min-height:44px;
+    margin-top:10px;
+    font-size:12px;
+  }
+
+  .hm-editor-note{
+    margin-top:9px;
+    font-size:9px;
+  }
+
+  .hm-editor-mobile-tools{
+    position:absolute;
+    left:10px;
+    bottom:154px;
+    z-index:18;
+    min-height:42px;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    border:1px solid rgba(16,47,41,.10);
+    border-radius:13px;
+    padding:0 12px;
+    color:#174d41;
+    background:#fff;
+    box-shadow:0 10px 28px rgba(16,47,41,.16);
+    font-size:12px;
+    font-weight:900;
+  }
+
+  .hm-editor-mobile-tools span{
+    min-width:19px;
+    height:19px;
+    display:grid;
+    place-items:center;
+    border-radius:999px;
+    color:#fff;
+    background:#174d41;
+    font-size:9px;
+  }
+
+  .hm-editor-mobile-draw-actions{
+    position:absolute;
+    left:10px;
+    right:10px;
+    bottom:88px;
+    z-index:18;
+    display:grid;
+    grid-template-columns:1fr 1fr 1.2fr;
+    gap:6px;
+    padding:6px;
+    border:1px solid rgba(16,47,41,.10);
+    border-radius:15px;
+    background:rgba(255,255,255,.96);
+    box-shadow:0 12px 32px rgba(16,47,41,.15);
+    backdrop-filter:blur(12px);
+  }
+
+  .hm-editor-mobile-draw-actions button{
+    min-height:40px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+    border:0;
+    border-radius:10px;
+    color:#49675f;
+    background:#eef4f1;
+    font-size:10px;
+    font-weight:900;
+  }
+
+  .hm-editor-mobile-draw-actions button.save{
+    color:#fff;
+    background:#174d41;
+  }
+
+  .hm-editor-mobile-draw-actions button:disabled{
+    opacity:.45;
+  }
+
+  .hm-editor-page.tools-open .hm-editor-mobile-tools,
+  .hm-editor-page.tools-open .hm-editor-mobile-draw-actions{
+    opacity:0;
+    pointer-events:none;
+  }
+
+  .hm-editor-map .maplibregl-ctrl-top-right{
+    top:10px;
+    right:10px;
+  }
+
+  .hm-editor-map .maplibregl-ctrl-group{
+    border-radius:11px;
+    box-shadow:0 8px 22px rgba(14,42,36,.14);
+  }
+
+  .hm-editor-map .maplibregl-ctrl-group button{
+    width:34px;
+    height:34px;
+  }
+}
+
+@media(max-width:380px){
+  .auth-page.page-container,
+  .admin-page.page-container{
+    width:calc(100% - 12px);
+  }
+
+  .admin-stat-card{
+    padding-left:5px;
+    padding-right:5px;
+  }
+
+  .admin-stat-card b{
+    font-size:15px!important;
+  }
+
+  .admin-stat-card span{
+    font-size:8px!important;
+  }
+
+  .hm-editor-sidebar{
+    left:6px;
+    right:6px;
+    padding:12px;
+  }
+
+  .hm-editor-mobile-draw-actions{
+    left:6px;
+    right:6px;
+  }
+}
