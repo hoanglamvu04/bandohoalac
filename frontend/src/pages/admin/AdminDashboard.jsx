@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ClipboardList, LayoutDashboard, ShieldCheck, Users } from 'lucide-react';
+import { ClipboardList, LayoutDashboard, MapPinned, PencilRuler, ShieldCheck, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getAdminContributions } from '../../services/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -45,9 +45,17 @@ export default function AdminDashboard() {
         </div>
       </section>
 
-      <Link className="primary-action" to="/admin/contributions">
-        <ClipboardList size={18} /> Xem danh sách đóng góp chờ duyệt
-      </Link>
+      <div className="admin-dashboard-actions">
+        <Link className="primary-action" to="/admin/contributions">
+          <ClipboardList size={18} /> Duyệt đóng góp
+        </Link>
+        <Link className="secondary-action" to="/admin/places">
+          <MapPinned size={18} /> Quản lý địa điểm
+        </Link>
+        <Link className="secondary-action" to="/admin/map-editor">
+          <PencilRuler size={18} /> Biên tập lớp bản đồ
+        </Link>
+      </div>
     </main>
   );
 }
