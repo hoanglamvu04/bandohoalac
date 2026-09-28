@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  getPlaces, getPlace, getPlaceBySlugHandler, getNearby, getBounds
+  getPlaces, getFeatured, getPlace, getPlaceBySlugHandler, getNearby, getBounds
 } from '../controllers/places.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { validateBody, validateQuery } from '../validators/validate.js';
@@ -21,6 +21,7 @@ const router = Router();
 router.get('/nearby', validateQuery(nearbyQuerySchema), getNearby);
 router.get('/bounds', validateQuery(boundsQuerySchema), getBounds);
 router.get('/favorites/me', authenticate, getFavorites);
+router.get('/featured', getFeatured);
 router.get('/slug/:slug', getPlaceBySlugHandler);
 
 router.get('/:id/reviews', getReviews);
