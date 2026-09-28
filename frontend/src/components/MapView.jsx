@@ -25,6 +25,11 @@ import { getBestBrowserLocation } from '../utils/geolocation.js';
 const DATA_SOURCE_ID = 'hola-data-layers';
 const ROUTE_SOURCE_ID = 'hola-route-source';
 const COVERAGE_SOURCE_ID = 'hola-service-areas';
+const PLACE_SOURCE_ID = 'hola-place-clusters';
+const PLACE_CLUSTER_LAYER_ID = 'hm-place-clusters';
+const PLACE_CLUSTER_COUNT_LAYER_ID = 'hm-place-cluster-count';
+const PLACE_POINT_LAYER_ID = 'hm-place-cluster-point';
+const PLACE_CLUSTER_MAX_ZOOM = 13;
 
 const DATA_LAYER_IDS = {
   TERRAIN: 'hm-terrain',
@@ -64,6 +69,106 @@ function removeMarkers(markers) {
 
 function emptyFeatureCollection() {
   return { type: 'FeatureCollection', features: [] };
+}
+
+function placeFeatureCollection(places = []) {
+  return {
+    type: 'FeatureCollection',
+    features: places.map((place) => ({
+      type: 'Feature',
+      id: String(place.id),
+      geometry: {
+        type: 'Point',
+        coordinates: [Number(place.lng), Number(place.lat)]
+      },
+      properties: {
+        placeId: String(place.id),
+        name: place.name || '',
+        category: place.category || 'Địa điểm',
+        rating: Number(place.rating || 0)
+      }
+    }))
+  };
+}
+
+function addPlaceClusterLayers(map, places = []) {
+  if (!map?.isStyleLoaded()) return;
+
+  const data = placeFeatureCollection(places);
+  const source = map.getSource(PLACE_SOURCE_ID);
+
+  if (source) {
+    source.setData(data);
+  } else {
+    map.addSource(PLACE_SOURCE_ID, {
+      type: 'geojson',
+      data,
+      cluster: true,
+      clusterMaxZoom: PLACE_CLUSTER_MAX_ZOOM,
+      clusterRadius: 54
+    });
+  }
+
+  if (!map.getLayer(PLACE_CLUSTER_LAYER_ID)) {
+    map.addLayer({
+      id: PLACE_CLUSTER_LAYER_ID,
+      type: 'circle',
+      source: PLACE_SOURCE_ID,
+      maxzoom: 14,
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-color': [
+          'step',
+          ['get', 'point_count'],
+          '#174d41',
+          20, '#0f6a57',
+          60, '#0b7c64'
+        ],
+        'circle-radius': [
+          'step',
+          ['get', 'point_count'],
+          18,
+          20, 22,
+          60, 27
+        ],
+        'circle-stroke-width': 3,
+        'circle-stroke-color': 'rgba(255,255,255,.92)'
+      }
+    });
+  }
+
+  if (!map.getLayer(PLACE_CLUSTER_COUNT_LAYER_ID)) {
+    map.addLayer({
+      id: PLACE_CLUSTER_COUNT_LAYER_ID,
+      type: 'symbol',
+      source: PLACE_SOURCE_ID,
+      maxzoom: 14,
+      filter: ['has', 'point_count'],
+      layout: {
+        'text-field': ['get', 'point_count_abbreviated'],
+        'text-size': 11
+      },
+      paint: {
+        'text-color': '#ffffff'
+      }
+    });
+  }
+
+  if (!map.getLayer(PLACE_POINT_LAYER_ID)) {
+    map.addLayer({
+      id: PLACE_POINT_LAYER_ID,
+      type: 'circle',
+      source: PLACE_SOURCE_ID,
+      maxzoom: 14,
+      filter: ['!', ['has', 'point_count']],
+      paint: {
+        'circle-radius': 8,
+        'circle-color': '#f6c453',
+        'circle-stroke-width': 3,
+        'circle-stroke-color': '#103f35'
+      }
+    });
+  }
 }
 
 function basemapStyleKey(mode, usingLocalPmtiles, usingSupplementalBuildings) {
@@ -351,6 +456,8 @@ export default function MapView({
   const latestMapDataRef = useRef(mapData);
   const latestActiveLayersRef = useRef(activeLayers);
   const latestRouteRef = useRef(route);
+  const latestPlacesRef = useRef([]);
+  const latestSelectPlaceRef = useRef(onSelectPlace);
   const styleSwitchIdRef = useRef(0);
   const styleSwitchTimerRef = useRef(null);
   const appliedStyleKeyRef = useRef('');
@@ -359,6 +466,7 @@ export default function MapView({
 
   const [interactiveReady, setInteractiveReady] = useState(false);
   const [mapBooted, setMapBooted] = useState(false);
+  const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM);
   const [mapError, setMapError] = useState('');
   const [locating, setLocating] = useState(false);
   const [locationNotice, setLocationNotice] = useState(null);
@@ -441,18 +549,21 @@ export default function MapView({
 
         const notifyViewport = () => {
           const b = map.getBounds();
+          const zoom = map.getZoom();
+          setMapZoom(zoom);
           onViewportChange?.({
             west: b.getWest(),
             south: b.getSouth(),
             east: b.getEast(),
             north: b.getNorth(),
-            zoom: map.getZoom()
+            zoom
           });
         };
 
         map.on('load', () => {
           addCoverage(map);
           addDataLayers(map, mapData);
+          addPlaceClusterLayers(map, validPlaces);
           setLayerVisibility(map, activeLayers);
           appliedStyleKeyRef.current = basemapStyleKey(
             basemapMode,
@@ -482,6 +593,58 @@ export default function MapView({
         });
 
         map.on('moveend', notifyViewport);
+
+        const zoomToCluster = (event) => {
+          const feature = event.features?.[0];
+          const clusterId = feature?.properties?.cluster_id;
+          if (clusterId === undefined || clusterId === null) return;
+
+          const source = map.getSource(PLACE_SOURCE_ID);
+          if (!source?.getClusterExpansionZoom) return;
+
+          const go = (zoom) => {
+            if (!Number.isFinite(Number(zoom))) return;
+            map.easeTo({
+              center: feature.geometry.coordinates,
+              zoom: Math.min(Number(zoom) + 0.15, 15),
+              duration: 450
+            });
+          };
+
+          if (source.getClusterExpansionZoom.length >= 2) {
+            source.getClusterExpansionZoom(clusterId, (error, zoom) => {
+              if (!error) go(zoom);
+            });
+          } else {
+            Promise.resolve(source.getClusterExpansionZoom(clusterId))
+              .then(go)
+              .catch(() => {});
+          }
+        };
+
+        const selectClusterPoint = (event) => {
+          const feature = event.features?.[0];
+          const placeId = feature?.properties?.placeId;
+          if (!placeId) return;
+
+          const place = latestPlacesRef.current.find(
+            (item) => String(item.id) === String(placeId)
+          );
+          if (place) latestSelectPlaceRef.current?.(place);
+        };
+
+        map.on('click', PLACE_CLUSTER_LAYER_ID, zoomToCluster);
+        map.on('click', PLACE_POINT_LAYER_ID, selectClusterPoint);
+
+        for (const layerId of [PLACE_CLUSTER_LAYER_ID, PLACE_POINT_LAYER_ID]) {
+          map.on('mouseenter', layerId, () => {
+            map.getCanvas().style.cursor = 'pointer';
+          });
+          map.on('mouseleave', layerId, () => {
+            map.getCanvas().style.cursor = '';
+          });
+        }
+
         let localSourceErrorCount = 0;
 
         map.on('error', (event) => {
@@ -579,6 +742,14 @@ export default function MapView({
   }, [route]);
 
   useEffect(() => {
+    latestPlacesRef.current = validPlaces;
+  }, [validPlaces]);
+
+  useEffect(() => {
+    latestSelectPlaceRef.current = onSelectPlace;
+  }, [onSelectPlace]);
+
+  useEffect(() => {
     const map = mapRef.current;
     const maplibre = maplibreRef.current;
     if (!map || !maplibre || !mapBooted) return undefined;
@@ -621,6 +792,7 @@ export default function MapView({
 
         addCoverage(map);
         addDataLayers(map, latestMapDataRef.current);
+        addPlaceClusterLayers(map, latestPlacesRef.current);
         setLayerVisibility(map, latestActiveLayersRef.current);
         renderRoute(map, latestRouteRef.current, maplibre, fittedRouteKeyRef);
 
@@ -678,10 +850,20 @@ export default function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !interactiveReady) return;
+    addPlaceClusterLayers(map, validPlaces);
+  }, [validPlaces, interactiveReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     const maplibre = maplibreRef.current;
     if (!map || !maplibre || !interactiveReady) return;
 
     removeMarkers(markersRef.current);
+    markersRef.current = [];
+
+    if (mapZoom < 14) return;
+
     markersRef.current = validPlaces.map((place) => {
       const element = document.createElement('button');
       element.type = 'button';
@@ -703,7 +885,7 @@ export default function MapView({
         )
         .addTo(map);
     });
-  }, [validPlaces, selectedPlaceId, onSelectPlace, interactiveReady]);
+  }, [validPlaces, selectedPlaceId, onSelectPlace, interactiveReady, mapZoom]);
 
   useEffect(() => {
     const map = mapRef.current;
