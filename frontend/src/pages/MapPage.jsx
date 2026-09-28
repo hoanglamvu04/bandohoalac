@@ -35,6 +35,7 @@ import {
 } from '../services/api.js';
 import { LOCAL_BASEMAP_OPTIONS as BASEMAP_OPTIONS } from '../localBasemap.js';
 import { getBestBrowserLocation } from '../utils/geolocation.js';
+import { distanceMeters, formatOpenStatus, isPlaceOpenNow } from '../utils/placeDiscovery.js';
 import { REGION_PRESETS } from '../mapConfig.js';
 
 const LAYERS = [
@@ -172,6 +173,8 @@ export default function MapPage() {
   const [categories, setCategories] = useState([]);
   const [category, setCategory] = useState(() => searchParams.get('category') || 'all');
   const [minRating, setMinRating] = useState(() => searchParams.get('rating') || '');
+  const [openNow, setOpenNow] = useState(() => searchParams.get('open') === '1');
+  const [sortMode, setSortMode] = useState(() => searchParams.get('sort') || 'relevant');
   const [selectedId, setSelectedId] = useState(null);
   const [activeLayers, setActiveLayers] = useState(DEFAULT_ACTIVE);
   const [basemapMode, setBasemapMode] = useState('streets');
@@ -226,6 +229,12 @@ export default function MapPage() {
 
     const nextRating = searchParams.get('rating') || '';
     if (nextRating !== minRating) setMinRating(nextRating);
+
+    const nextOpen = searchParams.get('open') === '1';
+    if (nextOpen !== openNow) setOpenNow(nextOpen);
+
+    const nextSort = searchParams.get('sort') || 'relevant';
+    if (nextSort !== sortMode) setSortMode(nextSort);
   }, [searchParams]);
 
   useEffect(() => {
@@ -400,17 +409,45 @@ export default function MapPage() {
 
   const filteredPlaces = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return places;
-    return places.filter((place) => {
-      const haystack = [
-        place.name,
-        place.category,
-        place.address,
-        place.description
-      ].filter(Boolean).join(' ').toLowerCase();
-      return haystack.includes(needle);
-    });
-  }, [places, query]);
+
+    return places
+      .filter((place) => {
+        if (needle) {
+          const haystack = [
+            place.name,
+            place.category,
+            place.address,
+            place.description
+          ].filter(Boolean).join(' ').toLowerCase();
+          if (!haystack.includes(needle)) return false;
+        }
+
+        if (openNow && isPlaceOpenNow(place.openingHours) !== true) {
+          return false;
+        }
+
+        return true;
+      })
+      .map((place) => {
+        if (
+          !userLocation ||
+          !Number.isFinite(Number(userLocation.lat)) ||
+          !Number.isFinite(Number(userLocation.lng))
+        ) {
+          return place;
+        }
+
+        return {
+          ...place,
+          distanceFromUser: distanceMeters(
+            userLocation.lat,
+            userLocation.lng,
+            place.lat,
+            place.lng
+          )
+        };
+      });
+  }, [places, query, openNow, userLocation]);
 
   const viewportPlaceCount = useMemo(() => {
     if (!viewport || query.trim() || placeScope !== 'viewport') {
@@ -420,14 +457,37 @@ export default function MapPage() {
   }, [filteredPlaces, viewport, query, placeScope]);
 
   const sidebarPlaces = useMemo(() => {
+    const items = [...filteredPlaces];
+
+    if (sortMode === 'nearest') {
+      return items.sort((a, b) =>
+        Number(a.distanceFromUser ?? a.distance ?? Number.POSITIVE_INFINITY) -
+        Number(b.distanceFromUser ?? b.distance ?? Number.POSITIVE_INFINITY)
+      );
+    }
+
+    if (sortMode === 'rating') {
+      return items.sort((a, b) =>
+        Number(b.rating || 0) - Number(a.rating || 0) ||
+        Number(b.reviews || 0) - Number(a.reviews || 0)
+      );
+    }
+
+    if (sortMode === 'recent') {
+      return items.sort((a, b) =>
+        new Date(b.updatedAt || b.createdAt || 0).getTime() -
+        new Date(a.updatedAt || a.createdAt || 0).getTime()
+      );
+    }
+
     if (!viewport || query.trim() || placeScope !== 'viewport') {
-      return filteredPlaces;
+      return items;
     }
 
     const centerLng = (Number(viewport.west) + Number(viewport.east)) / 2;
     const centerLat = (Number(viewport.south) + Number(viewport.north)) / 2;
 
-    return [...filteredPlaces].sort((a, b) => {
+    return items.sort((a, b) => {
       const aVisible = placeInsideViewport(a, viewport);
       const bVisible = placeInsideViewport(b, viewport);
       if (aVisible !== bVisible) return aVisible ? -1 : 1;
@@ -440,7 +500,7 @@ export default function MapPage() {
       const bDistance = ((bLng - centerLng) ** 2) + ((bLat - centerLat) ** 2);
       return aDistance - bDistance;
     });
-  }, [filteredPlaces, viewport, query, placeScope]);
+  }, [filteredPlaces, viewport, query, placeScope, sortMode]);
 
   const selectedPlace = useMemo(
     () => places.find((place) => place.id === selectedId) || null,
@@ -514,6 +574,53 @@ export default function MapPage() {
       lat: (Number(viewport.south) + Number(viewport.north)) / 2,
       lng: (Number(viewport.west) + Number(viewport.east)) / 2
     };
+  }
+
+  async function showNearMePlaces() {
+    if (placeScopeLoading) return;
+
+    setPlaceScopeLoading(true);
+    setSelectedId(null);
+
+    try {
+      const age = userLocation?.timestamp
+        ? Date.now() - Number(userLocation.timestamp)
+        : Number.POSITIVE_INFINITY;
+      const accuracy = Number(userLocation?.accuracy) || Number.POSITIVE_INFINITY;
+
+      const location =
+        userLocation && age < 120000 && accuracy <= 250
+          ? userLocation
+          : await getBestBrowserLocation({
+              timeout: 10000,
+              targetAccuracy: 60
+            });
+
+      setUserLocation(location);
+
+      let items = [];
+      let resolvedRadius = 0;
+
+      for (const radius of [5000, 10000, 20000, 40000]) {
+        const data = await getNearbyPlaces(location.lat, location.lng, radius, {
+          category,
+          minRating: minRating || undefined
+        });
+        items = Array.isArray(data?.items) ? data.items : [];
+        resolvedRadius = radius;
+        if (items.length >= 8 || (items.length > 0 && radius >= 10000)) break;
+      }
+
+      setPlaces(items);
+      setPlaceScope('near-me');
+      setNearbyRadius(resolvedRadius);
+      setSortMode('nearest');
+      syncDiscoveryParams({ sort: 'nearest' });
+    } catch (error) {
+      console.warn('[Hola Maps] near-me request failed:', error);
+    } finally {
+      setPlaceScopeLoading(false);
+    }
   }
 
   async function showNearbyPlaces() {
@@ -624,6 +731,20 @@ export default function MapPage() {
     setPlaceScope('viewport');
     setMinRating(value);
     syncDiscoveryParams({ rating: value });
+  }
+
+  function handleOpenNowToggle() {
+    const next = !openNow;
+    setOpenNow(next);
+    if (selectedPlace && next && isPlaceOpenNow(selectedPlace.openingHours) !== true) {
+      setSelectedId(null);
+    }
+    syncDiscoveryParams({ open: next ? '1' : null });
+  }
+
+  function handleSortChange(value) {
+    setSortMode(value);
+    syncDiscoveryParams({ sort: value === 'relevant' ? null : value });
   }
 
   function togglePlaceSelection(place) {
@@ -737,6 +858,25 @@ export default function MapPage() {
         </div>
 
         <div className="hm-discovery-filters">
+          <button
+            type="button"
+            className={placeScope === 'near-me' ? 'hm-quick-filter active' : 'hm-quick-filter'}
+            onClick={() => placeScope === 'near-me' ? resetToViewportPlaces() : showNearMePlaces()}
+            disabled={placeScopeLoading}
+          >
+            <Navigation size={14} />
+            {placeScope === 'near-me' ? 'Đang gần tôi' : 'Gần tôi'}
+          </button>
+
+          <button
+            type="button"
+            className={openNow ? 'hm-quick-filter active' : 'hm-quick-filter'}
+            onClick={handleOpenNowToggle}
+          >
+            <Clock3 size={14} />
+            Đang mở
+          </button>
+
           <select
             value={category}
             onChange={(event) => handleCategoryChange(event.target.value)}
@@ -756,6 +896,17 @@ export default function MapPage() {
             <option value="">Mọi đánh giá</option>
             <option value="4">★ 4.0+</option>
             <option value="4.5">★ 4.5+</option>
+          </select>
+
+          <select
+            value={sortMode}
+            onChange={(event) => handleSortChange(event.target.value)}
+            aria-label="Sắp xếp địa điểm"
+          >
+            <option value="relevant">Phù hợp</option>
+            <option value="nearest" disabled={!userLocation}>Gần nhất</option>
+            <option value="rating">Đánh giá cao</option>
+            <option value="recent">Mới cập nhật</option>
           </select>
         </div>
 
@@ -790,9 +941,11 @@ export default function MapPage() {
             <span>
               {query.trim()
                 ? 'KẾT QUẢ TÌM KIẾM'
-                : placeScope === 'nearby'
-                  ? 'ĐỊA ĐIỂM LÂN CẬN'
-                  : placeScope === 'all'
+                : placeScope === 'near-me'
+                  ? 'GẦN VỊ TRÍ CỦA BẠN'
+                  : placeScope === 'nearby'
+                    ? 'ĐỊA ĐIỂM LÂN CẬN'
+                    : placeScope === 'all'
                     ? 'TẤT CẢ ĐỊA ĐIỂM'
                     : 'ĐỊA ĐIỂM ĐÃ TẢI'}
             </span>
@@ -811,9 +964,11 @@ export default function MapPage() {
           {!query.trim() && placeScope !== 'viewport' && (
             <div className="hm-place-scope-bar">
               <span>
-                {placeScope === 'nearby'
-                  ? 'Quanh khu vực đang xem' + (nearbyRadius ? ' · ' + Math.round(nearbyRadius / 1000) + ' km' : '')
-                  : 'Toàn bộ dữ liệu Hola Maps'}
+                {placeScope === 'near-me'
+                  ? 'Quanh vị trí của bạn' + (nearbyRadius ? ' · ' + Math.round(nearbyRadius / 1000) + ' km' : '')
+                  : placeScope === 'nearby'
+                    ? 'Quanh khu vực đang xem' + (nearbyRadius ? ' · ' + Math.round(nearbyRadius / 1000) + ' km' : '')
+                    : 'Toàn bộ dữ liệu Hola Maps'}
               </span>
               <button type="button" onClick={resetToViewportPlaces}>
                 Khu vực đang xem
@@ -838,11 +993,21 @@ export default function MapPage() {
                   <small>{place.category || 'Địa điểm'}</small>
                   <b>{place.name}</b>
                   <em>
-                    {placeScope === 'nearby' && Number.isFinite(Number(place.distance))
-                      ? formatDistance(place.distance) + ' · '
-                      : ''}
+                    {Number.isFinite(Number(place.distanceFromUser))
+                      ? formatDistance(place.distanceFromUser) + ' · '
+                      : placeScope === 'nearby' && Number.isFinite(Number(place.distance))
+                        ? formatDistance(place.distance) + ' · '
+                        : ''}
                     {place.address || 'Hòa Lạc, Hà Nội'}
                   </em>
+                  {place.openingHours && (() => {
+                    const status = formatOpenStatus(place.openingHours);
+                    return (
+                      <span className={status.known ? (status.open ? 'hm-open-status open' : 'hm-open-status closed') : 'hm-open-status unknown'}>
+                        {status.label} · {place.openingHours}
+                      </span>
+                    );
+                  })()}
                 </span>
                 <span className="hm-place-rating">★ {Number(place.rating || 0).toFixed(1)}</span>
               </button>
@@ -873,6 +1038,17 @@ export default function MapPage() {
                 <p>Thử tên địa điểm, khu vực hoặc từ khóa khác.</p>
                 <button className="hm-place-empty-reset" type="button" onClick={() => handleQueryChange('')}>
                   Xóa tìm kiếm
+                </button>
+              </div>
+            )}
+
+            {!placeScopeLoading && filteredPlaces.length === 0 && !query.trim() && placeScope === 'near-me' && (
+              <div className="hm-place-empty compact">
+                <span className="hm-place-empty-icon"><Navigation size={18} /></span>
+                <b>Chưa tìm thấy địa điểm gần bạn</b>
+                <p>Thử bỏ bộ lọc “Đang mở” hoặc mở rộng sang tất cả địa điểm.</p>
+                <button className="hm-place-empty-reset" type="button" onClick={showAllPlaces}>
+                  Xem tất cả địa điểm
                 </button>
               </div>
             )}
@@ -1018,6 +1194,17 @@ export default function MapPage() {
             <span><b>★ {Number(selectedPlace.rating || 0).toFixed(1)}</b><small>Đánh giá</small></span>
             <span><b>{selectedPlace.priceLevel || '—'}</b><small>Mức giá</small></span>
           </div>
+
+          {selectedPlace.openingHours && (() => {
+            const status = formatOpenStatus(selectedPlace.openingHours);
+            return (
+              <div className={status.open ? 'hm-inspector-open open' : status.known ? 'hm-inspector-open closed' : 'hm-inspector-open'}>
+                <Clock3 size={14} />
+                <b>{status.label}</b>
+                <span>{selectedPlace.openingHours}</span>
+              </div>
+            );
+          })()}
 
           <div className="hm-inspector-actions">
             <button type="button" onClick={() => startDirections(selectedPlace)}>
