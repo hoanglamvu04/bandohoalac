@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
 import { uploadRoot } from './middleware/upload.js';
-import { generalApiRateLimiter } from './middleware/rateLimit.js';
+import { generalApiRateLimiter, mapReadRateLimiter } from './middleware/rateLimit.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 import { resolveCorsOrigin } from './config/cors.js';
 
@@ -30,6 +30,8 @@ export function createApp() {
   }
   app.use('/uploads', express.static(uploadRoot));
   app.use('/api', generalApiRateLimiter);
+  app.use('/api/places/bounds', mapReadRateLimiter);
+  app.use('/api/map-layers', mapReadRateLimiter);
 
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, service: 'hola-maps-api', env: env.nodeEnv });
