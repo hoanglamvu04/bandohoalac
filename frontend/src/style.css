@@ -1423,3 +1423,12 @@ a{color:inherit}
   color:#b45309;
   background:#fff4cf;
 }
+
+
+.reference-top-empty{
+  padding:18px 12px;
+  color:#80918a;
+  text-align:center;
+  font-size:11px;
+  line-height:1.5;
+}
