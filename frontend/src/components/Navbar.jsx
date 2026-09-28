@@ -27,6 +27,7 @@ const navItems = [
 ];
 
 function notificationTarget(item) {
+  if (item?.data?.contributionType === 'REPORT_CLOSED') return '/profile';
   if (item?.data?.placeId) return '/place/' + item.data.placeId;
   if (item?.data?.contributionId) return '/profile';
   return '/profile';
