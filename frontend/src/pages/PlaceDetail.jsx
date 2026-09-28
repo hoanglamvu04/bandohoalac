@@ -14,13 +14,26 @@ import {
   Users
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
-import { getPlace } from '../services/api.js';
+import {
+  addFavorite,
+  getPlace,
+  getPlaceMe,
+  removeFavorite
+} from '../services/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
+import { useToast } from '../context/ToastContext.jsx';
+import PlaceReviews from '../components/PlaceReviews.jsx';
+import PlaceContributionPanel from '../components/PlaceContributionPanel.jsx';
 
 export default function PlaceDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
+  const { showToast } = useToast();
   const [place, setPlace] = useState(null);
   const [status, setStatus] = useState('loading');
   const [shareLabel, setShareLabel] = useState('Chia sẻ');
+  const [favorite, setFavorite] = useState(false);
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -41,9 +54,50 @@ export default function PlaceDetail() {
     };
   }, [id]);
 
+  useEffect(() => {
+    if (!user || !id) {
+      setFavorite(false);
+      return;
+    }
+
+    getPlaceMe(id)
+      .then((data) => setFavorite(Boolean(data?.favorite)))
+      .catch(() => setFavorite(false));
+  }, [id, user?.id]);
+
   const images = useMemo(() => (Array.isArray(place?.images) ? place.images.filter(Boolean) : []), [place]);
   const rating = Number(place?.rating);
   const hasRating = Number.isFinite(rating) && rating > 0;
+
+  async function reloadPlace() {
+    try {
+      const data = await getPlace(id);
+      setPlace(data);
+    } catch {
+      // Keep the current detail visible if a refresh fails.
+    }
+  }
+
+  async function toggleFavorite() {
+    if (!user) {
+      showToast('Đăng nhập để lưu địa điểm.', 'info');
+      return;
+    }
+    if (favoriteBusy) return;
+
+    setFavoriteBusy(true);
+    try {
+      const data = favorite
+        ? await removeFavorite(id)
+        : await addFavorite(id);
+      setFavorite(Boolean(data?.favorite));
+      showToast(data?.favorite ? 'Đã lưu địa điểm.' : 'Đã bỏ lưu địa điểm.', 'success');
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setFavoriteBusy(false);
+    }
+  }
 
   async function sharePlace() {
     if (!place) return;
@@ -105,7 +159,15 @@ export default function PlaceDetail() {
         <Link to="/map" className="back-link"><ArrowLeft size={18} /> Quay lại bản đồ</Link>
         <div className="detail-actions">
           <button type="button" onClick={sharePlace}><Share2 size={17} /> {shareLabel}</button>
-          <button type="button"><Heart size={17} /> Lưu</button>
+          <button
+            type="button"
+            className={favorite ? 'detail-favorite active' : 'detail-favorite'}
+            onClick={toggleFavorite}
+            disabled={favoriteBusy}
+          >
+            <Heart size={17} fill={favorite ? 'currentColor' : 'none'} />
+            {favorite ? 'Đã lưu' : 'Lưu'}
+          </button>
         </div>
       </div>
 
@@ -193,6 +255,14 @@ export default function PlaceDetail() {
               <BadgeCheck size={23} />
             </div>
           </section>
+
+          <div className="detail-divider" />
+
+          <PlaceReviews placeId={place.id} onChanged={reloadPlace} />
+
+          <div className="detail-divider" />
+
+          <PlaceContributionPanel place={place} />
         </div>
 
         <aside className="detail-info-card premium-detail-info-card">
