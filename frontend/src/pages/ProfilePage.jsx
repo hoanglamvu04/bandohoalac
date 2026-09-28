@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Award, BadgeCheck, MapPin, Medal, TrendingUp } from 'lucide-react';
+import { Award, BadgeCheck, Heart, MapPin, Medal, TrendingUp } from 'lucide-react';
 import ExplorerProfile from '../components/ExplorerProfile.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { getUserProfile } from '../services/api.js';
+import { getMyFavorites, getUserProfile } from '../services/api.js';
+import { Link } from 'react-router-dom';
 
 const TYPE_LABELS = {
   CREATE_PLACE: 'Thêm địa điểm',
@@ -18,13 +19,23 @@ const TYPE_LABELS = {
 export default function ProfilePage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
+  const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    getUserProfile(user.id)
-      .then(setProfile)
-      .catch(() => setProfile(null))
+    Promise.allSettled([
+      getUserProfile(user.id),
+      getMyFavorites()
+    ])
+      .then(([profileResult, favoritesResult]) => {
+        setProfile(profileResult.status === 'fulfilled' ? profileResult.value : null);
+        setFavorites(
+          favoritesResult.status === 'fulfilled' && Array.isArray(favoritesResult.value?.items)
+            ? favoritesResult.value.items
+            : []
+        );
+      })
       .finally(() => setLoading(false));
   }, [user]);
 
@@ -75,6 +86,38 @@ export default function ProfilePage() {
             ))}
           </div>
         </div>
+      </section>
+
+      <section className="profile-panel profile-favorites-panel">
+        <div className="panel-heading">
+          <div><span className="eyebrow">ĐÃ LƯU</span><h2>Địa điểm yêu thích</h2></div>
+          <Heart size={22} />
+        </div>
+
+        {!favorites.length ? (
+          <div className="empty-state">
+            <Heart size={22} />
+            <b>Chưa lưu địa điểm nào</b>
+            <span>Lưu những nơi bạn muốn ghé lại để tìm nhanh hơn.</span>
+          </div>
+        ) : (
+          <div className="profile-favorite-grid">
+            {favorites.slice(0, 8).map((place) => (
+              <Link className="profile-favorite-card" to={'/place/' + place.id} key={place.id}>
+                <span className="profile-favorite-cover">
+                  {place.images?.[0]
+                    ? <img src={place.images[0]} alt="" />
+                    : <MapPin size={20} />}
+                </span>
+                <span>
+                  <small>{place.category || 'Địa điểm'}</small>
+                  <b>{place.name}</b>
+                  <em>{place.address || 'Hòa Lạc'}</em>
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
     </main>
   );
