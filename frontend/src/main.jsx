@@ -23,6 +23,7 @@ import './home-reference.css';
 import './mobile-detail.css';
 import './mobile-contribute.css';
 import './mobile-profile.css';
+import './mobile-community.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
