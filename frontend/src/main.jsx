@@ -3,6 +3,7 @@ import { RouterProvider } from 'react-router-dom';
 import { router } from './routes.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
+import { registerHolaPwa } from './pwa.js';
 import './style.css';
 import './premium.css';
 import './modern-ui.css';
@@ -27,3 +28,6 @@ createRoot(document.getElementById('root')).render(
     </AuthProvider>
   </ToastProvider>
 );
+
+
+registerHolaPwa();
