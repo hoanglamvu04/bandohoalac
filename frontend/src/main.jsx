@@ -21,6 +21,7 @@ import './hero-search-modern.css';
 import './hero-map-polish.css';
 import './home-reference.css';
 import './mobile-detail.css';
+import './mobile-contribute.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
