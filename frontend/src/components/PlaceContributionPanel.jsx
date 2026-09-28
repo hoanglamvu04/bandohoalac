@@ -49,6 +49,7 @@ export default function PlaceContributionPanel({ place }) {
     () => ACTIONS.find((item) => item.type === type),
     [type]
   );
+  const SelectedActionIcon = selectedAction?.icon;
 
   function field(name, value) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -125,7 +126,7 @@ export default function PlaceContributionPanel({ place }) {
 
           <div className="place-contribution-editor">
             <div className="place-contribution-editor-title">
-              {selectedAction?.icon && <selectedAction.icon size={18} />}
+              {SelectedActionIcon && <SelectedActionIcon size={18} />}
               <b>{selectedAction?.label}</b>
             </div>
 
