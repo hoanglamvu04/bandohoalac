@@ -2,7 +2,7 @@ import { withTransaction } from '../database/pool.js';
 import { AppError } from '../utils/AppError.js';
 import { findCategoryBySlug } from './category.service.js';
 import {
-  createPlace, updatePlaceFields, updatePlaceLocation, addPlaceImages
+  createPlace, updatePlaceFields, updatePlaceLocation, addPlaceImages, addPlaceImageAssets
 } from './place.service.js';
 import {
   getContributionForUpdate, markContributionReviewed, recordChange, getContributionById
@@ -46,7 +46,9 @@ async function applyContributionToPlace(contribution, client) {
       createdBy: contribution.user_id
     }, client);
 
-    if (Array.isArray(payload.photos) && payload.photos.length) {
+    if (Array.isArray(payload.photoAssets) && payload.photoAssets.length) {
+      await addPlaceImageAssets(placeId, payload.photoAssets, contribution.user_id, client);
+    } else if (Array.isArray(payload.photos) && payload.photos.length) {
       await addPlaceImages(placeId, payload.photos, contribution.user_id, client);
     }
 
@@ -83,8 +85,12 @@ async function applyContributionToPlace(contribution, client) {
     await updatePlaceFields(placeId, updates, client);
   }
 
-  if (contribution.type === 'ADD_PHOTO' && Array.isArray(payload.photos) && payload.photos.length) {
-    await addPlaceImages(placeId, payload.photos, contribution.user_id, client);
+  if (contribution.type === 'ADD_PHOTO') {
+    if (Array.isArray(payload.photoAssets) && payload.photoAssets.length) {
+      await addPlaceImageAssets(placeId, payload.photoAssets, contribution.user_id, client);
+    } else if (Array.isArray(payload.photos) && payload.photos.length) {
+      await addPlaceImages(placeId, payload.photos, contribution.user_id, client);
+    }
   }
 
   if (contribution.type === 'FIX_LOCATION' && payload.location) {
