@@ -12,13 +12,13 @@ export const getPlaces = asyncHandler(async (req, res) => {
 
 export const getPlace = asyncHandler(async (req, res) => {
   const place = await getPlaceById(Number(req.params.id));
-  if (!place) throw new AppError('Place not found.', 404);
+  if (!place || place.status !== 'PUBLISHED') throw new AppError('Place not found.', 404);
   res.json(place);
 });
 
 export const getPlaceBySlugHandler = asyncHandler(async (req, res) => {
   const place = await getPlaceBySlug(req.params.slug);
-  if (!place) throw new AppError('Place not found.', 404);
+  if (!place || place.status !== 'PUBLISHED') throw new AppError('Place not found.', 404);
   res.json(place);
 });
 
