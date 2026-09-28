@@ -10,6 +10,7 @@ import {
 import { awardPointsForApproval, penalizeRejection } from './points.service.js';
 import { findUserById } from './user.service.js';
 import { deleteStoredAssets } from './storage.service.js';
+import { createNotification } from './notification.service.js';
 
 function sourceForRole(role) {
   if (role === 'ADMIN' || role === 'MODERATOR') return 'ADMIN';
@@ -122,10 +123,25 @@ export async function approveContribution(contributionId, moderatorId) {
       placeId
     }, client);
 
-    await awardPointsForApproval({
+    const points = await awardPointsForApproval({
       userId: contribution.user_id,
       contributionId,
       type: contribution.type
+    }, client);
+
+    await createNotification({
+      userId: contribution.user_id,
+      type: 'CONTRIBUTION_APPROVED',
+      title: 'Đóng góp đã được duyệt',
+      message: points > 0
+        ? 'Đóng góp của bạn đã được duyệt và cộng +' + points + ' điểm.'
+        : 'Đóng góp của bạn đã được duyệt.',
+      data: {
+        contributionId,
+        placeId,
+        points,
+        contributionType: contribution.type
+      }
     }, client);
 
     return getContributionById(contributionId, client);
@@ -145,6 +161,20 @@ export async function rejectContribution(contributionId, moderatorId, reason) {
     }, client);
 
     await penalizeRejection(contribution.user_id, client);
+
+    await createNotification({
+      userId: contribution.user_id,
+      type: 'CONTRIBUTION_REJECTED',
+      title: 'Đóng góp chưa được duyệt',
+      message: reason
+        ? 'Lý do: ' + reason
+        : 'Đóng góp của bạn chưa đáp ứng tiêu chí xuất bản.',
+      data: {
+        contributionId,
+        placeId: contribution.place_id,
+        contributionType: contribution.type
+      }
+    }, client);
 
     return getContributionById(contributionId, client);
   });
