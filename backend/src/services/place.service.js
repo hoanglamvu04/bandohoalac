@@ -438,9 +438,15 @@ export async function setPlaceImageCover(placeId, imageId, client = pool) {
   );
   if (!rows[0]) throw new AppError('Place image not found.', 404);
 
+  // Two-step update avoids transient conflicts with the partial unique index
+  // that guarantees one cover image per place.
   await client.query(
-    'UPDATE place_images SET is_cover = (id = $2) WHERE place_id = $1',
-    [placeId, imageId]
+    'UPDATE place_images SET is_cover = FALSE WHERE place_id = $1',
+    [placeId]
+  );
+  await client.query(
+    'UPDATE place_images SET is_cover = TRUE WHERE id = $1 AND place_id = $2',
+    [imageId, placeId]
   );
 }
 
