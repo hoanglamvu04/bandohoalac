@@ -23,7 +23,7 @@ import {
 import { Link } from 'react-router-dom';
 import MapView from '../components/MapView.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { getDirections, getMapLayers, getPlaces, getPlacesInBounds } from '../services/api.js';
+import { getDirections, getMapLayers, getNearbyPlaces, getPlaces, getPlacesInBounds } from '../services/api.js';
 import { LOCAL_BASEMAP_OPTIONS as BASEMAP_OPTIONS } from '../localBasemap.js';
 import { getBestBrowserLocation } from '../utils/geolocation.js';
 
@@ -110,6 +110,9 @@ export default function MapPage() {
   const [leftOpen, setLeftOpen] = useState(true);
   const [layersExpanded, setLayersExpanded] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
+  const [placeScope, setPlaceScope] = useState('viewport');
+  const [placeScopeLoading, setPlaceScopeLoading] = useState(false);
+  const [nearbyRadius, setNearbyRadius] = useState(0);
 
   const [routeDestination, setRouteDestination] = useState(null);
   const [routeData, setRouteData] = useState(null);
@@ -122,9 +125,11 @@ export default function MapPage() {
   useEffect(() => {
     if (!viewport) return undefined;
 
+    const needle = query.trim();
+    if (!needle && placeScope !== 'viewport') return undefined;
+
     let active = true;
     const controller = new AbortController();
-    const needle = query.trim();
     const normalizedViewport = normalizeViewport(viewport);
     const requestKey = needle
       ? 'q:' + needle.toLowerCase()
@@ -170,7 +175,7 @@ export default function MapPage() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [viewport, query]);
+  }, [viewport, query, placeScope]);
 
   useEffect(() => {
     if (!viewport || !activeLayers.length) {
@@ -250,6 +255,78 @@ export default function MapPage() {
     () => places.find((place) => place.id === selectedId) || null,
     [places, selectedId]
   );
+
+  function resetToViewportPlaces() {
+    lastPlacesRequestKeyRef.current = '';
+    setPlaceScope('viewport');
+    setNearbyRadius(0);
+    setSelectedId(null);
+  }
+
+  function viewportCenter() {
+    if (!viewport) return null;
+    return {
+      lat: (Number(viewport.south) + Number(viewport.north)) / 2,
+      lng: (Number(viewport.west) + Number(viewport.east)) / 2
+    };
+  }
+
+  async function showNearbyPlaces() {
+    const center = viewportCenter();
+    if (!center || placeScopeLoading) return;
+
+    setPlaceScopeLoading(true);
+    setSelectedId(null);
+
+    try {
+      let items = [];
+      let resolvedRadius = 0;
+
+      // Expand progressively so "nearby" is useful even in sparse zones
+      // without immediately dumping every place in the whole service area.
+      for (const radius of [5000, 10000, 20000]) {
+        const data = await getNearbyPlaces(center.lat, center.lng, radius);
+        items = Array.isArray(data?.items) ? data.items : [];
+        resolvedRadius = radius;
+        if (items.length >= 6 || (items.length > 0 && radius >= 10000)) break;
+      }
+
+      setPlaces(items);
+      setPlaceScope('nearby');
+      setNearbyRadius(resolvedRadius);
+    } catch (error) {
+      console.warn('[Hola Maps] nearby places request failed:', error);
+    } finally {
+      setPlaceScopeLoading(false);
+    }
+  }
+
+  async function showAllPlaces() {
+    if (placeScopeLoading) return;
+
+    setPlaceScopeLoading(true);
+    setSelectedId(null);
+
+    try {
+      const data = await getPlaces({ limit: 100 });
+      setPlaces(Array.isArray(data?.items) ? data.items : []);
+      setPlaceScope('all');
+      setNearbyRadius(0);
+    } catch (error) {
+      console.warn('[Hola Maps] all places request failed:', error);
+    } finally {
+      setPlaceScopeLoading(false);
+    }
+  }
+
+  function handleQueryChange(value) {
+    if (placeScope !== 'viewport') {
+      lastPlacesRequestKeyRef.current = '';
+      setPlaceScope('viewport');
+      setNearbyRadius(0);
+    }
+    setQuery(value);
+  }
 
   function togglePlaceSelection(place) {
     if (!place) return;
@@ -350,11 +427,11 @@ export default function MapPage() {
           <Search size={18} />
           <input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => handleQueryChange(event.target.value)}
             placeholder="Tìm địa điểm, tuyến đường, khu vực..."
           />
           {query && (
-            <button type="button" onClick={() => setQuery('')} aria-label="Xóa tìm kiếm">
+            <button type="button" onClick={() => handleQueryChange('')} aria-label="Xóa tìm kiếm">
               <X size={16} />
             </button>
           )}
@@ -388,9 +465,30 @@ export default function MapPage() {
 
         <section className="hm-panel-section hm-place-results">
           <div className="hm-section-title">
-            <span>ĐỊA ĐIỂM</span>
+            <span>
+              {query.trim()
+                ? 'KẾT QUẢ TÌM KIẾM'
+                : placeScope === 'nearby'
+                  ? 'ĐỊA ĐIỂM LÂN CẬN'
+                  : placeScope === 'all'
+                    ? 'TẤT CẢ ĐỊA ĐIỂM'
+                    : 'ĐỊA ĐIỂM'}
+            </span>
             <b>{filteredPlaces.length}</b>
           </div>
+
+          {!query.trim() && placeScope !== 'viewport' && (
+            <div className="hm-place-scope-bar">
+              <span>
+                {placeScope === 'nearby'
+                  ? 'Quanh khu vực đang xem' + (nearbyRadius ? ' · ' + Math.round(nearbyRadius / 1000) + ' km' : '')
+                  : 'Toàn bộ dữ liệu Hola Maps'}
+              </span>
+              <button type="button" onClick={resetToViewportPlaces}>
+                Khu vực đang xem
+              </button>
+            </div>
+          )}
 
           <div className="hm-place-list">
             {filteredPlaces.slice(0, 30).map((place) => (
@@ -408,11 +506,71 @@ export default function MapPage() {
                 <span className="hm-place-copy">
                   <small>{place.category || 'Địa điểm'}</small>
                   <b>{place.name}</b>
-                  <em>{place.address || 'Hòa Lạc, Hà Nội'}</em>
+                  <em>
+                    {placeScope === 'nearby' && Number.isFinite(Number(place.distance))
+                      ? formatDistance(place.distance) + ' · '
+                      : ''}
+                    {place.address || 'Hòa Lạc, Hà Nội'}
+                  </em>
                 </span>
                 <span className="hm-place-rating">★ {Number(place.rating || 0).toFixed(1)}</span>
               </button>
             ))}
+
+            {!placeScopeLoading && filteredPlaces.length === 0 && !query.trim() && placeScope === 'viewport' && (
+              <div className="hm-place-empty">
+                <span className="hm-place-empty-icon"><MapPin size={20} /></span>
+                <b>Chưa có địa điểm trong vùng này</b>
+                <p>Mở rộng phạm vi để tiếp tục khám phá thay vì để danh sách trống.</p>
+                <div className="hm-place-empty-actions">
+                  <button type="button" onClick={showNearbyPlaces}>
+                    <Navigation size={14} />
+                    Xem khu vực lân cận
+                  </button>
+                  <button type="button" onClick={showAllPlaces}>
+                    <MapIcon size={14} />
+                    Tất cả địa điểm
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!placeScopeLoading && filteredPlaces.length === 0 && !!query.trim() && (
+              <div className="hm-place-empty compact">
+                <span className="hm-place-empty-icon"><Search size={18} /></span>
+                <b>Không tìm thấy “{query.trim()}”</b>
+                <p>Thử tên địa điểm, khu vực hoặc từ khóa khác.</p>
+                <button className="hm-place-empty-reset" type="button" onClick={() => handleQueryChange('')}>
+                  Xóa tìm kiếm
+                </button>
+              </div>
+            )}
+
+            {!placeScopeLoading && filteredPlaces.length === 0 && !query.trim() && placeScope === 'nearby' && (
+              <div className="hm-place-empty compact">
+                <span className="hm-place-empty-icon"><Navigation size={18} /></span>
+                <b>Chưa có địa điểm lân cận</b>
+                <p>Bạn có thể xem toàn bộ địa điểm đang có trên Hola Maps.</p>
+                <button className="hm-place-empty-reset" type="button" onClick={showAllPlaces}>
+                  Xem tất cả địa điểm
+                </button>
+              </div>
+            )}
+
+            {!placeScopeLoading && filteredPlaces.length === 0 && !query.trim() && placeScope === 'all' && (
+              <div className="hm-place-empty compact">
+                <span className="hm-place-empty-icon"><MapPin size={18} /></span>
+                <b>Chưa có địa điểm nào</b>
+                <p>Hãy là người đầu tiên đóng góp địa điểm cho Hola Maps.</p>
+              </div>
+            )}
+
+            {placeScopeLoading && (
+              <div className="hm-place-scope-loading">
+                <span />
+                Đang mở rộng phạm vi địa điểm…
+              </div>
+            )}
           </div>
         </section>
 
