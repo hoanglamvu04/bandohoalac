@@ -74,7 +74,7 @@ export default function AdminPlaces() {
 
   function loadList() {
     setLoading(true);
-    getAdminPlaces({
+    return getAdminPlaces({
       status,
       q: query.trim() || undefined,
       limit: 100
