@@ -1304,3 +1304,38 @@
   .reference-top-head>small{display:none}
   .reference-top-row{grid-template-columns:29px 34px minmax(0,1fr) 78px}
 }
+
+
+/* Mobile bottom navigation: align active state with Hola Maps blue brand. */
+@media(max-width:760px){
+  .bottom-nav{
+    background:rgba(255,255,255,.97)!important;
+    border:1px solid rgba(37,99,235,.10)!important;
+    box-shadow:0 14px 38px rgba(15,42,88,.16)!important;
+  }
+
+  .bottom-link{
+    min-height:48px;
+    justify-content:center;
+    border-radius:13px;
+    color:#8ca0ac!important;
+    font-size:11px;
+    font-weight:750;
+  }
+
+  .bottom-link.active{
+    color:#2563eb!important;
+    background:#eaf2ff!important;
+    box-shadow:inset 0 0 0 1px rgba(37,99,235,.08);
+  }
+
+  .bottom-link.active svg{
+    color:#2563eb;
+    stroke-width:2.25;
+  }
+
+  .bottom-link.active span{
+    color:#2563eb;
+    font-weight:900;
+  }
+}
