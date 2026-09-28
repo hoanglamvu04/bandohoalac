@@ -84,8 +84,16 @@ export function getPlaceBySlug(slug) {
   return unwrap(client.get('/places/slug/' + encodeURIComponent(slug)));
 }
 
-export function getNearbyPlaces(lat, lng, radius = 5000) {
-  return unwrap(client.get('/places/nearby', { params: { lat, lng, radius } }));
+export function getNearbyPlaces(lat, lng, radius = 5000, filters = {}) {
+  return unwrap(client.get('/places/nearby', {
+    params: cleanParams({
+      lat,
+      lng,
+      radius,
+      category: filters.category,
+      minRating: filters.minRating
+    })
+  }));
 }
 
 export function getPlacesInBounds(bounds, options = {}) {
@@ -176,8 +184,90 @@ export function getUserProfile(id) {
   return unwrap(client.get('/users/' + encodeURIComponent(id) + '/profile'));
 }
 
-export function getLeaderboard(limit = 20) {
-  return unwrap(client.get('/leaderboard', { params: { limit } }));
+export function getLeaderboard(limit = 20, period = 'month') {
+  return unwrap(client.get('/leaderboard', { params: { limit, period } }));
+}
+
+export function getPlaceReviews(id, params = {}) {
+  return unwrap(client.get('/places/' + encodeURIComponent(id) + '/reviews', {
+    params: cleanParams(params)
+  }));
+}
+
+export function getPlaceMe(id) {
+  return unwrap(client.get('/places/' + encodeURIComponent(id) + '/me'));
+}
+
+export function savePlaceReview(id, payload) {
+  return unwrap(client.put('/places/' + encodeURIComponent(id) + '/review', payload));
+}
+
+export function deletePlaceReview(id) {
+  return unwrap(client.delete('/places/' + encodeURIComponent(id) + '/review'));
+}
+
+export function addFavorite(id) {
+  return unwrap(client.post('/places/' + encodeURIComponent(id) + '/favorite'));
+}
+
+export function removeFavorite(id) {
+  return unwrap(client.delete('/places/' + encodeURIComponent(id) + '/favorite'));
+}
+
+export function getMyFavorites() {
+  return unwrap(client.get('/places/favorites/me'));
+}
+
+export function getNotifications(params = {}) {
+  return unwrap(client.get('/notifications', { params: cleanParams(params) }));
+}
+
+export function markNotificationRead(id) {
+  return unwrap(client.post('/notifications/' + encodeURIComponent(id) + '/read'));
+}
+
+export function markAllNotificationsRead() {
+  return unwrap(client.post('/notifications/read-all'));
+}
+
+export function getAdminPlaces(params = {}) {
+  return unwrap(client.get('/admin/places', { params: cleanParams(params) }));
+}
+
+export function getAdminPlace(id) {
+  return unwrap(client.get('/admin/places/' + encodeURIComponent(id)));
+}
+
+export function createAdminPlace(payload) {
+  return unwrap(client.post('/admin/places', payload));
+}
+
+export function updateAdminPlace(id, payload) {
+  return unwrap(client.patch('/admin/places/' + encodeURIComponent(id), payload));
+}
+
+export function archiveAdminPlace(id) {
+  return unwrap(client.delete('/admin/places/' + encodeURIComponent(id)));
+}
+
+export function uploadAdminPlaceImages(id, photos = []) {
+  const formData = new FormData();
+  photos.forEach((file) => formData.append('photos', file));
+  return unwrap(client.post('/admin/places/' + encodeURIComponent(id) + '/images', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }));
+}
+
+export function setAdminPlaceCover(id, imageId) {
+  return unwrap(client.post(
+    '/admin/places/' + encodeURIComponent(id) + '/images/' + encodeURIComponent(imageId) + '/cover'
+  ));
+}
+
+export function deleteAdminPlaceImage(id, imageId) {
+  return unwrap(client.delete(
+    '/admin/places/' + encodeURIComponent(id) + '/images/' + encodeURIComponent(imageId)
+  ));
 }
 
 export { API_URL };
