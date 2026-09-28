@@ -28,12 +28,13 @@ function rankClass(rank) {
 
 export default function Leaderboard() {
   const [explorers, setExplorers] = useState([]);
+  const [period, setPeriod] = useState('month');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
 
-    getLeaderboard()
+    getLeaderboard(20, period)
       .then((data) => {
         if (active) setExplorers(Array.isArray(data?.items) ? data.items : []);
       })
@@ -47,7 +48,7 @@ export default function Leaderboard() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [period]);
 
   const periodLabel = useMemo(
     () => new Intl.DateTimeFormat('vi-VN', {
@@ -116,9 +117,27 @@ export default function Leaderboard() {
               </div>
             </div>
 
-            <div className="community-period" aria-label={periodLabel}>
-              <CalendarDays size={17} />
-              <span>{periodLabel}</span>
+            <div className="community-period-wrap">
+              <div className="community-period-tabs">
+                <button
+                  type="button"
+                  className={period === 'month' ? 'active' : ''}
+                  onClick={() => setPeriod('month')}
+                >
+                  Tháng này
+                </button>
+                <button
+                  type="button"
+                  className={period === 'all' ? 'active' : ''}
+                  onClick={() => setPeriod('all')}
+                >
+                  Tất cả
+                </button>
+              </div>
+              <div className="community-period" aria-label={period === 'month' ? periodLabel : 'Tất cả thời gian'}>
+                <CalendarDays size={17} />
+                <span>{period === 'month' ? periodLabel : 'Tất cả thời gian'}</span>
+              </div>
             </div>
           </header>
 
