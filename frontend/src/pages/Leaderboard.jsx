@@ -33,6 +33,7 @@ export default function Leaderboard() {
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
 
     getLeaderboard(20, period)
       .then((data) => {
