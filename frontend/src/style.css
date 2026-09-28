@@ -501,7 +501,7 @@ a{color:inherit}
   padding-top:6px;
   border-top:1px dashed #d7e1dc;
   color:#899791;
-  font-size:9px;
+  font-size:12px;
   line-height:1.45;
 }
 
@@ -848,7 +848,7 @@ a{color:inherit}
 
 .profile-favorite-card small{
   color:#789087;
-  font-size:9px;
+  font-size:12px;
   font-weight:900;
   text-transform:uppercase;
 }
@@ -894,7 +894,7 @@ a{color:inherit}
   display:block;
   padding:7px 8px 8px;
   color:#8a9b95;
-  font-size:9px;
+  font-size:12px;
   font-weight:900;
   letter-spacing:.08em;
   text-transform:uppercase;
@@ -1065,7 +1065,7 @@ a{color:inherit}
   padding:6px 9px;
   color:#7b8d86;
   background:transparent;
-  font-size:9px;
+  font-size:12px;
   font-weight:900;
   cursor:pointer;
 }
@@ -1204,7 +1204,7 @@ a{color:inherit}
 .admin-place-row b{font-size:11px}
 .admin-place-row em{
   color:#8b9994;
-  font-size:9px;
+  font-size:12px;
   font-style:normal;
 }
 
@@ -1213,7 +1213,7 @@ a{color:inherit}
   align-items:center;
   gap:3px;
   color:#a57918;
-  font-size:9px;
+  font-size:12px;
 }
 
 .admin-place-editor{
