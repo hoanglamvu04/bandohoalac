@@ -65,6 +65,63 @@ const LAYER_MIN_ZOOM = {
   BUILDING: 14
 };
 
+const MAX_PROGRESSIVE_PLACES = 400;
+const VIEWPORT_PREFETCH_RATIO = 0.35;
+const MAX_LOADED_VIEWPORTS = 24;
+
+function expandViewport(viewport, ratio = VIEWPORT_PREFETCH_RATIO) {
+  const width = Math.max(0, Number(viewport.east) - Number(viewport.west));
+  const height = Math.max(0, Number(viewport.north) - Number(viewport.south));
+  const padX = width * ratio;
+  const padY = height * ratio;
+
+  return {
+    west: Number(viewport.west) - padX,
+    south: Number(viewport.south) - padY,
+    east: Number(viewport.east) + padX,
+    north: Number(viewport.north) + padY,
+    zoom: Number(viewport.zoom)
+  };
+}
+
+function viewportContains(outer, inner) {
+  if (!outer || !inner) return false;
+  return (
+    Number(inner.west) >= Number(outer.west) &&
+    Number(inner.south) >= Number(outer.south) &&
+    Number(inner.east) <= Number(outer.east) &&
+    Number(inner.north) <= Number(outer.north)
+  );
+}
+
+function placeInsideViewport(place, viewport) {
+  if (!viewport) return false;
+  const lng = Number(place?.lng);
+  const lat = Number(place?.lat);
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return false;
+
+  return (
+    lng >= Number(viewport.west) &&
+    lng <= Number(viewport.east) &&
+    lat >= Number(viewport.south) &&
+    lat <= Number(viewport.north)
+  );
+}
+
+function mergeProgressivePlaces(current, incoming) {
+  const merged = new Map();
+
+  // New viewport results go first so the sidebar feels relevant to where the
+  // user has just moved, while older loaded places remain available.
+  for (const place of [...incoming, ...current]) {
+    if (!place?.id || merged.has(place.id)) continue;
+    merged.set(place.id, place);
+    if (merged.size >= MAX_PROGRESSIVE_PLACES) break;
+  }
+
+  return Array.from(merged.values());
+}
+
 function normalizeViewport(viewport) {
   const round = (value, digits = 4) => {
     const n = Number(value);
@@ -135,6 +192,7 @@ export default function MapPage() {
   const [routeError, setRouteError] = useState('');
 
   const lastPlacesRequestKeyRef = useRef('');
+  const loadedPlaceBoundsRef = useRef([]);
   const lastLayersRequestKeyRef = useRef('');
   const galleryTouchStartRef = useRef(null);
 
@@ -148,11 +206,16 @@ export default function MapPage() {
   }, []);
 
   useEffect(() => {
+    // Region/filter changes start a new progressive discovery session. Within
+    // that session, panning keeps already loaded places instead of replacing
+    // them on every bounds request.
     lastPlacesRequestKeyRef.current = '';
+    loadedPlaceBoundsRef.current = [];
+    setPlaces([]);
     setPlaceScope('viewport');
     setNearbyRadius(0);
     setSelectedId(null);
-  }, [regionId]);
+  }, [regionId, category, minRating]);
 
   useEffect(() => {
     const nextQuery = searchParams.get('q') || '';
@@ -175,53 +238,98 @@ export default function MapPage() {
     const controller = new AbortController();
     const normalizedViewport = normalizeViewport(viewport);
     const filterKey = ':category=' + category + ':rating=' + minRating;
-    const requestKey = needle
-      ? 'q:' + needle.toLowerCase() + filterKey
-      : 'bounds:' + viewportKey(normalizedViewport) + filterKey;
+
+    // Search is intentionally replacement-based because each query is a new
+    // result set. Normal map exploration is progressive and cached.
+    if (needle) {
+      const requestKey = 'q:' + needle.toLowerCase() + filterKey;
+      if (lastPlacesRequestKeyRef.current === requestKey) {
+        return () => controller.abort();
+      }
+
+      const timer = window.setTimeout(() => {
+        getPlaces(
+          {
+            q: needle,
+            category,
+            minRating: minRating || undefined,
+            limit: 80
+          },
+          { signal: controller.signal }
+        )
+          .then((data) => {
+            if (!active) return;
+            lastPlacesRequestKeyRef.current = requestKey;
+            setPlaces(Array.isArray(data?.items) ? data.items : []);
+          })
+          .catch((error) => {
+            if (!active || error?.name === 'AbortError') return;
+            if (error?.status === 429) {
+              console.warn('[Hola Maps] search rate-limited; keeping previous results');
+              return;
+            }
+            console.warn('[Hola Maps] places search failed:', error);
+          });
+      }, 320);
+
+      return () => {
+        active = false;
+        window.clearTimeout(timer);
+        controller.abort();
+      };
+    }
+
+    // Already fetched a padded area around this viewport: keep the current
+    // cache and do not call the API again when the user pans back into it.
+    if (loadedPlaceBoundsRef.current.some((bounds) =>
+      viewportContains(bounds, normalizedViewport)
+    )) {
+      return () => controller.abort();
+    }
+
+    const requestViewport = expandViewport(normalizedViewport);
+    const requestKey = 'bounds:' + viewportKey(requestViewport) + filterKey;
 
     if (lastPlacesRequestKeyRef.current === requestKey) {
       return () => controller.abort();
     }
 
     const timer = window.setTimeout(() => {
-      const request = needle
-        ? getPlaces(
-            {
-              q: needle,
-              category,
-              minRating: minRating || undefined,
-              limit: 80
-            },
-            { signal: controller.signal }
-          )
-        : getPlacesInBounds(
-            {
-              ...normalizedViewport,
-              category,
-              minRating: minRating || undefined
-            },
-            { signal: controller.signal }
-          );
-
-      request
+      getPlacesInBounds(
+        {
+          west: requestViewport.west,
+          south: requestViewport.south,
+          east: requestViewport.east,
+          north: requestViewport.north,
+          category,
+          minRating: minRating || undefined
+        },
+        { signal: controller.signal }
+      )
         .then((data) => {
           if (!active) return;
+
+          const items = Array.isArray(data?.items) ? data.items : [];
           lastPlacesRequestKeyRef.current = requestKey;
-          setPlaces(Array.isArray(data?.items) ? data.items : []);
+          loadedPlaceBoundsRef.current = [
+            requestViewport,
+            ...loadedPlaceBoundsRef.current
+          ].slice(0, MAX_LOADED_VIEWPORTS);
+
+          setPlaces((current) => mergeProgressivePlaces(current, items));
         })
         .catch((error) => {
           if (!active || error?.name === 'AbortError') return;
 
-          // Keep the previous map data on transient 429/network errors instead
-          // of making the UI look like the backend crashed.
+          // Never wipe the accumulated map on transient backend/network errors.
           if (error?.status === 429) {
-            console.warn('[Hola Maps] places read rate-limited; keeping cached view');
+            console.warn('[Hola Maps] places read rate-limited; keeping progressive cache');
             return;
           }
 
           console.warn('[Hola Maps] places request failed:', error);
         });
-    }, needle ? 320 : 280);
+    }, 260);
 
     return () => {
       active = false;
@@ -304,6 +412,36 @@ export default function MapPage() {
     });
   }, [places, query]);
 
+  const viewportPlaceCount = useMemo(() => {
+    if (!viewport || query.trim() || placeScope !== 'viewport') {
+      return filteredPlaces.length;
+    }
+    return filteredPlaces.filter((place) => placeInsideViewport(place, viewport)).length;
+  }, [filteredPlaces, viewport, query, placeScope]);
+
+  const sidebarPlaces = useMemo(() => {
+    if (!viewport || query.trim() || placeScope !== 'viewport') {
+      return filteredPlaces;
+    }
+
+    const centerLng = (Number(viewport.west) + Number(viewport.east)) / 2;
+    const centerLat = (Number(viewport.south) + Number(viewport.north)) / 2;
+
+    return [...filteredPlaces].sort((a, b) => {
+      const aVisible = placeInsideViewport(a, viewport);
+      const bVisible = placeInsideViewport(b, viewport);
+      if (aVisible !== bVisible) return aVisible ? -1 : 1;
+
+      const aLng = Number(a.lng);
+      const aLat = Number(a.lat);
+      const bLng = Number(b.lng);
+      const bLat = Number(b.lat);
+      const aDistance = ((aLng - centerLng) ** 2) + ((aLat - centerLat) ** 2);
+      const bDistance = ((bLng - centerLng) ** 2) + ((bLat - centerLat) ** 2);
+      return aDistance - bDistance;
+    });
+  }, [filteredPlaces, viewport, query, placeScope]);
+
   const selectedPlace = useMemo(
     () => places.find((place) => place.id === selectedId) || null,
     [places, selectedId]
@@ -363,6 +501,8 @@ export default function MapPage() {
 
   function resetToViewportPlaces() {
     lastPlacesRequestKeyRef.current = '';
+    loadedPlaceBoundsRef.current = [];
+    setPlaces([]);
     setPlaceScope('viewport');
     setNearbyRadius(0);
     setSelectedId(null);
@@ -446,11 +586,26 @@ export default function MapPage() {
   }
 
   function handleQueryChange(value) {
+    const wasSearching = Boolean(query.trim());
+    const willSearch = Boolean(value.trim());
+
     if (placeScope !== 'viewport') {
       lastPlacesRequestKeyRef.current = '';
+      loadedPlaceBoundsRef.current = [];
+      setPlaces([]);
       setPlaceScope('viewport');
       setNearbyRadius(0);
     }
+
+    // Entering/leaving search changes between replacement results and
+    // progressive viewport results, so start with a clean cache boundary.
+    if (wasSearching !== willSearch) {
+      lastPlacesRequestKeyRef.current = '';
+      loadedPlaceBoundsRef.current = [];
+      setPlaces([]);
+      setSelectedId(null);
+    }
+
     setQuery(value);
     syncDiscoveryParams({ q: value.trim() || null });
   }
@@ -639,10 +794,19 @@ export default function MapPage() {
                   ? 'ĐỊA ĐIỂM LÂN CẬN'
                   : placeScope === 'all'
                     ? 'TẤT CẢ ĐỊA ĐIỂM'
-                    : 'ĐỊA ĐIỂM'}
+                    : 'ĐỊA ĐIỂM ĐÃ TẢI'}
             </span>
             <b>{filteredPlaces.length}</b>
           </div>
+
+          {!query.trim() && placeScope === 'viewport' && filteredPlaces.length > 0 && viewportPlaceCount === 0 && (
+            <div className="hm-place-scope-bar">
+              <span>Vùng đang xem chưa có địa điểm · vẫn giữ {filteredPlaces.length} địa điểm đã tải</span>
+              <button type="button" onClick={showNearbyPlaces}>
+                Tìm lân cận
+              </button>
+            </div>
+          )}
 
           {!query.trim() && placeScope !== 'viewport' && (
             <div className="hm-place-scope-bar">
@@ -658,7 +822,7 @@ export default function MapPage() {
           )}
 
           <div className="hm-place-list">
-            {filteredPlaces.slice(0, 30).map((place) => (
+            {sidebarPlaces.slice(0, 80).map((place) => (
               <button
                 key={place.id}
                 type="button"
