@@ -25,6 +25,7 @@ import './mobile-contribute.css';
 import './mobile-profile.css';
 import './mobile-community.css';
 import './mobile-admin-places.css';
+import './mobile-final-pass.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
