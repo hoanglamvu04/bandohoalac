@@ -181,7 +181,11 @@ export default function MapPage() {
   const [mapData, setMapData] = useState({ type: 'FeatureCollection', features: [] });
   const [viewport, setViewport] = useState(null);
   const [dataLoading, setDataLoading] = useState(false);
-  const [leftOpen, setLeftOpen] = useState(true);
+  const [leftOpen, setLeftOpen] = useState(() =>
+    typeof window === 'undefined'
+      ? true
+      : !window.matchMedia('(max-width: 760px)').matches
+  );
   const [layersExpanded, setLayersExpanded] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [placeScope, setPlaceScope] = useState('viewport');
@@ -616,6 +620,13 @@ export default function MapPage() {
       setNearbyRadius(resolvedRadius);
       setSortMode('nearest');
       syncDiscoveryParams({ sort: 'nearest' });
+
+      if (
+        typeof window !== 'undefined' &&
+        window.matchMedia('(max-width: 760px)').matches
+      ) {
+        setLeftOpen(true);
+      }
     } catch (error) {
       console.warn('[Hola Maps] near-me request failed:', error);
     } finally {
@@ -696,6 +707,14 @@ export default function MapPage() {
     const wasSearching = Boolean(query.trim());
     const willSearch = Boolean(value.trim());
 
+    if (
+      willSearch &&
+      typeof window !== 'undefined' &&
+      window.matchMedia('(max-width: 760px)').matches
+    ) {
+      setLeftOpen(true);
+    }
+
     if (placeScope !== 'viewport') {
       lastPlacesRequestKeyRef.current = '';
       loadedPlaceBoundsRef.current = [];
@@ -749,7 +768,17 @@ export default function MapPage() {
 
   function togglePlaceSelection(place) {
     if (!place) return;
-    setSelectedId((current) => current === place.id ? null : place.id);
+
+    const nextSelected = selectedId === place.id ? null : place.id;
+    setSelectedId(nextSelected);
+
+    if (
+      nextSelected &&
+      typeof window !== 'undefined' &&
+      window.matchMedia('(max-width: 760px)').matches
+    ) {
+      setLeftOpen(false);
+    }
   }
 
   function toggleLayer(type) {
@@ -926,6 +955,15 @@ export default function MapPage() {
           <Plus size={17} /> Thêm địa điểm
         </Link>
       </header>
+
+      {leftOpen && (
+        <button
+          className="hm-mobile-panel-backdrop"
+          type="button"
+          aria-label="Đóng danh sách địa điểm"
+          onClick={() => setLeftOpen(false)}
+        />
+      )}
 
       <aside className={leftOpen ? 'hm-left-panel open' : 'hm-left-panel'}>
         <div className="hm-panel-heading">
