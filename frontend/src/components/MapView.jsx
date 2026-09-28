@@ -491,11 +491,23 @@ export default function MapView({
 
     const initialize = async () => {
       try {
-        const [maplibre] = await Promise.all([
+        // Start every cold-start dependency at the same time.
+        // Previously Hola Maps loaded MapLibre/CDN scripts first and only then
+        // probed the local archives, which added a second serial wait.
+        const [
+          maplibre,
+          ,
+          ,
+          ,
+          hasLocalPmtiles,
+          hasSupplementalBuildings
+        ] = await Promise.all([
           import('maplibre-gl'),
           import('maplibre-gl/dist/maplibre-gl.css'),
           loadExternalScript('https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js', 'pmtiles'),
-          loadExternalScript('https://unpkg.com/@protomaps/basemaps@5/dist/basemaps.js', 'basemaps')
+          loadExternalScript('https://unpkg.com/@protomaps/basemaps@5/dist/basemaps.js', 'basemaps'),
+          localPmtilesAvailable(),
+          supplementalBuildingsAvailable()
         ]);
         if (cancelled || !containerRef.current) return;
 
@@ -507,10 +519,6 @@ export default function MapView({
           // Protocol may already exist after a hot reload.
         }
 
-        const [hasLocalPmtiles, hasSupplementalBuildings] = await Promise.all([
-          localPmtilesAvailable(),
-          supplementalBuildingsAvailable()
-        ]);
         if (cancelled) return;
 
         const canUseSupplementalBuildings = hasLocalPmtiles && hasSupplementalBuildings;
