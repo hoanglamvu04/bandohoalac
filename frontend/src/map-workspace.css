@@ -2358,3 +2358,114 @@ body.map-route-active{
     min-width:51px;
   }
 }
+
+
+/* ============================================================
+   Mobile map control alignment v3
+   - keep Add Place in the first command row
+   - restore app bottom navigation on /map
+   - lift map controls above bottom navigation
+   ============================================================ */
+@media(max-width:760px){
+  /* Explicit grid placement prevents the + action from wrapping under filters. */
+  .hm-map-menu{
+    grid-column:1;
+    grid-row:1;
+  }
+
+  .hm-map-search{
+    grid-column:2;
+    grid-row:1;
+  }
+
+  .hm-add-place{
+    grid-column:3;
+    grid-row:1;
+    align-self:center;
+    justify-self:end;
+  }
+
+  .hm-discovery-filters{
+    grid-column:1/-1;
+    grid-row:2;
+  }
+
+  /* /map keeps the same app navigation as every other mobile page. */
+  .map-app-shell .bottom-nav{
+    display:grid!important;
+  }
+
+  /* Bottom sheet must stop above the persistent app nav. */
+  .hm-left-panel{
+    bottom:82px;
+    max-height:calc(100dvh - 226px);
+  }
+
+  .hm-place-inspector,
+  .hm-route-panel{
+    bottom:82px;
+    max-height:calc(100dvh - 170px);
+  }
+
+  /* Basemap modes sit immediately above app navigation. */
+  .hm-basemap-switcher,
+  .hm-basemap-switcher.panel-open{
+    bottom:88px;
+  }
+
+  /* User-location action gets its own row above the basemap selector. */
+  .hm-locate{
+    right:9px;
+    bottom:158px;
+  }
+
+  .hm-map-provider{
+    left:9px;
+    bottom:157px;
+    max-width:48vw;
+  }
+
+  .hm-location-notice{
+    bottom:154px;
+  }
+
+  /* Keep MapLibre zoom +/- / compass visible and clear of our mobile controls. */
+  .hm-map-canvas .maplibregl-ctrl-bottom-right{
+    right:8px;
+    bottom:198px;
+  }
+
+  .hm-map-canvas .maplibregl-ctrl-bottom-right .maplibregl-ctrl{
+    margin:0 0 6px 0;
+  }
+
+  .hm-map-canvas .maplibregl-ctrl-group{
+    border-radius:11px;
+    box-shadow:0 8px 22px rgba(14,42,36,.14);
+  }
+
+  .hm-map-canvas .maplibregl-ctrl-group button{
+    width:34px;
+    height:34px;
+  }
+}
+
+@media(max-width:420px){
+  .hm-left-panel{
+    bottom:80px;
+    max-height:calc(100dvh - 220px);
+  }
+
+  .hm-basemap-switcher,
+  .hm-basemap-switcher.panel-open{
+    bottom:86px;
+  }
+
+  .hm-locate{
+    bottom:154px;
+  }
+
+  .hm-map-canvas .maplibregl-ctrl-bottom-right{
+    bottom:194px;
+  }
+}
