@@ -120,11 +120,11 @@ test('contribution permissions: a plain USER cannot reach admin moderation route
   assert.equal(res.status, 403);
 });
 
-test('admin: ADMIN role can list contributions', async () => {
+test('admin: MODERATOR role can list contributions', async () => {
   const loginRes = await fetch(url('/api/auth/login'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'admin@holamaps.vn', password: 'Admin@123' })
+    body: JSON.stringify({ email: 'moderator@holamaps.vn', password: 'Moderator@123' })
   });
   assert.equal(loginRes.status, 200);
   const { token } = await loginRes.json();
@@ -141,6 +141,21 @@ test('GET /api/leaderboard returns ranked items', async () => {
   const res = await fetch(url('/api/leaderboard'));
   assert.equal(res.status, 200);
   const body = await res.json();
+  assert.ok(Array.isArray(body.items));
+});
+
+
+
+test('notifications: unauthenticated list is rejected', async () => {
+  const res = await fetch(url('/api/notifications'));
+  assert.equal(res.status, 401);
+});
+
+test('GET /api/leaderboard supports all-time period', async () => {
+  const res = await fetch(url('/api/leaderboard?period=all'));
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.period, 'all');
   assert.ok(Array.isArray(body.items));
 });
 
