@@ -1,4 +1,4 @@
-import { Mail, MapPin, MapPinned, Play, UsersRound } from 'lucide-react';
+import { ExternalLink, MapPinned, MessageCircle, UserRound, UsersRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Footer() {
@@ -11,11 +11,34 @@ export default function Footer() {
             <span><b>Hola Maps</b><small>LOCAL DISCOVERY</small></span>
           </div>
           <p>Bản đồ số khu vực Hòa Lạc - Thạch Thất và vùng phụ cận. Khám phá địa điểm địa phương theo cách thông minh hơn.</p>
-          <div className="footer-socials" aria-label="Kênh cộng đồng">
-            <span><UsersRound size={16}/></span>
-            <span><MapPin size={16}/></span>
-            <span><Play size={16}/></span>
-            <span><Mail size={16}/></span>
+          <div className="footer-socials" aria-label="Kênh liên hệ Hola Maps">
+            <a
+              href="https://www.facebook.com/lamvudcba"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Facebook cá nhân"
+              title="Facebook cá nhân"
+            >
+              <UserRound size={16}/>
+            </a>
+            <a
+              href="https://www.facebook.com/groups/1436045585156420"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Nhóm Facebook Hola Maps"
+              title="Nhóm Facebook"
+            >
+              <UsersRound size={16}/>
+            </a>
+            <a
+              href="https://zalo.me/0376531093"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Zalo 0376531093"
+              title="Zalo 0376531093"
+            >
+              <MessageCircle size={16}/>
+            </a>
           </div>
         </div>
 
@@ -27,11 +50,19 @@ export default function Footer() {
           <Link to="/leaderboard">Cộng đồng Explorer</Link>
         </div>
 
-        <div className="footer-column">
-          <h4>Hỗ trợ</h4>
+        <div className="footer-column footer-contact-column">
+          <h4>Hỗ trợ & liên hệ</h4>
           <Link to="#">Hướng dẫn sử dụng</Link>
           <Link to="#">Quy định cộng đồng</Link>
-          <Link to="#">Liên hệ</Link>
+          <a href="https://www.facebook.com/lamvudcba" target="_blank" rel="noreferrer">
+            Facebook <ExternalLink size={11}/>
+          </a>
+          <a href="https://www.facebook.com/groups/1436045585156420" target="_blank" rel="noreferrer">
+            Nhóm Facebook <ExternalLink size={11}/>
+          </a>
+          <a href="https://zalo.me/0376531093" target="_blank" rel="noreferrer">
+            Zalo · 0376531093 <ExternalLink size={11}/>
+          </a>
         </div>
 
         <div className="footer-column">
