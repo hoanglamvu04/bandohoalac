@@ -13,7 +13,7 @@ if (!existsSync(uploadRoot)) {
   mkdirSync(uploadRoot, { recursive: true });
 }
 
-const storage = multer.diskStorage({
+const localDiskStorage = multer.diskStorage({
   destination(_req, _file, callback) {
     callback(null, uploadRoot);
   },
@@ -22,6 +22,10 @@ const storage = multer.diskStorage({
     callback(null, `${randomUUID()}${ext}`);
   }
 });
+
+const storage = env.uploadProvider === 'cloudinary'
+  ? multer.memoryStorage()
+  : localDiskStorage;
 
 function fileFilter(_req, file, callback) {
   const ext = path.extname(file.originalname).toLowerCase();
