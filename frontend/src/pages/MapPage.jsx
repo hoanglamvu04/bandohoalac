@@ -22,12 +22,20 @@ import {
   Waves,
   X
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import MapView from '../components/MapView.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { getDirections, getMapLayers, getNearbyPlaces, getPlaces, getPlacesInBounds } from '../services/api.js';
+import {
+  getCategories,
+  getDirections,
+  getMapLayers,
+  getNearbyPlaces,
+  getPlaces,
+  getPlacesInBounds
+} from '../services/api.js';
 import { LOCAL_BASEMAP_OPTIONS as BASEMAP_OPTIONS } from '../localBasemap.js';
 import { getBestBrowserLocation } from '../utils/geolocation.js';
+import { REGION_PRESETS } from '../mapConfig.js';
 
 const LAYERS = [
   { type: 'TERRAIN', label: 'Địa hình', icon: Mountain, tone: 'green' },
@@ -101,8 +109,12 @@ function formatDuration(seconds) {
 
 export default function MapPage() {
   const { isModerator } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [places, setPlaces] = useState([]);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => searchParams.get('q') || '');
+  const [categories, setCategories] = useState([]);
+  const [category, setCategory] = useState(() => searchParams.get('category') || 'all');
+  const [minRating, setMinRating] = useState(() => searchParams.get('rating') || '');
   const [selectedId, setSelectedId] = useState(null);
   const [activeLayers, setActiveLayers] = useState(DEFAULT_ACTIVE);
   const [basemapMode, setBasemapMode] = useState('streets');
@@ -126,6 +138,26 @@ export default function MapPage() {
   const lastLayersRequestKeyRef = useRef('');
   const galleryTouchStartRef = useRef(null);
 
+  const regionId = searchParams.get('region') || 'all';
+  const focusRegion = REGION_PRESETS.find((item) => item.id === regionId) || REGION_PRESETS[0];
+
+  useEffect(() => {
+    getCategories()
+      .then((data) => setCategories(Array.isArray(data?.items) ? data.items : []))
+      .catch(() => setCategories([]));
+  }, []);
+
+  useEffect(() => {
+    const nextQuery = searchParams.get('q') || '';
+    if (nextQuery !== query) setQuery(nextQuery);
+
+    const nextCategory = searchParams.get('category') || 'all';
+    if (nextCategory !== category) setCategory(nextCategory);
+
+    const nextRating = searchParams.get('rating') || '';
+    if (nextRating !== minRating) setMinRating(nextRating);
+  }, [searchParams]);
+
   useEffect(() => {
     if (!viewport) return undefined;
 
@@ -135,9 +167,10 @@ export default function MapPage() {
     let active = true;
     const controller = new AbortController();
     const normalizedViewport = normalizeViewport(viewport);
+    const filterKey = ':category=' + category + ':rating=' + minRating;
     const requestKey = needle
-      ? 'q:' + needle.toLowerCase()
-      : 'bounds:' + viewportKey(normalizedViewport);
+      ? 'q:' + needle.toLowerCase() + filterKey
+      : 'bounds:' + viewportKey(normalizedViewport) + filterKey;
 
     if (lastPlacesRequestKeyRef.current === requestKey) {
       return () => controller.abort();
@@ -146,11 +179,20 @@ export default function MapPage() {
     const timer = window.setTimeout(() => {
       const request = needle
         ? getPlaces(
-            { q: needle, limit: 80 },
+            {
+              q: needle,
+              category,
+              minRating: minRating || undefined,
+              limit: 80
+            },
             { signal: controller.signal }
           )
         : getPlacesInBounds(
-            normalizedViewport,
+            {
+              ...normalizedViewport,
+              category,
+              minRating: minRating || undefined
+            },
             { signal: controller.signal }
           );
 
@@ -179,7 +221,7 @@ export default function MapPage() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [viewport, query, placeScope]);
+  }, [viewport, query, placeScope, category, minRating]);
 
   useEffect(() => {
     if (!viewport || !activeLayers.length) {
@@ -341,7 +383,10 @@ export default function MapPage() {
       // Expand progressively so "nearby" is useful even in sparse zones
       // without immediately dumping every place in the whole service area.
       for (const radius of [5000, 10000, 20000]) {
-        const data = await getNearbyPlaces(center.lat, center.lng, radius);
+        const data = await getNearbyPlaces(center.lat, center.lng, radius, {
+          category,
+          minRating: minRating || undefined
+        });
         items = Array.isArray(data?.items) ? data.items : [];
         resolvedRadius = radius;
         if (items.length >= 6 || (items.length > 0 && radius >= 10000)) break;
@@ -364,7 +409,11 @@ export default function MapPage() {
     setSelectedId(null);
 
     try {
-      const data = await getPlaces({ limit: 100 });
+      const data = await getPlaces({
+        category,
+        minRating: minRating || undefined,
+        limit: 100
+      });
       setPlaces(Array.isArray(data?.items) ? data.items : []);
       setPlaceScope('all');
       setNearbyRadius(0);
@@ -375,6 +424,20 @@ export default function MapPage() {
     }
   }
 
+  function syncDiscoveryParams(next = {}) {
+    const params = new URLSearchParams(searchParams);
+
+    for (const [key, value] of Object.entries(next)) {
+      if (value === undefined || value === null || value === '' || value === 'all') {
+        params.delete(key);
+      } else {
+        params.set(key, String(value));
+      }
+    }
+
+    setSearchParams(params, { replace: true });
+  }
+
   function handleQueryChange(value) {
     if (placeScope !== 'viewport') {
       lastPlacesRequestKeyRef.current = '';
@@ -382,6 +445,23 @@ export default function MapPage() {
       setNearbyRadius(0);
     }
     setQuery(value);
+    syncDiscoveryParams({ q: value.trim() || null });
+  }
+
+  function handleCategoryChange(value) {
+    lastPlacesRequestKeyRef.current = '';
+    setSelectedId(null);
+    setPlaceScope('viewport');
+    setCategory(value);
+    syncDiscoveryParams({ category: value });
+  }
+
+  function handleRatingChange(value) {
+    lastPlacesRequestKeyRef.current = '';
+    setSelectedId(null);
+    setPlaceScope('viewport');
+    setMinRating(value);
+    syncDiscoveryParams({ rating: value });
   }
 
   function togglePlaceSelection(place) {
@@ -467,6 +547,7 @@ export default function MapPage() {
         activeLayers={activeLayers}
         basemapMode={basemapMode}
         onViewportChange={setViewport}
+        focusRegion={focusRegion}
       />
 
       <header className="hm-map-topbar">
@@ -491,6 +572,29 @@ export default function MapPage() {
               <X size={16} />
             </button>
           )}
+        </div>
+
+        <div className="hm-discovery-filters">
+          <select
+            value={category}
+            onChange={(event) => handleCategoryChange(event.target.value)}
+            aria-label="Lọc theo danh mục"
+          >
+            <option value="all">Tất cả danh mục</option>
+            {categories.map((item) => (
+              <option key={item.slug} value={item.slug}>{item.name}</option>
+            ))}
+          </select>
+
+          <select
+            value={minRating}
+            onChange={(event) => handleRatingChange(event.target.value)}
+            aria-label="Lọc theo đánh giá"
+          >
+            <option value="">Mọi đánh giá</option>
+            <option value="4">★ 4.0+</option>
+            <option value="4.5">★ 4.5+</option>
+          </select>
         </div>
 
         <div className="hm-topbar-status">
