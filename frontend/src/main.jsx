@@ -20,6 +20,7 @@ import './category-modern.css';
 import './hero-search-modern.css';
 import './hero-map-polish.css';
 import './home-reference.css';
+import './mobile-detail.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
