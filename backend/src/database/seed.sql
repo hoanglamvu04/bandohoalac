@@ -17,15 +17,18 @@ ON CONFLICT (slug) DO NOTHING;
 
 -- ============================================================
 -- USERS
--- Default passwords (bcrypt-hashed via pgcrypto):
---   admin@holamaps.vn      -> Admin@123
+-- Development-only demo accounts. The ADMIN account is intentionally NOT
+-- hard-coded here anymore. Create/update it with:
+--   npm run db:seed:admin
+-- using ADMIN_SEED_* values from backend/.env.
+--
+-- Default demo passwords (bcrypt-hashed via pgcrypto):
 --   moderator@holamaps.vn  -> Moderator@123
 --   ctv@holamaps.vn        -> Explorer@123
 --   user@holamaps.vn       -> Explorer@123
 -- ============================================================
 INSERT INTO users (name, email, password_hash, role, bio, points_total, trust_score, approved_count)
 VALUES
-  ('Hola Admin', 'admin@holamaps.vn', crypt('Admin@123', gen_salt('bf', 10)), 'ADMIN', 'Quản trị hệ thống Hola Maps.', 0, 100, 0),
   ('Hola Moderator', 'moderator@holamaps.vn', crypt('Moderator@123', gen_salt('bf', 10)), 'MODERATOR', 'Kiểm duyệt đóng góp cộng đồng.', 0, 80, 0),
   ('Chinh Explorer', 'ctv@holamaps.vn', crypt('Explorer@123', gen_salt('bf', 10)), 'CONTRIBUTOR', 'Thích cafe có view đẹp, homestay yên tĩnh và những góc Hòa Lạc ít người biết.', 1280, 62, 58),
   ('Diep Local Guide', 'user@holamaps.vn', crypt('Explorer@123', gen_salt('bf', 10)), 'USER', 'Người dùng Hola Maps.', 40, 4, 2)
