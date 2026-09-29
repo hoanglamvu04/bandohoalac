@@ -1,6 +1,6 @@
-import { BadgeCheck, Camera, MapPin, Sparkles } from 'lucide-react';
+import { BadgeCheck, Camera, LogOut, MapPin, Sparkles } from 'lucide-react';
 
-export default function ExplorerProfile({ user, stats }) {
+export default function ExplorerProfile({ user, stats, onLogout }) {
   const initials = (user?.name || '?').split(' ').map((word) => word[0]).slice(0, 2).join('').toUpperCase();
   const trustLabel = user?.trustScore >= 80 ? 'Trusted Explorer' : user?.trustScore >= 40 ? 'Explorer' : 'New Explorer';
 
@@ -9,6 +9,18 @@ export default function ExplorerProfile({ user, stats }) {
       <div className="explorer-cover">
         <div className="explorer-avatar">{initials}</div>
         <span className="trusted-badge"><BadgeCheck size={16} /> {trustLabel}</span>
+        {onLogout && (
+          <button
+            type="button"
+            className="explorer-mobile-logout"
+            onClick={onLogout}
+            aria-label="Đăng xuất"
+            title="Đăng xuất"
+          >
+            <LogOut size={14} />
+            <span>Đăng xuất</span>
+          </button>
+        )}
       </div>
 
       <div className="explorer-body">
