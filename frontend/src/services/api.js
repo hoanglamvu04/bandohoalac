@@ -161,9 +161,7 @@ export function createContribution({ type, placeId, location, place, reason, pho
   if (reason) formData.append('reason', reason);
   photos.forEach((file) => formData.append('photos', file));
 
-  return unwrap(client.post('/contributions', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }));
+  return unwrap(client.post('/contributions', formData));
 }
 
 export function getMyContributions() {
@@ -259,9 +257,7 @@ export function archiveAdminPlace(id) {
 export function uploadAdminPlaceImages(id, photos = []) {
   const formData = new FormData();
   photos.forEach((file) => formData.append('photos', file));
-  return unwrap(client.post('/admin/places/' + encodeURIComponent(id) + '/images', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }));
+  return unwrap(client.post('/admin/places/' + encodeURIComponent(id) + '/images', formData));
 }
 
 export function setAdminPlaceCover(id, imageId) {
