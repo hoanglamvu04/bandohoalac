@@ -1,0 +1,64 @@
+name: Deploy Hola Maps to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: hola-maps-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Pull, build and restart
+        shell: bash
+        run: |
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" 'bash -se' <<'REMOTE'
+            set -euo pipefail
+
+            APP_DIR=/var/www/bandohoalac
+
+            cd "$APP_DIR"
+
+            echo "==> Sync source"
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+
+            echo "==> Install dependencies"
+            npm ci
+            npm ci --prefix backend
+            npm ci --prefix frontend
+
+            echo "==> Apply database schema"
+            npm run db:migrate
+
+            echo "==> Build frontend"
+            npm run build
+
+            echo "==> Restart backend"
+            pm2 restart bandohoalac-api --update-env
+            pm2 save
+
+            echo "==> Health check"
+            sleep 2
+            curl --fail --silent --show-error http://127.0.0.1:5003/api/health
+            echo
+          REMOTE
