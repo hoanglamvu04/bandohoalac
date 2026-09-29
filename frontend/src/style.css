@@ -1414,6 +1414,57 @@ a{color:inherit}
 
 .admin-image-picker input{display:none}
 
+.admin-place-selected-photos{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:9px;
+  margin-top:10px;
+  border:1px solid #cfe1da;
+  border-radius:11px;
+  padding:10px 11px;
+  color:#28594d;
+  background:#f2f8f5;
+}
+
+.admin-place-selected-photos>svg{
+  color:#2f7f68;
+}
+
+.admin-place-selected-photos>div{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.admin-place-selected-photos b{
+  font-size:10px;
+}
+
+.admin-place-selected-photos span{
+  overflow:hidden;
+  color:#789087;
+  font-size:9px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.admin-place-selected-photos button{
+  min-height:30px;
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  border:0;
+  border-radius:8px;
+  padding:0 8px;
+  color:#7c493e;
+  background:#fff;
+  font-size:9px;
+  font-weight:850;
+  cursor:pointer;
+}
+
 .admin-place-image-grid{
   display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr));
