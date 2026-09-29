@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hola-maps-shell-v4';
+const CACHE_NAME = 'hola-maps-shell-v5';
 const APP_SHELL = [
   '/',
   '/manifest.webmanifest',
@@ -32,7 +32,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // API data, local PMTiles and map archives must remain network-driven.
+  // API data and local map archives must always be network-driven.
   if (
     url.pathname.startsWith('/api/') ||
     url.pathname.startsWith('/maps/')
@@ -40,18 +40,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (request.mode === 'navigate') {
+  // Navigation, JS and CSS are network-first. This prevents an installed PWA
+  // from continuing to run an old UI bundle after a production deployment.
+  const mustBeFresh =
+    request.mode === 'navigate' ||
+    request.destination === 'script' ||
+    request.destination === 'style';
+
+  if (mustBeFresh) {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: 'no-store' })
         .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
           return response;
         })
         .catch(async () => {
           return (
             await caches.match(request) ||
-            await caches.match('/') ||
+            (request.mode === 'navigate' ? await caches.match('/') : undefined) ||
             new Response('Hola Maps đang ngoại tuyến.', {
               status: 503,
               headers: { 'Content-Type': 'text/plain; charset=utf-8' }
@@ -63,8 +72,6 @@ self.addEventListener('fetch', (event) => {
   }
 
   const isStaticAsset =
-    request.destination === 'script' ||
-    request.destination === 'style' ||
     request.destination === 'font' ||
     request.destination === 'image';
 
