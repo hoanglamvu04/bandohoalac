@@ -2355,3 +2355,114 @@
     height:37px;
   }
 }
+
+
+/* Official brand sizing v2: the SVG already contains the full wordmark,
+   so give the artwork enough physical space instead of shrinking it like an icon. */
+.reference-navbar .premium-brand.brand-official{
+  min-width:205px!important;
+  width:205px!important;
+  height:62px!important;
+  flex:0 0 205px!important;
+}
+
+.reference-navbar .brand-official-lockup{
+  width:198px!important;
+  height:62px!important;
+  display:flex!important;
+  align-items:center;
+  overflow:visible!important;
+}
+
+.reference-navbar .brand-official-logo{
+  width:198px!important;
+  height:auto!important;
+  max-width:none!important;
+  display:block!important;
+  object-fit:contain!important;
+  object-position:left center!important;
+}
+
+@media(max-width:1100px){
+  .reference-navbar .premium-brand.brand-official{
+    min-width:178px!important;
+    width:178px!important;
+    flex-basis:178px!important;
+  }
+
+  .reference-navbar .brand-official-lockup,
+  .reference-navbar .brand-official-logo{
+    width:172px!important;
+  }
+}
+
+@media(max-width:760px){
+  .reference-navbar.home-navbar .premium-brand.brand-official,
+  .reference-navbar .premium-brand.brand-official{
+    min-width:0!important;
+    width:154px!important;
+    height:56px!important;
+    flex:0 0 154px!important;
+  }
+
+  .reference-navbar.home-navbar .brand-official-lockup,
+  .reference-navbar .brand-official-lockup{
+    width:150px!important;
+    height:54px!important;
+    overflow:visible!important;
+  }
+
+  .reference-navbar.home-navbar .brand-official-logo,
+  .reference-navbar .brand-official-logo{
+    width:150px!important;
+    height:auto!important;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .premium-brand.brand-official{
+    width:42px!important;
+    height:42px!important;
+    flex-basis:42px!important;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .brand-official-lockup{
+    width:42px!important;
+    height:42px!important;
+    overflow:hidden!important;
+    border-radius:11px;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .brand-official-logo{
+    width:auto!important;
+    height:42px!important;
+  }
+}
+
+@media(max-width:390px){
+  .reference-navbar.home-navbar .premium-brand.brand-official,
+  .reference-navbar .premium-brand.brand-official{
+    width:144px!important;
+    flex-basis:144px!important;
+  }
+
+  .reference-navbar.home-navbar .brand-official-lockup,
+  .reference-navbar .brand-official-lockup,
+  .reference-navbar.home-navbar .brand-official-logo,
+  .reference-navbar .brand-official-logo{
+    width:140px!important;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .premium-brand.brand-official{
+    width:39px!important;
+    flex-basis:39px!important;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .brand-official-lockup{
+    width:39px!important;
+    height:39px!important;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .brand-official-logo{
+    width:auto!important;
+    height:39px!important;
+  }
+}
