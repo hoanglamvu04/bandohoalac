@@ -1,4 +1,4 @@
-import { ExternalLink, MapPinned, MessageCircle, UserRound, UsersRound } from 'lucide-react';
+import { ExternalLink, MessageCircle, UserRound, UsersRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Footer() {
@@ -6,11 +6,14 @@ export default function Footer() {
     <footer className="site-footer modern-footer reference-footer">
       <div className="footer-columns">
         <div className="footer-brand">
-          <div className="footer-logo">
-            <span className="footer-logo-mark"><MapPinned size={23}/></span>
-            <span><b>Hola Maps</b><small>LOCAL DISCOVERY</small></span>
-          </div>
-          <p>Bản đồ số khu vực Hòa Lạc - Thạch Thất và vùng phụ cận. Khám phá địa điểm địa phương theo cách thông minh hơn.</p>
+          <Link className="footer-logo footer-logo-official" to="/" aria-label="Hola Maps">
+            <img src="/logo.svg?v=20260929-2" alt="Hola Maps" />
+          </Link>
+          <p>
+            Bản đồ cộng đồng dành cho Hòa Lạc và 8 xã lân cận.
+            Khám phá địa điểm, tuyến đường và cùng cập nhật dữ liệu địa phương
+            đầy đủ, chính xác hơn mỗi ngày.
+          </p>
           <div className="footer-socials" aria-label="Kênh liên hệ Hola Maps">
             <a
               href="https://www.facebook.com/lamvudcba"
@@ -79,6 +82,12 @@ export default function Footer() {
 
       <div className="footer-copy">
         <span>© {new Date().getFullYear()} Hola Maps. All rights reserved.</span>
+        <span className="footer-developer">
+          Đơn vị phát triển:
+          <a href="https://media.xspace.vn/" target="_blank" rel="noreferrer">
+            Media X Space <ExternalLink size={10} />
+          </a>
+        </span>
         <span>Cùng xây dựng bản đồ Hòa Lạc tốt hơn mỗi ngày <b>♥</b></span>
       </div>
     </footer>
