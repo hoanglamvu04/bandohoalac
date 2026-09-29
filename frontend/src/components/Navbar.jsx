@@ -225,7 +225,7 @@ export default function Navbar() {
     ].filter(Boolean).join(' ')}>
       <Link className="brand premium-brand brand-official" to="/" aria-label="Hola Maps">
         <span className="brand-official-lockup">
-          <img className="brand-official-logo" src="/logo.svg" alt="Hola Maps" />
+          <img className="brand-official-logo" src="/logo.svg?v=20260929-2" alt="Hola Maps" />
         </span>
       </Link>
 
