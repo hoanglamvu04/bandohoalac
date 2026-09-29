@@ -5,6 +5,7 @@ import {
   Camera,
   Check,
   ImagePlus,
+  LocateFixed,
   MapPin,
   PencilLine,
   Plus,
@@ -26,7 +27,7 @@ import {
 } from '../../services/api.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import LocationPicker from '../../components/LocationPicker.jsx';
-import { DEFAULT_CENTER } from '../../mapConfig.js';
+import { DEFAULT_CENTER, isInsideServiceCoverage } from '../../mapConfig.js';
 
 const EMPTY_FORM = {
   name: '',
@@ -41,6 +42,36 @@ const EMPTY_FORM = {
   lat: DEFAULT_CENTER[1],
   lng: DEFAULT_CENTER[0]
 };
+
+
+function formatCoordinate(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toFixed(6) : '—';
+}
+
+function parseCoordinatePair(raw) {
+  const parts = String(raw || '')
+    .trim()
+    .replace(/[;|]+/g, ',')
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .map(Number);
+
+  if (parts.length < 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) {
+    return null;
+  }
+
+  let lat = parts[0];
+  let lng = parts[1];
+
+  // Accept both "lat,lng" and the common GIS "lng,lat" form.
+  if (Math.abs(lat) > 90 && Math.abs(lng) <= 90) {
+    [lat, lng] = [lng, lat];
+  }
+
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { lat, lng };
+}
 
 function toForm(place) {
   if (!place) return { ...EMPTY_FORM };
@@ -72,6 +103,7 @@ export default function AdminPlaces() {
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [coordinateText, setCoordinateText] = useState('');
 
   function loadList() {
     setLoading(true);
@@ -121,6 +153,7 @@ export default function AdminPlaces() {
       categorySlug: categories[0]?.slug || ''
     });
     setPhotos([]);
+    setCoordinateText('');
   }
 
   function closeEditor() {
@@ -128,12 +161,39 @@ export default function AdminPlaces() {
     setSelectedId(null);
     setDetail(null);
     setPhotos([]);
+    setCoordinateText('');
   }
 
   const editorOpen = creating || Boolean(selectedId);
 
   function update(name, value) {
     setForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function updateCoordinate(name, value) {
+    setForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function applyCoordinateText() {
+    const parsed = parseCoordinatePair(coordinateText);
+
+    if (!parsed) {
+      showToast('Tọa độ không hợp lệ. Ví dụ: 21.015000, 105.515000', 'error');
+      return;
+    }
+
+    if (!isInsideServiceCoverage(parsed.lng, parsed.lat)) {
+      showToast('Tọa độ nằm ngoài vùng hoạt động của Hola Maps.', 'error');
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      lat: parsed.lat,
+      lng: parsed.lng
+    }));
+    setCoordinateText(parsed.lat.toFixed(6) + ', ' + parsed.lng.toFixed(6));
+    showToast('Đã cập nhật vị trí theo tọa độ.', 'success');
   }
 
   const changedPayload = useMemo(() => ({
@@ -154,6 +214,19 @@ export default function AdminPlaces() {
     event.preventDefault();
     if (!form.name.trim()) {
       showToast('Tên địa điểm không được để trống.', 'error');
+      return;
+    }
+
+    const lat = Number(form.lat);
+    const lng = Number(form.lng);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      showToast('Vĩ độ / kinh độ không hợp lệ.', 'error');
+      return;
+    }
+
+    if (!isInsideServiceCoverage(lng, lat)) {
+      showToast('Vị trí nằm ngoài vùng hoạt động của Hola Maps.', 'error');
       return;
     }
 
@@ -397,14 +470,76 @@ export default function AdminPlaces() {
               </div>
 
               <div className="admin-place-location">
-                <div>
-                  <b>Vị trí</b>
-                  <span>{Number(form.lat).toFixed(6)}, {Number(form.lng).toFixed(6)}</span>
+                <div className="admin-place-location-head">
+                  <div>
+                    <b>Vị trí</b>
+                    <span>{formatCoordinate(form.lat)}, {formatCoordinate(form.lng)}</span>
+                  </div>
+                  <span className="admin-coordinate-badge">
+                    <LocateFixed size={13} />
+                    Nhập tọa độ hoặc kéo ghim
+                  </span>
                 </div>
+
+                <div className="admin-coordinate-grid">
+                  <label>
+                    Vĩ độ (Latitude)
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="any"
+                      min="-90"
+                      max="90"
+                      value={form.lat}
+                      onChange={(event) => updateCoordinate('lat', event.target.value)}
+                      placeholder="21.015000"
+                    />
+                  </label>
+
+                  <label>
+                    Kinh độ (Longitude)
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="any"
+                      min="-180"
+                      max="180"
+                      value={form.lng}
+                      onChange={(event) => updateCoordinate('lng', event.target.value)}
+                      placeholder="105.515000"
+                    />
+                  </label>
+                </div>
+
+                <div className="admin-coordinate-paste">
+                  <input
+                    value={coordinateText}
+                    onChange={(event) => setCoordinateText(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        applyCoordinateText();
+                      }
+                    }}
+                    placeholder="Dán tọa độ: 21.015000, 105.515000"
+                  />
+                  <button type="button" onClick={applyCoordinateText}>
+                    <LocateFixed size={15} />
+                    Áp dụng
+                  </button>
+                </div>
+
+                <p className="admin-coordinate-note">
+                  Hỗ trợ cả <b>vĩ độ, kinh độ</b> và <b>kinh độ, vĩ độ</b>. Bản đồ bên dưới sẽ tự di chuyển tới tọa độ hợp lệ.
+                </p>
+
                 <LocationPicker
                   lat={Number(form.lat)}
                   lng={Number(form.lng)}
-                  onChange={({ lat, lng }) => setForm((current) => ({ ...current, lat, lng }))}
+                  onChange={({ lat, lng }) => {
+                    setForm((current) => ({ ...current, lat, lng }));
+                    setCoordinateText(lat.toFixed(6) + ', ' + lng.toFixed(6));
+                  }}
                 />
               </div>
 
