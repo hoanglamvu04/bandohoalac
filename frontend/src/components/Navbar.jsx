@@ -223,12 +223,9 @@ export default function Navbar() {
       isHome ? 'home-navbar' : '',
       isHome && homeHeaderScrolled ? 'home-navbar-scrolled' : ''
     ].filter(Boolean).join(' ')}>
-      <Link className="brand premium-brand" to="/">
-        <span className="brand-mark"><MapPinned size={24}/></span>
-        <span className="brand-copy">
-          <strong>Hola Maps</strong>
-          <small className="brand-subtitle-desktop">LOCAL DISCOVERY</small>
-          <small className="brand-subtitle-mobile">Khám phá Hòa Lạc</small>
+      <Link className="brand premium-brand brand-official" to="/" aria-label="Hola Maps">
+        <span className="brand-official-lockup">
+          <img className="brand-official-logo" src="/logo.svg" alt="Hola Maps" />
         </span>
       </Link>
 
