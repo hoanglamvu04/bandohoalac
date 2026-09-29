@@ -76,6 +76,12 @@ export function getPlaces(params = {}, options = {}) {
   }));
 }
 
+export function getHomePlaceSections(limit = 8) {
+  return unwrap(client.get('/places/home-sections', {
+    params: { limit }
+  }));
+}
+
 export function getFeaturedPlaces(limit = 4) {
   return unwrap(client.get('/places/featured', {
     params: { limit }
