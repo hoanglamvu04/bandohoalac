@@ -494,15 +494,16 @@ export default function MapView({
 
     const initialize = async () => {
       try {
-        // Start every cold-start dependency at the same time.
-        // Previously Hola Maps loaded MapLibre/CDN scripts first and only then
-        // probed the local archives, which added a second serial wait.
-        const [
-          hasLocalPmtiles,
-          hasSupplementalBuildings
-        ] = await Promise.all([
-          localPmtilesAvailable(),
-          supplementalBuildingsAvailable()
+        // Same-origin map archives are part of the production app contract.
+        // Do not block MapLibre startup behind HEAD probes: some reverse-proxy /
+        // browser combinations delay HEAD even though byte-range GET works.
+        // Remote archive URLs are still probed before use.
+        const sameOriginBasemap = PMTILES_URL.startsWith('/');
+        const sameOriginBuildings = BUILDINGS_PMTILES_URL.startsWith('/');
+
+        const [hasLocalPmtiles, hasSupplementalBuildings] = await Promise.all([
+          sameOriginBasemap ? Promise.resolve(true) : localPmtilesAvailable(),
+          sameOriginBuildings ? Promise.resolve(true) : supplementalBuildingsAvailable()
         ]);
         if (cancelled || !containerRef.current) return;
 
@@ -549,6 +550,11 @@ export default function MapView({
         map.addControl(new maplibre.NavigationControl({ visualizePitch: false }), 'bottom-right');
         map.addControl(new maplibre.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-right');
 
+        // The MapLibre instance is interactive immediately. Do not keep the
+        // full-screen placeholder over it while glyphs/sprites/vector tiles
+        // continue loading in the background.
+        setMapBooted(true);
+
         const notifyViewport = () => {
           const b = map.getBounds();
           const zoom = map.getZoom();
@@ -573,7 +579,6 @@ export default function MapView({
             canUseSupplementalBuildings
           );
           setInteractiveReady(true);
-          setMapBooted(true);
           notifyViewport();
           requestAnimationFrame(() => map.resize());
 
