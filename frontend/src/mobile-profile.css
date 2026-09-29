@@ -1,7 +1,11 @@
 .profile-mobile-account{display:none}
 .explorer-mobile-logout,
 .explorer-avatar-crown,
-.explorer-score-sparkle{display:none}
+.explorer-score-star,
+.explorer-score-sparkle,
+.profile-panel-icon,
+.profile-panel-arrow,
+.profile-empty-illustration{display:none}
 
 /* Hola Maps mobile profile v3
    Premium explorer account surface inspired by the approved mobile reference.
@@ -318,6 +322,8 @@
     -webkit-box-orient:vertical;
   }
 
+  .profile-page .explorer-score-default{display:none}
+
   .profile-page .explorer-score{
     position:relative;
     width:84px;
@@ -444,6 +450,8 @@
       rgba(255,254,250,.97);
     box-shadow:0 14px 34px rgba(43,58,51,.07);
   }
+
+  .profile-page .profile-panel-desktop-icon{display:none}
 
   .profile-page .panel-heading{
     display:grid;
