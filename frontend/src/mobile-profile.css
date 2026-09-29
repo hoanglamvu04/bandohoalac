@@ -1,3 +1,5 @@
+.profile-mobile-account{display:none}
+
 /* Hola Maps mobile profile v2
    Compact explorer identity + horizontal stats + touch-friendly content cards.
 */
@@ -8,6 +10,80 @@
     flex-direction:column;
     gap:10px;
     padding:12px 0 132px;
+  }
+
+  .profile-mobile-account{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    min-height:58px;
+    padding:9px 10px 9px 12px;
+    border:1px solid rgba(16,47,41,.08);
+    border-radius:16px;
+    background:#fffdf8;
+    box-shadow:0 8px 24px rgba(16,47,41,.055);
+  }
+
+  .profile-mobile-account-copy{
+    min-width:0;
+    display:flex;
+    align-items:center;
+    gap:9px;
+  }
+
+  .profile-mobile-account-icon{
+    width:34px;
+    height:34px;
+    flex:0 0 auto;
+    display:grid;
+    place-items:center;
+    border-radius:11px;
+    color:#1f5b4b;
+    background:#edf5f1;
+  }
+
+  .profile-mobile-account-copy>div{
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .profile-mobile-account-copy b{
+    font-size:13px;
+    line-height:1.2;
+  }
+
+  .profile-mobile-account-copy span{
+    max-width:155px;
+    overflow:hidden;
+    color:#73857f;
+    font-size:10px;
+    line-height:1.25;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .profile-mobile-logout{
+    min-height:38px;
+    flex:0 0 auto;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    border:1px solid #ead8d3;
+    border-radius:11px;
+    padding:0 11px;
+    color:#8b4535;
+    background:#fff7f4;
+    font-size:12px;
+    font-weight:850;
+    cursor:pointer;
+  }
+
+  .profile-mobile-logout:active{
+    transform:scale(.98);
   }
 
   /* Explorer identity card */
