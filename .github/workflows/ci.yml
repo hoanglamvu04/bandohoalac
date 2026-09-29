@@ -25,7 +25,9 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install
-        run: npm ci
+        # package-lock predates the bundled PMTiles runtime; npm install
+        # reconciles the pinned package.json until the lockfile is regenerated.
+        run: npm install --no-audit --no-fund
 
       - name: Build
         run: npm run build
