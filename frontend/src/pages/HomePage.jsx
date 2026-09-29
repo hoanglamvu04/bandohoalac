@@ -30,7 +30,7 @@ import {
   addFavorite,
   getHomePlaceSections,
   getLeaderboard,
-  getPlaceMe,
+  getMyFavorites,
   removeFavorite
 } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -142,7 +142,7 @@ function initials(name = '') {
     .toUpperCase() || 'HM';
 }
 
-function FeaturedPlaceCard({ place, index, tone }) {
+function FeaturedPlaceCard({ place, index, tone, initialFavorite = false }) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [favorite, setFavorite] = useState(false);
@@ -153,15 +153,8 @@ function FeaturedPlaceCard({ place, index, tone }) {
   const canFavorite = true;
 
   useEffect(() => {
-    if (!user || !canFavorite) {
-      setFavorite(false);
-      return;
-    }
-
-    getPlaceMe(place.id)
-      .then((data) => setFavorite(Boolean(data?.favorite)))
-      .catch(() => setFavorite(false));
-  }, [user?.id, place.id, canFavorite]);
+    setFavorite(Boolean(user && canFavorite && initialFavorite));
+  }, [user?.id, place.id, canFavorite, initialFavorite]);
 
   async function toggleFavorite(event) {
     event.preventDefault();
@@ -230,8 +223,10 @@ function FeaturedPlaceCard({ place, index, tone }) {
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [sections, setSections] = useState([]);
   const [leaders, setLeaders] = useState([]);
+  const [favoriteIds, setFavoriteIds] = useState(() => new Set());
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -262,6 +257,31 @@ export default function HomePage() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!user) {
+      setFavoriteIds(new Set());
+      return () => {
+        active = false;
+      };
+    }
+
+    getMyFavorites()
+      .then((data) => {
+        if (!active) return;
+        const items = Array.isArray(data?.items) ? data.items : [];
+        setFavoriteIds(new Set(items.map((place) => String(place.id))));
+      })
+      .catch(() => {
+        if (active) setFavoriteIds(new Set());
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
 
   const displaySections = useMemo(
     () => [...sections].sort((a, b) => {
@@ -483,6 +503,7 @@ export default function HomePage() {
                         place={place}
                         index={sectionIndex + placeIndex}
                         tone={meta.tone}
+                        initialFavorite={favoriteIds.has(String(place.id))}
                         key={place.id}
                       />
                     ))}
