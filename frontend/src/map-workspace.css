@@ -2727,3 +2727,40 @@ body.map-route-active{
     bottom:156px!important;
   }
 }
+
+
+/* Mobile 2D/3D control placement v5.
+   Reserve a dedicated row above Locate + basemap controls on narrow screens. */
+@media(max-width:760px){
+  .hm-3d{
+    left:8px!important;
+    right:auto!important;
+    bottom:208px!important;
+    z-index:30!important;
+    min-width:56px;
+    min-height:38px;
+    padding:0 11px;
+    border-radius:12px;
+  }
+
+  .hm-attribution-wrap{
+    left:8px!important;
+    bottom:160px!important;
+    z-index:20!important;
+  }
+}
+
+@media(max-width:420px){
+  .hm-3d{
+    left:8px!important;
+    right:auto!important;
+    bottom:202px!important;
+    min-width:54px;
+    min-height:36px;
+  }
+
+  .hm-attribution-wrap{
+    left:8px!important;
+    bottom:156px!important;
+  }
+}
