@@ -2505,3 +2505,40 @@ body.map-route-active{
 .hm-map-placeholder{
   pointer-events:none;
 }
+
+
+/* Mobile map cleanup:
+   keep mandatory source attribution accessible as a compact info control,
+   and remove the developer/provider status pill from the user UI. */
+@media(max-width:760px){
+  .hm-map-provider{
+    display:none!important;
+  }
+
+  .hm-map-canvas .maplibregl-ctrl-bottom-left{
+    left:8px;
+    bottom:154px;
+  }
+
+  .hm-map-canvas .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib{
+    margin:0;
+    border:1px solid rgba(16,47,41,.09);
+    border-radius:10px;
+    background:rgba(255,255,255,.9);
+    box-shadow:0 6px 18px rgba(14,42,36,.08);
+  }
+
+  .hm-map-canvas .maplibregl-ctrl-attrib.maplibregl-compact{
+    min-height:28px;
+  }
+
+  .hm-map-canvas .maplibregl-ctrl-attrib.maplibregl-compact-show{
+    max-width:min(290px,calc(100vw - 28px));
+  }
+}
+
+@media(max-width:420px){
+  .hm-map-canvas .maplibregl-ctrl-bottom-left{
+    bottom:150px;
+  }
+}
