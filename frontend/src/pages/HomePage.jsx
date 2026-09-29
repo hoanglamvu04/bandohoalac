@@ -207,7 +207,7 @@ function FeaturedPlaceCard({ place, index, tone, initialFavorite = false }) {
       <div className="home-place-content">
         <Link to={detailHref} className="home-place-title">{place.name}</Link>
         <span className="home-place-address"><MapPin size={13} /> {place.address || 'Hòa Lạc, Thạch Thất'}</span>
-        <p>{place.description || 'Địa điểm đáng khám phá trong khu vực Hòa Lạc và vùng phụ cận.'}</p>
+        <p>{place.description || 'Địa điểm đáng khám phá tại Hòa Lạc và 8 xã lân cận.'}</p>
         <div className="home-place-footer">
           <strong>
             <Star size={14} fill="currentColor" />
@@ -325,12 +325,12 @@ export default function HomePage() {
     <main className="reference-home">
       <section className="reference-home-hero">
         <div className="reference-hero-copy">
-          <span className="reference-kicker">Bản đồ Hòa Lạc</span>
-          <h1>Khám phá Hòa Lạc<br />thông minh hơn.</h1>
+          <span className="reference-kicker">Bản đồ cộng đồng Hòa Lạc</span>
+          <h1>Mọi điều về Hòa Lạc,<br />trên một bản đồ.</h1>
           <p>
-            Bản đồ số khu vực Hòa Lạc - Thạch Thất và vùng phụ cận.
-            Khám phá địa điểm, kết nối cộng đồng và cùng xây dựng
-            bản đồ phong phú, chính xác hơn mỗi ngày.
+            Khám phá địa điểm, tuyến đường và những trải nghiệm đáng chú ý
+            tại Hòa Lạc và 8 xã lân cận. Cùng cộng đồng đóng góp, cập nhật
+            dữ liệu để bản đồ ngày càng đầy đủ, chính xác và hữu ích hơn.
           </p>
 
           <form className="reference-search" onSubmit={submitSearch}>
