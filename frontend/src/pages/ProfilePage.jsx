@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Award, BadgeCheck, Heart, LogOut, MapPin, Medal, TrendingUp, UserRound } from 'lucide-react';
+import { Award, BadgeCheck, Heart, MapPin, Medal, TrendingUp } from 'lucide-react';
 import ExplorerProfile from '../components/ExplorerProfile.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getMyFavorites, getUserProfile } from '../services/api.js';
@@ -51,21 +51,11 @@ export default function ProfilePage() {
 
   return (
     <main className="profile-page page-container">
-      <ExplorerProfile user={profile?.user || user} stats={profile?.stats} />
-
-      <section className="profile-mobile-account" aria-label="Tài khoản">
-        <div className="profile-mobile-account-copy">
-          <span className="profile-mobile-account-icon"><UserRound size={17} /></span>
-          <div>
-            <b>Tài khoản</b>
-            <span>{profile?.user?.email || user?.email || 'Hola Explorer'}</span>
-          </div>
-        </div>
-        <button type="button" className="profile-mobile-logout" onClick={handleLogout}>
-          <LogOut size={16} />
-          Đăng xuất
-        </button>
-      </section>
+      <ExplorerProfile
+        user={profile?.user || user}
+        stats={profile?.stats}
+        onLogout={handleLogout}
+      />
 
       <section className="profile-grid">
         <div className="profile-panel">
