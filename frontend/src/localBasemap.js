@@ -125,6 +125,28 @@ function cloneLayer(layer) {
  * The source itself is still the same compact PMTiles archive. This function
  * only changes cartography / progressive disclosure by zoom.
  */
+function buildingHeightExpression(fallbackHeight = 7.5) {
+  return [
+    'case',
+    ['>', ['to-number', ['get', 'height'], 0], 0],
+    ['to-number', ['get', 'height'], fallbackHeight],
+    ['>', ['to-number', ['get', 'num_floors'], 0], 0],
+    ['*', ['to-number', ['get', 'num_floors'], 2], 3.2],
+    fallbackHeight
+  ];
+}
+
+function buildingBaseExpression() {
+  return [
+    'case',
+    ['>', ['to-number', ['get', 'min_height'], 0], 0],
+    ['to-number', ['get', 'min_height'], 0],
+    ['>', ['to-number', ['get', 'min_floor'], 0], 0],
+    ['*', ['to-number', ['get', 'min_floor'], 0], 3.2],
+    0
+  ];
+}
+
 function createSupplementalBuildingLayers(mode) {
   const palette = DETAIL_PALETTES[mode] || DETAIL_PALETTES.streets;
   const fillOpacity = [
@@ -169,6 +191,41 @@ function createSupplementalBuildingLayers(mode) {
           18, 0.5
         ],
         'fill-outline-color': palette.buildingOutline
+      }
+    },
+    {
+      id: 'hola-overture-building-3d',
+      type: 'fill-extrusion',
+      source: 'overture-buildings',
+      'source-layer': 'building',
+      minzoom: 16.4,
+      filter: ['!=', ['get', 'has_parts'], true],
+      layout: {
+        visibility: 'none'
+      },
+      paint: {
+        'fill-extrusion-color': mode === 'dark' ? '#737d87' : '#d4dce2',
+        'fill-extrusion-height': buildingHeightExpression(7.5),
+        'fill-extrusion-base': buildingBaseExpression(),
+        'fill-extrusion-opacity': 0.88,
+        'fill-extrusion-vertical-gradient': true
+      }
+    },
+    {
+      id: 'hola-overture-building-part-3d',
+      type: 'fill-extrusion',
+      source: 'overture-buildings',
+      'source-layer': 'building_part',
+      minzoom: 16.4,
+      layout: {
+        visibility: 'none'
+      },
+      paint: {
+        'fill-extrusion-color': mode === 'dark' ? '#7f8993' : '#e1e6ea',
+        'fill-extrusion-height': buildingHeightExpression(6),
+        'fill-extrusion-base': buildingBaseExpression(),
+        'fill-extrusion-opacity': 0.9,
+        'fill-extrusion-vertical-gradient': true
       }
     }
   ];
