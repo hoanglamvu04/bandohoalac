@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LocateFixed, RefreshCcw } from 'lucide-react';
 import * as maplibre from 'maplibre-gl';
+import { PMTiles, Protocol } from 'pmtiles';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   DEFAULT_CENTER,
@@ -497,20 +498,15 @@ export default function MapView({
         // Previously Hola Maps loaded MapLibre/CDN scripts first and only then
         // probed the local archives, which added a second serial wait.
         const [
-          ,
-          ,
           hasLocalPmtiles,
           hasSupplementalBuildings
         ] = await Promise.all([
-          loadExternalScript('https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js', 'pmtiles'),
-          loadExternalScript('https://unpkg.com/@protomaps/basemaps@5/dist/basemaps.js', 'basemaps'),
           localPmtilesAvailable(),
           supplementalBuildingsAvailable()
         ]);
         if (cancelled || !containerRef.current) return;
 
-        const pmtiles = window.pmtiles;
-        const protocol = new pmtiles.Protocol();
+        const protocol = new Protocol();
         try {
           maplibre.addProtocol('pmtiles', protocol.tile);
         } catch {
@@ -524,10 +520,10 @@ export default function MapView({
         setUsingSupplementalBuildings(canUseSupplementalBuildings);
 
         if (hasLocalPmtiles) {
-          protocol.add(new pmtiles.PMTiles(PMTILES_URL));
+          protocol.add(new PMTiles(PMTILES_URL));
         }
         if (canUseSupplementalBuildings) {
-          protocol.add(new pmtiles.PMTiles(BUILDINGS_PMTILES_URL));
+          protocol.add(new PMTiles(BUILDINGS_PMTILES_URL));
         }
 
         maplibreRef.current = maplibre;
