@@ -1,4 +1,4 @@
-import { BadgeCheck, Camera, LogOut, MapPin, Sparkles } from 'lucide-react';
+import { BadgeCheck, Camera, Crown, LogOut, MapPin, Sparkles, Star } from 'lucide-react';
 
 export default function ExplorerProfile({ user, stats, onLogout }) {
   const initials = (user?.name || '?').split(' ').map((word) => word[0]).slice(0, 2).join('').toUpperCase();
@@ -7,7 +7,10 @@ export default function ExplorerProfile({ user, stats, onLogout }) {
   return (
     <section className="explorer-card">
       <div className="explorer-cover">
-        <div className="explorer-avatar">{initials}</div>
+        <div className="explorer-avatar">
+          {initials}
+          <span className="explorer-avatar-crown" aria-hidden="true"><Crown size={14} /></span>
+        </div>
         <span className="trusted-badge"><BadgeCheck size={16} /> {trustLabel}</span>
         {onLogout && (
           <button
@@ -31,9 +34,10 @@ export default function ExplorerProfile({ user, stats, onLogout }) {
         </div>
 
         <div className="explorer-score">
-          <Sparkles size={20} />
+          <span className="explorer-score-star"><Star size={20} fill="currentColor" /></span>
           <strong>{(user?.points ?? 0).toLocaleString('vi-VN')}</strong>
           <span>điểm</span>
+          <Sparkles className="explorer-score-sparkle" size={13} />
         </div>
       </div>
 
