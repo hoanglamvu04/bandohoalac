@@ -34,6 +34,7 @@ export default function ExplorerProfile({ user, stats, onLogout }) {
         </div>
 
         <div className="explorer-score">
+          <Sparkles className="explorer-score-default" size={20} />
           <span className="explorer-score-star"><Star size={20} fill="currentColor" /></span>
           <strong>{(user?.points ?? 0).toLocaleString('vi-VN')}</strong>
           <span>điểm</span>
