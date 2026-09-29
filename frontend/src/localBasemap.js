@@ -1,3 +1,5 @@
+import * as basemaps from '@protomaps/basemaps';
+
 const GLYPHS_URL = 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf';
 const SPRITE_BASE = 'https://protomaps.github.io/basemaps-assets/sprites/v4/';
 
@@ -438,9 +440,6 @@ function createHybridOverlayLayers(layers) {
 }
 
 export function createPmtilesStyle(mode = 'streets', options = {}) {
-  const basemaps = window.basemaps;
-  if (!basemaps) throw new Error('Protomaps basemap assets are not loaded.');
-
   const flavorName = FLAVORS[mode] || 'light';
   const baseLayers = basemaps.layers('protomaps', basemaps.namedFlavor(flavorName), {
     lang: 'vi'
@@ -526,24 +525,20 @@ async function archiveAvailable(url) {
   }
 
   const check = (async () => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 5000);
+
     try {
-      const key = 'hola-map-archive:' + String(url);
-      const stored = window.sessionStorage?.getItem(key);
-      if (stored === '1') return true;
-      if (stored === '0') return false;
-
-      const response = await fetch(url, { method: 'HEAD', cache: 'default' });
-      const available = response.ok;
-
-      try {
-        window.sessionStorage?.setItem(key, available ? '1' : '0');
-      } catch {
-        // Ignore storage restrictions.
-      }
-
-      return available;
+      const response = await fetch(url, {
+        method: 'HEAD',
+        cache: 'no-store',
+        signal: controller.signal
+      });
+      return response.ok;
     } catch {
       return false;
+    } finally {
+      window.clearTimeout(timeout);
     }
   })();
 
