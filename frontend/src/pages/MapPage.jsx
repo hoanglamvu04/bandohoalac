@@ -603,6 +603,7 @@ export default function MapPage() {
     setPlaceScope('viewport');
     setNearbyRadius(0);
     setSelectedId(null);
+    syncDiscoveryParams({ place: null });
   }
 
   function viewportCenter() {
@@ -766,7 +767,10 @@ export default function MapPage() {
     }
 
     setQuery(value);
-    syncDiscoveryParams({ q: value.trim() || null });
+    syncDiscoveryParams({
+      q: value.trim() || null,
+      place: wasSearching !== willSearch ? null : requestedPlaceId || null
+    });
   }
 
   function handleCategoryChange(value) {
@@ -774,7 +778,7 @@ export default function MapPage() {
     setSelectedId(null);
     setPlaceScope('viewport');
     setCategory(value);
-    syncDiscoveryParams({ category: value });
+    syncDiscoveryParams({ category: value, place: null });
   }
 
   function handleRatingChange(value) {
@@ -782,7 +786,7 @@ export default function MapPage() {
     setSelectedId(null);
     setPlaceScope('viewport');
     setMinRating(value);
-    syncDiscoveryParams({ rating: value });
+    syncDiscoveryParams({ rating: value, place: null });
   }
 
   function handleOpenNowToggle() {
@@ -827,6 +831,7 @@ export default function MapPage() {
     if (!place) return;
 
     setSelectedId(place.id);
+    syncDiscoveryParams({ place: place.id });
     setRouteDestination(place);
     setRouteLoading(true);
     setRouteError('');
@@ -1197,7 +1202,14 @@ export default function MapPage() {
 
       {selectedPlace && !routeDestination && (
         <section className={selectedImages.length ? 'hm-place-inspector has-gallery' : 'hm-place-inspector'}>
-          <button className="hm-inspector-close" type="button" onClick={() => setSelectedId(null)}>
+          <button
+            className="hm-inspector-close"
+            type="button"
+            onClick={() => {
+              setSelectedId(null);
+              syncDiscoveryParams({ place: null });
+            }}
+          >
             <X size={16} />
           </button>
 
