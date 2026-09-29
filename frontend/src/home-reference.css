@@ -2574,3 +2574,216 @@
     font-size:16px!important;
   }
 }
+
+
+/* ---------- Live homepage map preview ---------- */
+.home-live-map-preview{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  cursor:default;
+  background:#dfe9ef;
+}
+
+.home-live-map-canvas{
+  position:absolute;
+  inset:0;
+  z-index:0;
+}
+
+.home-live-map-canvas .maplibregl-map,
+.home-live-map-canvas .maplibregl-canvas{
+  width:100%;
+  height:100%;
+}
+
+.home-live-map-preview::after{
+  content:"";
+  position:absolute;
+  z-index:1;
+  inset:0;
+  pointer-events:none;
+  box-shadow:inset 0 0 0 1px rgba(43,92,135,.08);
+}
+
+.home-live-map-badge,
+.home-live-map-area,
+.home-live-map-open{
+  position:absolute;
+  z-index:4;
+}
+
+.home-live-map-badge{
+  top:16px;
+  left:16px;
+  min-height:48px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:0 13px;
+  border:1px solid rgba(255,255,255,.72);
+  border-radius:15px;
+  color:#173b58;
+  background:rgba(255,255,255,.92);
+  box-shadow:0 10px 28px rgba(30,69,104,.13);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+
+.home-live-map-dot{
+  width:9px;
+  height:9px;
+  flex:0 0 auto;
+  border-radius:50%;
+  background:#17b978;
+  box-shadow:0 0 0 5px rgba(23,185,120,.13);
+}
+
+.home-live-map-badge>div{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.home-live-map-badge b{
+  font-size:9px;
+  letter-spacing:.08em;
+}
+
+.home-live-map-badge small{
+  color:#7a8ea0;
+  font-size:8px;
+  font-weight:700;
+}
+
+.home-live-map-area{
+  top:16px;
+  right:16px;
+  min-height:36px;
+  display:flex;
+  align-items:center;
+  padding:0 12px;
+  border:1px solid rgba(255,255,255,.7);
+  border-radius:12px;
+  color:#17483d;
+  background:rgba(255,255,255,.91);
+  box-shadow:0 8px 22px rgba(30,69,104,.10);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  font-size:9px;
+  font-weight:900;
+}
+
+.home-live-map-open{
+  right:16px;
+  bottom:16px;
+  min-height:46px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:0 15px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:14px;
+  color:#fff;
+  background:linear-gradient(145deg,#0d6b54,#064535);
+  box-shadow:0 12px 28px rgba(4,63,48,.23);
+  font-size:10px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.home-live-map-open:hover{
+  transform:translateY(-1px);
+}
+
+.home-live-place-marker{
+  width:30px;
+  height:30px;
+  display:block;
+  padding:0;
+  border:3px solid rgba(255,255,255,.96);
+  border-radius:10px 10px 10px 3px;
+  box-shadow:0 8px 18px rgba(27,65,95,.22);
+  cursor:pointer;
+}
+
+.home-live-place-marker::after{
+  content:"";
+  width:7px;
+  height:7px;
+  display:block;
+  margin:auto;
+  border-radius:50%;
+  background:#fff;
+}
+
+.home-live-place-marker.blue{background:#2c7df0}
+.home-live-place-marker.green{background:#18a467}
+.home-live-place-marker.orange{background:#ef8b27}
+.home-live-place-marker.purple{background:#6b5bd8}
+
+.home-live-map-preview .maplibregl-ctrl-bottom-left{
+  z-index:5;
+  left:10px;
+  bottom:10px;
+}
+
+.home-live-map-preview .maplibregl-ctrl-attrib{
+  border-radius:9px;
+  background:rgba(255,255,255,.9);
+  box-shadow:0 5px 14px rgba(30,69,104,.08);
+}
+
+@media(max-width:760px){
+  .home-live-map-badge{
+    top:10px;
+    left:10px;
+    min-height:40px;
+    gap:7px;
+    padding:0 10px;
+    border-radius:12px;
+  }
+
+  .home-live-map-badge b{font-size:8px}
+  .home-live-map-badge small{font-size:7px}
+
+  .home-live-map-area{
+    top:10px;
+    right:10px;
+    min-height:32px;
+    padding:0 9px;
+    font-size:8px;
+  }
+
+  .home-live-map-open{
+    right:10px;
+    bottom:10px;
+    min-height:40px;
+    padding:0 12px;
+    border-radius:12px;
+    font-size:9px;
+  }
+
+  .home-live-place-marker{
+    width:26px;
+    height:26px;
+    border-width:2px;
+    border-radius:9px 9px 9px 3px;
+  }
+
+  .home-live-map-preview .maplibregl-ctrl-bottom-left{
+    left:8px;
+    bottom:8px;
+  }
+}
+
+@media(max-width:430px){
+  .home-live-map-area{
+    display:none;
+  }
+
+  .home-live-map-badge{
+    max-width:150px;
+  }
+}
