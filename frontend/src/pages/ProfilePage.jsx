@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Award, BadgeCheck, Heart, MapPin, Medal, TrendingUp } from 'lucide-react';
+import { Award, BadgeCheck, Heart, LogOut, MapPin, Medal, TrendingUp, UserRound } from 'lucide-react';
 import ExplorerProfile from '../components/ExplorerProfile.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getMyFavorites, getUserProfile } from '../services/api.js';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const TYPE_LABELS = {
   CREATE_PLACE: 'Thêm địa điểm',
@@ -17,7 +17,8 @@ const TYPE_LABELS = {
 };
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,9 +44,28 @@ export default function ProfilePage() {
     return <main className="profile-page page-container"><div className="loading-card">Đang tải hồ sơ...</div></main>;
   }
 
+  function handleLogout() {
+    logout();
+    navigate('/');
+  }
+
   return (
     <main className="profile-page page-container">
       <ExplorerProfile user={profile?.user || user} stats={profile?.stats} />
+
+      <section className="profile-mobile-account" aria-label="Tài khoản">
+        <div className="profile-mobile-account-copy">
+          <span className="profile-mobile-account-icon"><UserRound size={17} /></span>
+          <div>
+            <b>Tài khoản</b>
+            <span>{profile?.user?.email || user?.email || 'Hola Explorer'}</span>
+          </div>
+        </div>
+        <button type="button" className="profile-mobile-logout" onClick={handleLogout}>
+          <LogOut size={16} />
+          Đăng xuất
+        </button>
+      </section>
 
       <section className="profile-grid">
         <div className="profile-panel">
