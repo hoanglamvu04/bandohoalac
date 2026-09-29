@@ -121,6 +121,27 @@ attribution from the official tileset. The project does not copy building
 geometry from the Google Maps UI or tiles.
 
 
+## Optional 3D building view
+
+When the supplemental Overture archive is available, the vector map exposes a
+small `3D` control. The normal map remains 2D by default. Enabling 3D:
+
+- switches the Overture footprint fills to MapLibre `fill-extrusion` layers;
+- pitches the camera to 52 degrees and rotates slightly for depth;
+- starts at local zoom 16.6 or closer;
+- uses Overture `height` when present;
+- otherwise estimates height from `num_floors * 3.2m`;
+- falls back to a conservative default height for footprints without either
+  attribute;
+- respects `min_height` / `min_floor` for elevated building parts;
+- prefers `building_part` geometry when a building declares detailed parts.
+
+Switching to Satellite or Hybrid automatically returns the camera to 2D.
+No extra download or PMTiles rebuild is needed after
+`hoalac-buildings.pmtiles` already exists because the same Overture archive
+contains the building attributes used by the extrusion style.
+
+
 ## Satellite and Hybrid basemaps
 
 Hola Maps supports two imagery modes in addition to the local vector basemap:
