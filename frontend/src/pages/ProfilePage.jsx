@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Award, BadgeCheck, Heart, MapPin, Medal, TrendingUp } from 'lucide-react';
+import { Award, BadgeCheck, ChevronRight, Heart, MapPin, MapPinned, Medal, TrendingUp } from 'lucide-react';
 import ExplorerProfile from '../components/ExplorerProfile.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getMyFavorites, getUserProfile } from '../services/api.js';
@@ -60,12 +60,19 @@ export default function ProfilePage() {
       <section className="profile-grid">
         <div className="profile-panel">
           <div className="panel-heading">
+            <span className="profile-panel-icon"><TrendingUp size={20} /></span>
             <div><span className="eyebrow">HOẠT ĐỘNG</span><h2>Đóng góp gần đây</h2></div>
-            <TrendingUp size={22} />
+            <span className="profile-panel-arrow"><ChevronRight size={20} /></span>
           </div>
 
           <div className="activity-list">
-            {!profile?.recentActivity?.length && <div className="empty-state"><b>Chưa có hoạt động nào</b><span>Hãy gửi đóng góp đầu tiên của bạn.</span></div>}
+            {!profile?.recentActivity?.length && (
+              <div className="empty-state profile-activity-empty">
+                <span className="profile-empty-illustration"><MapPinned size={42} /></span>
+                <b>Chưa có hoạt động nào</b>
+                <span>Hãy gửi đóng góp đầu tiên của bạn.</span>
+              </div>
+            )}
             {profile?.recentActivity?.map((activity) => (
               <div className="activity-row" key={activity.id}>
                 <span className="activity-icon"><MapPin size={18} /></span>
@@ -81,8 +88,9 @@ export default function ProfilePage() {
 
         <div className="profile-panel">
           <div className="panel-heading">
+            <span className="profile-panel-icon"><Medal size={20} /></span>
             <div><span className="eyebrow">THÀNH TÍCH</span><h2>Huy hiệu</h2></div>
-            <Medal size={22} />
+            <span className="profile-panel-arrow"><ChevronRight size={20} /></span>
           </div>
 
           <div className="badge-grid">
@@ -100,8 +108,9 @@ export default function ProfilePage() {
 
       <section className="profile-panel profile-favorites-panel">
         <div className="panel-heading">
+          <span className="profile-panel-icon"><Heart size={20} /></span>
           <div><span className="eyebrow">ĐÃ LƯU</span><h2>Địa điểm yêu thích</h2></div>
-          <Heart size={22} />
+          <span className="profile-panel-arrow"><ChevronRight size={20} /></span>
         </div>
 
         {!favorites.length ? (
