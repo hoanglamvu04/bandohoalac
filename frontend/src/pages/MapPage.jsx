@@ -30,6 +30,7 @@ import {
   getDirections,
   getMapLayers,
   getNearbyPlaces,
+  getPlace,
   getPlaces,
   getPlacesInBounds
 } from '../services/api.js';
@@ -204,6 +205,7 @@ export default function MapPage() {
   const galleryTouchStartRef = useRef(null);
 
   const regionId = searchParams.get('region') || 'all';
+  const requestedPlaceId = searchParams.get('place') || '';
   const focusRegion = REGION_PRESETS.find((item) => item.id === regionId) || REGION_PRESETS[0];
 
   useEffect(() => {
@@ -211,6 +213,37 @@ export default function MapPage() {
       .then((data) => setCategories(Array.isArray(data?.items) ? data.items : []))
       .catch(() => setCategories([]));
   }, []);
+
+  useEffect(() => {
+    if (!requestedPlaceId) return undefined;
+
+    let active = true;
+
+    getPlace(requestedPlaceId)
+      .then((place) => {
+        if (!active || !place?.id) return;
+
+        setPlaces((current) => mergeProgressivePlaces(current, [place]));
+        setSelectedId(place.id);
+        setPlaceScope('viewport');
+        setNearbyRadius(0);
+
+        if (
+          typeof window !== 'undefined' &&
+          window.matchMedia('(max-width: 760px)').matches
+        ) {
+          setLeftOpen(false);
+        }
+      })
+      .catch((error) => {
+        if (!active) return;
+        console.warn('[Hola Maps] requested place could not be loaded:', error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [requestedPlaceId]);
 
   useEffect(() => {
     // Region/filter changes start a new progressive discovery session. Within
@@ -771,6 +804,7 @@ export default function MapPage() {
 
     const nextSelected = selectedId === place.id ? null : place.id;
     setSelectedId(nextSelected);
+    syncDiscoveryParams({ place: nextSelected || null });
 
     if (
       nextSelected &&
