@@ -2222,3 +2222,136 @@
     height:34px;
   }
 }
+
+
+/* ---------- Official Hola Maps brand lockup ---------- */
+.reference-navbar .premium-brand.brand-official{
+  min-width:164px;
+  width:164px;
+  height:58px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:0;
+  padding:0;
+  overflow:visible;
+}
+
+.reference-navbar .brand-official-lockup{
+  width:154px;
+  height:57px;
+  display:block;
+  flex:0 0 auto;
+  overflow:hidden;
+}
+
+.reference-navbar .brand-official-logo{
+  width:auto;
+  height:57px;
+  max-width:none;
+  display:block;
+  object-fit:contain;
+  object-position:left center;
+  transform:translateZ(0);
+}
+
+/* Remove any old icon-tile decoration if stale markup/CSS is still cached. */
+.reference-navbar .brand-official .brand-mark,
+.reference-navbar .brand-official .brand-copy{
+  display:none!important;
+}
+
+@media(max-width:1100px){
+  .reference-navbar .premium-brand.brand-official{
+    min-width:144px;
+    width:144px;
+  }
+
+  .reference-navbar .brand-official-lockup{
+    width:136px;
+    height:50px;
+  }
+
+  .reference-navbar .brand-official-logo{
+    height:50px;
+  }
+}
+
+@media(max-width:760px){
+  .reference-navbar.home-navbar .premium-brand.brand-official,
+  .reference-navbar .premium-brand.brand-official{
+    min-width:0;
+    width:126px;
+    height:50px;
+    flex:0 0 126px;
+    gap:0;
+  }
+
+  .reference-navbar.home-navbar .brand-official-lockup,
+  .reference-navbar .brand-official-lockup{
+    width:126px;
+    height:47px;
+    border-radius:0;
+  }
+
+  .reference-navbar.home-navbar .brand-official-logo,
+  .reference-navbar .brand-official-logo{
+    width:auto;
+    height:47px;
+    max-width:none;
+  }
+
+  /* After the hero, preserve room for search by showing only the icon portion
+     of the same official SVG instead of shrinking the whole wordmark unreadably. */
+  .reference-navbar.home-navbar.home-navbar-scrolled .premium-brand.brand-official{
+    width:38px;
+    height:40px;
+    flex:0 0 38px;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .brand-official-lockup{
+    width:38px;
+    height:40px;
+    overflow:hidden;
+    border-radius:10px;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .brand-official-logo{
+    width:auto;
+    height:40px;
+    max-width:none;
+  }
+}
+
+@media(max-width:390px){
+  .reference-navbar.home-navbar .premium-brand.brand-official,
+  .reference-navbar .premium-brand.brand-official{
+    width:116px;
+    flex-basis:116px;
+  }
+
+  .reference-navbar.home-navbar .brand-official-lockup,
+  .reference-navbar .brand-official-lockup{
+    width:116px;
+    height:43px;
+  }
+
+  .reference-navbar.home-navbar .brand-official-logo,
+  .reference-navbar .brand-official-logo{
+    height:43px;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .premium-brand.brand-official{
+    width:35px;
+    flex-basis:35px;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .brand-official-lockup{
+    width:35px;
+    height:37px;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .brand-official-logo{
+    height:37px;
+  }
+}
