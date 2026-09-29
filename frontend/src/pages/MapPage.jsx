@@ -305,8 +305,36 @@ export default function MapPage() {
         )
           .then((data) => {
             if (!active) return;
+
+            const items = Array.isArray(data?.items) ? data.items : [];
             lastPlacesRequestKeyRef.current = requestKey;
-            setPlaces(Array.isArray(data?.items) ? data.items : []);
+            setPlaces(items);
+
+            const normalizedNeedle = needle.toLocaleLowerCase('vi-VN');
+            const strongMatch = items.find((place) => {
+              const name = String(place?.name || '').trim().toLocaleLowerCase('vi-VN');
+              return name === normalizedNeedle || name.startsWith(normalizedNeedle);
+            });
+            const focusedPlace = items.length === 1 ? items[0] : strongMatch || null;
+
+            if (focusedPlace) {
+              setSelectedId(focusedPlace.id);
+              if (
+                typeof window !== 'undefined' &&
+                window.matchMedia('(max-width: 760px)').matches
+              ) {
+                setLeftOpen(false);
+              }
+            } else {
+              setSelectedId(null);
+              if (
+                items.length > 0 &&
+                typeof window !== 'undefined' &&
+                window.matchMedia('(max-width: 760px)').matches
+              ) {
+                setLeftOpen(true);
+              }
+            }
           })
           .catch((error) => {
             if (!active || error?.name === 'AbortError') return;
