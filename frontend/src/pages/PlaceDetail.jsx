@@ -254,7 +254,7 @@ export default function PlaceDetail() {
             <span>Chỉ đường</span>
           </a>
         )}
-        <Link to="/map">
+        <Link to={'/map?place=' + encodeURIComponent(place.id)}>
           <MapPin size={18} />
           <span>Xem bản đồ</span>
         </Link>
