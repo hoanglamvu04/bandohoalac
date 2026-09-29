@@ -510,6 +510,8 @@ export default function MapView({
   const [usingSupplementalBuildings, setUsingSupplementalBuildings] = useState(false);
   const [basemapHealth, setBasemapHealth] = useState('checking');
   const [building3D, setBuilding3D] = useState(false);
+  const [attributionOpen, setAttributionOpen] = useState(false);
+  const [attributionIntro, setAttributionIntro] = useState(false);
 
   const validPlaces = useMemo(
     () => places.filter((place) =>
@@ -582,7 +584,6 @@ export default function MapView({
         });
 
         mapRef.current = map;
-        map.addControl(new maplibre.AttributionControl({ compact: true }), 'bottom-left');
         map.addControl(new maplibre.NavigationControl({ visualizePitch: true }), 'bottom-right');
         map.addControl(new maplibre.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-right');
 
@@ -771,6 +772,27 @@ export default function MapView({
       maplibreRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (!mapBooted) return undefined;
+
+    let timer = null;
+    const alreadyShown =
+      typeof window !== 'undefined' &&
+      window.sessionStorage.getItem('hola-map-attribution-shown') === '1';
+
+    if (!alreadyShown) {
+      setAttributionIntro(true);
+      timer = window.setTimeout(() => {
+        setAttributionIntro(false);
+        window.sessionStorage.setItem('hola-map-attribution-shown', '1');
+      }, 5000);
+    }
+
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [mapBooted]);
 
   useEffect(() => {
     latestMapDataRef.current = mapData;
@@ -1111,24 +1133,44 @@ export default function MapView({
 
       <div ref={containerRef} className="hm-map-canvas" />
 
-      <div className={'hm-map-provider health-' + basemapHealth}>
-        {basemapMode === 'satellite' && (
-          'SATELLITE · ' + SATELLITE_PROVIDER.toUpperCase() +
-          (HAS_SATELLITE_FALLBACK ? ' · ESRI BACKUP' : '')
+      <div className="hm-attribution-wrap">
+        {attributionIntro && (
+          <div className="hm-attribution-intro">
+            Map data © OpenStreetMap · Protomaps
+          </div>
         )}
-        {basemapMode === 'hybrid' && (
-          'HYBRID · ' + SATELLITE_PROVIDER.toUpperCase() +
-          (HAS_SATELLITE_FALLBACK ? ' · ESRI BACKUP' : '') +
-          ' + LOCAL LABELS'
+
+        <button
+          className="hm-attribution-mini"
+          type="button"
+          onClick={() => setAttributionOpen((value) => !value)}
+          aria-label="Nguồn dữ liệu bản đồ"
+          aria-expanded={attributionOpen}
+          title="Nguồn dữ liệu bản đồ"
+        >
+          i
+        </button>
+
+        {attributionOpen && (
+          <div className="hm-attribution-popover">
+            <b>Nguồn bản đồ</b>
+            <a
+              href="https://www.openstreetmap.org/copyright"
+              target="_blank"
+              rel="noreferrer"
+            >
+              © OpenStreetMap contributors
+            </a>
+            <a
+              href="https://protomaps.com"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Protomaps
+            </a>
+            <small>Map rendering powered by MapLibre.</small>
+          </div>
         )}
-        {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'checking' && 'CHECKING LOCAL BASEMAP'}
-        {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'ok' && (
-          usingSupplementalBuildings
-            ? 'LOCAL PMTILES · OSM + OVERTURE BUILDINGS' + (building3D ? ' · 3D' : '')
-            : 'LOCAL PMTILES · OSM'
-        )}
-        {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'broken' && 'LOCAL PMTILES ERROR'}
-        {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'fallback' && 'OPEN VECTOR FALLBACK'}
       </div>
 
       {usingSupplementalBuildings && !['satellite', 'hybrid'].includes(basemapMode) && (
