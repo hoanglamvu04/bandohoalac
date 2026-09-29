@@ -7,6 +7,7 @@ import Footer from './components/Footer.jsx';
 export default function App() {
   const location = useLocation();
   const isMapRoute = location.pathname === '/map';
+  const isProfileRoute = location.pathname === '/profile';
 
   useEffect(() => {
     document.body.classList.toggle('map-route-active', isMapRoute);
@@ -14,7 +15,11 @@ export default function App() {
   }, [isMapRoute]);
 
   return (
-    <div className={isMapRoute ? 'app-shell map-app-shell' : 'app-shell'}>
+    <div className={[
+      'app-shell',
+      isMapRoute ? 'map-app-shell' : '',
+      isProfileRoute ? 'profile-app-shell' : ''
+    ].filter(Boolean).join(' ')}>
       <Navbar />
 
       <main className={isMapRoute ? 'app-main map-app-main' : 'app-main'}>
