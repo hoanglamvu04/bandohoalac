@@ -166,7 +166,7 @@ export async function listHomeSections({ limit = 8 } = {}) {
     '    c.icon AS category_icon,',
     "    COALESCE(img.images, '[]'::json) AS images,",
     '    COALESCE(fav.favorite_count, 0)::int AS favorite_count,',
-    '    COUNT(*) OVER (PARTITION BY c.id)::int AS category_total,',
+    '    (COUNT(*) OVER (PARTITION BY c.id))::int AS category_total,',
     '    ROW_NUMBER() OVER (',
     '      PARTITION BY c.id',
     '      ORDER BY p.rating_avg DESC, p.rating_count DESC, p.updated_at DESC',
