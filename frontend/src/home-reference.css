@@ -1859,3 +1859,366 @@
     max-width:190px;
   }
 }
+
+
+/* ---------- Smart mobile home header ---------- */
+.mobile-home-search,
+.mobile-account-control,
+.brand-subtitle-mobile{
+  display:none;
+}
+
+@media(max-width:760px){
+  .reference-navbar.home-navbar{
+    width:calc(100% - 12px);
+    height:64px;
+    margin-top:6px;
+    top:6px;
+    padding:0 9px;
+    gap:8px;
+    border-radius:17px;
+    transition:
+      height .22s ease,
+      padding .22s ease,
+      box-shadow .22s ease,
+      background .22s ease;
+  }
+
+  .reference-navbar.home-navbar .premium-desktop-nav,
+  .reference-navbar.home-navbar .nav-region-control,
+  .reference-navbar.home-navbar .nav-cta,
+  .reference-navbar.home-navbar .nav-install,
+  .reference-navbar.home-navbar .desktop-account-control{
+    display:none!important;
+  }
+
+  .reference-navbar.home-navbar .premium-brand{
+    min-width:0;
+    flex:0 1 auto;
+    gap:9px;
+  }
+
+  .reference-navbar.home-navbar .brand-mark{
+    width:40px;
+    height:40px;
+    flex:0 0 auto;
+    border-radius:13px;
+  }
+
+  .reference-navbar.home-navbar .brand-mark svg{
+    width:22px;
+    height:22px;
+  }
+
+  .reference-navbar.home-navbar .brand-copy{
+    min-width:0;
+    gap:3px;
+  }
+
+  .reference-navbar.home-navbar .brand-copy strong{
+    overflow:hidden;
+    color:#071c46;
+    font-size:15px;
+    line-height:1;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .reference-navbar.home-navbar .brand-subtitle-desktop{
+    display:none!important;
+  }
+
+  .reference-navbar.home-navbar .brand-subtitle-mobile{
+    display:block!important;
+    overflow:hidden;
+    color:#6f8299;
+    font-size:8px;
+    line-height:1;
+    font-weight:800;
+    letter-spacing:.035em;
+    text-transform:none;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .reference-navbar.home-navbar .premium-nav-actions{
+    display:flex!important;
+    flex:0 0 auto;
+    align-items:center;
+    gap:6px;
+    margin-left:auto;
+  }
+
+  .reference-navbar.home-navbar .nav-notification-control{
+    display:block!important;
+  }
+
+  .reference-navbar.home-navbar .nav-notification-button{
+    width:38px;
+    height:38px;
+    display:grid;
+    place-items:center;
+    padding:0;
+    border:1px solid #e0eaf4;
+    border-radius:12px;
+    color:#173c5e;
+    background:#f8fbff;
+    box-shadow:none;
+  }
+
+  .reference-navbar.home-navbar .nav-notification-button svg{
+    width:18px;
+    height:18px;
+  }
+
+  .reference-navbar.home-navbar .nav-notification-button>span{
+    top:-3px;
+    right:-3px;
+    min-width:16px;
+    height:16px;
+    padding:0 4px;
+    border:2px solid #fff;
+    border-radius:999px;
+    font-size:7px;
+    line-height:12px;
+  }
+
+  .reference-navbar.home-navbar .nav-notification-menu{
+    top:calc(100% + 12px);
+    right:-46px;
+    width:min(340px,calc(100vw - 24px));
+    max-height:min(440px,70vh);
+    overflow-y:auto;
+    border-radius:18px;
+  }
+
+  .reference-navbar.home-navbar .mobile-account-control{
+    position:relative;
+    display:block;
+  }
+
+  .reference-navbar.home-navbar .mobile-account-button{
+    width:38px;
+    height:38px;
+    display:grid;
+    place-items:center;
+    overflow:hidden;
+    padding:0;
+    border:1px solid rgba(14,84,65,.14);
+    border-radius:12px;
+    color:#fff;
+    background:linear-gradient(145deg,#147558,#074738);
+    box-shadow:0 6px 15px rgba(6,74,56,.15);
+    cursor:pointer;
+  }
+
+  .reference-navbar.home-navbar .mobile-account-button>span{
+    font-size:12px;
+    font-weight:950;
+    line-height:1;
+  }
+
+  .reference-navbar.home-navbar .mobile-account-menu{
+    position:absolute;
+    z-index:100;
+    top:calc(100% + 12px);
+    right:0;
+    width:min(260px,calc(100vw - 24px));
+    overflow:hidden;
+    padding:8px;
+    border:1px solid #dfe9e4;
+    border-radius:18px;
+    background:rgba(255,255,255,.98);
+    box-shadow:0 18px 44px rgba(20,52,43,.18);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+  }
+
+  .reference-navbar.home-navbar .mobile-account-summary{
+    display:grid;
+    grid-template-columns:38px minmax(0,1fr);
+    gap:9px;
+    align-items:center;
+    margin-bottom:5px;
+    padding:8px;
+    border-radius:13px;
+    background:#f5f9f7;
+  }
+
+  .reference-navbar.home-navbar .mobile-account-avatar{
+    width:38px;
+    height:38px;
+    display:grid;
+    place-items:center;
+    border-radius:12px;
+    color:#fff;
+    background:linear-gradient(145deg,#147558,#074738);
+    font-size:12px;
+    font-weight:950;
+  }
+
+  .reference-navbar.home-navbar .mobile-account-summary>div{
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .reference-navbar.home-navbar .mobile-account-summary b,
+  .reference-navbar.home-navbar .mobile-account-summary small{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .reference-navbar.home-navbar .mobile-account-summary b{
+    color:#15362d;
+    font-size:11px;
+  }
+
+  .reference-navbar.home-navbar .mobile-account-summary small{
+    color:#80918b;
+    font-size:8px;
+  }
+
+  .reference-navbar.home-navbar .mobile-account-menu>a,
+  .reference-navbar.home-navbar .mobile-account-menu>button{
+    width:100%;
+    min-height:39px;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    padding:0 10px;
+    border:0;
+    border-radius:11px;
+    color:#294b42;
+    background:transparent;
+    text-decoration:none;
+    text-align:left;
+    font-size:10px;
+    font-weight:850;
+    cursor:pointer;
+  }
+
+  .reference-navbar.home-navbar .mobile-account-menu>a:hover,
+  .reference-navbar.home-navbar .mobile-account-menu>button:hover{
+    background:#f2f7f5;
+  }
+
+  .reference-navbar.home-navbar .mobile-account-menu>button{
+    margin-top:3px;
+    color:#a54535;
+    border-top:1px solid #edf1ef;
+    border-radius:0 0 11px 11px;
+  }
+
+  .reference-navbar.home-navbar .mobile-home-search{
+    min-width:0;
+    height:40px;
+    display:none;
+    flex:1 1 auto;
+    align-items:center;
+    gap:7px;
+    padding:0 10px;
+    border:1px solid #dce8f5;
+    border-radius:12px;
+    color:#70869d;
+    background:#f6faff;
+  }
+
+  .reference-navbar.home-navbar .mobile-home-search input{
+    min-width:0;
+    width:100%;
+    border:0;
+    outline:0;
+    color:#173553;
+    background:transparent;
+    font-size:10px;
+    font-weight:700;
+  }
+
+  .reference-navbar.home-navbar .mobile-home-search input::placeholder{
+    color:#91a2b3;
+    opacity:1;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled{
+    height:58px;
+    padding-left:8px;
+    padding-right:8px;
+    background:rgba(255,255,255,.985)!important;
+    box-shadow:0 12px 32px rgba(29,73,113,.14);
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .premium-brand{
+    flex:0 0 auto;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .brand-mark{
+    width:36px;
+    height:36px;
+    border-radius:11px;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .brand-copy{
+    display:none;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .mobile-home-search{
+    display:flex;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .nav-notification-button,
+  .reference-navbar.home-navbar.home-navbar-scrolled .mobile-account-button{
+    width:36px;
+    height:36px;
+    border-radius:11px;
+  }
+}
+
+@media(max-width:390px){
+  .reference-navbar.home-navbar{
+    gap:6px;
+    padding-left:7px;
+    padding-right:7px;
+  }
+
+  .reference-navbar.home-navbar .brand-mark{
+    width:38px;
+    height:38px;
+  }
+
+  .reference-navbar.home-navbar .brand-copy strong{
+    font-size:14px;
+  }
+
+  .reference-navbar.home-navbar .brand-subtitle-mobile{
+    font-size:7px;
+  }
+
+  .reference-navbar.home-navbar .nav-notification-button,
+  .reference-navbar.home-navbar .mobile-account-button{
+    width:36px;
+    height:36px;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .brand-mark{
+    width:34px;
+    height:34px;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .mobile-home-search{
+    height:38px;
+    padding:0 8px;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .mobile-home-search input{
+    font-size:9px;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .nav-notification-button,
+  .reference-navbar.home-navbar.home-navbar-scrolled .mobile-account-button{
+    width:34px;
+    height:34px;
+  }
+}
