@@ -56,8 +56,8 @@ function mapRow(row) {
       : undefined,
     lat: Number(row.lat),
     lng: Number(row.lng),
-    category: row.category,
-    categorySlug: row.category_slug,
+    category: row.category || 'Địa điểm',
+    categorySlug: row.category_slug || 'other',
     images: Array.isArray(row.images) ? row.images : [],
     distance: row.distance_m !== undefined && row.distance_m !== null
       ? Math.round(Number(row.distance_m))
