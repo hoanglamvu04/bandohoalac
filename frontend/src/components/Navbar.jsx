@@ -63,6 +63,8 @@ export default function Navbar() {
   const activeRegion = REGION_PRESETS.find((item) => item.id === regionId) || REGION_PRESETS[0];
 
   const handleLogout = () => {
+    setNotificationsOpen(false);
+    setMobileAccountOpen(false);
     logout();
     setNotifications([]);
     setUnreadCount(0);
@@ -307,7 +309,10 @@ export default function Navbar() {
             <button
               className="nav-notification-button"
               type="button"
-              onClick={() => setNotificationsOpen((value) => !value)}
+              onClick={() => {
+                setMobileAccountOpen(false);
+                setNotificationsOpen((value) => !value);
+              }}
               aria-label="Thông báo"
             >
               <Bell size={18} />
@@ -362,6 +367,7 @@ export default function Navbar() {
                 navigate('/login');
                 return;
               }
+              setNotificationsOpen(false);
               setMobileAccountOpen((value) => !value);
             }}
             aria-label={user ? 'Mở tài khoản' : 'Đăng nhập'}
