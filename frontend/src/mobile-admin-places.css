@@ -300,6 +300,50 @@
   .admin-place-images-head{
     gap:8px;
   }
+  .admin-place-location-head{
+    align-items:flex-start;
+    gap:7px;
+  }
+
+  .admin-coordinate-badge{
+    min-height:27px;
+    padding:0 7px;
+    font-size:8px!important;
+  }
+
+  .admin-coordinate-grid{
+    grid-template-columns:1fr!important;
+    gap:8px;
+  }
+
+  .admin-coordinate-grid label{
+    font-size:12px!important;
+  }
+
+  .admin-coordinate-grid input,
+  .admin-coordinate-paste input{
+    min-height:46px;
+    padding:11px 12px;
+    border-radius:11px;
+    font-size:16px!important;
+  }
+
+  .admin-coordinate-paste{
+    grid-template-columns:1fr;
+    gap:7px;
+  }
+
+  .admin-coordinate-paste button{
+    min-height:44px;
+    border-radius:11px;
+    font-size:13px;
+  }
+
+  .admin-coordinate-note{
+    margin:7px 0 10px;
+    font-size:10px;
+  }
+
 
   .admin-image-picker{
     min-height:38px;
