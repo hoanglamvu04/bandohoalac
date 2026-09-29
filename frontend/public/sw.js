@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hola-maps-shell-v2';
+const CACHE_NAME = 'hola-maps-shell-v4';
 const APP_SHELL = [
   '/',
   '/manifest.webmanifest',
