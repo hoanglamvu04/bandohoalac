@@ -56,8 +56,10 @@ function escapeHtml(value = '') {
     .replaceAll("'", '&#039;');
 }
 
-function categoryIcon(category = '') {
-  const normalized = category.toLowerCase();
+function categoryIcon(category) {
+  // category can legitimately be null when a published place has no
+  // category_id. Never let API data crash the whole map renderer.
+  const normalized = String(category || '').trim().toLowerCase();
   if (normalized.includes('cafe') || normalized.includes('coffee')) return '☕';
   if (normalized.includes('ăn') || normalized.includes('food')) return '🍜';
   if (normalized.includes('home')) return '🏡';
