@@ -2662,3 +2662,18 @@ body.map-route-active{
     bottom:150px;
   }
 }
+
+
+/* Final map overlay cleanup.
+   Legacy builds/styles must never show the old provider pill or MapLibre's
+   expanded attribution strip. Source disclosure is handled by .hm-attribution-mini. */
+.hm-map-provider,
+.hm-map-canvas .maplibregl-ctrl-attrib,
+.hm-map-canvas .maplibregl-ctrl-attrib-button,
+.hm-map-canvas .maplibregl-ctrl-logo{
+  display:none!important;
+}
+
+.hm-attribution-intro{
+  display:none!important;
+}
