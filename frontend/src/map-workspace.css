@@ -2677,3 +2677,53 @@ body.map-route-active{
 .hm-attribution-intro{
   display:none!important;
 }
+
+
+/* Mobile 2D/3D control placement v4.
+   Put the building mode control in the previous attribution-info position so
+   it stays above the basemap rail instead of being hidden behind it. */
+@media(max-width:760px){
+  .hm-3d{
+    left:8px!important;
+    right:auto!important;
+    bottom:154px!important;
+    z-index:13;
+    min-width:54px;
+    min-height:36px;
+    padding:0 10px;
+    gap:5px;
+    border-radius:11px;
+    font-size:10px;
+    box-shadow:0 7px 20px rgba(14,42,36,.13);
+  }
+
+  .hm-3d svg{
+    width:16px;
+    height:16px;
+  }
+
+  /* Keep the source-info affordance available, but move it beside 2D/3D. */
+  .hm-attribution-wrap{
+    left:68px!important;
+    bottom:161px!important;
+    z-index:12;
+  }
+
+  .hm-attribution-popover{
+    left:-60px;
+  }
+}
+
+@media(max-width:420px){
+  .hm-3d{
+    left:8px!important;
+    bottom:150px!important;
+    min-width:52px;
+    min-height:34px;
+  }
+
+  .hm-attribution-wrap{
+    left:66px!important;
+    bottom:156px!important;
+  }
+}
