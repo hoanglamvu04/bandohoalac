@@ -136,6 +136,90 @@ export async function listPlaces({
   return rows.map(mapRow);
 }
 
+export async function listHomeSections({ limit = 8 } = {}) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 8, 1), 16);
+
+  const sql = [
+    'WITH ranked AS (',
+    '  SELECT',
+    '    p.id,',
+    '    p.name,',
+    '    p.slug,',
+    '    p.description,',
+    '    p.address,',
+    '    p.phone,',
+    '    p.website,',
+    '    p.price_level,',
+    '    p.opening_hours,',
+    '    p.status,',
+    '    p.source,',
+    '    p.created_by,',
+    '    p.rating_avg,',
+    '    p.rating_count,',
+    '    p.created_at,',
+    '    p.updated_at,',
+    '    ST_X(p.location) AS lng,',
+    '    ST_Y(p.location) AS lat,',
+    '    c.id AS category_id,',
+    '    c.name AS category,',
+    '    c.slug AS category_slug,',
+    '    c.icon AS category_icon,',
+    "    COALESCE(img.images, '[]'::json) AS images,",
+    '    COALESCE(fav.favorite_count, 0)::int AS favorite_count,',
+    '    COUNT(*) OVER (PARTITION BY c.id)::int AS category_total,',
+    '    ROW_NUMBER() OVER (',
+    '      PARTITION BY c.id',
+    '      ORDER BY p.rating_avg DESC, p.rating_count DESC, p.updated_at DESC',
+    '    ) AS category_rank',
+    '  FROM places p',
+    '  JOIN categories c ON c.id = p.category_id',
+    '  LEFT JOIN LATERAL (',
+    '    SELECT json_agg(pi.url ORDER BY pi.is_cover DESC, pi.id ASC) AS images',
+    '    FROM place_images pi',
+    '    WHERE pi.place_id = p.id',
+    '  ) img ON TRUE',
+    '  LEFT JOIN LATERAL (',
+    '    SELECT COUNT(*)::int AS favorite_count',
+    '    FROM favorites f',
+    '    WHERE f.place_id = p.id',
+    '  ) fav ON TRUE',
+    "  WHERE p.status = 'PUBLISHED'",
+    '    AND ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($1), 4326))',
+    ')',
+    'SELECT *',
+    'FROM ranked',
+    'WHERE category_rank <= $2',
+    'ORDER BY category ASC, category_rank ASC'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [SERVICE_AREA_GEOJSON_STRING, safeLimit]);
+  const sections = [];
+  const bySlug = new Map();
+
+  for (const row of rows) {
+    let section = bySlug.get(row.category_slug);
+
+    if (!section) {
+      section = {
+        category: {
+          id: row.category_id,
+          name: row.category,
+          slug: row.category_slug,
+          icon: row.category_icon,
+          totalCount: Number(row.category_total) || 0
+        },
+        items: []
+      };
+      bySlug.set(row.category_slug, section);
+      sections.push(section);
+    }
+
+    section.items.push(mapRow(row));
+  }
+
+  return sections;
+}
+
 export async function listFeaturedPlaces({ limit = 4 } = {}) {
   const safeLimit = Math.min(Math.max(Number(limit) || 4, 1), 12);
 
