@@ -577,10 +577,12 @@ export default function MapView({
           renderWorldCopies: false,
           refreshExpiredTiles: false,
           fadeDuration: 0,
-          maxTileCacheSize: 18
+          maxTileCacheSize: 18,
+          attributionControl: false
         });
 
         mapRef.current = map;
+        map.addControl(new maplibre.AttributionControl({ compact: true }), 'bottom-left');
         map.addControl(new maplibre.NavigationControl({ visualizePitch: true }), 'bottom-right');
         map.addControl(new maplibre.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-right');
 
