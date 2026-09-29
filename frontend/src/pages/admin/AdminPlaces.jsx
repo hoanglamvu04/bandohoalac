@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Archive,
   ArrowLeft,
-  Camera,
   Check,
   ImagePlus,
   LocateFixed,
@@ -232,17 +231,36 @@ export default function AdminPlaces() {
 
     setSaving(true);
     try {
+      let placeId = selectedId;
+
       if (creating) {
         const created = await createAdminPlace(changedPayload);
-        showToast('Đã tạo địa điểm.', 'success');
-        setCreating(false);
-        await loadList();
-        await openPlace(created.id);
+        placeId = created.id;
       } else if (selectedId) {
         await updateAdminPlace(selectedId, changedPayload);
-        showToast('Đã cập nhật địa điểm.', 'success');
-        await loadList();
-        await openPlace(selectedId);
+      }
+
+      if (placeId && photos.length) {
+        await uploadAdminPlaceImages(placeId, photos);
+      }
+
+      const photoMessage = photos.length
+        ? ' và tải ' + photos.length + ' ảnh'
+        : '';
+
+      showToast(
+        creating
+          ? 'Đã tạo địa điểm' + photoMessage + '.'
+          : 'Đã cập nhật địa điểm' + photoMessage + '.',
+        'success'
+      );
+
+      setCreating(false);
+      setPhotos([]);
+      await loadList();
+
+      if (placeId) {
+        await openPlace(placeId);
       }
     } catch (error) {
       showToast(error.message, 'error');
@@ -250,7 +268,6 @@ export default function AdminPlaces() {
       setSaving(false);
     }
   }
-
   async function archivePlace() {
     if (!selectedId) return;
     if (!window.confirm('Ẩn địa điểm này khỏi Hola Maps?')) return;
@@ -269,21 +286,6 @@ export default function AdminPlaces() {
     }
   }
 
-  async function uploadImages() {
-    if (!selectedId || !photos.length) return;
-    setSaving(true);
-    try {
-      const data = await uploadAdminPlaceImages(selectedId, photos);
-      setDetail((current) => ({ ...current, imageItems: data.items }));
-      setPhotos([]);
-      showToast('Đã thêm ảnh địa điểm.', 'success');
-      await loadList();
-    } catch (error) {
-      showToast(error.message, 'error');
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function makeCover(imageId) {
     if (!selectedId) return;
@@ -543,31 +545,43 @@ export default function AdminPlaces() {
                 />
               </div>
 
-              {!creating && (
-                <div className="admin-place-images">
-                  <div className="admin-place-images-head">
-                    <div>
-                      <b>Ảnh địa điểm</b>
-                      <span>{detail?.imageItems?.length || 0} ảnh</span>
-                    </div>
-                    <label className="admin-image-picker">
-                      <ImagePlus size={15} />
-                      Chọn ảnh
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/png,image/jpeg,image/webp"
-                        onChange={(event) => setPhotos(Array.from(event.target.files || []).slice(0, 8))}
-                      />
-                    </label>
+              <div className="admin-place-images">
+                <div className="admin-place-images-head">
+                  <div>
+                    <b>Ảnh địa điểm</b>
+                    <span>
+                      {creating
+                        ? (photos.length ? photos.length + ' ảnh đã chọn' : 'Chưa chọn ảnh')
+                        : ((detail?.imageItems?.length || 0) + ' ảnh hiện có')}
+                    </span>
                   </div>
+                  <label className="admin-image-picker">
+                    <ImagePlus size={15} />
+                    Chọn ảnh
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={(event) => setPhotos(Array.from(event.target.files || []).slice(0, 8))}
+                    />
+                  </label>
+                </div>
 
-                  {!!photos.length && (
-                    <button className="secondary-action" type="button" onClick={uploadImages} disabled={saving}>
-                      <Camera size={15} /> Tải {photos.length} ảnh lên
+                {!!photos.length && (
+                  <div className="admin-place-selected-photos">
+                    <Check size={15} />
+                    <div>
+                      <b>{photos.length} ảnh sẽ được tải lên khi bấm Lưu địa điểm</b>
+                      <span>{photos.map((file) => file.name).join(' · ')}</span>
+                    </div>
+                    <button type="button" onClick={() => setPhotos([])}>
+                      <X size={14} />
+                      Bỏ chọn
                     </button>
-                  )}
+                  </div>
+                )}
 
+                {!creating && (
                   <div className="admin-place-image-grid">
                     {(detail?.imageItems || []).map((image) => (
                       <article className={image.isCover ? 'admin-place-image cover' : 'admin-place-image'} key={image.id}>
@@ -586,12 +600,14 @@ export default function AdminPlaces() {
                       </article>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               <div className="admin-place-save-row">
                 <button className="primary-action" type="submit" disabled={saving}>
-                  <Check size={17} /> {saving ? 'Đang lưu...' : 'Lưu địa điểm'}
+                  <Check size={17} /> {saving
+                    ? (photos.length ? 'Đang lưu & tải ảnh...' : 'Đang lưu...')
+                    : (photos.length ? 'Lưu địa điểm & ' + photos.length + ' ảnh' : 'Lưu địa điểm')}
                 </button>
                 {creating && (
                   <button className="secondary-action" type="button" onClick={() => setCreating(false)}>
