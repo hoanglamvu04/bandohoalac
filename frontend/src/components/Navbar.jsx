@@ -8,6 +8,7 @@ import {
   LogOut,
   MapPinned,
   Plus,
+  Search,
   ShieldCheck,
   Trophy,
   UserRound
@@ -40,6 +41,9 @@ export default function Navbar() {
   const location = useLocation();
   const [regionOpen, setRegionOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [mobileAccountOpen, setMobileAccountOpen] = useState(false);
+  const [homeSearch, setHomeSearch] = useState('');
+  const [homeHeaderScrolled, setHomeHeaderScrolled] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [installPrompt, setInstallPrompt] = useState(null);
@@ -51,7 +55,9 @@ export default function Navbar() {
   );
   const regionRef = useRef(null);
   const notificationRef = useRef(null);
+  const mobileAccountRef = useRef(null);
 
+  const isHome = location.pathname === '/';
   const params = new URLSearchParams(location.search);
   const regionId = params.get('region') || 'all';
   const activeRegion = REGION_PRESETS.find((item) => item.id === regionId) || REGION_PRESETS[0];
@@ -102,6 +108,30 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
+    if (!isHome || typeof window === 'undefined') {
+      setHomeHeaderScrolled(false);
+      return undefined;
+    }
+
+    function syncHomeHeader() {
+      const hero = document.querySelector('.reference-home-hero');
+      const scrolled = hero
+        ? hero.getBoundingClientRect().bottom <= 92
+        : window.scrollY > 320;
+      setHomeHeaderScrolled(scrolled);
+    }
+
+    syncHomeHeader();
+    window.addEventListener('scroll', syncHomeHeader, { passive: true });
+    window.addEventListener('resize', syncHomeHeader);
+
+    return () => {
+      window.removeEventListener('scroll', syncHomeHeader);
+      window.removeEventListener('resize', syncHomeHeader);
+    };
+  }, [isHome]);
+
+  useEffect(() => {
     function onPointerDown(event) {
       if (regionRef.current && !regionRef.current.contains(event.target)) {
         setRegionOpen(false);
@@ -109,10 +139,24 @@ export default function Navbar() {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setNotificationsOpen(false);
       }
+      if (mobileAccountRef.current && !mobileAccountRef.current.contains(event.target)) {
+        setMobileAccountOpen(false);
+      }
     }
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
   }, []);
+
+  useEffect(() => {
+    setNotificationsOpen(false);
+    setMobileAccountOpen(false);
+  }, [location.pathname]);
+
+  function submitHomeHeaderSearch(event) {
+    event.preventDefault();
+    const needle = homeSearch.trim();
+    navigate('/map' + (needle ? '?q=' + encodeURIComponent(needle) : ''));
+  }
 
   function chooseRegion(region) {
     setRegionOpen(false);
@@ -172,11 +216,31 @@ export default function Navbar() {
   }
 
   return (
-    <header className="navbar premium-navbar modern-blue-navbar reference-navbar">
+    <header className={[
+      'navbar premium-navbar modern-blue-navbar reference-navbar',
+      isHome ? 'home-navbar' : '',
+      isHome && homeHeaderScrolled ? 'home-navbar-scrolled' : ''
+    ].filter(Boolean).join(' ')}>
       <Link className="brand premium-brand" to="/">
         <span className="brand-mark"><MapPinned size={24}/></span>
-        <span className="brand-copy"><strong>Hola Maps</strong><small>LOCAL DISCOVERY</small></span>
+        <span className="brand-copy">
+          <strong>Hola Maps</strong>
+          <small className="brand-subtitle-desktop">LOCAL DISCOVERY</small>
+          <small className="brand-subtitle-mobile">Khám phá Hòa Lạc</small>
+        </span>
       </Link>
+
+      {isHome && (
+        <form className="mobile-home-search" onSubmit={submitHomeHeaderSearch}>
+          <Search size={16} />
+          <input
+            value={homeSearch}
+            onChange={(event) => setHomeSearch(event.target.value)}
+            placeholder="Tìm ở Hòa Lạc..."
+            aria-label="Tìm địa điểm ở Hòa Lạc"
+          />
+        </form>
+      )}
 
       <nav className="desktop-nav premium-desktop-nav">
         {navItems.map(({to,label,icon:Icon,includeHome}) => (
@@ -282,12 +346,63 @@ export default function Navbar() {
         )}
 
         {user ? (
-          <button className="nav-user" type="button" onClick={handleLogout}>
+          <button className="nav-user desktop-account-control" type="button" onClick={handleLogout}>
             <span className="nav-user-avatar">{user.name?.[0] || 'U'}</span><LogOut size={15}/>
           </button>
         ) : (
-          <Link className="nav-login" to="/login">Đăng nhập</Link>
+          <Link className="nav-login desktop-account-control" to="/login">Đăng nhập</Link>
         )}
+
+        <div className="mobile-account-control" ref={mobileAccountRef}>
+          <button
+            className="mobile-account-button"
+            type="button"
+            onClick={() => {
+              if (!user) {
+                navigate('/login');
+                return;
+              }
+              setMobileAccountOpen((value) => !value);
+            }}
+            aria-label={user ? 'Mở tài khoản' : 'Đăng nhập'}
+            aria-expanded={user ? mobileAccountOpen : undefined}
+          >
+            {user ? (
+              <span>{String(user.name || user.email || 'U').trim().charAt(0).toUpperCase()}</span>
+            ) : (
+              <UserRound size={18} />
+            )}
+          </button>
+
+          {user && mobileAccountOpen && (
+            <div className="mobile-account-menu">
+              <div className="mobile-account-summary">
+                <span className="mobile-account-avatar">
+                  {String(user.name || user.email || 'U').trim().charAt(0).toUpperCase()}
+                </span>
+                <div>
+                  <b>{user.name || 'Hola Explorer'}</b>
+                  <small>{user.email || 'Tài khoản Hola Maps'}</small>
+                </div>
+              </div>
+
+              <Link to="/profile" onClick={() => setMobileAccountOpen(false)}>
+                <UserRound size={16} />
+                Hồ sơ Explorer
+              </Link>
+              {isModerator && (
+                <Link to="/admin" onClick={() => setMobileAccountOpen(false)}>
+                  <ShieldCheck size={16} />
+                  Quản trị
+                </Link>
+              )}
+              <button type="button" onClick={handleLogout}>
+                <LogOut size={16} />
+                Đăng xuất
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
