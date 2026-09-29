@@ -511,7 +511,6 @@ export default function MapView({
   const [basemapHealth, setBasemapHealth] = useState('checking');
   const [building3D, setBuilding3D] = useState(false);
   const [attributionOpen, setAttributionOpen] = useState(false);
-  const [attributionIntro, setAttributionIntro] = useState(false);
 
   const validPlaces = useMemo(
     () => places.filter((place) =>
@@ -772,27 +771,6 @@ export default function MapView({
       maplibreRef.current = null;
     };
   }, []);
-
-  useEffect(() => {
-    if (!mapBooted) return undefined;
-
-    let timer = null;
-    const alreadyShown =
-      typeof window !== 'undefined' &&
-      window.sessionStorage.getItem('hola-map-attribution-shown') === '1';
-
-    if (!alreadyShown) {
-      setAttributionIntro(true);
-      timer = window.setTimeout(() => {
-        setAttributionIntro(false);
-        window.sessionStorage.setItem('hola-map-attribution-shown', '1');
-      }, 5000);
-    }
-
-    return () => {
-      if (timer) window.clearTimeout(timer);
-    };
-  }, [mapBooted]);
 
   useEffect(() => {
     latestMapDataRef.current = mapData;
@@ -1134,12 +1112,6 @@ export default function MapView({
       <div ref={containerRef} className="hm-map-canvas" />
 
       <div className="hm-attribution-wrap">
-        {attributionIntro && (
-          <div className="hm-attribution-intro">
-            Map data © OpenStreetMap · Protomaps
-          </div>
-        )}
-
         <button
           className="hm-attribution-mini"
           type="button"
