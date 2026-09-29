@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LocateFixed, RefreshCcw } from 'lucide-react';
 import * as maplibre from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { PMTiles, Protocol } from 'pmtiles';
 import 'maplibre-gl/dist/maplibre-gl.css';
+
+// MapLibre v6 uses an ESM worker. Vite must bundle that worker explicitly;
+// otherwise production builds can load the PMTiles header but never decode
+// or request viewport vector tiles, leaving local vector basemaps blank.
+maplibre.setWorkerUrl(maplibreWorkerUrl);
 import {
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
