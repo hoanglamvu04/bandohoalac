@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { LocateFixed, RefreshCcw } from 'lucide-react';
+import { Box, LocateFixed, RefreshCcw } from 'lucide-react';
 import * as maplibre from 'maplibre-gl';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { PMTiles, Protocol } from 'pmtiles';
@@ -39,6 +39,15 @@ const PLACE_CLUSTER_LAYER_ID = 'hm-place-clusters';
 const PLACE_CLUSTER_COUNT_LAYER_ID = 'hm-place-cluster-count';
 const PLACE_POINT_LAYER_ID = 'hm-place-cluster-point';
 const PLACE_CLUSTER_MAX_ZOOM = 13;
+
+const BUILDING_2D_LAYER_IDS = [
+  'hola-overture-building',
+  'hola-overture-building-part'
+];
+const BUILDING_3D_LAYER_IDS = [
+  'hola-overture-building-3d',
+  'hola-overture-building-part-3d'
+];
 
 const DATA_LAYER_IDS = {
   TERRAIN: 'hm-terrain',
@@ -375,6 +384,22 @@ function addDataLayers(map, data) {
   }
 }
 
+function setBuildingDimensionVisibility(map, enabled) {
+  if (!map?.isStyleLoaded()) return;
+
+  BUILDING_2D_LAYER_IDS.forEach((id) => {
+    if (map.getLayer(id)) {
+      map.setLayoutProperty(id, 'visibility', enabled ? 'none' : 'visible');
+    }
+  });
+
+  BUILDING_3D_LAYER_IDS.forEach((id) => {
+    if (map.getLayer(id)) {
+      map.setLayoutProperty(id, 'visibility', enabled ? 'visible' : 'none');
+    }
+  });
+}
+
 function setLayerVisibility(map, activeLayers) {
   if (!map?.isStyleLoaded()) return;
   Object.entries(DATA_LAYER_IDS).forEach(([type, id]) => {
@@ -484,6 +509,7 @@ export default function MapView({
   const [usingLocalPmtiles, setUsingLocalPmtiles] = useState(false);
   const [usingSupplementalBuildings, setUsingSupplementalBuildings] = useState(false);
   const [basemapHealth, setBasemapHealth] = useState('checking');
+  const [building3D, setBuilding3D] = useState(false);
 
   const validPlaces = useMemo(
     () => places.filter((place) =>
@@ -555,7 +581,7 @@ export default function MapView({
         });
 
         mapRef.current = map;
-        map.addControl(new maplibre.NavigationControl({ visualizePitch: false }), 'bottom-right');
+        map.addControl(new maplibre.NavigationControl({ visualizePitch: true }), 'bottom-right');
         map.addControl(new maplibre.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-right');
 
         // The MapLibre instance is interactive immediately. Do not keep the
@@ -809,6 +835,7 @@ export default function MapView({
         addDataLayers(map, latestMapDataRef.current);
         addPlaceClusterLayers(map, latestPlacesRef.current);
         setLayerVisibility(map, latestActiveLayersRef.current);
+        setBuildingDimensionVisibility(map, building3D);
         renderRoute(map, latestRouteRef.current, maplibre, fittedRouteKeyRef);
 
         appliedStyleKeyRef.current = nextStyleKey;
@@ -847,6 +874,7 @@ export default function MapView({
     basemapMode,
     usingLocalPmtiles,
     usingSupplementalBuildings,
+    building3D,
     mapBooted
   ]);
 
@@ -942,6 +970,23 @@ export default function MapView({
   }, [route, interactiveReady]);
 
   useEffect(() => {
+    const supports3D =
+      usingSupplementalBuildings &&
+      !['satellite', 'hybrid'].includes(basemapMode);
+
+    if (supports3D || !building3D) return;
+
+    setBuilding3D(false);
+    setBuildingDimensionVisibility(mapRef.current, false);
+    mapRef.current?.easeTo({
+      pitch: 0,
+      bearing: 0,
+      duration: 320,
+      essential: true
+    });
+  }, [basemapMode, usingSupplementalBuildings, building3D]);
+
+  useEffect(() => {
     const map = mapRef.current;
     if (!map || !interactiveReady || !focusRegion?.center) return;
     if (lastFocusRegionRef.current === focusRegion.id) return;
@@ -979,6 +1024,27 @@ export default function MapView({
         locationNoticeTimerRef.current = null;
       }, timeout);
     }
+  }
+
+  function toggleBuilding3D() {
+    const map = mapRef.current;
+    const supports3D =
+      usingSupplementalBuildings &&
+      !['satellite', 'hybrid'].includes(basemapMode);
+
+    if (!map || !interactiveReady || !supports3D) return;
+
+    const next = !building3D;
+    setBuilding3D(next);
+    setBuildingDimensionVisibility(map, next);
+
+    map.easeTo({
+      pitch: next ? 52 : 0,
+      bearing: next ? -18 : 0,
+      zoom: next ? Math.max(map.getZoom(), 16.6) : map.getZoom(),
+      duration: 520,
+      essential: true
+    });
   }
 
   async function locateUser() {
@@ -1056,12 +1122,25 @@ export default function MapView({
         {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'checking' && 'CHECKING LOCAL BASEMAP'}
         {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'ok' && (
           usingSupplementalBuildings
-            ? 'LOCAL PMTILES · OSM + OVERTURE BUILDINGS'
+            ? 'LOCAL PMTILES · OSM + OVERTURE BUILDINGS' + (building3D ? ' · 3D' : '')
             : 'LOCAL PMTILES · OSM'
         )}
         {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'broken' && 'LOCAL PMTILES ERROR'}
         {!['satellite', 'hybrid'].includes(basemapMode) && basemapHealth === 'fallback' && 'OPEN VECTOR FALLBACK'}
       </div>
+
+      {usingSupplementalBuildings && !['satellite', 'hybrid'].includes(basemapMode) && (
+        <button
+          className={'hm-3d' + (building3D ? ' active' : '')}
+          type="button"
+          onClick={toggleBuilding3D}
+          aria-pressed={building3D}
+          title={building3D ? 'Trở về bản đồ 2D' : 'Xem khối nhà 3D'}
+        >
+          <Box size={18} />
+          {building3D ? '2D' : '3D'}
+        </button>
+      )}
 
       <button className="hm-locate" type="button" onClick={locateUser} disabled={locating}>
         <LocateFixed size={18} />
