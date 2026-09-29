@@ -1,13 +1,18 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
 import {
-  listPlaces, listFeaturedPlaces, getPlaceById, getPlaceBySlug, getNearbyPlaces, getPlacesInBounds
+  listPlaces, listFeaturedPlaces, listHomeSections, getPlaceById, getPlaceBySlug, getNearbyPlaces, getPlacesInBounds
 } from '../services/place.service.js';
 
 export const getPlaces = asyncHandler(async (req, res) => {
   const { q, category, minRating, limit, offset } = req.query;
   const items = await listPlaces({ q, category, minRating, limit, offset });
   res.json({ items });
+});
+
+export const getHomeSections = asyncHandler(async (req, res) => {
+  const sections = await listHomeSections({ limit: req.query.limit });
+  res.json({ sections });
 });
 
 export const getFeatured = asyncHandler(async (req, res) => {
