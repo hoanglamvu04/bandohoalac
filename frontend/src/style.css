@@ -1303,6 +1303,101 @@ a{color:inherit}
   font-size:10px;
 }
 
+.admin-place-location-head{
+  display:flex!important;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px!important;
+}
+
+.admin-place-location-head>div{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.admin-coordinate-badge{
+  min-height:30px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  border:1px solid #dce7e2;
+  border-radius:999px;
+  padding:0 9px;
+  color:#315f53!important;
+  background:#f3f8f5;
+  font-size:9px!important;
+  font-weight:850;
+  white-space:nowrap;
+}
+
+.admin-coordinate-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.admin-coordinate-grid label{
+  display:grid;
+  gap:5px;
+  color:#385e53;
+  font-size:10px;
+  font-weight:850;
+}
+
+.admin-coordinate-grid input,
+.admin-coordinate-paste input{
+  min-width:0;
+  min-height:42px;
+  width:100%;
+  border:1px solid #dce6e1;
+  border-radius:10px;
+  padding:9px 11px;
+  color:#173f36;
+  background:#fff;
+  outline:none;
+}
+
+.admin-coordinate-grid input:focus,
+.admin-coordinate-paste input:focus{
+  border-color:#7fa398;
+  box-shadow:0 0 0 3px rgba(35,102,84,.08);
+}
+
+.admin-coordinate-paste{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+}
+
+.admin-coordinate-paste button{
+  min-height:42px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  border:0;
+  border-radius:10px;
+  padding:0 13px;
+  color:#fff;
+  background:#174d41;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.admin-coordinate-note{
+  margin:8px 0 12px;
+  color:#7b8f87;
+  font-size:10px;
+  line-height:1.45;
+}
+
+.admin-coordinate-note b{
+  color:#45675e;
+}
+
 .admin-image-picker{
   display:inline-flex;
   align-items:center;
