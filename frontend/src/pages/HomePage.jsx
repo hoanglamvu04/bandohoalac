@@ -3,9 +3,13 @@ import {
   ArrowRight,
   Building2,
   Camera,
+  ChevronLeft,
+  ChevronRight,
+  Coffee,
   Compass,
   GraduationCap,
   Heart,
+  Home,
   Layers3,
   LocateFixed,
   Map,
@@ -13,6 +17,7 @@ import {
   Navigation,
   Plus,
   Search,
+  Sparkles,
   Star,
   TreePine,
   Trophy,
@@ -23,7 +28,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import {
   addFavorite,
-  getFeaturedPlaces,
+  getHomePlaceSections,
   getLeaderboard,
   getPlaceMe,
   removeFavorite
@@ -76,6 +81,56 @@ const MAP_TILES = [
   [6496, 3607], [6497, 3607], [6498, 3607]
 ];
 
+const CATEGORY_ORDER = [
+  'cafe',
+  'trai-nghiem',
+  'an-uong',
+  'homestay',
+  'villa',
+  'check-in'
+];
+
+const CATEGORY_META = {
+  cafe: {
+    icon: Coffee,
+    tone: 'blue',
+    description: 'Quán cà phê, góc làm việc và những nơi đáng ngồi lâu.'
+  },
+  'trai-nghiem': {
+    icon: Sparkles,
+    tone: 'green',
+    description: 'Hoạt động, trải nghiệm địa phương và những điều nên thử.'
+  },
+  'an-uong': {
+    icon: UtensilsCrossed,
+    tone: 'orange',
+    description: 'Quán ăn, nhà hàng và những món ngon quanh Hòa Lạc.'
+  },
+  homestay: {
+    icon: Home,
+    tone: 'purple',
+    description: 'Chỗ nghỉ cuối tuần, homestay và không gian thư giãn.'
+  },
+  villa: {
+    icon: Building2,
+    tone: 'green',
+    description: 'Villa, nhà vườn và lựa chọn nghỉ dưỡng cho nhóm đông.'
+  },
+  'check-in': {
+    icon: Camera,
+    tone: 'blue',
+    description: 'Điểm ngắm cảnh, chụp ảnh và những góc check-in đẹp.'
+  }
+};
+
+function categoryMeta(category) {
+  return CATEGORY_META[category?.slug] || {
+    icon: MapPin,
+    tone: 'blue',
+    description: 'Những địa điểm đáng khám phá tại Hòa Lạc.'
+  };
+}
+
 function initials(name = '') {
   return String(name)
     .trim()
@@ -87,13 +142,13 @@ function initials(name = '') {
     .toUpperCase() || 'HM';
 }
 
-function FeaturedPlaceCard({ place, index }) {
+function FeaturedPlaceCard({ place, index, tone }) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [favorite, setFavorite] = useState(false);
   const [favoriteBusy, setFavoriteBusy] = useState(false);
   const cover = place.images?.[0] || place.image || null;
-  const categoryTone = ['blue', 'green', 'orange', 'purple'][index % 4];
+  const categoryTone = tone || ['blue', 'green', 'orange', 'purple'][index % 4];
   const detailHref = '/place/' + place.id;
   const canFavorite = true;
 
@@ -175,7 +230,7 @@ function FeaturedPlaceCard({ place, index }) {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const [places, setPlaces] = useState([]);
+  const [sections, setSections] = useState([]);
   const [leaders, setLeaders] = useState([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -183,12 +238,16 @@ export default function HomePage() {
   useEffect(() => {
     let active = true;
 
-    Promise.allSettled([getFeaturedPlaces(4), getLeaderboard(3, 'month')])
-      .then(([placesResult, leaderboardResult]) => {
+    Promise.allSettled([getHomePlaceSections(10), getLeaderboard(3, 'month')])
+      .then(([sectionsResult, leaderboardResult]) => {
         if (!active) return;
 
-        if (placesResult.status === 'fulfilled') {
-          setPlaces(Array.isArray(placesResult.value?.items) ? placesResult.value.items : []);
+        if (sectionsResult.status === 'fulfilled') {
+          setSections(
+            Array.isArray(sectionsResult.value?.sections)
+              ? sectionsResult.value.sections
+              : []
+          );
         }
 
         if (leaderboardResult.status === 'fulfilled') {
@@ -204,15 +263,36 @@ export default function HomePage() {
     };
   }, []);
 
-  const displayPlaces = useMemo(
-    () => places.slice(0, 4),
-    [places]
+  const displaySections = useMemo(
+    () => [...sections].sort((a, b) => {
+      const aIndex = CATEGORY_ORDER.indexOf(a?.category?.slug);
+      const bIndex = CATEGORY_ORDER.indexOf(b?.category?.slug);
+      const safeA = aIndex === -1 ? CATEGORY_ORDER.length : aIndex;
+      const safeB = bIndex === -1 ? CATEGORY_ORDER.length : bIndex;
+
+      if (safeA !== safeB) return safeA - safeB;
+      return String(a?.category?.name || '').localeCompare(
+        String(b?.category?.name || ''),
+        'vi'
+      );
+    }),
+    [sections]
   );
 
   const displayLeaders = useMemo(
     () => leaders.slice(0, 3),
     [leaders]
   );
+
+  function scrollCategoryRow(categorySlug, direction) {
+    const row = document.getElementById('home-category-' + categorySlug);
+    if (!row) return;
+
+    row.scrollBy({
+      left: direction * Math.max(row.clientWidth * 0.82, 280),
+      behavior: 'smooth'
+    });
+  }
 
   function submitSearch(event) {
     event?.preventDefault();
@@ -325,31 +405,98 @@ export default function HomePage() {
         ))}
       </section>
 
-      <section className="reference-featured-section">
-        <div className="reference-section-head">
+      <section className="reference-category-discovery">
+        <div className="reference-section-head home-discovery-heading">
           <div>
-            <h2>Khám phá nổi bật</h2>
-            <p>Những địa điểm được cộng đồng yêu thích tại Hòa Lạc</p>
+            <span className="reference-kicker">Khám phá theo sở thích</span>
+            <h2>Mỗi danh mục, một hành trình riêng</h2>
+            <p>Vuốt ngang từng hàng để xem thêm địa điểm cùng loại tại Hòa Lạc.</p>
           </div>
-          <Link to="/map">Xem tất cả địa điểm <ArrowRight size={16} /></Link>
+          <Link to="/map">Xem toàn bộ bản đồ <ArrowRight size={16} /></Link>
         </div>
 
-        {loading && !places.length ? (
-          <div className="reference-place-grid">
-            {Array.from({ length: 4 }).map((_, index) => <div className="home-card-skeleton" key={index} />)}
-          </div>
-        ) : displayPlaces.length ? (
-          <div className="reference-place-grid">
-            {displayPlaces.map((place, index) => (
-              <FeaturedPlaceCard place={place} index={index} key={place.id} />
+        {loading && !displaySections.length ? (
+          <div className="home-category-loading">
+            {Array.from({ length: 3 }).map((_, sectionIndex) => (
+              <div className="home-category-skeleton-section" key={sectionIndex}>
+                <div className="home-category-skeleton-title" />
+                <div className="home-category-track skeleton">
+                  {Array.from({ length: 4 }).map((__, cardIndex) => (
+                    <div className="home-card-skeleton" key={cardIndex} />
+                  ))}
+                </div>
+              </div>
             ))}
+          </div>
+        ) : displaySections.length ? (
+          <div className="home-category-sections">
+            {displaySections.map((section, sectionIndex) => {
+              const meta = categoryMeta(section.category);
+              const CategoryIcon = meta.icon;
+              const slug = section.category?.slug || 'other';
+
+              return (
+                <section className="home-category-section" key={slug}>
+                  <div className="home-category-heading">
+                    <div className="home-category-title">
+                      <span className={'home-category-icon ' + meta.tone}>
+                        <CategoryIcon size={20} />
+                      </span>
+                      <div>
+                        <span>KHÁM PHÁ</span>
+                        <h3>{section.category?.name || 'Địa điểm'}</h3>
+                        <p>{meta.description}</p>
+                      </div>
+                    </div>
+
+                    <div className="home-category-actions">
+                      <small>{Number(section.category?.totalCount || section.items?.length || 0)} địa điểm</small>
+                      <span className="home-category-scroll-buttons">
+                        <button
+                          type="button"
+                          aria-label={'Lùi danh mục ' + (section.category?.name || '')}
+                          onClick={() => scrollCategoryRow(slug, -1)}
+                        >
+                          <ChevronLeft size={17} />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={'Xem thêm danh mục ' + (section.category?.name || '')}
+                          onClick={() => scrollCategoryRow(slug, 1)}
+                        >
+                          <ChevronRight size={17} />
+                        </button>
+                      </span>
+                      <Link to={'/map?category=' + encodeURIComponent(slug)}>
+                        Xem tất cả <ArrowRight size={15} />
+                      </Link>
+                    </div>
+                  </div>
+
+                  <div
+                    className="home-category-track"
+                    id={'home-category-' + slug}
+                    aria-label={'Danh sách ' + (section.category?.name || 'địa điểm')}
+                  >
+                    {(section.items || []).map((place, placeIndex) => (
+                      <FeaturedPlaceCard
+                        place={place}
+                        index={sectionIndex + placeIndex}
+                        tone={meta.tone}
+                        key={place.id}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         ) : (
           <div className="reference-featured-empty">
             <MapPin size={24} />
             <div>
-              <b>Chưa có địa điểm nổi bật đủ dữ liệu</b>
-              <p>Khu vực này chưa có địa điểm đã duyệt để xếp hạng. Hola Maps sẽ không dùng dữ liệu hoặc ảnh minh họa giả.</p>
+              <b>Chưa có địa điểm theo danh mục</b>
+              <p>Khi địa điểm đã duyệt được gắn danh mục, Hola Maps sẽ tự tạo từng hàng khám phá tại đây.</p>
             </div>
             <Link to="/contribute">Đóng góp địa điểm <ArrowRight size={15} /></Link>
           </div>
