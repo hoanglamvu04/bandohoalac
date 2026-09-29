@@ -2469,3 +2469,10 @@ body.map-route-active{
     bottom:194px;
   }
 }
+
+
+/* Production map boot safety:
+   the startup visual must never prevent MapLibre pan/zoom interactions. */
+.hm-map-placeholder{
+  pointer-events:none;
+}
