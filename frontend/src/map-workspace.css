@@ -2764,3 +2764,15 @@ body.map-route-active{
     bottom:156px!important;
   }
 }
+
+
+/* Prevent iOS Safari from zooming the map when the search field receives focus. */
+@media(max-width:760px){
+  .hm-map-search input,
+  .hm-map-search input::placeholder,
+  .hm-search input,
+  .hm-search input::placeholder{
+    font-size:16px!important;
+    line-height:1.2;
+  }
+}
