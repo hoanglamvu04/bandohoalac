@@ -63,6 +63,7 @@ export default function ProfilePage() {
             <span className="profile-panel-icon"><TrendingUp size={20} /></span>
             <div><span className="eyebrow">HOẠT ĐỘNG</span><h2>Đóng góp gần đây</h2></div>
             <span className="profile-panel-arrow"><ChevronRight size={20} /></span>
+            <TrendingUp className="profile-panel-desktop-icon" size={22} />
           </div>
 
           <div className="activity-list">
@@ -91,6 +92,7 @@ export default function ProfilePage() {
             <span className="profile-panel-icon"><Medal size={20} /></span>
             <div><span className="eyebrow">THÀNH TÍCH</span><h2>Huy hiệu</h2></div>
             <span className="profile-panel-arrow"><ChevronRight size={20} /></span>
+            <Medal className="profile-panel-desktop-icon" size={22} />
           </div>
 
           <div className="badge-grid">
@@ -111,6 +113,7 @@ export default function ProfilePage() {
           <span className="profile-panel-icon"><Heart size={20} /></span>
           <div><span className="eyebrow">ĐÃ LƯU</span><h2>Địa điểm yêu thích</h2></div>
           <span className="profile-panel-arrow"><ChevronRight size={20} /></span>
+          <Heart className="profile-panel-desktop-icon" size={22} />
         </div>
 
         {!favorites.length ? (
