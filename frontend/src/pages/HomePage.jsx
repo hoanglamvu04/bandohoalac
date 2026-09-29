@@ -7,11 +7,9 @@ import {
   ChevronRight,
   Coffee,
   Compass,
-  GraduationCap,
   Heart,
   Home,
   Layers3,
-  LocateFixed,
   Map,
   MapPin,
   Navigation,
@@ -19,11 +17,9 @@ import {
   Search,
   Sparkles,
   Star,
-  TreePine,
   Trophy,
   UtensilsCrossed,
-  UsersRound,
-  Waves
+  UsersRound
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -35,6 +31,7 @@ import {
 } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
+import HomeMapPreview from '../components/HomeMapPreview.jsx';
 
 const FEATURE_CARDS = [
   {
@@ -65,20 +62,6 @@ const FEATURE_CARDS = [
     tone: 'purple',
     to: '/map'
   }
-];
-
-const MAP_LAYERS = [
-  { icon: TreePine, label: 'Địa hình', active: true },
-  { icon: Navigation, label: 'Đường nội bộ', active: false },
-  { icon: Waves, label: 'Sông / hồ', active: true },
-  { icon: Building2, label: 'Công trình', active: true },
-  { icon: MapPin, label: 'Địa danh', active: true },
-  { icon: Navigation, label: 'Đường cấm', active: false }
-];
-
-const MAP_TILES = [
-  [6496, 3606], [6497, 3606], [6498, 3606],
-  [6496, 3607], [6497, 3607], [6498, 3607]
 ];
 
 const CATEGORY_ORDER = [
@@ -299,6 +282,20 @@ export default function HomePage() {
     [sections]
   );
 
+  const previewPlaces = useMemo(() => {
+    const seen = new Set();
+
+    return displaySections
+      .flatMap((section) => Array.isArray(section?.items) ? section.items : [])
+      .filter((place) => {
+        const id = String(place?.id || '');
+        if (!id || seen.has(id)) return false;
+        seen.add(id);
+        return Number.isFinite(Number(place?.lng)) && Number.isFinite(Number(place?.lat));
+      })
+      .slice(0, 10);
+  }, [displaySections]);
+
   const displayLeaders = useMemo(
     () => leaders.slice(0, 3),
     [leaders]
@@ -367,52 +364,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="reference-map-demo" aria-label="Xem trước bản đồ Hola Maps">
-          <div className="home-map-tiles" aria-hidden="true">
-            {MAP_TILES.map(([x, y]) => (
-              <img
-                key={x + '-' + y}
-                src={'https://tile.openstreetmap.org/13/' + x + '/' + y + '.png'}
-                alt=""
-              />
-            ))}
-          </div>
-          <div className="home-map-wash" />
-
-          <div className="home-map-search">
-            <Search size={16} />
-            <span>Tìm địa điểm, tuyến đường, khu vực...</span>
-          </div>
-
-          <div className="home-map-status"><i /> LOCAL DATA <span>⌄</span></div>
-
-          <div className="home-layer-panel">
-            <div className="home-layer-title">
-              <span>LỚP DỮ LIỆU</span><b>7/10</b>
-            </div>
-            {MAP_LAYERS.map(({ icon: Icon, label, active }) => (
-              <div className={active ? 'home-layer-row active' : 'home-layer-row'} key={label}>
-                <span><Icon size={15} /></span>
-                <div><b>{label}</b><small>{active ? 'Đang hiển thị' : 'Đang ẩn'}</small></div>
-                <i />
-              </div>
-            ))}
-          </div>
-
-          <span className="map-demo-pin pin-yellow"><Building2 size={17} /></span>
-          <span className="map-demo-pin pin-green"><TreePine size={17} /></span>
-          <span className="map-demo-pin pin-blue"><GraduationCap size={17} /></span>
-          <span className="map-demo-pin pin-orange"><UtensilsCrossed size={17} /></span>
-
-          <div className="home-map-modes">
-            <button className="active" type="button"><Map size={15} /><span>Bản đồ</span></button>
-            <button type="button"><Waves size={15} /><span>Vệ tinh</span></button>
-            <button type="button"><TreePine size={15} /><span>Địa hình</span></button>
-          </div>
-
-          <button className="home-map-locate" type="button"><LocateFixed size={17} /> Vị trí của tôi</button>
-          <small className="home-map-attribution">© OpenStreetMap</small>
-        </div>
+        <HomeMapPreview places={previewPlaces} />
       </section>
 
       <section className="reference-feature-grid">
