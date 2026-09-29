@@ -310,30 +310,16 @@ export default function MapPage() {
             lastPlacesRequestKeyRef.current = requestKey;
             setPlaces(items);
 
-            const normalizedNeedle = needle.toLocaleLowerCase('vi-VN');
-            const strongMatch = items.find((place) => {
-              const name = String(place?.name || '').trim().toLocaleLowerCase('vi-VN');
-              return name === normalizedNeedle || name.startsWith(normalizedNeedle);
-            });
-            const focusedPlace = items.length === 1 ? items[0] : strongMatch || null;
+            // Search is a discovery list first. Never auto-select a strong
+            // match: users choose the place explicitly, then the detail card
+            // and map focus open from that list item.
+            setSelectedId(null);
 
-            if (focusedPlace) {
-              setSelectedId(focusedPlace.id);
-              if (
-                typeof window !== 'undefined' &&
-                window.matchMedia('(max-width: 760px)').matches
-              ) {
-                setLeftOpen(false);
-              }
-            } else {
-              setSelectedId(null);
-              if (
-                items.length > 0 &&
-                typeof window !== 'undefined' &&
-                window.matchMedia('(max-width: 760px)').matches
-              ) {
-                setLeftOpen(true);
-              }
+            if (
+              typeof window !== 'undefined' &&
+              window.matchMedia('(max-width: 760px)').matches
+            ) {
+              setLeftOpen(true);
             }
           })
           .catch((error) => {
@@ -794,10 +780,15 @@ export default function MapPage() {
       setSelectedId(null);
     }
 
+    if (willSearch) {
+      setSelectedId(null);
+    }
+
     setQuery(value);
     syncDiscoveryParams({
       q: value.trim() || null,
-      place: wasSearching !== willSearch ? null : requestedPlaceId || null
+      // Typing a new search always leaves any previously selected place.
+      place: null
     });
   }
 
