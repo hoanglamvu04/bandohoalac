@@ -173,6 +173,20 @@ export async function createPartner(data, adminId) {
     );
 
     if (!rows[0]) throw new AppError('Place not found.', 404);
+
+    await pool.query(
+      `INSERT INTO partner_memberships (partner_id, user_id, role, status, created_by)
+       SELECT $1, pm.user_id,
+              CASE WHEN pm.role = 'OWNER' THEN 'OWNER' ELSE 'STAFF' END,
+              'ACTIVE',
+              $2
+       FROM place_managers pm
+       WHERE pm.place_id = $3
+       ON CONFLICT (partner_id, user_id)
+       DO UPDATE SET status = 'ACTIVE', updated_at = NOW()`,
+      [rows[0].id, adminId, data.placeId]
+    );
+
     return getPartnerAdmin(rows[0].id);
   } catch (error) {
     if (error?.code === '23505') throw new AppError('Địa điểm này đã được gắn hồ sơ đối tác.', 409);
