@@ -51,7 +51,11 @@ const DETAIL_FIELDS = [
 ].join(',');
 
 function googleApiKey() {
-  const key = String(process.env.GOOGLE_PLACES_API_KEY || '').trim();
+  const key = String(
+    process.env.GOOGLE_PLACES_API_KEY
+    || process.env.GOOGLE_MAPS_API_KEY
+    || ''
+  ).trim();
   if (!key) {
     throw new AppError(
       'Google Places chưa được cấu hình. Thêm GOOGLE_PLACES_API_KEY vào backend/.env.',
