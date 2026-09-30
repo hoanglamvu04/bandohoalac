@@ -19,6 +19,11 @@ const AdminAdvertisements = lazy(() => import('./pages/admin/AdminAdvertisements
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers.jsx'));
 const AdminPartnersRewards = lazy(() => import('./pages/admin/AdminPartnersRewards.jsx'));
 const RewardsPage = lazy(() => import('./pages/RewardsPage.jsx'));
+const MissionsPage = lazy(() => import('./pages/MissionsPage.jsx'));
+const ClaimPlacePage = lazy(() => import('./pages/ClaimPlacePage.jsx'));
+const PartnerDashboard = lazy(() => import('./pages/PartnerDashboard.jsx'));
+const AdminMissions = lazy(() => import('./pages/admin/AdminMissions.jsx'));
+const AdminAudit = lazy(() => import('./pages/admin/AdminAudit.jsx'));
 
 function LoadingPage() {
   return (
@@ -85,6 +90,9 @@ export const router = createBrowserRouter([
       { path: 'profile', element: withRole(ProfilePage) },
       { path: 'leaderboard', element: withSuspense(Leaderboard) },
       { path: 'rewards', element: withSuspense(RewardsPage) },
+      { path: 'missions', element: withSuspense(MissionsPage) },
+      { path: 'claim-place/:id', element: withRole(ClaimPlacePage) },
+      { path: 'partner', element: withRole(PartnerDashboard) },
       { path: 'login', element: withSuspense(Login) },
       { path: 'register', element: withSuspense(Register) },
       { path: 'admin', element: withRole(AdminDashboard, ['MODERATOR', 'ADMIN']) },
@@ -93,7 +101,9 @@ export const router = createBrowserRouter([
       { path: 'admin/map-editor', element: withRole(MapEditor, ['MODERATOR', 'ADMIN']) },
       { path: 'admin/ads', element: withRole(AdminAdvertisements, ['ADMIN']) },
       { path: 'admin/users', element: withRole(AdminUsers, ['ADMIN']) },
-      { path: 'admin/partners', element: withRole(AdminPartnersRewards, ['ADMIN']) }
+      { path: 'admin/partners', element: withRole(AdminPartnersRewards, ['ADMIN']) },
+      { path: 'admin/missions', element: withRole(AdminMissions, ['ADMIN']) },
+      { path: 'admin/audit', element: withRole(AdminAudit, ['ADMIN']) }
     ]
   }
 ]);
