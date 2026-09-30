@@ -3021,3 +3021,27 @@
     background:linear-gradient(155deg,#f8fbff,#edf5ff)!important;
   }
 }
+
+
+/* ---------- Hero height cleanup after intro consolidation ---------- */
+.reference-home-hero{
+  min-height:0!important;
+  height:auto!important;
+}
+
+@media(max-width:760px){
+  .reference-home-hero{
+    min-height:0!important;
+    height:auto!important;
+    margin-bottom:0!important;
+  }
+
+  .home-info-showcase{
+    min-height:0!important;
+    height:auto!important;
+  }
+
+  .home-info-banners{
+    margin-bottom:0!important;
+  }
+}
