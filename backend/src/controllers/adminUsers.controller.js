@@ -6,6 +6,7 @@ import {
   listAdminUsers,
   updateAdminUser
 } from '../services/adminUser.service.js';
+import { auditContextFromRequest, writeAuditLog } from '../services/audit.service.js';
 
 export const listUsersAdmin = asyncHandler(async (req, res) => {
   const items = await listAdminUsers({
@@ -42,15 +43,39 @@ export const updateUserAdmin = asyncHandler(async (req, res) => {
   if (!existing) throw new AppError('User not found.', 404);
 
   const item = await updateAdminUser(userId, req.body);
+
+  await writeAuditLog({
+    actorUserId: req.user.id,
+    action: 'ADMIN_USER_UPDATED',
+    entityType: 'USER',
+    entityId: userId,
+    metadata: { before: existing, changes: req.body },
+    ...auditContextFromRequest(req)
+  });
+
   res.json(item);
 });
 
 export const adjustUserWalletAdmin = asyncHandler(async (req, res) => {
+  const userId = Number(req.params.id);
   const item = await adjustUserWallet({
-    userId: Number(req.params.id),
+    userId,
     amount: req.body.amount,
     reason: req.body.reason,
     adminId: req.user.id
+  });
+
+  await writeAuditLog({
+    actorUserId: req.user.id,
+    action: 'ADMIN_WALLET_ADJUSTED',
+    entityType: 'USER',
+    entityId: userId,
+    metadata: {
+      amount: req.body.amount,
+      reason: req.body.reason,
+      nextBalance: item.pointsBalance
+    },
+    ...auditContextFromRequest(req)
   });
 
   res.json(item);
