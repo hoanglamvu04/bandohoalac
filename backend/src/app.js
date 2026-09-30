@@ -19,6 +19,7 @@ import directionsRoutes from './routes/directions.routes.js';
 import mapLayersRoutes from './routes/mapLayers.routes.js';
 import notificationsRoutes from './routes/notifications.routes.js';
 import advertisementsRoutes from './routes/advertisements.routes.js';
+import rewardsRoutes from './routes/rewards.routes.js';
 
 export function createApp() {
   const app = express();
@@ -50,6 +51,7 @@ export function createApp() {
   app.use('/api/map-layers', mapLayersRoutes);
   app.use('/api/notifications', notificationsRoutes);
   app.use('/api/ads', advertisementsRoutes);
+  app.use('/api/rewards', rewardsRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
