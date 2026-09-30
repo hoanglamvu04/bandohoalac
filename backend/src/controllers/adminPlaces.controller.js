@@ -79,23 +79,32 @@ export const getPlaceAdmin = asyncHandler(async (req, res) => {
 export const createPlaceAdmin = asyncHandler(async (req, res) => {
   const categoryId = await resolveCategoryId(req.body.categorySlug);
 
-  const placeId = await createPlace({
-    name: req.body.name,
-    description: req.body.description,
-    categoryId,
-    address: req.body.address,
-    lat: req.body.lat,
-    lng: req.body.lng,
-    phone: req.body.phone,
-    website: req.body.website,
-    priceLevel: req.body.priceLevel,
-    openingHours: req.body.openingHours,
-    googlePlaceId: req.body.googlePlaceId,
-    googleMapsUri: req.body.googleMapsUri,
-    status: req.body.status || 'PUBLISHED',
-    source: 'ADMIN',
-    createdBy: req.user.id
-  });
+  let placeId;
+
+  try {
+    placeId = await createPlace({
+      name: req.body.name,
+      description: req.body.description,
+      categoryId,
+      address: req.body.address,
+      lat: req.body.lat,
+      lng: req.body.lng,
+      phone: req.body.phone,
+      website: req.body.website,
+      priceLevel: req.body.priceLevel,
+      openingHours: req.body.openingHours,
+      googlePlaceId: req.body.googlePlaceId,
+      googleMapsUri: req.body.googleMapsUri,
+      status: req.body.status || 'PUBLISHED',
+      source: 'ADMIN',
+      createdBy: req.user.id
+    });
+  } catch (error) {
+    if (error?.code === '23505' && req.body.googlePlaceId) {
+      throw new AppError('Địa điểm Google Maps này đã được nhập vào Hola Maps.', 409);
+    }
+    throw error;
+  }
 
   const place = await getPlaceById(placeId);
   res.status(201).json(place);
