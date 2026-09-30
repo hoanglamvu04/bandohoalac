@@ -1,3 +1,4 @@
+import { getExplorerLevel } from './explorerLevel.service.js';
 import { pool } from '../database/pool.js';
 
 export async function findUserByEmail(email, client = pool) {
@@ -29,7 +30,9 @@ export function toPublicUser(user) {
     role: user.role,
     avatarUrl: user.avatar_url,
     bio: user.bio,
-    points: user.points_total,
+    points: Number(user.points_total || 0),
+    pointsBalance: Number(user.points_balance || 0),
+    explorerLevel: getExplorerLevel(user.points_total),
     trustScore: user.trust_score,
     approvedCount: user.approved_count,
     rejectedCount: user.rejected_count,
