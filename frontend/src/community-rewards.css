@@ -1212,3 +1212,1240 @@
     font-size:8px;
   }
 }
+
+
+/* =========================================================
+   Mission, claim, partner portal and audit extensions
+   ========================================================= */
+
+/* ---------- Voucher QR ---------- */
+.my-voucher-qr{
+  display:grid;
+  grid-template-columns:118px minmax(0,1fr);
+  gap:10px;
+  align-items:center;
+  padding:10px;
+  border-radius:13px;
+  background:#0d3768;
+}
+
+.voucher-qr-image,
+.voucher-qr-placeholder{
+  width:118px;
+  height:118px;
+  display:block;
+  border-radius:10px;
+  background:#fff;
+}
+
+.voucher-qr-placeholder{
+  display:grid;
+  place-items:center;
+  color:#0d3768;
+  font-weight:900;
+}
+
+.my-voucher-qr .my-voucher-code{
+  padding:0;
+  background:transparent;
+}
+
+.my-voucher-code small{
+  color:#bdd2eb;
+  font-size:8px;
+  line-height:1.45;
+}
+
+/* ---------- Profile community shortcuts ---------- */
+.profile-community-links{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin:14px 0;
+}
+
+.profile-community-links .profile-rewards-entry{
+  margin:0;
+}
+
+.profile-rewards-entry.mission{
+  border-color:#d9d0ff;
+  background:
+    radial-gradient(circle at 92% 10%,rgba(116,91,240,.14),transparent 32%),
+    linear-gradient(145deg,#fbfaff,#f1eeff);
+}
+
+.profile-rewards-entry.mission .profile-rewards-icon{
+  background:linear-gradient(145deg,#7764ee,#5846cb);
+}
+
+.profile-rewards-entry.mission small,
+.profile-rewards-entry.mission>svg{
+  color:#6652d7;
+}
+
+.profile-rewards-entry.partner{
+  border-color:#c7e5d8;
+  background:
+    radial-gradient(circle at 92% 10%,rgba(23,155,103,.13),transparent 32%),
+    linear-gradient(145deg,#fbfffd,#ecf8f3);
+}
+
+.profile-rewards-entry.partner .profile-rewards-icon{
+  background:linear-gradient(145deg,#1e9e71,#0e7554);
+}
+
+.profile-rewards-entry.partner small,
+.profile-rewards-entry.partner>svg{
+  color:#0d7a57;
+}
+
+/* ---------- Place claim action ---------- */
+.detail-claim-place{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  margin-top:7px;
+  color:#46627f;
+  font-size:9px;
+  font-weight:800;
+  text-decoration:none;
+}
+
+.detail-claim-place:hover{
+  color:#0b68d4;
+}
+
+/* ---------- Claim page ---------- */
+.claim-place-page{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.claim-place-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1.3fr) minmax(280px,.7fr);
+  gap:16px;
+  padding:24px;
+  border:1px solid #d5e4f5;
+  border-radius:23px;
+  background:linear-gradient(150deg,#fbfdff,#edf5ff);
+}
+
+.claim-place-hero h1{
+  margin:7px 0 10px;
+  color:#0d315f;
+  font-size:31px;
+}
+
+.claim-place-hero p{
+  max-width:680px;
+  margin:0;
+  color:#647b93;
+  line-height:1.7;
+}
+
+.claim-place-summary{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:12px;
+  border:1px solid rgba(255,255,255,.74);
+  border-radius:17px;
+  background:rgba(255,255,255,.8);
+}
+
+.claim-place-cover{
+  width:84px;
+  height:68px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border-radius:13px;
+  color:#176edf;
+  background:#e6f1ff;
+}
+
+.claim-place-cover img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.claim-place-summary>div{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.claim-place-summary small{color:#0c69d4;font-size:8px;font-weight:900}
+.claim-place-summary b{font-size:13px}
+.claim-place-summary span{display:flex;align-items:center;gap:4px;color:#74879b;font-size:8px}
+
+.claim-place-form,
+.claim-status-card{
+  width:min(760px,100%);
+  margin:0 auto;
+  padding:18px;
+  border:1px solid #dfe7e3;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 12px 32px rgba(31,73,125,.06);
+}
+
+.claim-form-heading{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin-bottom:14px;
+}
+
+.claim-form-heading>span{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  border-radius:13px;
+  color:#0c68d3;
+  background:#e8f2ff;
+}
+
+.claim-form-heading>div{display:flex;flex-direction:column;gap:2px}
+.claim-form-heading b{font-size:13px}
+.claim-form-heading small{color:#788a98;font-size:8px}
+
+.claim-place-form{
+  display:flex;
+  flex-direction:column;
+  gap:11px;
+}
+
+.claim-place-form label{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  color:#41566c;
+  font-size:10px;
+  font-weight:850;
+}
+
+.claim-place-form input,
+.claim-place-form textarea{
+  width:100%;
+  padding:10px 11px;
+  border:1px solid #d9e5f0;
+  border-radius:11px;
+  outline:none;
+  background:#fff;
+}
+
+.claim-form-note{
+  padding:9px 10px;
+  border-radius:10px;
+  color:#6c7f91;
+  background:#f7f9fb;
+  font-size:8px;
+  line-height:1.5;
+}
+
+.claim-status-card{
+  display:flex;
+  gap:13px;
+  align-items:flex-start;
+}
+
+.claim-status-card>svg{
+  flex:none;
+  color:#d39a1e;
+}
+
+.claim-status-card.approved>svg{color:#0c8a61}
+.claim-status-card.rejected>svg{color:#b14a3d}
+.claim-status-card h2{margin:5px 0 6px;font-size:18px}
+.claim-status-card p{margin:0 0 12px;color:#6f8194;line-height:1.6}
+
+/* ---------- Missions ---------- */
+.missions-page{
+  display:flex;
+  flex-direction:column;
+  gap:22px;
+}
+
+.missions-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);
+  gap:16px;
+  padding:27px;
+  overflow:hidden;
+  border:1px solid #ddd6fb;
+  border-radius:25px;
+  background:
+    radial-gradient(circle at 85% 15%,rgba(113,91,238,.18),transparent 34%),
+    linear-gradient(150deg,#fcfbff,#f0edff);
+}
+
+.missions-hero h1{
+  margin:8px 0 11px;
+  color:#2f2767;
+  font-size:38px;
+  line-height:1.08;
+  letter-spacing:-.04em;
+}
+
+.missions-hero p{
+  max-width:690px;
+  margin:0;
+  color:#716c8c;
+  line-height:1.7;
+}
+
+.missions-login{
+  width:max-content;
+  min-height:42px;
+  display:inline-flex;
+  align-items:center;
+  margin-top:17px;
+  padding:0 13px;
+  border-radius:11px;
+  color:#fff;
+  background:#6553d7;
+  text-decoration:none;
+  font-size:10px;
+  font-weight:900;
+}
+
+.missions-level-card{
+  width:max-content;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin-top:17px;
+  padding:10px 12px;
+  border:1px solid #d8d0fb;
+  border-radius:14px;
+  background:rgba(255,255,255,.78);
+}
+
+.missions-level-card>span{
+  width:39px;
+  height:39px;
+  display:grid;
+  place-items:center;
+  border-radius:12px;
+  color:#7e5d00;
+  background:#fff0c7;
+}
+
+.missions-level-card>div{display:flex;flex-direction:column;gap:2px}
+.missions-level-card small{color:#7e7896;font-size:8px}
+.missions-level-card b{color:#372f6d;font-size:13px}
+.missions-level-card em{color:#817b98;font-size:8px;font-style:normal}
+
+.missions-hero-art{
+  min-height:210px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  border:1px solid rgba(255,255,255,.7);
+  border-radius:20px;
+  color:#6654d8;
+  background:rgba(255,255,255,.66);
+}
+
+.missions-hero-art b{font-size:18px}
+.missions-hero-art span{color:#817b9b;font-size:9px}
+
+.missions-section,
+.missions-levels{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.missions-section-head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.missions-section-head h2{
+  margin:4px 0 0;
+  color:#28215f;
+  font-size:24px;
+}
+
+.missions-section-head>span{color:#807a94;font-size:9px}
+
+.missions-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+}
+
+.mission-card{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+  padding:15px;
+  border:1px solid #e1dcfa;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 11px 28px rgba(68,54,145,.06);
+}
+
+.mission-card.completed{
+  border-color:#bfe5d5;
+  background:linear-gradient(145deg,#fff,#f0faf5);
+}
+
+.mission-card-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.mission-card-icon{
+  width:40px;
+  height:40px;
+  display:grid;
+  place-items:center;
+  border-radius:13px;
+  color:#6654d8;
+  background:#eeeaff;
+}
+
+.mission-completed-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:5px 7px;
+  border-radius:999px;
+  color:#0a7956;
+  background:#e4f7ee;
+  font-size:7px;
+  font-weight:900;
+}
+
+.mission-status-line{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  color:#8d6b00;
+  font-size:8px;
+  font-weight:850;
+}
+
+.mission-card h3{margin:0;color:#312865;font-size:15px}
+.mission-card p{min-height:45px;margin:0;color:#7a7590;font-size:9px;line-height:1.55}
+
+.mission-types{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+}
+
+.mission-types span{
+  padding:4px 6px;
+  border-radius:999px;
+  color:#62598c;
+  background:#f3f0ff;
+  font-size:7px;
+  font-weight:800;
+}
+
+.mission-progress-meta{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  color:#7a7690;
+  font-size:8px;
+}
+
+.mission-progress-meta b{color:#302968}
+.mission-progress-meta strong{color:#6653d7}
+
+.mission-progress-track{
+  height:7px;
+  overflow:hidden;
+  border-radius:999px;
+  background:#ece9f8;
+}
+
+.mission-progress-track span{
+  height:100%;
+  display:block;
+  border-radius:999px;
+  background:linear-gradient(90deg,#7b67ef,#5b48cb);
+}
+
+.mission-login-link{
+  width:max-content;
+  color:#6553d7;
+  font-size:8px;
+  font-weight:900;
+  text-decoration:none;
+}
+
+.mission-card footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:auto;
+  padding-top:9px;
+  border-top:1px solid #f0edf9;
+  color:#817c94;
+  font-size:8px;
+}
+
+.mission-card footer span{display:flex;align-items:center;gap:4px}
+.mission-card footer a{color:#6653d7;font-weight:900;text-decoration:none}
+
+.explorer-level-list{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:8px;
+}
+
+.explorer-level-row{
+  position:relative;
+  min-height:135px;
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  padding:12px;
+  border:1px solid #e4e7ec;
+  border-radius:15px;
+  background:#fff;
+}
+
+.explorer-level-row.active{
+  border-color:#b6a9f4;
+  background:linear-gradient(145deg,#fff,#f3f0ff);
+}
+
+.explorer-level-row>span{
+  width:35px;
+  height:35px;
+  display:grid;
+  place-items:center;
+  border-radius:11px;
+  color:#785f00;
+  background:#fff0c7;
+}
+
+.explorer-level-row>div{display:flex;flex-direction:column;gap:3px}
+.explorer-level-row b{font-size:11px}
+.explorer-level-row small{color:#7d8994;font-size:7px;line-height:1.45}
+.explorer-level-row strong{margin-top:auto;color:#6553d7;font-size:9px}
+.explorer-level-row em{position:absolute;top:9px;right:9px;color:#0d7a57;font-size:7px;font-style:normal;font-weight:900}
+
+/* ---------- Partner dashboard ---------- */
+.partner-dashboard{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.partner-dashboard-hero{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:22px;
+  border:1px solid #cde5da;
+  border-radius:22px;
+  background:
+    radial-gradient(circle at 90% 10%,rgba(24,156,105,.15),transparent 30%),
+    linear-gradient(145deg,#fbfffd,#edf8f3);
+}
+
+.partner-dashboard-hero h1{margin:6px 0;font-size:29px;color:#123f33}
+.partner-dashboard-hero p{margin:0;color:#69837b}
+
+.partner-dashboard-mark{
+  width:64px;
+  height:64px;
+  display:grid;
+  place-items:center;
+  flex:none;
+  border-radius:19px;
+  color:#fff;
+  background:linear-gradient(145deg,#1b9c6d,#0b7250);
+}
+
+.partner-stat-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:9px;
+}
+
+.partner-stat-grid>div{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:12px;
+  border:1px solid #dde9e4;
+  border-radius:14px;
+  background:#fff;
+}
+
+.partner-stat-grid>div>svg{color:#0b7a56}
+.partner-stat-grid span{display:flex;flex-direction:column;gap:2px}
+.partner-stat-grid b{font-size:16px}
+.partner-stat-grid small{color:#788a84;font-size:8px}
+
+.partner-redeem-panel{
+  padding:16px;
+  border:1px solid #c7e2d6;
+  border-radius:19px;
+  background:linear-gradient(145deg,#fafffc,#eef8f3);
+}
+
+.partner-redeem-copy{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+.partner-redeem-icon{
+  width:46px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  border-radius:14px;
+  color:#0e7d58;
+  background:#dff4ea;
+}
+
+.partner-redeem-copy h2{margin:4px 0 3px;font-size:18px;color:#153f34}
+.partner-redeem-copy p{margin:0;color:#71867f;font-size:9px}
+
+.partner-redeem-controls{
+  display:grid;
+  grid-template-columns:minmax(240px,1fr) auto auto;
+  gap:8px;
+  margin-top:13px;
+}
+
+.partner-redeem-controls>label{
+  min-height:42px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:0 10px;
+  border:1px solid #cfe0d9;
+  border-radius:11px;
+  background:#fff;
+}
+
+.partner-redeem-controls input{
+  width:100%;
+  border:0;
+  outline:0;
+  font-weight:900;
+  letter-spacing:.06em;
+}
+
+.partner-scanner-modal{
+  position:fixed;
+  inset:0;
+  z-index:12000;
+  display:grid;
+  place-items:center;
+  padding:18px;
+  background:rgba(4,27,20,.72);
+  backdrop-filter:blur(7px);
+}
+
+.partner-scanner-card{
+  width:min(460px,100%);
+  overflow:hidden;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 24px 70px rgba(0,0,0,.3);
+}
+
+.partner-scanner-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px;
+}
+
+.partner-scanner-head span{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:900}
+.partner-scanner-head button{border:0;border-radius:9px;padding:7px 9px;background:#edf3f0;color:#46645b;font-size:9px;font-weight:800}
+
+.partner-scanner-video{
+  position:relative;
+  aspect-ratio:1/1;
+  overflow:hidden;
+  background:#0b1411;
+}
+
+.partner-scanner-video video{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.partner-scan-frame{
+  position:absolute;
+  inset:20%;
+  border:3px solid #49e1a5;
+  border-radius:20px;
+  box-shadow:0 0 0 999px rgba(0,0,0,.25);
+}
+
+.partner-dashboard-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.partner-dashboard-card{
+  padding:14px;
+  border:1px solid #e0e9e5;
+  border-radius:18px;
+  background:#fff;
+}
+
+.partner-card-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.partner-card-head h2{margin:4px 0 0;font-size:17px}
+.partner-card-head>span{color:#788a84;font-size:9px}
+
+.partner-place-list,
+.partner-redemption-list{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+}
+
+.partner-place-list article{
+  display:grid;
+  grid-template-columns:58px minmax(0,1fr) auto;
+  gap:9px;
+  align-items:center;
+  padding:8px;
+  border-radius:12px;
+  background:#f8faf9;
+}
+
+.partner-place-image{
+  width:58px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border-radius:10px;
+  color:#0d7d59;
+  background:#e4f5ed;
+}
+
+.partner-place-image img{width:100%;height:100%;object-fit:cover}
+.partner-place-list article>div{min-width:0;display:flex;flex-direction:column;gap:2px}
+.partner-place-list small{color:#0b7955;font-size:7px;font-weight:900}
+.partner-place-list b{overflow:hidden;font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+.partner-place-list span{overflow:hidden;color:#7a8b85;font-size:8px;text-overflow:ellipsis;white-space:nowrap}
+.partner-place-list a{color:#0a6fd5;font-size:8px;font-weight:900;text-decoration:none}
+
+.partner-redemption-list article{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:9px;
+  padding:8px;
+  border-radius:11px;
+  background:#f8faf9;
+}
+
+.partner-redemption-list article>div{min-width:0;display:flex;flex-direction:column;gap:2px}
+.partner-redemption-list small{color:#788a84;font-size:7px}
+.partner-redemption-list b{font-size:10px}
+.partner-redemption-list div>span{overflow:hidden;color:#7b8d87;font-size:8px;text-overflow:ellipsis;white-space:nowrap}
+
+.partner-campaign-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+
+.partner-campaign-grid article{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  padding:10px;
+  border:1px solid #e0e9e5;
+  border-radius:12px;
+  background:#fafcfb;
+}
+
+.partner-campaign-grid article>span{color:#0b7c57;font-size:7px;font-weight:900}
+.partner-campaign-grid b{font-size:11px}
+.partner-campaign-grid small{color:#788983;font-size:8px}
+.partner-campaign-grid article>div{margin-top:auto;color:#7d8c87;font-size:8px}
+.partner-campaign-grid strong{color:#143f34;font-size:15px}
+
+.partner-no-access{
+  width:min(620px,100%);
+  margin:30px auto;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:9px;
+  padding:28px;
+  border:1px solid #dce7e2;
+  border-radius:20px;
+  background:#fff;
+  text-align:center;
+}
+
+.partner-no-access h1{margin:0;font-size:24px}
+.partner-no-access p{margin:0 0 8px;color:#748780;line-height:1.6}
+
+/* ---------- Admin claims ---------- */
+.admin-claims-card{
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:19px;
+  background:#fff;
+}
+
+.admin-claim-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.admin-claim-row{
+  display:grid;
+  grid-template-columns:74px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:start;
+  padding:10px;
+  border:1px solid #e0e8e4;
+  border-radius:13px;
+  background:#fafcfb;
+}
+
+.admin-claim-place-image{
+  width:74px;
+  height:58px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border-radius:10px;
+  color:#176fde;
+  background:#e8f2ff;
+}
+
+.admin-claim-place-image img{width:100%;height:100%;object-fit:cover}
+.admin-claim-main{min-width:0;display:flex;flex-direction:column;gap:3px}
+.admin-claim-main small{color:#0e6ed6;font-size:7px;font-weight:900}
+.admin-claim-main b{font-size:11px}
+.admin-claim-main span,
+.admin-claim-main em{color:#778983;font-size:8px;font-style:normal}
+.admin-claim-main p{margin:4px 0;color:#596c66;font-size:8px;line-height:1.5}
+.admin-claim-main blockquote{margin:4px 0 0;padding:7px;border-left:3px solid #db9b8e;color:#805349;background:#fff4f1;font-size:8px}
+
+.admin-claim-actions{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.admin-claim-actions button{
+  min-height:31px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  padding:0 9px;
+  border-radius:9px;
+  font-size:8px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.admin-claim-actions .approve{border:1px solid #b7dfce;color:#0c7351;background:#eef9f4}
+.admin-claim-actions .reject{border:1px solid #efc9c2;color:#9b4335;background:#fff4f1}
+
+/* ---------- Admin missions ---------- */
+.admin-missions-layout{
+  display:grid;
+  grid-template-columns:340px minmax(0,1fr);
+  gap:14px;
+  align-items:start;
+}
+
+.admin-mission-list-card,
+.admin-mission-editor{
+  padding:13px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:#fff;
+}
+
+.admin-mission-list{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+}
+
+.admin-mission-list>button{
+  width:100%;
+  display:grid;
+  grid-template-columns:38px minmax(0,1fr);
+  gap:8px;
+  align-items:center;
+  padding:8px;
+  border:1px solid transparent;
+  border-radius:11px;
+  background:#f9fafb;
+  text-align:left;
+  cursor:pointer;
+}
+
+.admin-mission-list>button.active,
+.admin-mission-list>button:hover{
+  border-color:#cfc6f8;
+  background:#f5f2ff;
+}
+
+.admin-mission-icon{
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  border-radius:11px;
+  color:#6553d7;
+  background:#ece9ff;
+}
+
+.admin-mission-list button>span:last-child{min-width:0;display:flex;flex-direction:column;gap:2px}
+.admin-mission-list small{color:#6653d7;font-size:7px;font-weight:900}
+.admin-mission-list b{font-size:10px}
+.admin-mission-list em{overflow:hidden;color:#7c8791;font-size:7px;font-style:normal;text-overflow:ellipsis;white-space:nowrap}
+
+.admin-mission-editor form{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.admin-mission-editor label{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  color:#495b56;
+  font-size:9px;
+  font-weight:850;
+}
+
+.admin-mission-editor input,
+.admin-mission-editor textarea,
+.admin-mission-editor select{
+  width:100%;
+  padding:9px 10px;
+  border:1px solid #dde5e1;
+  border-radius:10px;
+  outline:none;
+  background:#fff;
+}
+
+.admin-mission-form-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+}
+
+.admin-mission-types{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding:10px;
+  border:1px solid #e4e6ec;
+  border-radius:12px;
+  background:#fafafa;
+}
+
+.admin-mission-types>b{font-size:10px}
+.admin-mission-types>small{color:#808a94;font-size:7px}
+.admin-mission-types>div{display:flex;flex-wrap:wrap;gap:5px}
+.admin-mission-types button{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:6px 8px;
+  border:1px solid #dedfe6;
+  border-radius:999px;
+  color:#69737d;
+  background:#fff;
+  font-size:7px;
+  font-weight:850;
+  cursor:pointer;
+}
+
+.admin-mission-types button.active{
+  color:#5e49cc;
+  border-color:#bfb3f5;
+  background:#f0edff;
+}
+
+.admin-mission-mobile-back{display:none}
+
+/* ---------- Admin audit ---------- */
+.admin-audit-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:9px 11px;
+  border:1px solid #d8e3ed;
+  border-radius:12px;
+  color:#45627f;
+  background:#fff;
+  font-size:9px;
+  font-weight:900;
+}
+
+.admin-audit-filters{
+  display:grid;
+  grid-template-columns:minmax(260px,1fr) 220px;
+  gap:9px;
+  margin-bottom:12px;
+}
+
+.admin-audit-filters label{
+  min-height:42px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:0 10px;
+  border:1px solid #dce5ea;
+  border-radius:11px;
+  background:#fff;
+}
+
+.admin-audit-filters input{width:100%;border:0;outline:0}
+.admin-audit-filters select{min-height:42px;padding:0 9px;border:1px solid #dce5ea;border-radius:11px;background:#fff}
+
+.admin-audit-card{
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:#fff;
+}
+
+.admin-audit-list{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+}
+
+.admin-audit-list article{
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr) auto;
+  gap:9px;
+  align-items:start;
+  padding:9px;
+  border-radius:11px;
+  background:#f9fbfa;
+}
+
+.admin-audit-icon{
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+  color:#1a6bc7;
+  background:#e8f2fd;
+}
+
+.admin-audit-main{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.admin-audit-main>span{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.admin-audit-main b{font-size:9px}
+.admin-audit-main em{padding:2px 5px;border-radius:999px;color:#657789;background:#eef2f5;font-size:7px;font-style:normal}
+.admin-audit-main small{color:#7c8a85;font-size:7px}
+.admin-audit-main code{overflow:hidden;padding:5px;border-radius:7px;color:#59696d;background:#f0f3f4;font-size:7px;text-overflow:ellipsis;white-space:nowrap}
+
+.admin-audit-meta{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:2px;
+}
+
+.admin-audit-meta b{font-size:8px}
+.admin-audit-meta small{color:#89948f;font-size:7px}
+
+@media(max-width:980px){
+  .profile-community-links{grid-template-columns:1fr}
+  .missions-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .explorer-level-list{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .partner-dashboard-grid{grid-template-columns:1fr}
+  .partner-campaign-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(max-width:760px){
+  .claim-place-page,
+  .missions-page,
+  .partner-dashboard,
+  .admin-missions-page,
+  .admin-audit-page{
+    width:calc(100% - 20px);
+  }
+
+  .my-voucher-qr{
+    grid-template-columns:94px minmax(0,1fr);
+  }
+
+  .voucher-qr-image,
+  .voucher-qr-placeholder{
+    width:94px;
+    height:94px;
+  }
+
+  .claim-place-hero,
+  .missions-hero{
+    grid-template-columns:1fr;
+    padding:17px;
+    border-radius:20px;
+  }
+
+  .claim-place-hero h1,
+  .missions-hero h1{
+    font-size:25px;
+  }
+
+  .claim-place-form input,
+  .claim-place-form textarea,
+  .partner-redeem-controls input,
+  .admin-mission-editor input,
+  .admin-mission-editor textarea,
+  .admin-mission-editor select,
+  .admin-audit-filters input,
+  .admin-audit-filters select{
+    font-size:16px;
+  }
+
+  .claim-status-card{
+    flex-direction:column;
+  }
+
+  .missions-grid,
+  .explorer-level-list{
+    grid-template-columns:1fr;
+  }
+
+  .missions-hero-art{
+    min-height:135px;
+  }
+
+  .explorer-level-row{
+    min-height:0;
+    display:grid;
+    grid-template-columns:36px minmax(0,1fr) auto;
+    align-items:center;
+  }
+
+  .explorer-level-row strong{margin:0}
+  .explorer-level-row em{position:static;grid-column:2}
+
+  .partner-stat-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .partner-redeem-controls{
+    grid-template-columns:1fr;
+  }
+
+  .partner-dashboard-grid{
+    grid-template-columns:1fr;
+  }
+
+  .partner-campaign-grid{
+    grid-template-columns:1fr;
+  }
+
+  .admin-reward-tabs{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .admin-claim-row{
+    grid-template-columns:58px minmax(0,1fr);
+  }
+
+  .admin-claim-place-image{
+    width:58px;
+    height:48px;
+  }
+
+  .admin-claim-actions{
+    grid-column:1/-1;
+    flex-direction:row;
+  }
+
+  .admin-claim-actions button{
+    flex:1;
+  }
+
+  .admin-missions-layout{
+    display:block;
+  }
+
+  .admin-mission-editor{display:none}
+  .admin-missions-layout.editing .admin-mission-list-card{display:none}
+  .admin-missions-layout.editing .admin-mission-editor{display:block}
+  .admin-mission-mobile-back{
+    width:max-content;
+    display:block;
+    padding:7px 9px;
+    border:0;
+    border-radius:9px;
+    color:#5c4ac7;
+    background:#f0edff;
+    font-size:8px;
+    font-weight:900;
+  }
+
+  .admin-mission-form-row{
+    grid-template-columns:1fr;
+  }
+
+  .admin-audit-filters{
+    grid-template-columns:1fr;
+  }
+
+  .admin-audit-list article{
+    grid-template-columns:34px minmax(0,1fr);
+  }
+
+  .admin-audit-meta{
+    grid-column:2;
+    align-items:flex-start;
+  }
+
+  .detail-claim-place{
+    font-size:8px;
+  }
+}
