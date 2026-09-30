@@ -248,6 +248,10 @@ export function getAdminPlace(id) {
   return unwrap(client.get('/admin/places/' + encodeURIComponent(id)));
 }
 
+export function previewGooglePlaceImport(input) {
+  return unwrap(client.post('/admin/places/google-import-preview', { input }));
+}
+
 export function createAdminPlace(payload) {
   return unwrap(client.post('/admin/places', payload));
 }
