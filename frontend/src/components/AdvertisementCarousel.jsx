@@ -5,7 +5,6 @@ import {
   ChevronRight,
   EyeOff,
   LogIn,
-  Megaphone,
   X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -110,7 +109,7 @@ export default function AdvertisementCarousel() {
   async function hideToday() {
     if (!user) {
       setLoginPrompt(true);
-      showToast('Đăng nhập để tắt quảng cáo trong hôm nay.', 'info');
+      showToast('Đăng nhập để ẩn nội dung này trong hôm nay.', 'info');
       return;
     }
 
@@ -120,7 +119,7 @@ export default function AdvertisementCarousel() {
     try {
       await hideAdvertisementsToday();
       setHidden(true);
-      showToast('Đã ẩn quảng cáo đến hết hôm nay.', 'success');
+      showToast('Đã ẩn nội dung này đến hết hôm nay.', 'success');
     } catch (error) {
       showToast(error.message, 'error');
     } finally {
@@ -140,19 +139,16 @@ export default function AdvertisementCarousel() {
         className="ad-modal"
         role="dialog"
         aria-modal="true"
-        aria-label="Quảng cáo"
+        aria-label="Nội dung tài trợ"
       >
         <header className="ad-modal-header">
-          <span className="ad-modal-sponsored">
-            <Megaphone size={15} />
-            Nội dung tài trợ
-          </span>
+          <span className="ad-modal-sponsored">Tài trợ</span>
 
           <button
             className="ad-modal-close"
             type="button"
             onClick={dismissModal}
-            aria-label="Đóng quảng cáo"
+            aria-label="Đóng nội dung"
           >
             <X size={18} />
           </button>
@@ -180,7 +176,7 @@ export default function AdvertisementCarousel() {
                     src={ad.imageUrl}
                     alt={ad.altText || ad.title}
                   />
-                  <span className="ad-modal-ad-label">Quảng cáo</span>
+
                 </a>
               );
             })}
@@ -191,7 +187,7 @@ export default function AdvertisementCarousel() {
               <button
                 className="ad-modal-arrow prev"
                 type="button"
-                aria-label="Quảng cáo trước"
+                aria-label="Nội dung trước"
                 onClick={() => goTo(activeIndex - 1)}
               >
                 <ChevronLeft size={20} />
@@ -200,18 +196,18 @@ export default function AdvertisementCarousel() {
               <button
                 className="ad-modal-arrow next"
                 type="button"
-                aria-label="Quảng cáo tiếp theo"
+                aria-label="Nội dung tiếp theo"
                 onClick={() => goTo(activeIndex + 1)}
               >
                 <ChevronRight size={20} />
               </button>
 
-              <div className="ad-modal-dots" aria-label="Chọn quảng cáo">
+              <div className="ad-modal-dots" aria-label="Chọn nội dung">
                 {items.map((ad, index) => (
                   <button
                     type="button"
                     className={index === activeIndex ? 'active' : ''}
-                    aria-label={'Xem quảng cáo ' + (index + 1)}
+                    aria-label={'Xem nội dung ' + (index + 1)}
                     onClick={() => goTo(index)}
                     key={ad.id}
                   />
@@ -234,7 +230,7 @@ export default function AdvertisementCarousel() {
             disabled={hideBusy}
           >
             <EyeOff size={15} />
-            {hideBusy ? 'Đang ẩn...' : 'Ẩn quảng cáo hôm nay'}
+            {hideBusy ? 'Đang ẩn...' : 'Ẩn nội dung này'}
           </button>
         </footer>
 
@@ -245,9 +241,9 @@ export default function AdvertisementCarousel() {
                 <LogIn size={18} />
               </span>
               <span>
-                <b>Đăng nhập để ẩn quảng cáo</b>
+                <b>Đăng nhập để ẩn nội dung này</b>
                 <small>
-                  Đăng nhập một lần để tắt toàn bộ quảng cáo đến hết hôm nay.
+                  Đăng nhập để ẩn nội dung tài trợ đến hết hôm nay.
                 </small>
               </span>
             </div>
