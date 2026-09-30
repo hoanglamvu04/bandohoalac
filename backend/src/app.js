@@ -18,6 +18,7 @@ import leaderboardRoutes from './routes/leaderboard.routes.js';
 import directionsRoutes from './routes/directions.routes.js';
 import mapLayersRoutes from './routes/mapLayers.routes.js';
 import notificationsRoutes from './routes/notifications.routes.js';
+import advertisementsRoutes from './routes/advertisements.routes.js';
 
 export function createApp() {
   const app = express();
@@ -48,6 +49,7 @@ export function createApp() {
   app.use('/api/directions', directionsRoutes);
   app.use('/api/map-layers', mapLayersRoutes);
   app.use('/api/notifications', notificationsRoutes);
+  app.use('/api/ads', advertisementsRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
