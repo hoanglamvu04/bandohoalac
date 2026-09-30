@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   BadgeCheck,
+  BadgePercent,
   Camera,
   Clock3,
   Heart,
@@ -177,6 +178,11 @@ export default function PlaceDetail() {
             <span className="place-kicker">{place.category || 'Khám phá'}</span>
             {place.status === 'PUBLISHED' && (
               <span className="detail-published-badge"><BadgeCheck size={15} /> Đã xuất bản</span>
+            )}
+            {place.isPartner && (
+              <Link className="detail-partner-badge" to="/rewards">
+                <BadgePercent size={15} /> Đối tác Hola Maps
+              </Link>
             )}
           </div>
 
