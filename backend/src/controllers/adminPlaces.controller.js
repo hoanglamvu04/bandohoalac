@@ -27,6 +27,8 @@ function mapAdminFields(body, categoryId) {
     website: 'website',
     priceLevel: 'price_level',
     openingHours: 'opening_hours',
+    googlePlaceId: 'google_place_id',
+    googleMapsUri: 'google_maps_uri',
     status: 'status'
   };
 
@@ -37,6 +39,11 @@ function mapAdminFields(body, categoryId) {
   }
 
   if (categoryId !== undefined) fields.category_id = categoryId;
+
+  if (Object.prototype.hasOwnProperty.call(body, 'googlePlaceId')) {
+    fields.google_imported_at = body.googlePlaceId ? new Date() : null;
+  }
+
   return fields;
 }
 
@@ -83,6 +90,8 @@ export const createPlaceAdmin = asyncHandler(async (req, res) => {
     website: req.body.website,
     priceLevel: req.body.priceLevel,
     openingHours: req.body.openingHours,
+    googlePlaceId: req.body.googlePlaceId,
+    googleMapsUri: req.body.googleMapsUri,
     status: req.body.status || 'PUBLISHED',
     source: 'ADMIN',
     createdBy: req.user.id
