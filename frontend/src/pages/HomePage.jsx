@@ -14,7 +14,6 @@ import {
   MapPin,
   Navigation,
   Plus,
-  Search,
   Sparkles,
   Star,
   Trophy,
@@ -209,7 +208,6 @@ export default function HomePage() {
   const [sections, setSections] = useState([]);
   const [leaders, setLeaders] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState(() => new Set());
-  const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -296,59 +294,11 @@ export default function HomePage() {
     });
   }
 
-  function submitSearch(event) {
-    event?.preventDefault();
-    const params = new URLSearchParams();
-    if (query.trim()) params.set('q', query.trim());
-    navigate('/map' + (params.toString() ? '?' + params.toString() : ''));
-  }
+
 
   return (
     <main className="reference-home">
       <section className="reference-home-hero">
-        <div className="reference-hero-copy">
-          <span className="reference-kicker">Bản đồ cộng đồng Hòa Lạc</span>
-          <h1>Mọi điều về Hòa Lạc,<br />trên một bản đồ.</h1>
-          <p>
-            Khám phá địa điểm, tuyến đường và những trải nghiệm đáng chú ý
-            tại Hòa Lạc và 8 xã lân cận. Cùng cộng đồng đóng góp, cập nhật
-            dữ liệu để bản đồ ngày càng đầy đủ, chính xác và hữu ích hơn.
-          </p>
-
-          <form className="reference-search" onSubmit={submitSearch}>
-            <Search size={18} />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Tìm địa điểm, tuyến đường, khu vực..."
-            />
-          </form>
-
-          <div className="reference-hero-actions">
-            <Link to="/map" className="reference-primary-action">
-              <Map size={19} /> Mở bản đồ <ArrowRight size={17} />
-            </Link>
-            <Link to="/contribute" className="reference-secondary-action">
-              <Plus size={20} /> Đóng góp địa điểm
-            </Link>
-          </div>
-
-          <div className="reference-proof-grid">
-            <div>
-              <span className="proof-icon"><MapPin size={21} /></span>
-              <p><b>Hàng trăm<br />địa điểm</b><small>Được cộng đồng đóng góp</small></p>
-            </div>
-            <div>
-              <span className="proof-icon"><UsersRound size={21} /></span>
-              <p><b>Cộng đồng<br />đang phát triển</b><small>Cùng xây dựng Hòa Lạc</small></p>
-            </div>
-            <div>
-              <span className="proof-icon"><Layers3 size={21} /></span>
-              <p><b>Đa dạng<br />lớp dữ liệu</b><small>Phục vụ học tập, làm việc</small></p>
-            </div>
-          </div>
-        </div>
-
         <div className="home-info-showcase">
           <div className="home-info-main">
             <span className="home-info-kicker">
