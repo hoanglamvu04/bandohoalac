@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ClipboardList, LayoutDashboard, MapPinned, Megaphone, PencilRuler, ShieldCheck, Users } from 'lucide-react';
+import { BadgePercent, ClipboardList, LayoutDashboard, MapPinned, Megaphone, PencilRuler, ShieldCheck, UserCog, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getAdminContributions } from '../../services/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -56,9 +56,17 @@ export default function AdminDashboard() {
           <PencilRuler size={18} /> Biên tập lớp bản đồ
         </Link>
         {user?.role === 'ADMIN' && (
-          <Link className="secondary-action" to="/admin/ads">
-            <Megaphone size={18} /> Quản lý quảng cáo
-          </Link>
+          <>
+            <Link className="secondary-action" to="/admin/users">
+              <UserCog size={18} /> Quản lý người dùng
+            </Link>
+            <Link className="secondary-action" to="/admin/partners">
+              <BadgePercent size={18} /> Đối tác & Voucher
+            </Link>
+            <Link className="secondary-action" to="/admin/ads">
+              <Megaphone size={18} /> Quản lý quảng cáo
+            </Link>
+          </>
         )}
       </div>
     </main>
