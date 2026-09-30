@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   BadgeCheck,
   BadgePercent,
+  Building2,
   Camera,
   Clock3,
   Heart,
@@ -200,6 +201,19 @@ export default function PlaceDetail() {
 
         <div className="detail-heading-side">
           <span className="detail-source-pill">{place.source === 'ADMIN' ? 'Hola Maps' : 'Cộng đồng đóng góp'}</span>
+          {user ? (
+            <Link className="detail-claim-place" to={'/claim-place/' + encodeURIComponent(place.id)}>
+              <Building2 size={14} /> Bạn là chủ địa điểm này?
+            </Link>
+          ) : (
+            <Link
+              className="detail-claim-place"
+              to="/login"
+              state={{ from: { pathname: '/claim-place/' + place.id } }}
+            >
+              <Building2 size={14} /> Xác minh địa điểm
+            </Link>
+          )}
         </div>
       </section>
 
