@@ -2,7 +2,8 @@ import { BadgeCheck, Camera, Crown, LogOut, MapPin, Sparkles, Star } from 'lucid
 
 export default function ExplorerProfile({ user, stats, onLogout }) {
   const initials = (user?.name || '?').split(' ').map((word) => word[0]).slice(0, 2).join('').toUpperCase();
-  const trustLabel = user?.trustScore >= 80 ? 'Trusted Explorer' : user?.trustScore >= 40 ? 'Explorer' : 'New Explorer';
+  const levelLabel = user?.explorerLevel?.name
+    || (user?.trustScore >= 80 ? 'Trusted Explorer' : user?.trustScore >= 40 ? 'Explorer' : 'New Explorer');
 
   return (
     <section className="explorer-card">
@@ -11,7 +12,7 @@ export default function ExplorerProfile({ user, stats, onLogout }) {
           {initials}
           <span className="explorer-avatar-crown" aria-hidden="true"><Crown size={14} /></span>
         </div>
-        <span className="trusted-badge"><BadgeCheck size={16} /> {trustLabel}</span>
+        <span className="trusted-badge"><BadgeCheck size={16} /> {levelLabel}</span>
         {onLogout && (
           <button
             type="button"
