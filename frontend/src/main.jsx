@@ -21,6 +21,7 @@ import './hero-search-modern.css';
 import './hero-map-polish.css';
 import './home-reference.css';
 import './advertisements.css';
+import './community-rewards.css';
 import './mobile-detail.css';
 import './mobile-contribute.css';
 import './mobile-profile.css';
