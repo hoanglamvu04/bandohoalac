@@ -5,6 +5,8 @@ import {
   BadgePercent,
   Building2,
   Camera,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Heart,
   Image as ImageIcon,
@@ -13,7 +15,8 @@ import {
   Phone,
   Share2,
   Star,
-  Users
+  Users,
+  X
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import {
@@ -36,10 +39,14 @@ export default function PlaceDetail() {
   const [shareLabel, setShareLabel] = useState('Chia sẻ');
   const [favorite, setFavorite] = useState(false);
   const [favoriteBusy, setFavoriteBusy] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
     setStatus('loading');
+    setActiveImageIndex(0);
+    setGalleryOpen(false);
 
     getPlace(id)
       .then((data) => {
@@ -68,8 +75,62 @@ export default function PlaceDetail() {
   }, [id, user?.id]);
 
   const images = useMemo(() => (Array.isArray(place?.images) ? place.images.filter(Boolean) : []), [place]);
+  const activeImage = images[activeImageIndex] || images[0] || null;
+
+  useEffect(() => {
+    if (!images.length) {
+      setActiveImageIndex(0);
+      setGalleryOpen(false);
+      return;
+    }
+
+    if (activeImageIndex >= images.length) {
+      setActiveImageIndex(0);
+    }
+  }, [images.length, activeImageIndex]);
+
+  useEffect(() => {
+    if (!galleryOpen || typeof window === 'undefined') return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    function onKeyDown(event) {
+      if (event.key === 'Escape') {
+        setGalleryOpen(false);
+      } else if (event.key === 'ArrowLeft') {
+        setActiveImageIndex((current) => (current - 1 + images.length) % images.length);
+      } else if (event.key === 'ArrowRight') {
+        setActiveImageIndex((current) => (current + 1) % images.length);
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [galleryOpen, images.length]);
   const rating = Number(place?.rating);
   const hasRating = Number.isFinite(rating) && rating > 0;
+
+  function selectImage(index) {
+    if (!images.length) return;
+    setActiveImageIndex((index + images.length) % images.length);
+  }
+
+  function showPreviousImage(event) {
+    event?.stopPropagation?.();
+    if (images.length < 2) return;
+    setActiveImageIndex((current) => (current - 1 + images.length) % images.length);
+  }
+
+  function showNextImage(event) {
+    event?.stopPropagation?.();
+    if (images.length < 2) return;
+    setActiveImageIndex((current) => (current + 1) % images.length);
+  }
 
   async function reloadPlace() {
     try {
@@ -219,42 +280,157 @@ export default function PlaceDetail() {
 
       <section className={galleryClass}>
         <div
-          className="gallery-main premium-gallery-main"
-          style={images[0] ? { backgroundImage: 'url("' + images[0] + '")' } : undefined}
+          className={images.length ? 'gallery-main premium-gallery-main interactive' : 'gallery-main premium-gallery-main'}
+          style={activeImage ? { backgroundImage: 'url("' + activeImage + '")' } : undefined}
+          role={activeImage ? 'button' : undefined}
+          tabIndex={activeImage ? 0 : undefined}
+          aria-label={activeImage ? 'Mở ảnh ' + (activeImageIndex + 1) + ' toàn màn hình' : undefined}
+          onClick={activeImage ? () => setGalleryOpen(true) : undefined}
+          onKeyDown={activeImage ? (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setGalleryOpen(true);
+            }
+          } : undefined}
         >
-          {!images[0] && (
+          {!activeImage && (
             <div className="gallery-empty-state">
               <ImageIcon size={38} />
               <span>Chưa có ảnh đại diện</span>
             </div>
           )}
-          {images.length > 0 && <span className="gallery-photo-count"><Camera size={15} /> {images.length} ảnh</span>}
-        </div>
 
-        <div className="gallery-side premium-gallery-side">
-          {[1, 2, 3, 4].map((index) => (
-            <div
-              key={index}
-              className="gallery-side-cell"
-              style={images[index] ? { backgroundImage: 'url("' + images[index] + '")' } : undefined}
-            >
-              {!images[index] && <ImageIcon size={22} />}
-            </div>
-          ))}
+          {images.length > 1 && (
+            <>
+              <button
+                className="detail-gallery-arrow prev"
+                type="button"
+                aria-label="Ảnh trước"
+                onClick={showPreviousImage}
+              >
+                <ChevronLeft size={22} />
+              </button>
+              <button
+                className="detail-gallery-arrow next"
+                type="button"
+                aria-label="Ảnh tiếp theo"
+                onClick={showNextImage}
+              >
+                <ChevronRight size={22} />
+              </button>
+            </>
+          )}
+
+          {images.length > 0 && (
+            <span className="gallery-photo-count">
+              <Camera size={15} /> {activeImageIndex + 1}/{images.length}
+            </span>
+          )}
         </div>
 
         {images.length > 1 && (
+          <div className={'gallery-side premium-gallery-side side-count-' + Math.min(images.length - 1, 4)}>
+            {images.slice(1, 5).map((image, offset) => {
+              const index = offset + 1;
+              return (
+                <button
+                  key={image + index}
+                  type="button"
+                  className={index === activeImageIndex ? 'gallery-side-cell active' : 'gallery-side-cell'}
+                  style={{ backgroundImage: 'url("' + image + '")' }}
+                  aria-label={'Xem ảnh ' + (index + 1)}
+                  onClick={() => selectImage(index)}
+                >
+                  {index === activeImageIndex && <span>Đang xem</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {images.length > 1 && (
           <div className="detail-mobile-gallery-strip" aria-label="Ảnh địa điểm">
-            {images.slice(0, 6).map((image, index) => (
-              <span
+            {images.map((image, index) => (
+              <button
+                type="button"
                 key={image + index}
+                className={index === activeImageIndex ? 'active' : ''}
                 style={{ backgroundImage: 'url("' + image + '")' }}
-                aria-label={'Ảnh ' + (index + 1)}
+                aria-label={'Xem ảnh ' + (index + 1)}
+                aria-current={index === activeImageIndex ? 'true' : undefined}
+                onClick={() => selectImage(index)}
               />
             ))}
           </div>
         )}
       </section>
+
+      {galleryOpen && activeImage && (
+        <div
+          className="detail-gallery-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Xem ảnh địa điểm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setGalleryOpen(false);
+          }}
+        >
+          <div className="detail-gallery-lightbox-shell">
+            <button
+              className="detail-gallery-lightbox-close"
+              type="button"
+              aria-label="Đóng"
+              onClick={() => setGalleryOpen(false)}
+            >
+              <X size={22} />
+            </button>
+
+            <div className="detail-gallery-lightbox-stage">
+              <img src={activeImage} alt={place.name + ' - ảnh ' + (activeImageIndex + 1)} />
+
+              {images.length > 1 && (
+                <>
+                  <button
+                    className="detail-gallery-lightbox-arrow prev"
+                    type="button"
+                    aria-label="Ảnh trước"
+                    onClick={showPreviousImage}
+                  >
+                    <ChevronLeft size={26} />
+                  </button>
+                  <button
+                    className="detail-gallery-lightbox-arrow next"
+                    type="button"
+                    aria-label="Ảnh tiếp theo"
+                    onClick={showNextImage}
+                  >
+                    <ChevronRight size={26} />
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="detail-gallery-lightbox-footer">
+              <strong>{activeImageIndex + 1} / {images.length}</strong>
+              {images.length > 1 && (
+                <div className="detail-gallery-lightbox-thumbs">
+                  {images.map((image, index) => (
+                    <button
+                      type="button"
+                      key={image + index}
+                      className={index === activeImageIndex ? 'active' : ''}
+                      onClick={() => selectImage(index)}
+                      aria-label={'Xem ảnh ' + (index + 1)}
+                    >
+                      <img src={image} alt="" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="detail-fact-strip">
         <div><span><Clock3 size={18} /></span><small>Giờ mở cửa</small><b>{place.openingHours || 'Chưa cập nhật'}</b></div>
