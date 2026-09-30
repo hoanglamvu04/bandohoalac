@@ -41,16 +41,11 @@
 .ad-modal-sponsored{
   display:inline-flex;
   align-items:center;
-  gap:7px;
-  color:#66809b;
-  font-size:11px;
-  font-weight:900;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-}
-
-.ad-modal-sponsored svg{
-  color:#176fe2;
+  color:#8a99aa;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.02em;
+  text-transform:none;
 }
 
 .ad-modal-close{
@@ -876,4 +871,11 @@
   .admin-ad-save-row>*{
     width:100%;
   }
+}
+
+
+/* Keep one subtle sponsorship disclosure in the modal header.
+   Hide the duplicate in-image badge from older cached bundles. */
+.ad-modal-ad-label{
+  display:none !important;
 }
