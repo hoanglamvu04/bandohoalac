@@ -375,4 +375,50 @@ export function redeemReward(id) {
   return unwrap(client.post('/rewards/' + encodeURIComponent(id) + '/redeem'));
 }
 
+
+
+export function getMissions() {
+  return unwrap(client.get('/missions'));
+}
+
+export function getAdminMissions(params = {}) {
+  return unwrap(client.get('/admin/missions', { params: cleanParams(params) }));
+}
+
+export function createAdminMission(payload) {
+  return unwrap(client.post('/admin/missions', payload));
+}
+
+export function updateAdminMission(id, payload) {
+  return unwrap(client.patch('/admin/missions/' + encodeURIComponent(id), payload));
+}
+
+export function createPlaceClaim(payload) {
+  return unwrap(client.post('/place-claims', payload));
+}
+
+export function getMyPlaceClaims() {
+  return unwrap(client.get('/place-claims/me'));
+}
+
+export function getAdminPlaceClaims(params = {}) {
+  return unwrap(client.get('/admin/place-claims', { params: cleanParams(params) }));
+}
+
+export function reviewAdminPlaceClaim(id, payload) {
+  return unwrap(client.post('/admin/place-claims/' + encodeURIComponent(id) + '/review', payload));
+}
+
+export function getPartnerDashboard() {
+  return unwrap(client.get('/partner/dashboard'));
+}
+
+export function redeemPartnerVoucher(code) {
+  return unwrap(client.post('/partner/redeem', { code }));
+}
+
+export function getAdminAuditLogs(params = {}) {
+  return unwrap(client.get('/admin/audit', { params: cleanParams(params) }));
+}
+
 export { API_URL };
