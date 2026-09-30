@@ -9,6 +9,7 @@ import {
   auditContextFromRequest,
   writeAuditLog
 } from '../services/audit.service.js';
+import { createNotification } from '../services/notification.service.js';
 
 export const createClaim = asyncHandler(async (req, res) => {
   const item = await createPlaceClaim({
@@ -59,6 +60,22 @@ export const reviewClaimAdmin = asyncHandler(async (req, res) => {
       reviewNote: req.body.reviewNote || null
     },
     ...auditContextFromRequest(req)
+  });
+
+  await createNotification({
+    userId: Number(item.userId),
+    type: req.body.status === 'APPROVED' ? 'PLACE_CLAIM_APPROVED' : 'PLACE_CLAIM_REJECTED',
+    title: req.body.status === 'APPROVED'
+      ? 'Địa điểm đã được xác minh'
+      : 'Yêu cầu xác minh chưa được duyệt',
+    message: req.body.status === 'APPROVED'
+      ? 'Bạn đã được cấp quyền quản lý ' + item.placeName + '.'
+      : (req.body.reviewNote || 'Hola Maps cần thêm thông tin trước khi xác minh địa điểm này.'),
+    data: {
+      claimId: item.id,
+      placeId: item.placeId,
+      status: req.body.status
+    }
   });
 
   res.json(item);
