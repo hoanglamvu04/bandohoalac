@@ -1826,3 +1826,398 @@ button{
     --text-meta:11px;
   }
 }
+
+
+/* ---------- Admin Google Maps import ---------- */
+.admin-places-heading-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.admin-google-import-button{
+  border-color:#b9d8fb;
+  color:#0e69ca;
+  background:#f3f8ff;
+}
+
+.admin-google-import-source{
+  display:grid;
+  grid-template-columns:44px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+  margin-top:16px;
+  padding:11px 12px;
+  border:1px solid #c9dcf4;
+  border-radius:13px;
+  background:linear-gradient(145deg,#f8fbff,#edf5ff);
+}
+
+.admin-google-import-source-icon{
+  width:44px;
+  height:44px;
+  display:grid;
+  place-items:center;
+  border-radius:12px;
+  color:#126ed9;
+  background:#dcecff;
+}
+
+.admin-google-import-source>div{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.admin-google-import-source small{
+  color:#1470d8;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.06em;
+}
+
+.admin-google-import-source b{
+  color:#193b64;
+  font-size:13px;
+}
+
+.admin-google-import-source span{
+  overflow:hidden;
+  color:#71849a;
+  font-size:11px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.admin-google-import-source>a{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  color:#0c67c7;
+  font-size:11px;
+  font-weight:850;
+  text-decoration:none;
+}
+
+.admin-google-import-modal{
+  position:fixed;
+  inset:0;
+  z-index:15000;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:rgba(11,31,52,.64);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+
+.admin-google-import-card{
+  width:min(980px,100%);
+  max-height:calc(100dvh - 48px);
+  overflow:auto;
+  padding:20px;
+  border:1px solid #dce6ee;
+  border-radius:22px;
+  background:#fff;
+  box-shadow:0 28px 90px rgba(7,28,49,.28);
+}
+
+.admin-google-import-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+}
+
+.admin-google-import-head h2{
+  margin:5px 0 6px;
+  color:#173b66;
+  font-size:26px;
+}
+
+.admin-google-import-head p{
+  max-width:720px;
+  margin:0;
+  color:#718296;
+  font-size:13px;
+  line-height:1.55;
+}
+
+.admin-google-import-head>button{
+  width:40px;
+  height:40px;
+  flex:0 0 auto;
+  display:grid;
+  place-items:center;
+  border:0;
+  border-radius:12px;
+  color:#587086;
+  background:#f0f4f7;
+  cursor:pointer;
+}
+
+.admin-google-import-search{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:10px;
+  align-items:end;
+  margin-top:18px;
+}
+
+.admin-google-import-search>label{
+  display:grid;
+  gap:7px;
+  color:#38556f;
+  font-size:13px;
+  font-weight:850;
+}
+
+.admin-google-import-search>label>div{
+  min-height:50px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:0 12px;
+  border:1px solid #cfdce7;
+  border-radius:13px;
+  background:#fff;
+}
+
+.admin-google-import-search input{
+  min-width:0;
+  width:100%;
+  min-height:48px;
+  border:0;
+  outline:0;
+  font-size:15px;
+  background:transparent;
+}
+
+.admin-google-import-search>.primary-action{
+  min-height:50px;
+  padding:0 16px;
+}
+
+.admin-google-import-note{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  margin-top:10px;
+  padding:10px 12px;
+  border:1px solid #e5e9ed;
+  border-radius:11px;
+  color:#6f7e8b;
+  background:#f8fafb;
+  font-size:11px;
+}
+
+.admin-google-import-note b{
+  color:#43586d;
+  font-size:12px;
+}
+
+.admin-google-import-results{
+  margin-top:16px;
+}
+
+.admin-google-import-results-head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:9px;
+}
+
+.admin-google-import-results-head>div{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.admin-google-import-results-head b{
+  color:#1c3d62;
+  font-size:15px;
+}
+
+.admin-google-import-results-head span,
+.admin-google-import-results-head strong{
+  color:#7a8998;
+  font-size:11px;
+}
+
+.admin-google-import-list{
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+}
+
+.admin-google-import-result{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 170px;
+  gap:13px;
+  padding:13px;
+  border:1px solid #dce6ef;
+  border-radius:15px;
+  background:#fff;
+}
+
+.admin-google-import-result.existing{
+  border-color:#e7d7a8;
+  background:#fffdf6;
+}
+
+.admin-google-import-result.outside{
+  opacity:.68;
+  border-style:dashed;
+}
+
+.admin-google-import-result-main{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+}
+
+.admin-google-import-result-title{
+  display:grid;
+  grid-template-columns:42px minmax(0,1fr);
+  gap:9px;
+  align-items:center;
+}
+
+.admin-google-import-pin{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  border-radius:12px;
+  color:#0e70dd;
+  background:#e8f2ff;
+}
+
+.admin-google-import-result-title>div{
+  min-width:0;
+}
+
+.admin-google-import-result-title small{
+  color:#0d6ed8;
+  font-size:10px;
+  font-weight:850;
+}
+
+.admin-google-import-result-title h3{
+  margin:2px 0;
+  color:#183d65;
+  font-size:16px;
+}
+
+.admin-google-import-result-title p{
+  margin:0;
+  color:#778797;
+  font-size:12px;
+  line-height:1.4;
+}
+
+.admin-google-import-meta{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:7px;
+}
+
+.admin-google-import-meta>span{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  padding:8px 9px;
+  border-radius:10px;
+  color:#52677b;
+  background:#f5f8fa;
+  font-size:11px;
+}
+
+.admin-google-import-meta b{
+  color:#7890a5;
+  font-size:9px;
+  text-transform:uppercase;
+}
+
+.admin-google-import-analysis{
+  display:flex;
+  align-items:flex-start;
+  gap:6px;
+  padding:8px 9px;
+  border-radius:10px;
+  color:#5f5778;
+  background:#f6f2ff;
+  font-size:11px;
+  line-height:1.45;
+}
+
+.admin-google-import-analysis svg{
+  flex:0 0 auto;
+  margin-top:1px;
+  color:#7058cf;
+}
+
+.admin-google-import-details{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px 12px;
+  color:#657789;
+  font-size:11px;
+}
+
+.admin-google-import-details b{
+  color:#3d5368;
+}
+
+.admin-google-import-result-actions{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:center;
+  gap:8px;
+}
+
+.admin-google-import-result-actions>.primary-action,
+.admin-google-import-result-actions>.secondary-action{
+  width:100%;
+  min-height:42px;
+}
+
+.admin-google-import-result-actions>a{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  color:#0d68ca;
+  font-size:11px;
+  font-weight:850;
+  text-decoration:none;
+}
+
+.admin-google-import-empty{
+  min-height:160px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  border:1px dashed #d6e0e8;
+  border-radius:14px;
+  color:#7b8b99;
+  text-align:center;
+}
+
+.admin-google-import-empty b{
+  color:#3e556b;
+  font-size:14px;
+}
+
+.admin-google-import-empty span{
+  max-width:520px;
+  font-size:11px;
+}
