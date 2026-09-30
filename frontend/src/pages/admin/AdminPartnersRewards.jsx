@@ -246,10 +246,7 @@ export default function AdminPartnersRewards() {
       voucherValueText: voucherForm.voucherValueText.trim() || null,
       terms: voucherForm.terms.trim() || null,
       pointsCost: Number(voucherForm.pointsCost),
-      quantityTotal:
-        voucherForm.quantityTotal === '' || Number(voucherForm.quantityTotal) <= 0
-          ? null
-          : Number(voucherForm.quantityTotal),
+      quantityTotal: voucherForm.quantityTotal === '' ? null : Number(voucherForm.quantityTotal),
       maxPerUser: Number(voucherForm.maxPerUser || 1),
       status: voucherForm.status,
       startsAt: toIso(voucherForm.startsAt),
@@ -518,7 +515,7 @@ export default function AdminPartnersRewards() {
                 <label>Mô tả<textarea rows="3" value={voucherForm.description} onChange={(e) => setVoucherForm((c) => ({ ...c, description: e.target.value }))} /></label>
                 <div className="admin-partner-form-row">
                   <label>Điểm cần đổi<input type="number" min="1" value={voucherForm.pointsCost} onChange={(e) => setVoucherForm((c) => ({ ...c, pointsCost: e.target.value }))} /></label>
-                  <label>Số lượng voucher <span className="field-help">0 hoặc để trống = không giới hạn</span><input type="number" min="0" value={voucherForm.quantityTotal} onChange={(e) => setVoucherForm((c) => ({ ...c, quantityTotal: e.target.value }))} placeholder="0 = không giới hạn" /></label>
+                  <label>Số lượng<input type="number" min="0" value={voucherForm.quantityTotal} onChange={(e) => setVoucherForm((c) => ({ ...c, quantityTotal: e.target.value }))} placeholder="Trống = không giới hạn" /></label>
                 </div>
                 <div className="admin-partner-form-row">
                   <label>Giới hạn/user<input type="number" min="1" value={voucherForm.maxPerUser} onChange={(e) => setVoucherForm((c) => ({ ...c, maxPerUser: e.target.value }))} /></label>
