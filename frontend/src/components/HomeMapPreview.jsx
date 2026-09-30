@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Map as MapIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as maplibre from 'maplibre-gl';
@@ -26,6 +26,8 @@ export default function HomeMapPreview({ places = [] }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
+  const resizeObserverRef = useRef(null);
+  const [mapReady, setMapReady] = useState(false);
 
   const validPlaces = useMemo(() => {
     const seen = new Set();
@@ -52,7 +54,7 @@ export default function HomeMapPreview({ places = [] }) {
       style: createLocalBasemapStyle('streets'),
       center: DEFAULT_CENTER,
       zoom: 12.65,
-      minZoom: 11.8,
+      minZoom: 12.1,
       maxZoom: 16,
       maxBounds: MAP_COVERAGE_BOUNDS,
       interactive: false,
@@ -65,12 +67,24 @@ export default function HomeMapPreview({ places = [] }) {
     map.addControl(new maplibre.AttributionControl({ compact: true }), 'bottom-left');
 
     map.on('load', () => {
+      setMapReady(true);
       requestAnimationFrame(() => map.resize());
     });
 
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserverRef.current = new ResizeObserver(() => {
+        if (!mapRef.current) return;
+        requestAnimationFrame(() => mapRef.current?.resize());
+      });
+      resizeObserverRef.current.observe(containerRef.current);
+    }
+
     return () => {
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
+      setMapReady(false);
       map.remove();
       mapRef.current = null;
     };
@@ -78,7 +92,7 @@ export default function HomeMapPreview({ places = [] }) {
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapReady) return;
 
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
@@ -119,13 +133,21 @@ export default function HomeMapPreview({ places = [] }) {
         bounds.extend([Number(place.lng), Number(place.lat)]);
       });
 
-      map.fitBounds(bounds, {
+      const camera = map.cameraForBounds(bounds, {
         padding: 54,
-        maxZoom: 13.35,
-        duration: 0
+        maxZoom: 13.35
       });
+
+      if (camera) {
+        map.jumpTo({
+          center: camera.center,
+          // The raster preview source begins at z12. Never let the mobile
+          // overview zoom below that threshold or the card becomes blank.
+          zoom: Math.max(Number(camera.zoom) || 12.65, 12.2)
+        });
+      }
     }
-  }, [validPlaces, navigate]);
+  }, [validPlaces, navigate, mapReady]);
 
   return (
     <div className="reference-map-demo home-live-map-preview" aria-label="Bản đồ trực tiếp Hola Maps">
