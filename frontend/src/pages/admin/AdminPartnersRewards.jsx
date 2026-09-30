@@ -6,16 +6,20 @@ import {
   MapPin,
   Plus,
   Search,
-  TicketCheck
+  ShieldCheck,
+  TicketCheck,
+  XCircle
 } from 'lucide-react';
 import {
   createAdminPartner,
   createAdminVoucher,
   getAdminPartners,
   getAdminPlaces,
+  getAdminPlaceClaims,
   getAdminVoucherRedemptions,
   getAdminVouchers,
   markAdminVoucherRedeemed,
+  reviewAdminPlaceClaim,
   updateAdminPartner,
   updateAdminVoucher
 } from '../../services/api.js';
@@ -65,6 +69,7 @@ export default function AdminPartnersRewards() {
   const [partners, setPartners] = useState([]);
   const [vouchers, setVouchers] = useState([]);
   const [redemptions, setRedemptions] = useState([]);
+  const [claims, setClaims] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [partnerId, setPartnerId] = useState(null);
@@ -88,14 +93,16 @@ export default function AdminPartnersRewards() {
   async function loadAll() {
     setLoading(true);
     try {
-      const [partnerData, voucherData, redemptionData] = await Promise.all([
+      const [partnerData, voucherData, redemptionData, claimData] = await Promise.all([
         getAdminPartners(),
         getAdminVouchers(),
-        getAdminVoucherRedemptions()
+        getAdminVoucherRedemptions(),
+        getAdminPlaceClaims()
       ]);
       setPartners(Array.isArray(partnerData?.items) ? partnerData.items : []);
       setVouchers(Array.isArray(voucherData?.items) ? voucherData.items : []);
       setRedemptions(Array.isArray(redemptionData?.items) ? redemptionData.items : []);
+      setClaims(Array.isArray(claimData?.items) ? claimData.items : []);
     } catch (error) {
       showToast(error.message, 'error');
     } finally {
@@ -248,6 +255,28 @@ export default function AdminPartnersRewards() {
     }
   }
 
+  async function reviewClaim(item, status) {
+    const reviewNote = status === 'REJECTED'
+      ? window.prompt('Lý do từ chối yêu cầu xác minh:', '') || ''
+      : '';
+
+    if (status === 'REJECTED' && !reviewNote.trim()) return;
+
+    try {
+      await reviewAdminPlaceClaim(item.id, {
+        status,
+        reviewNote: reviewNote.trim() || null
+      });
+      showToast(
+        status === 'APPROVED' ? 'Đã xác minh quyền quản lý địa điểm.' : 'Đã từ chối yêu cầu.',
+        status === 'APPROVED' ? 'success' : 'info'
+      );
+      await loadAll();
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  }
+
   return (
     <main className="admin-page admin-partners-page page-container">
       <section className="section-heading admin-partners-heading">
@@ -267,6 +296,9 @@ export default function AdminPartnersRewards() {
         </button>
         <button className={tab === 'redemptions' ? 'active' : ''} onClick={() => setTab('redemptions')} type="button">
           <TicketCheck size={16} /> Voucher đã đổi <span>{redemptions.length}</span>
+        </button>
+        <button className={tab === 'claims' ? 'active' : ''} onClick={() => setTab('claims')} type="button">
+          <ShieldCheck size={16} /> Xác minh chủ quán <span>{claims.filter((item) => item.status === 'PENDING').length}</span>
         </button>
       </nav>
 
@@ -390,6 +422,53 @@ export default function AdminPartnersRewards() {
                 <button className="primary-action" type="submit" disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu chiến dịch'}</button>
               </form>
             </div>
+          )}
+
+          {tab === 'claims' && (
+            <section className="admin-claims-card">
+              <div className="admin-reward-card-head">
+                <div>
+                  <b>Yêu cầu xác minh địa điểm</b>
+                  <span>Duyệt chủ quán/người đại diện trước khi cấp quyền Business Dashboard.</span>
+                </div>
+              </div>
+
+              {!claims.length ? (
+                <div className="empty-state"><ShieldCheck size={24} /><b>Chưa có yêu cầu xác minh</b></div>
+              ) : (
+                <div className="admin-claim-list">
+                  {claims.map((item) => (
+                    <article key={item.id} className={'admin-claim-row ' + item.status.toLowerCase()}>
+                      <span className="admin-claim-place-image">
+                        {item.placeImage ? <img src={item.placeImage} alt="" /> : <MapPin size={20} />}
+                      </span>
+                      <div className="admin-claim-main">
+                        <small>{item.status} · CLAIM #{item.id}</small>
+                        <b>{item.businessName || item.placeName}</b>
+                        <span>{item.placeName} · {item.placeAddress || 'Hòa Lạc'}</span>
+                        <em>{item.userName} · {item.userEmail} · {item.contactPhone}</em>
+                        <p>{item.proofNote}</p>
+                        {item.reviewNote && <blockquote>{item.reviewNote}</blockquote>}
+                      </div>
+                      <div className="admin-claim-actions">
+                        {item.status === 'PENDING' ? (
+                          <>
+                            <button className="approve" type="button" onClick={() => reviewClaim(item, 'APPROVED')}>
+                              <ShieldCheck size={15} /> Duyệt
+                            </button>
+                            <button className="reject" type="button" onClick={() => reviewClaim(item, 'REJECTED')}>
+                              <XCircle size={15} /> Từ chối
+                            </button>
+                          </>
+                        ) : (
+                          <span className={'voucher-status ' + (item.status === 'APPROVED' ? 'redeemed' : 'cancelled')}>{item.status}</span>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
           )}
 
           {tab === 'redemptions' && (
