@@ -2449,3 +2449,124 @@
     font-size:8px;
   }
 }
+
+
+/* ---------- Partner place edit ---------- */
+.partner-place-actions{
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+
+.partner-place-actions button,
+.partner-place-actions a{
+  min-height:28px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  padding:0 7px;
+  border:1px solid #d7e6df;
+  border-radius:8px;
+  color:#0d7453;
+  background:#f6fbf8;
+  font-size:7px;
+  font-weight:900;
+  text-decoration:none;
+  cursor:pointer;
+}
+
+.partner-edit-modal{
+  position:fixed;
+  inset:0;
+  z-index:12000;
+  display:grid;
+  place-items:center;
+  padding:18px;
+  background:rgba(7,33,26,.62);
+  backdrop-filter:blur(7px);
+  -webkit-backdrop-filter:blur(7px);
+}
+
+.partner-edit-card{
+  width:min(620px,100%);
+  max-height:calc(100dvh - 36px);
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:18px;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 28px 80px rgba(0,0,0,.28);
+}
+
+.partner-edit-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.partner-edit-head h2{
+  margin:4px 0 0;
+  color:#163f34;
+  font-size:20px;
+}
+
+.partner-edit-head>button{
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border:0;
+  border-radius:10px;
+  color:#5f756e;
+  background:#eef4f1;
+  cursor:pointer;
+}
+
+.partner-edit-card>p{
+  margin:0;
+  padding:9px 10px;
+  border-radius:10px;
+  color:#6e817b;
+  background:#f7faf8;
+  font-size:8px;
+  line-height:1.55;
+}
+
+.partner-edit-card label{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  color:#415850;
+  font-size:9px;
+  font-weight:850;
+}
+
+.partner-edit-card input,
+.partner-edit-card textarea{
+  width:100%;
+  padding:9px 10px;
+  border:1px solid #d8e5df;
+  border-radius:10px;
+  outline:none;
+  background:#fff;
+}
+
+@media(max-width:760px){
+  .partner-place-list article{
+    grid-template-columns:54px minmax(0,1fr);
+  }
+
+  .partner-place-actions{
+    grid-column:1/-1;
+    justify-content:flex-end;
+  }
+
+  .partner-edit-card input,
+  .partner-edit-card textarea{
+    font-size:16px;
+  }
+}
