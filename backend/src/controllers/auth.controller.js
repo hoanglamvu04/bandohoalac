@@ -27,6 +27,10 @@ export const login = asyncHandler(async (req, res) => {
     throw new AppError('Invalid email or password.', 401);
   }
 
+  if (user.account_status && user.account_status !== 'ACTIVE') {
+    throw new AppError('This account is suspended.', 403);
+  }
+
   const valid = await comparePassword(password, user.password_hash);
   if (!valid) {
     throw new AppError('Invalid email or password.', 401);
