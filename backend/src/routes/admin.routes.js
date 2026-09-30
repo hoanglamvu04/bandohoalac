@@ -17,7 +17,18 @@ import {
   adminCreatePlaceSchema,
   adminUpdatePlaceSchema
 } from '../validators/adminPlace.validators.js';
-import { uploadPhotos } from '../middleware/upload.js';
+import { uploadPhotos, uploadSingleImage } from '../middleware/upload.js';
+import {
+  archiveAdvertisementAdmin,
+  createAdvertisementAdmin,
+  listAdvertisementsAdmin,
+  updateAdvertisementAdmin,
+  uploadAdvertisementImageAdmin
+} from '../controllers/adminAdvertisements.controller.js';
+import {
+  adminCreateAdvertisementSchema,
+  adminUpdateAdvertisementSchema
+} from '../validators/advertisement.validators.js';
 
 const router = Router();
 
@@ -36,5 +47,26 @@ router.delete('/places/:id', archivePlaceAdmin);
 router.post('/places/:id/images', uploadPhotos, uploadPlaceImagesAdmin);
 router.post('/places/:id/images/:imageId/cover', makeCoverAdmin);
 router.delete('/places/:id/images/:imageId', deletePlaceImageAdmin);
+
+router.get('/ads', authorize('ADMIN'), listAdvertisementsAdmin);
+router.post(
+  '/ads',
+  authorize('ADMIN'),
+  validateBody(adminCreateAdvertisementSchema),
+  createAdvertisementAdmin
+);
+router.patch(
+  '/ads/:id',
+  authorize('ADMIN'),
+  validateBody(adminUpdateAdvertisementSchema),
+  updateAdvertisementAdmin
+);
+router.delete('/ads/:id', authorize('ADMIN'), archiveAdvertisementAdmin);
+router.post(
+  '/ads/:id/image',
+  authorize('ADMIN'),
+  uploadSingleImage,
+  uploadAdvertisementImageAdmin
+);
 
 export default router;
