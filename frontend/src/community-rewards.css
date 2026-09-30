@@ -3111,3 +3111,91 @@
     max-height:280px;
   }
 }
+
+
+/* ---------- Mobile profile shortcut cards: improve readability ---------- */
+@media(max-width:760px){
+  .profile-community-links{
+    gap:12px;
+    margin:18px 0 20px;
+  }
+
+  .profile-community-links .profile-rewards-entry{
+    min-height:86px;
+    grid-template-columns:58px minmax(0,1fr) 26px;
+    gap:12px;
+    padding:13px 14px;
+    border-radius:18px;
+  }
+
+  .profile-community-links .profile-rewards-icon{
+    width:58px;
+    height:58px;
+    border-radius:17px;
+  }
+
+  .profile-community-links .profile-rewards-icon svg{
+    width:28px;
+    height:28px;
+    stroke-width:2;
+  }
+
+  .profile-community-links .profile-rewards-entry>span:nth-child(2){
+    gap:5px;
+  }
+
+  .profile-community-links .profile-rewards-entry small{
+    font-size:10px;
+    line-height:1.2;
+    letter-spacing:.07em;
+  }
+
+  .profile-community-links .profile-rewards-entry b{
+    font-size:15px;
+    line-height:1.3;
+    font-weight:850;
+  }
+
+  .profile-community-links .profile-rewards-entry em{
+    gap:5px;
+    font-size:11px;
+    line-height:1.3;
+  }
+
+  .profile-community-links .profile-rewards-entry em svg{
+    width:14px;
+    height:14px;
+  }
+
+  .profile-community-links .profile-rewards-entry>svg{
+    width:22px;
+    height:22px;
+  }
+}
+
+@media(max-width:390px){
+  .profile-community-links .profile-rewards-entry{
+    min-height:82px;
+    grid-template-columns:54px minmax(0,1fr) 24px;
+    gap:10px;
+    padding:12px;
+  }
+
+  .profile-community-links .profile-rewards-icon{
+    width:54px;
+    height:54px;
+    border-radius:16px;
+  }
+
+  .profile-community-links .profile-rewards-entry b{
+    font-size:14px;
+  }
+
+  .profile-community-links .profile-rewards-entry small{
+    font-size:9.5px;
+  }
+
+  .profile-community-links .profile-rewards-entry em{
+    font-size:10.5px;
+  }
+}
