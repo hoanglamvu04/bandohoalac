@@ -16,31 +16,13 @@ import {
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 
-const SESSION_DISMISS_KEY = 'hola_ads_modal_dismissed_session';
-
-function isSessionDismissed() {
-  try {
-    return sessionStorage.getItem(SESSION_DISMISS_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function rememberSessionDismissal() {
-  try {
-    sessionStorage.setItem(SESSION_DISMISS_KEY, '1');
-  } catch {
-    // Ignore storage restrictions.
-  }
-}
-
 export default function AdvertisementCarousel() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const viewportRef = useRef(null);
   const [items, setItems] = useState([]);
   const [hidden, setHidden] = useState(false);
-  const [dismissed, setDismissed] = useState(() => isSessionDismissed());
+  const [dismissed, setDismissed] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loginPrompt, setLoginPrompt] = useState(false);
   const [hideBusy, setHideBusy] = useState(false);
@@ -74,7 +56,6 @@ export default function AdvertisementCarousel() {
 
     function onKeyDown(event) {
       if (event.key === 'Escape') {
-        rememberSessionDismissal();
         setDismissed(true);
       }
     }
@@ -90,7 +71,6 @@ export default function AdvertisementCarousel() {
   if (!visible || typeof document === 'undefined') return null;
 
   function dismissModal() {
-    rememberSessionDismissal();
     setDismissed(true);
   }
 
