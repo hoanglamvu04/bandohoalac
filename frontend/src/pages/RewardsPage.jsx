@@ -15,6 +15,7 @@ import {
 } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
+import VoucherQr from '../components/VoucherQr.jsx';
 
 export default function RewardsPage() {
   const { user } = useAuth();
@@ -174,9 +175,13 @@ export default function RewardsPage() {
                   <span className={'voucher-status ' + item.status.toLowerCase()}>{item.status}</span>
                   <small>{item.partnerName}</small>
                   <h3>{item.campaignTitle}</h3>
-                  <div className="my-voucher-code">
-                    <span>MÃ VOUCHER</span>
-                    <b>{item.code}</b>
+                  <div className="my-voucher-qr">
+                    <VoucherQr code={item.code} size={172} />
+                    <div className="my-voucher-code">
+                      <span>MÃ VOUCHER</span>
+                      <b>{item.code}</b>
+                      <small>Đưa QR hoặc mã này cho quán đối tác để xác nhận.</small>
+                    </div>
                   </div>
                   <p><MapPin size={13} /> {item.placeName} · {item.placeAddress}</p>
                   <footer>
