@@ -29,6 +29,16 @@ import {
   adminCreateAdvertisementSchema,
   adminUpdateAdvertisementSchema
 } from '../validators/advertisement.validators.js';
+import {
+  adjustUserWalletAdmin,
+  getUserAdmin,
+  listUsersAdmin,
+  updateUserAdmin
+} from '../controllers/adminUsers.controller.js';
+import {
+  adminAdjustWalletSchema,
+  adminUpdateUserSchema
+} from '../validators/adminUser.validators.js';
 
 const router = Router();
 
@@ -67,6 +77,21 @@ router.post(
   authorize('ADMIN'),
   uploadSingleImage,
   uploadAdvertisementImageAdmin
+);
+
+router.get('/users', authorize('ADMIN'), listUsersAdmin);
+router.get('/users/:id', authorize('ADMIN'), getUserAdmin);
+router.patch(
+  '/users/:id',
+  authorize('ADMIN'),
+  validateBody(adminUpdateUserSchema),
+  updateUserAdmin
+);
+router.post(
+  '/users/:id/wallet-adjustments',
+  authorize('ADMIN'),
+  validateBody(adminAdjustWalletSchema),
+  adjustUserWalletAdmin
 );
 
 export default router;
