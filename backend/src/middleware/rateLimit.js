@@ -45,3 +45,28 @@ export const mapReadRateLimiter = rateLimit({
     error: 'Map data is being requested too quickly. Please wait a moment.'
   }
 });
+
+
+export const claimRateLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  limit: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Bạn đã gửi quá nhiều yêu cầu xác minh. Hãy thử lại sau.' }
+});
+
+export const rewardRedeemRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Bạn đang thử đổi hoặc xác nhận voucher quá nhanh. Hãy chờ một lúc.' }
+});
+
+export const partnerScanRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Có quá nhiều lần kiểm tra voucher. Hãy chờ một lúc.' }
+});
