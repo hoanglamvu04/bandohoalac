@@ -3045,3 +3045,82 @@
     margin-bottom:0!important;
   }
 }
+
+
+/* ---------- Mobile homepage intro readability ---------- */
+@media(max-width:760px){
+  .home-info-main{
+    min-height:auto!important;
+    padding:23px 18px 22px!important;
+  }
+
+  .home-info-kicker{
+    gap:7px;
+    margin-bottom:13px;
+    padding:7px 10px;
+    font-size:10.5px;
+    line-height:1.2;
+    letter-spacing:.065em;
+  }
+
+  .home-info-kicker svg{
+    width:16px;
+    height:16px;
+  }
+
+  .home-info-main h3{
+    max-width:none!important;
+    margin-bottom:12px;
+    font-size:26px!important;
+    line-height:1.15;
+    letter-spacing:-.035em;
+  }
+
+  .home-info-main p{
+    max-width:none!important;
+    font-size:13px!important;
+    line-height:1.62;
+  }
+
+  .home-info-actions{
+    gap:10px;
+    margin-top:18px;
+  }
+
+  .home-info-primary,
+  .home-info-secondary{
+    min-height:46px;
+    gap:7px;
+    padding:0 12px;
+    border-radius:13px;
+    font-size:12px!important;
+    line-height:1.2;
+  }
+
+  .home-info-primary svg,
+  .home-info-secondary svg{
+    width:17px;
+    height:17px;
+  }
+}
+
+@media(max-width:390px){
+  .home-info-main{
+    padding:21px 16px 20px!important;
+  }
+
+  .home-info-main h3{
+    font-size:24px!important;
+  }
+
+  .home-info-main p{
+    font-size:12.5px!important;
+  }
+
+  .home-info-primary,
+  .home-info-secondary{
+    min-height:45px;
+    padding:0 9px;
+    font-size:11.5px!important;
+  }
+}
