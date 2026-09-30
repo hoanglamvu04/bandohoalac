@@ -72,6 +72,8 @@ import {
   reviewPlaceClaimSchema
 } from '../validators/placeClaim.validators.js';
 import { listAuditLogsAdmin } from '../controllers/audit.controller.js';
+import { previewGooglePlaceImportAdmin } from '../controllers/googlePlacesImport.controller.js';
+import { googlePlaceImportPreviewSchema } from '../validators/googlePlacesImport.validators.js';
 
 const router = Router();
 
@@ -83,6 +85,11 @@ router.post('/contributions/:id/approve', approve);
 router.post('/contributions/:id/reject', validateBody(rejectContributionSchema), reject);
 
 router.get('/places', listPlacesAdmin);
+router.post(
+  '/places/google-import-preview',
+  validateBody(googlePlaceImportPreviewSchema),
+  previewGooglePlaceImportAdmin
+);
 router.post('/places', validateBody(adminCreatePlaceSchema), createPlaceAdmin);
 router.get('/places/:id', getPlaceAdmin);
 router.patch('/places/:id', validateBody(adminUpdatePlaceSchema), updatePlaceAdmin);
