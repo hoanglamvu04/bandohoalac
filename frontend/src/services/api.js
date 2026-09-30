@@ -417,6 +417,10 @@ export function redeemPartnerVoucher(code) {
   return unwrap(client.post('/partner/redeem', { code }));
 }
 
+export function updatePartnerManagedPlace(id, payload) {
+  return unwrap(client.patch('/partner/places/' + encodeURIComponent(id), payload));
+}
+
 export function getAdminAuditLogs(params = {}) {
   return unwrap(client.get('/admin/audit', { params: cleanParams(params) }));
 }
