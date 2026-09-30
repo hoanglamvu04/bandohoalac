@@ -10,6 +10,8 @@ const placeFields = {
   website: z.string().trim().max(200).nullable().optional(),
   priceLevel: z.string().trim().max(120).nullable().optional(),
   openingHours: z.string().trim().max(120).nullable().optional(),
+  googlePlaceId: z.string().trim().max(255).nullable().optional(),
+  googleMapsUri: z.string().trim().max(1200).nullable().optional(),
   status: z.enum(['PENDING', 'PUBLISHED', 'REJECTED', 'ARCHIVED']).optional(),
   lat: z.coerce.number().min(-90).max(90).optional(),
   lng: z.coerce.number().min(-180).max(180).optional()
