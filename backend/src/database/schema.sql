@@ -416,3 +416,135 @@ CREATE INDEX IF NOT EXISTS voucher_redemptions_user_idx
 
 CREATE INDEX IF NOT EXISTS voucher_redemptions_campaign_idx
   ON voucher_redemptions (campaign_id, created_at DESC);
+
+
+-- ============================================================
+-- BUSINESS CLAIMS / PLACE MANAGERS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS place_claims (
+  id BIGSERIAL PRIMARY KEY,
+  place_id BIGINT NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  business_name TEXT,
+  contact_phone TEXT,
+  proof_note TEXT,
+  status TEXT NOT NULL DEFAULT 'PENDING'
+    CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+  reviewed_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMPTZ,
+  review_note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS place_claims_place_idx
+  ON place_claims (place_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS place_claims_user_idx
+  ON place_claims (user_id, created_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS place_claims_pending_unique
+  ON place_claims (place_id, user_id)
+  WHERE status = 'PENDING';
+
+CREATE TABLE IF NOT EXISTS place_managers (
+  id BIGSERIAL PRIMARY KEY,
+  place_id BIGINT NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'OWNER'
+    CHECK (role IN ('OWNER', 'MANAGER')),
+  created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (place_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS place_managers_user_idx
+  ON place_managers (user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS partner_memberships (
+  id BIGSERIAL PRIMARY KEY,
+  partner_id BIGINT NOT NULL REFERENCES place_partners(id) ON DELETE CASCADE,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'OWNER'
+    CHECK (role IN ('OWNER', 'STAFF')),
+  status TEXT NOT NULL DEFAULT 'ACTIVE'
+    CHECK (status IN ('ACTIVE', 'INACTIVE')),
+  created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (partner_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS partner_memberships_user_idx
+  ON partner_memberships (user_id, status);
+
+-- ============================================================
+-- COMMUNITY MISSIONS / CAMPAIGNS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS missions (
+  id BIGSERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT NOT NULL DEFAULT 'DRAFT'
+    CHECK (status IN ('DRAFT', 'ACTIVE', 'PAUSED', 'ENDED')),
+  contribution_types TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+  target_count INTEGER NOT NULL DEFAULT 1 CHECK (target_count > 0),
+  bonus_points INTEGER NOT NULL DEFAULT 0 CHECK (bonus_points >= 0),
+  completion_bonus INTEGER NOT NULL DEFAULT 0 CHECK (completion_bonus >= 0),
+  starts_at TIMESTAMPTZ,
+  ends_at TIMESTAMPTZ,
+  created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (ends_at IS NULL OR starts_at IS NULL OR ends_at >= starts_at)
+);
+
+CREATE INDEX IF NOT EXISTS missions_active_idx
+  ON missions (status, starts_at, ends_at);
+
+CREATE TABLE IF NOT EXISTS mission_contributions (
+  id BIGSERIAL PRIMARY KEY,
+  mission_id BIGINT NOT NULL REFERENCES missions(id) ON DELETE CASCADE,
+  contribution_id BIGINT NOT NULL REFERENCES contributions(id) ON DELETE CASCADE,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  bonus_points_awarded INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (mission_id, contribution_id)
+);
+
+CREATE INDEX IF NOT EXISTS mission_contributions_user_idx
+  ON mission_contributions (user_id, mission_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS mission_completions (
+  id BIGSERIAL PRIMARY KEY,
+  mission_id BIGINT NOT NULL REFERENCES missions(id) ON DELETE CASCADE,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  points_awarded INTEGER NOT NULL DEFAULT 0,
+  completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (mission_id, user_id)
+);
+
+-- ============================================================
+-- AUDIT LOG
+-- ============================================================
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id BIGSERIAL PRIMARY KEY,
+  actor_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  action TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  ip_address TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS audit_logs_created_idx
+  ON audit_logs (created_at DESC);
+
+CREATE INDEX IF NOT EXISTS audit_logs_actor_idx
+  ON audit_logs (actor_user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS audit_logs_entity_idx
+  ON audit_logs (entity_type, entity_id, created_at DESC);
