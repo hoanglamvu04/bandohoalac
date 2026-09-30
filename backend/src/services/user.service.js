@@ -55,10 +55,13 @@ export async function getUserBadges(userId, client = pool) {
 export async function getRecentActivity(userId, limit = 10, client = pool) {
   const { rows } = await client.query(
     `SELECT c.id, c.type, c.status, c.created_at,
-            pt.amount AS points_awarded,
+            COALESCE((
+              SELECT SUM(pt.amount)
+              FROM points_transactions pt
+              WHERE pt.contribution_id = c.id
+            ), 0)::int AS points_awarded,
             p.name AS place_name
      FROM contributions c
-     LEFT JOIN points_transactions pt ON pt.contribution_id = c.id
      LEFT JOIN places p ON p.id = c.place_id
      WHERE c.user_id = $1
      ORDER BY c.created_at DESC
