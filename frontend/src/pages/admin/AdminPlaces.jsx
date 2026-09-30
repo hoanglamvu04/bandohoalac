@@ -3,12 +3,15 @@ import {
   Archive,
   ArrowLeft,
   Check,
+  Download,
+  ExternalLink,
   ImagePlus,
   LocateFixed,
   MapPin,
   PencilLine,
   Plus,
   Search,
+  Sparkles,
   Star,
   Trash2,
   X
@@ -20,6 +23,7 @@ import {
   getAdminPlace,
   getAdminPlaces,
   getCategories,
+  previewGooglePlaceImport,
   setAdminPlaceCover,
   updateAdminPlace,
   uploadAdminPlaceImages
@@ -37,6 +41,8 @@ const EMPTY_FORM = {
   website: '',
   priceLevel: '',
   openingHours: '',
+  googlePlaceId: '',
+  googleMapsUri: '',
   status: 'PUBLISHED',
   lat: DEFAULT_CENTER[1],
   lng: DEFAULT_CENTER[0]
@@ -83,6 +89,8 @@ function toForm(place) {
     website: place.website || '',
     priceLevel: place.priceLevel || '',
     openingHours: place.openingHours || '',
+    googlePlaceId: place.googlePlaceId || '',
+    googleMapsUri: place.googleMapsUri || '',
     status: place.status || 'PUBLISHED',
     lat: Number(place.lat) || DEFAULT_CENTER[1],
     lng: Number(place.lng) || DEFAULT_CENTER[0]
@@ -103,6 +111,10 @@ export default function AdminPlaces() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [coordinateText, setCoordinateText] = useState('');
+  const [googleImportOpen, setGoogleImportOpen] = useState(false);
+  const [googleImportInput, setGoogleImportInput] = useState('');
+  const [googleImportLoading, setGoogleImportLoading] = useState(false);
+  const [googleImportResult, setGoogleImportResult] = useState(null);
 
   function loadList() {
     setLoading(true);
@@ -138,6 +150,7 @@ export default function AdminPlaces() {
       setDetail(data);
       setForm(toForm(data));
       setPhotos([]);
+      setGoogleImportResult(null);
     } catch (error) {
       showToast(error.message, 'error');
     }
@@ -153,6 +166,7 @@ export default function AdminPlaces() {
     });
     setPhotos([]);
     setCoordinateText('');
+    setGoogleImportResult(null);
   }
 
   function closeEditor() {
@@ -161,6 +175,7 @@ export default function AdminPlaces() {
     setDetail(null);
     setPhotos([]);
     setCoordinateText('');
+    setGoogleImportResult(null);
   }
 
   const editorOpen = creating || Boolean(selectedId);
@@ -195,6 +210,84 @@ export default function AdminPlaces() {
     showToast('Đã cập nhật vị trí theo tọa độ.', 'success');
   }
 
+  function openGoogleImport() {
+    setGoogleImportInput('');
+    setGoogleImportResult(null);
+    setGoogleImportOpen(true);
+  }
+
+  function closeGoogleImport() {
+    if (googleImportLoading) return;
+    setGoogleImportOpen(false);
+  }
+
+  async function analyzeGoogleImport(event) {
+    event?.preventDefault?.();
+
+    const input = googleImportInput.trim();
+    if (!input) {
+      showToast('Dán link Google Maps hoặc nhập tên địa điểm.', 'error');
+      return;
+    }
+
+    setGoogleImportLoading(true);
+    try {
+      const data = await previewGooglePlaceImport(input);
+      setGoogleImportResult(data);
+      if (!data?.candidates?.length) {
+        showToast('Google Places không tìm thấy địa điểm phù hợp.', 'info');
+      }
+    } catch (error) {
+      setGoogleImportResult(null);
+      showToast(error.message, 'error');
+    } finally {
+      setGoogleImportLoading(false);
+    }
+  }
+
+  function applyGoogleCandidate(candidate) {
+    if (candidate?.existingPlace?.id) {
+      setGoogleImportOpen(false);
+      openPlace(Number(candidate.existingPlace.id));
+      showToast('Địa điểm này đã có trên Hola Maps.', 'info');
+      return;
+    }
+
+    if (!candidate?.insideServiceArea) {
+      showToast('Địa điểm này nằm ngoài vùng hoạt động hiện tại của Hola Maps.', 'error');
+      return;
+    }
+
+    const categoryExists = categories.some((item) => item.slug === candidate.categorySlug);
+
+    setCreating(true);
+    setSelectedId(null);
+    setDetail(null);
+    setPhotos([]);
+    setForm({
+      ...EMPTY_FORM,
+      name: candidate.name || '',
+      categorySlug: categoryExists ? candidate.categorySlug : '',
+      address: candidate.address || '',
+      description: candidate.description || '',
+      phone: candidate.phone || '',
+      website: candidate.website || '',
+      priceLevel: candidate.priceLevel || '',
+      openingHours: candidate.openingHours || '',
+      googlePlaceId: candidate.googlePlaceId || '',
+      googleMapsUri: candidate.googleMapsUri || '',
+      status: 'PUBLISHED',
+      lat: Number(candidate.lat) || DEFAULT_CENTER[1],
+      lng: Number(candidate.lng) || DEFAULT_CENTER[0]
+    });
+    setCoordinateText(
+      Number(candidate.lat).toFixed(6) + ', ' + Number(candidate.lng).toFixed(6)
+    );
+    setGoogleImportOpen(false);
+    setGoogleImportResult(null);
+    showToast('Đã điền dữ liệu Google Maps vào form. Kiểm tra lại rồi bấm Lưu địa điểm.', 'success');
+  }
+
   const changedPayload = useMemo(() => ({
     name: form.name.trim(),
     categorySlug: form.categorySlug || null,
@@ -204,6 +297,8 @@ export default function AdminPlaces() {
     website: form.website.trim() || null,
     priceLevel: form.priceLevel.trim() || null,
     openingHours: form.openingHours.trim() || null,
+    googlePlaceId: form.googlePlaceId.trim() || null,
+    googleMapsUri: form.googleMapsUri.trim() || null,
     status: form.status,
     lat: Number(form.lat),
     lng: Number(form.lng)
@@ -321,9 +416,14 @@ export default function AdminPlaces() {
           <h2>Quản lý địa điểm</h2>
           <p>Thêm, sửa, ẩn và quản lý ảnh của mọi địa điểm trên Hola Maps.</p>
         </div>
-        <button className="primary-action" type="button" onClick={startCreate}>
-          <Plus size={17} /> Thêm địa điểm
-        </button>
+        <div className="admin-places-heading-actions">
+          <button className="secondary-action admin-google-import-button" type="button" onClick={openGoogleImport}>
+            <Download size={17} /> Nhập từ Google Maps
+          </button>
+          <button className="primary-action" type="button" onClick={startCreate}>
+            <Plus size={17} /> Thêm địa điểm
+          </button>
+        </div>
       </div>
 
       <section className={editorOpen ? 'admin-places-layout editing' : 'admin-places-layout'}>
@@ -414,6 +514,22 @@ export default function AdminPlaces() {
                   )}
                 </div>
               </div>
+
+              {form.googlePlaceId && (
+                <div className="admin-google-import-source">
+                  <span className="admin-google-import-source-icon"><Sparkles size={18} /></span>
+                  <div>
+                    <small>NGUỒN NHẬP</small>
+                    <b>Google Maps đã được dùng để điền dữ liệu ban đầu</b>
+                    <span>Place ID: {form.googlePlaceId}</span>
+                  </div>
+                  {form.googleMapsUri && (
+                    <a href={form.googleMapsUri} target="_blank" rel="noreferrer">
+                      Mở Google Maps <ExternalLink size={13} />
+                    </a>
+                  )}
+                </div>
+              )}
 
               <div className="admin-place-form-grid">
                 <label className="full">
@@ -619,6 +735,157 @@ export default function AdminPlaces() {
           )}
         </section>
       </section>
+
+      {googleImportOpen && (
+        <div
+          className="admin-google-import-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Nhập địa điểm từ Google Maps"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeGoogleImport();
+          }}
+        >
+          <div className="admin-google-import-card">
+            <div className="admin-google-import-head">
+              <div>
+                <span className="eyebrow">GOOGLE MAPS IMPORT</span>
+                <h2>Nhập địa điểm tự động</h2>
+                <p>Dán link Google Maps hoặc nhập tên địa điểm. Hola Maps sẽ tìm, phân loại và điền sẵn form để Admin kiểm tra.</p>
+              </div>
+              <button type="button" onClick={closeGoogleImport} aria-label="Đóng"><X size={20} /></button>
+            </div>
+
+            <form className="admin-google-import-search" onSubmit={analyzeGoogleImport}>
+              <label>
+                Link Google Maps / tên địa điểm
+                <div>
+                  <Search size={18} />
+                  <input
+                    autoFocus
+                    value={googleImportInput}
+                    onChange={(event) => setGoogleImportInput(event.target.value)}
+                    placeholder="VD: https://maps.app.goo.gl/... hoặc Hanashi Coffee Hạ Bằng"
+                  />
+                </div>
+              </label>
+              <button className="primary-action" type="submit" disabled={googleImportLoading}>
+                <Sparkles size={17} />
+                {googleImportLoading ? 'Đang phân tích...' : 'Phân tích địa điểm'}
+              </button>
+            </form>
+
+            <div className="admin-google-import-note">
+              <b>Hola Maps chỉ dùng dữ liệu này làm bản nháp.</b>
+              <span>Admin vẫn kiểm tra và bấm Lưu. Ảnh từ Google không tự sao chép vào kho ảnh Hola Maps.</span>
+            </div>
+
+            {googleImportResult && (
+              <div className="admin-google-import-results">
+                <div className="admin-google-import-results-head">
+                  <div>
+                    <b>Kết quả phù hợp</b>
+                    <span>
+                      {googleImportResult.query
+                        ? 'Tìm theo: ' + googleImportResult.query
+                        : 'Tìm theo Google Place ID'}
+                    </span>
+                  </div>
+                  <strong>{googleImportResult.candidates?.length || 0} kết quả</strong>
+                </div>
+
+                {!googleImportResult.candidates?.length ? (
+                  <div className="admin-google-import-empty">
+                    <MapPin size={22} />
+                    <b>Không tìm thấy địa điểm</b>
+                    <span>Thử link Google Maps đầy đủ hoặc thêm “Hòa Lạc / Thạch Thất” vào tên tìm kiếm.</span>
+                  </div>
+                ) : (
+                  <div className="admin-google-import-list">
+                    {googleImportResult.candidates.map((candidate) => (
+                      <article
+                        key={candidate.googlePlaceId || candidate.name}
+                        className={[
+                          'admin-google-import-result',
+                          !candidate.insideServiceArea ? 'outside' : '',
+                          candidate.existingPlace ? 'existing' : ''
+                        ].filter(Boolean).join(' ')}
+                      >
+                        <div className="admin-google-import-result-main">
+                          <div className="admin-google-import-result-title">
+                            <span className="admin-google-import-pin"><MapPin size={18} /></span>
+                            <div>
+                              <small>{candidate.googlePrimaryTypeLabel || candidate.googlePrimaryType || 'Google Place'}</small>
+                              <h3>{candidate.name}</h3>
+                              <p>{candidate.address || 'Chưa có địa chỉ'}</p>
+                            </div>
+                          </div>
+
+                          <div className="admin-google-import-meta">
+                            <span>
+                              <b>Danh mục đề xuất</b>
+                              {categories.find((item) => item.slug === candidate.categorySlug)?.name || 'Cần Admin chọn'}
+                            </span>
+                            <span>
+                              <b>Đánh giá Google</b>
+                              {candidate.googleRating
+                                ? candidate.googleRating.toFixed(1) + ' · ' + candidate.googleUserRatingCount + ' lượt'
+                                : 'Chưa có'}
+                            </span>
+                            <span>
+                              <b>Vị trí</b>
+                              {candidate.insideServiceArea ? 'Trong vùng Hola Maps' : 'Ngoài vùng Hola Maps'}
+                            </span>
+                          </div>
+
+                          <div className="admin-google-import-analysis">
+                            <Sparkles size={14} />
+                            <span>
+                              {candidate.analysis?.categoryReason}
+                              {candidate.tags?.length ? ' · Tags: ' + candidate.tags.join(', ') : ''}
+                            </span>
+                          </div>
+
+                          {(candidate.phone || candidate.website || candidate.openingHours) && (
+                            <div className="admin-google-import-details">
+                              {candidate.phone && <span><b>Điện thoại:</b> {candidate.phone}</span>}
+                              {candidate.openingHours && <span><b>Giờ mở cửa:</b> {candidate.openingHours}</span>}
+                              {candidate.website && <span><b>Website:</b> {candidate.website}</span>}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="admin-google-import-result-actions">
+                          {candidate.existingPlace ? (
+                            <button type="button" className="secondary-action" onClick={() => applyGoogleCandidate(candidate)}>
+                              Đã có · Mở #{candidate.existingPlace.id}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="primary-action"
+                              disabled={!candidate.insideServiceArea}
+                              onClick={() => applyGoogleCandidate(candidate)}
+                            >
+                              <Check size={16} />
+                              {candidate.insideServiceArea ? 'Dùng dữ liệu này' : 'Ngoài vùng'}
+                            </button>
+                          )}
+                          {candidate.googleMapsUri && (
+                            <a href={candidate.googleMapsUri} target="_blank" rel="noreferrer">
+                              Google Maps <ExternalLink size={13} />
+                            </a>
+                          )}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
