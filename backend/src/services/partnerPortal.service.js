@@ -213,3 +213,48 @@ export async function redeemPartnerVoucherByCode({ userId, code }) {
     return getRedemptionById(updated.rows[0].id, client);
   });
 }
+
+
+export async function updateManagedPlace({ userId, placeId, values }) {
+  const access = await pool.query(
+    `SELECT pm.role
+     FROM place_managers pm
+     WHERE pm.place_id = $1 AND pm.user_id = $2
+     LIMIT 1`,
+    [placeId, userId]
+  );
+
+  if (!access.rows[0]) {
+    throw new AppError('Bạn không có quyền quản lý địa điểm này.', 403);
+  }
+
+  const columnMap = {
+    phone: 'phone',
+    website: 'website',
+    openingHours: 'opening_hours',
+    description: 'description'
+  };
+
+  const params = [];
+  const sets = [];
+  for (const [key, value] of Object.entries(values || {})) {
+    const column = columnMap[key];
+    if (!column) continue;
+    params.push(value || null);
+    sets.push(column + ' = $' + params.length);
+  }
+
+  if (!sets.length) {
+    const current = await listManagedPlaces(userId);
+    return current.find((item) => String(item.placeId) === String(placeId)) || null;
+  }
+
+  params.push(placeId);
+  await pool.query(
+    'UPDATE places SET ' + sets.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
+    params
+  );
+
+  const current = await listManagedPlaces(userId);
+  return current.find((item) => String(item.placeId) === String(placeId)) || null;
+}
