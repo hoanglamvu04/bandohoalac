@@ -30,6 +30,7 @@ import {
 } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
+import AdvertisementCarousel from '../components/AdvertisementCarousel.jsx';
 
 const FEATURE_CARDS = [
   {
@@ -340,6 +341,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <AdvertisementCarousel />
 
       <section className="reference-category-discovery">
         <div className="reference-section-head home-discovery-heading">
