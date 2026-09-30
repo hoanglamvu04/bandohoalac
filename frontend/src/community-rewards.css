@@ -1,0 +1,1108 @@
+/* =========================================================
+   Community admin + partner rewards
+   ========================================================= */
+
+/* ---------- Admin users ---------- */
+.admin-users-heading,
+.admin-partners-heading{
+  align-items:flex-start;
+}
+
+.admin-users-heading p,
+.admin-partners-heading p{
+  margin:6px 0 0;
+  color:var(--muted);
+}
+
+.admin-users-total{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:13px;
+  background:#fff;
+}
+
+.admin-users-total b{font-size:16px}
+.admin-users-total span{color:var(--muted);font-size:10px}
+
+.admin-users-filters{
+  display:grid;
+  grid-template-columns:minmax(260px,1fr) 180px 180px;
+  gap:10px;
+  margin-bottom:14px;
+}
+
+.admin-users-search{
+  min-height:43px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:0 12px;
+  border:1px solid #dce5e1;
+  border-radius:12px;
+  background:#fff;
+}
+
+.admin-users-search svg{color:#6e8580}
+.admin-users-search input{
+  width:100%;
+  border:0;
+  outline:0;
+  background:transparent;
+}
+
+.admin-users-filters select{
+  min-height:43px;
+  padding:0 10px;
+  border:1px solid #dce5e1;
+  border-radius:12px;
+  background:#fff;
+}
+
+.admin-users-layout{
+  display:grid;
+  grid-template-columns:390px minmax(0,1fr);
+  gap:16px;
+  align-items:start;
+}
+
+.admin-users-list-panel,
+.admin-user-editor{
+  border:1px solid var(--line);
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 12px 32px rgba(26,62,56,.05);
+}
+
+.admin-users-list-panel{padding:12px}
+.admin-users-list{
+  max-height:720px;
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  overflow:auto;
+}
+
+.admin-user-row{
+  width:100%;
+  display:grid;
+  grid-template-columns:44px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+  padding:9px;
+  border:1px solid transparent;
+  border-radius:14px;
+  background:#f9fbfa;
+  text-align:left;
+  cursor:pointer;
+}
+
+.admin-user-row:hover,
+.admin-user-row.active{
+  border-color:#bdd8fb;
+  background:#f2f7ff;
+}
+
+.admin-user-avatar{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border-radius:13px;
+  color:#fff;
+  background:linear-gradient(145deg,#2788f8,#1263d0);
+  font-size:15px;
+  font-weight:900;
+}
+
+.admin-user-avatar.large{
+  width:58px;
+  height:58px;
+  border-radius:17px;
+  font-size:21px;
+}
+
+.admin-user-avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.admin-user-row-main{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.admin-user-row-main>span:first-child{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-width:0;
+}
+
+.admin-user-row-main b{
+  overflow:hidden;
+  font-size:11px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.admin-user-row-main em{
+  padding:2px 5px;
+  border-radius:999px;
+  color:#126add;
+  background:#e7f1ff;
+  font-size:7px;
+  font-style:normal;
+  font-weight:900;
+}
+
+.admin-user-row-main>small{
+  overflow:hidden;
+  color:#7c8f89;
+  font-size:9px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.admin-user-meta{
+  display:flex;
+  gap:5px;
+}
+
+.admin-user-meta i{
+  padding:3px 5px;
+  border-radius:999px;
+  font-size:7px;
+  font-style:normal;
+  font-weight:900;
+}
+
+.admin-user-meta .role{color:#355f8e;background:#eaf2fa}
+.admin-user-meta .role.admin{color:#754514;background:#fff0d7}
+.admin-user-meta .role.moderator{color:#684a9a;background:#f1eaff}
+.admin-user-meta .status.active{color:#157655;background:#e7f6ef}
+.admin-user-meta .status.suspended{color:#a04235;background:#fff0ed}
+
+.admin-user-points{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  color:#a26b00;
+  font-size:9px;
+  font-weight:900;
+}
+
+.admin-user-editor{
+  min-height:480px;
+  padding:18px;
+}
+
+.admin-user-editor-empty{
+  min-height:430px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  color:#82958f;
+  text-align:center;
+}
+
+.admin-user-editor-empty b{color:var(--ink)}
+
+.admin-user-mobile-back{display:none}
+
+.admin-user-overview{
+  display:flex;
+  align-items:center;
+  gap:13px;
+  padding-bottom:14px;
+  border-bottom:1px solid #edf1ef;
+}
+
+.admin-user-overview>div{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.admin-user-overview small{color:#738781;font-size:8px;font-weight:900}
+.admin-user-overview h2{margin:0;font-size:20px}
+.admin-user-overview span{color:#7c8d88;font-size:9px}
+
+.admin-user-stat-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+  margin:14px 0;
+}
+
+.admin-user-stat-grid>div{
+  padding:10px;
+  border:1px solid #e4ece8;
+  border-radius:12px;
+  background:#f8fbfa;
+}
+
+.admin-user-stat-grid b{
+  display:block;
+  color:#133f70;
+  font-size:16px;
+}
+
+.admin-user-stat-grid span{
+  color:#788b84;
+  font-size:8px;
+}
+
+.admin-user-form,
+.admin-wallet-form{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:14px;
+  padding:14px;
+  border:1px solid #e0e9e5;
+  border-radius:15px;
+  background:#fbfcfc;
+}
+
+.admin-user-form h3,
+.admin-wallet-form h3{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:0;
+  font-size:13px;
+}
+
+.admin-wallet-form p{
+  margin:0;
+  color:#748783;
+  font-size:9px;
+  line-height:1.5;
+}
+
+.admin-user-form label,
+.admin-wallet-form label{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  color:#465b55;
+  font-size:9px;
+  font-weight:850;
+}
+
+.admin-user-form input,
+.admin-user-form textarea,
+.admin-user-form select,
+.admin-wallet-form input{
+  width:100%;
+  padding:9px 10px;
+  border:1px solid #d9e4df;
+  border-radius:10px;
+  outline:none;
+  background:#fff;
+}
+
+.admin-user-form-row,
+.admin-wallet-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+}
+
+.admin-user-warning{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-top:12px;
+  padding:10px;
+  border:1px solid #f0ccc5;
+  border-radius:12px;
+  color:#8f3e31;
+  background:#fff4f1;
+  font-size:9px;
+  font-weight:800;
+}
+
+/* ---------- Partner / voucher admin ---------- */
+.admin-reward-tabs{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-bottom:14px;
+  padding:5px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fff;
+}
+
+.admin-reward-tabs button{
+  min-height:38px;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:0 11px;
+  border:0;
+  border-radius:10px;
+  color:#607570;
+  background:transparent;
+  font-size:10px;
+  font-weight:850;
+  cursor:pointer;
+}
+
+.admin-reward-tabs button.active{
+  color:#075fc9;
+  background:#eaf3ff;
+}
+
+.admin-reward-tabs button span{
+  min-width:20px;
+  padding:2px 5px;
+  border-radius:999px;
+  background:rgba(0,0,0,.05);
+  font-size:8px;
+}
+
+.admin-partner-grid,
+.admin-voucher-layout{
+  display:grid;
+  grid-template-columns:minmax(300px,.82fr) minmax(0,1.18fr);
+  gap:15px;
+  align-items:start;
+}
+
+.admin-partner-list-card,
+.admin-partner-form-card,
+.admin-voucher-list-card,
+.admin-voucher-form-card,
+.admin-redemptions-card{
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:19px;
+  background:#fff;
+  box-shadow:0 12px 30px rgba(24,58,52,.05);
+}
+
+.admin-reward-card-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:12px;
+}
+
+.admin-reward-card-head>div{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.admin-reward-card-head b{font-size:13px}
+.admin-reward-card-head span{color:#7b8d88;font-size:8px}
+
+.admin-partner-list,
+.admin-voucher-list{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  max-height:650px;
+  overflow:auto;
+}
+
+.admin-partner-row,
+.admin-voucher-row{
+  width:100%;
+  border:1px solid transparent;
+  border-radius:13px;
+  background:#f9fbfa;
+  text-align:left;
+  cursor:pointer;
+}
+
+.admin-partner-row{
+  display:grid;
+  grid-template-columns:60px minmax(0,1fr);
+  gap:9px;
+  align-items:center;
+  padding:8px;
+}
+
+.admin-partner-row:hover,
+.admin-partner-row.active,
+.admin-voucher-row:hover,
+.admin-voucher-row.active{
+  border-color:#b9d6fb;
+  background:#f2f7ff;
+}
+
+.admin-partner-image{
+  width:60px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border-radius:10px;
+  color:#176fdc;
+  background:#e6f1ff;
+}
+
+.admin-partner-image img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.admin-partner-row>span:last-child,
+.admin-voucher-row>span{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.admin-partner-row small,
+.admin-voucher-row small{
+  color:#126bd5;
+  font-size:7px;
+  font-weight:900;
+}
+
+.admin-partner-row b,
+.admin-voucher-row b{
+  overflow:hidden;
+  font-size:10px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.admin-partner-row em,
+.admin-voucher-row em{
+  overflow:hidden;
+  color:#7a8a86;
+  font-size:8px;
+  font-style:normal;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.admin-partner-form-card,
+.admin-voucher-form-card{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.admin-partner-form-card>label,
+.admin-voucher-form-card>label,
+.admin-place-picker>label{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  color:#425751;
+  font-size:9px;
+  font-weight:850;
+}
+
+.admin-partner-form-card input,
+.admin-partner-form-card textarea,
+.admin-partner-form-card select,
+.admin-voucher-form-card input,
+.admin-voucher-form-card textarea,
+.admin-voucher-form-card select,
+.admin-place-picker input{
+  width:100%;
+  padding:9px 10px;
+  border:1px solid #dbe5e1;
+  border-radius:10px;
+  outline:none;
+  background:#fff;
+}
+
+.admin-partner-form-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+}
+
+.admin-partner-form-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.admin-place-picker{
+  position:relative;
+}
+
+.admin-place-picker-input{
+  min-height:41px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:0 9px;
+  border:1px solid #dbe5e1;
+  border-radius:10px;
+  background:#fff;
+}
+
+.admin-place-picker-input input{
+  padding:0;
+  border:0;
+}
+
+.admin-place-picker-results{
+  position:absolute;
+  z-index:15;
+  top:58px;
+  right:0;
+  left:0;
+  max-height:250px;
+  overflow:auto;
+  padding:6px;
+  border:1px solid #d5e2dd;
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 16px 34px rgba(25,61,54,.14);
+}
+
+.admin-place-picker-results button{
+  width:100%;
+  display:flex;
+  gap:8px;
+  align-items:flex-start;
+  padding:8px;
+  border:0;
+  border-radius:9px;
+  background:transparent;
+  text-align:left;
+  cursor:pointer;
+}
+
+.admin-place-picker-results button:hover{background:#f2f7ff}
+.admin-place-picker-results span{display:flex;flex-direction:column;gap:2px}
+.admin-place-picker-results b{font-size:9px}
+.admin-place-picker-results small{color:#7b8c87;font-size:7px}
+.admin-place-selected{display:block;margin-top:5px;color:#0e72d9;font-size:8px}
+
+.admin-voucher-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+  padding:10px;
+}
+
+.admin-voucher-row>strong{
+  color:#a36a00;
+  font-size:12px;
+}
+
+.admin-voucher-row>strong small{color:#927d57}
+
+.admin-redemption-table{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+}
+
+.admin-redemption-table article{
+  display:grid;
+  grid-template-columns:minmax(0,1.3fr) minmax(140px,.7fr) 90px 135px;
+  gap:10px;
+  align-items:center;
+  padding:10px;
+  border:1px solid #e2eae6;
+  border-radius:12px;
+  background:#fbfcfc;
+}
+
+.admin-redemption-table article>span:first-child,
+.admin-redemption-table article>span:nth-child(2){
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.admin-redemption-table small{color:#7c8d88;font-size:7px}
+.admin-redemption-table b{font-size:10px}
+.admin-redemption-table em{
+  overflow:hidden;
+  color:#778883;
+  font-size:8px;
+  font-style:normal;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.admin-redemption-table button{
+  min-height:32px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  border:1px solid #b9d9ca;
+  border-radius:9px;
+  color:#116d4e;
+  background:#eff9f4;
+  font-size:8px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.admin-redemption-done{color:#6f827c;font-size:8px}
+
+/* ---------- Shared voucher status ---------- */
+.voucher-status{
+  width:max-content;
+  padding:4px 7px;
+  border-radius:999px;
+  font-size:7px;
+  font-weight:950;
+}
+.voucher-status.issued{color:#8b5d00;background:#fff1ca}
+.voucher-status.redeemed{color:#0d7652;background:#e2f7ed}
+.voucher-status.cancelled,
+.voucher-status.expired{color:#8c4538;background:#ffefeb}
+
+/* ---------- Public rewards ---------- */
+.rewards-page{
+  display:flex;
+  flex-direction:column;
+  gap:24px;
+}
+
+.rewards-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);
+  gap:16px;
+  overflow:hidden;
+  padding:28px;
+  border:1px solid rgba(22,108,220,.14);
+  border-radius:26px;
+  background:
+    radial-gradient(circle at 85% 15%,rgba(39,132,248,.18),transparent 34%),
+    linear-gradient(150deg,#f9fcff,#eaf4ff);
+  box-shadow:0 20px 52px rgba(29,94,173,.10);
+}
+
+.rewards-hero-copy h1{
+  margin:9px 0 12px;
+  color:#082c5c;
+  font-size:39px;
+  line-height:1.08;
+  letter-spacing:-.04em;
+}
+
+.rewards-hero-copy p{
+  max-width:670px;
+  margin:0;
+  color:#5d7691;
+  line-height:1.7;
+}
+
+.rewards-wallet{
+  width:max-content;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin-top:18px;
+  padding:10px 13px;
+  border:1px solid #b9d8ff;
+  border-radius:14px;
+  background:rgba(255,255,255,.86);
+}
+
+.rewards-wallet>span{
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  border-radius:12px;
+  color:#9b6a00;
+  background:#fff0c7;
+}
+
+.rewards-wallet>div{display:flex;flex-direction:column;gap:2px}
+.rewards-wallet small{color:#73879d;font-size:8px}
+.rewards-wallet b{color:#103c6d;font-size:15px}
+
+.rewards-login-cta{
+  width:max-content;
+  min-height:42px;
+  display:inline-flex;
+  align-items:center;
+  margin-top:18px;
+  padding:0 14px;
+  border-radius:12px;
+  color:#fff;
+  background:#116fdf;
+  text-decoration:none;
+  font-size:10px;
+  font-weight:900;
+}
+
+.rewards-hero-art{
+  min-height:220px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  border:1px solid rgba(255,255,255,.65);
+  border-radius:20px;
+  color:#0a62ca;
+  background:linear-gradient(145deg,rgba(255,255,255,.78),rgba(222,239,255,.9));
+}
+
+.rewards-hero-art>span{
+  width:88px;
+  height:88px;
+  display:grid;
+  place-items:center;
+  border-radius:26px;
+  color:#fff;
+  background:linear-gradient(145deg,#3193ff,#0a63dc);
+  box-shadow:0 15px 34px rgba(11,103,218,.22);
+}
+
+.rewards-hero-art b{font-size:19px}
+.rewards-hero-art small{color:#70869c;font-size:9px}
+
+.rewards-section{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.rewards-section-head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.rewards-section-head h2{
+  margin:4px 0 0;
+  color:#0c315e;
+  font-size:25px;
+}
+
+.rewards-section-head>span{
+  color:#74899f;
+  font-size:9px;
+}
+
+.rewards-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:13px;
+}
+
+.reward-card{
+  overflow:hidden;
+  border:1px solid #dce7f3;
+  border-radius:19px;
+  background:#fff;
+  box-shadow:0 13px 32px rgba(31,83,143,.07);
+}
+
+.reward-cover{
+  position:relative;
+  aspect-ratio:16/9;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  color:#1b72d9;
+  background:#e7f1fc;
+}
+
+.reward-cover img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.reward-cover>span{
+  position:absolute;
+  top:9px;
+  left:9px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:5px 7px;
+  border-radius:999px;
+  color:#0a6a4d;
+  background:rgba(255,255,255,.9);
+  font-size:7px;
+  font-weight:900;
+}
+
+.reward-content{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:13px;
+}
+
+.reward-content>small{color:#0f6bd3;font-size:8px;font-weight:900}
+.reward-content h3{margin:0;color:#10345f;font-size:16px}
+.reward-content>strong{color:#0b7a57;font-size:11px}
+.reward-content>p{min-height:38px;margin:0;color:#718399;font-size:9px;line-height:1.5}
+
+.reward-place{
+  display:flex;
+  align-items:flex-start;
+  gap:6px;
+  padding:8px;
+  border-radius:10px;
+  background:#f7f9fb;
+}
+
+.reward-place svg{flex:none;color:#176fde}
+.reward-place span{min-width:0;display:flex;flex-direction:column;gap:2px}
+.reward-place b{font-size:9px}
+.reward-place small{overflow:hidden;color:#7a8c9e;font-size:7px;text-overflow:ellipsis;white-space:nowrap}
+
+.reward-meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  color:#73869a;
+  font-size:8px;
+}
+
+.reward-meta span:first-child{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  color:#9a6900;
+}
+
+.reward-redeem{
+  min-height:40px;
+  border:0;
+  border-radius:11px;
+  color:#fff;
+  background:linear-gradient(135deg,#2185f8,#0868df);
+  font-size:10px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.reward-redeem:disabled{
+  color:#8594a4;
+  background:#edf1f5;
+  cursor:not-allowed;
+}
+
+.reward-redeem.login{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+}
+
+.my-voucher-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+}
+
+.my-voucher-card{
+  position:relative;
+  padding:14px;
+  border:1px dashed #a9c7e9;
+  border-radius:17px;
+  background:linear-gradient(145deg,#fff,#f1f7ff);
+}
+
+.my-voucher-card>small{display:block;margin-top:8px;color:#0d68ce;font-size:8px;font-weight:900}
+.my-voucher-card h3{margin:4px 0 12px;color:#15385f;font-size:14px}
+.my-voucher-code{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  padding:10px;
+  border-radius:11px;
+  background:#0d3768;
+}
+.my-voucher-code span{color:#a9c8ee;font-size:7px;font-weight:900;letter-spacing:.1em}
+.my-voucher-code b{color:#fff;font-size:19px;letter-spacing:.08em}
+.my-voucher-card>p{display:flex;gap:5px;margin:9px 0;color:#75889b;font-size:8px}
+.my-voucher-card footer{display:flex;justify-content:space-between;gap:8px;color:#7a8b9d;font-size:8px}
+.my-voucher-card footer span{display:flex;align-items:center;gap:4px}
+
+@media(max-width:980px){
+  .admin-users-layout{grid-template-columns:330px minmax(0,1fr)}
+  .admin-partner-grid,
+  .admin-voucher-layout{grid-template-columns:1fr}
+  .rewards-grid,
+  .my-voucher-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(max-width:760px){
+  .admin-users-page,
+  .admin-partners-page,
+  .rewards-page{
+    width:calc(100% - 20px);
+  }
+
+  .admin-users-heading{
+    flex-direction:column;
+  }
+
+  .admin-users-filters{
+    grid-template-columns:1fr;
+  }
+
+  .admin-users-search input,
+  .admin-users-filters select,
+  .admin-user-form input,
+  .admin-user-form textarea,
+  .admin-user-form select,
+  .admin-wallet-form input,
+  .admin-partner-form-card input,
+  .admin-partner-form-card textarea,
+  .admin-partner-form-card select,
+  .admin-voucher-form-card input,
+  .admin-voucher-form-card textarea,
+  .admin-voucher-form-card select,
+  .admin-place-picker input{
+    font-size:16px;
+  }
+
+  .admin-users-layout{
+    display:block;
+  }
+
+  .admin-user-editor{display:none}
+  .admin-users-layout.editing .admin-users-list-panel{display:none}
+  .admin-users-layout.editing .admin-user-editor{display:block}
+
+  .admin-users-list{max-height:none}
+  .admin-user-mobile-back{
+    width:max-content;
+    display:block;
+    margin-bottom:10px;
+    padding:7px 9px;
+    border:0;
+    border-radius:9px;
+    color:#42625a;
+    background:#eef3f1;
+    font-size:9px;
+    font-weight:900;
+  }
+
+  .admin-user-stat-grid{grid-template-columns:1fr 1fr}
+  .admin-user-form-row,
+  .admin-wallet-row,
+  .admin-partner-form-row{grid-template-columns:1fr}
+
+  .admin-reward-tabs{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+  }
+
+  .admin-reward-tabs button{
+    justify-content:center;
+    padding:0 6px;
+    font-size:8px;
+  }
+
+  .admin-partner-grid,
+  .admin-voucher-layout{
+    display:block;
+  }
+
+  .admin-partner-form-card,
+  .admin-voucher-form-card{
+    margin-top:12px;
+  }
+
+  .admin-redemption-table article{
+    grid-template-columns:1fr auto;
+  }
+
+  .admin-redemption-table article>span:nth-child(2){
+    text-align:right;
+  }
+
+  .admin-redemption-table article>button,
+  .admin-redemption-done{
+    grid-column:1/-1;
+  }
+
+  .rewards-page{gap:18px}
+
+  .rewards-hero{
+    grid-template-columns:1fr;
+    padding:18px;
+    border-radius:21px;
+  }
+
+  .rewards-hero-copy h1{
+    font-size:27px;
+  }
+
+  .rewards-hero-copy p{
+    font-size:11px;
+  }
+
+  .rewards-hero-art{
+    min-height:145px;
+  }
+
+  .rewards-hero-art>span{
+    width:64px;
+    height:64px;
+    border-radius:19px;
+  }
+
+  .rewards-hero-art>span svg{
+    width:34px;
+    height:34px;
+  }
+
+  .rewards-section-head h2{
+    font-size:20px;
+  }
+
+  .rewards-grid,
+  .my-voucher-grid{
+    grid-template-columns:1fr;
+  }
+
+  .reward-card{
+    display:grid;
+    grid-template-columns:120px minmax(0,1fr);
+  }
+
+  .reward-cover{
+    aspect-ratio:auto;
+    min-height:100%;
+  }
+
+  .reward-content h3{font-size:14px}
+}
+
+@media(max-width:420px){
+  .reward-card{
+    grid-template-columns:1fr;
+  }
+
+  .reward-cover{
+    aspect-ratio:16/8;
+  }
+}
