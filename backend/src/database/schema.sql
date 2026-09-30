@@ -302,3 +302,117 @@ CREATE TABLE IF NOT EXISTS ad_daily_hides (
 
 CREATE INDEX IF NOT EXISTS ad_daily_hides_user_date_idx
   ON ad_daily_hides (user_id, hide_date DESC);
+
+
+-- ============================================================
+-- USER ACCOUNT STATUS + SPENDABLE POINTS WALLET
+-- ============================================================
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS account_status TEXT,
+  ADD COLUMN IF NOT EXISTS points_balance INTEGER;
+
+UPDATE users
+SET account_status = 'ACTIVE'
+WHERE account_status IS NULL;
+
+UPDATE users
+SET points_balance = points_total
+WHERE points_balance IS NULL;
+
+ALTER TABLE users
+  ALTER COLUMN account_status SET DEFAULT 'ACTIVE',
+  ALTER COLUMN account_status SET NOT NULL,
+  ALTER COLUMN points_balance SET DEFAULT 0,
+  ALTER COLUMN points_balance SET NOT NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'users_account_status_check'
+  ) THEN
+    ALTER TABLE users
+      ADD CONSTRAINT users_account_status_check
+      CHECK (account_status IN ('ACTIVE', 'SUSPENDED'));
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS users_account_status_idx
+  ON users (account_status);
+
+-- ============================================================
+-- PARTNER PLACES
+-- A partner profile is attached to an existing Hola Maps place.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS place_partners (
+  id BIGSERIAL PRIMARY KEY,
+  place_id BIGINT NOT NULL UNIQUE REFERENCES places(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'PENDING'
+    CHECK (status IN ('PENDING', 'ACTIVE', 'PAUSED', 'ENDED')),
+  partner_name TEXT,
+  contact_name TEXT,
+  contact_phone TEXT,
+  contact_email TEXT,
+  note TEXT,
+  joined_at TIMESTAMPTZ,
+  created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS place_partners_status_idx
+  ON place_partners (status);
+
+-- ============================================================
+-- REWARD / VOUCHER CAMPAIGNS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS voucher_campaigns (
+  id BIGSERIAL PRIMARY KEY,
+  partner_id BIGINT NOT NULL REFERENCES place_partners(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  voucher_value_text TEXT,
+  terms TEXT,
+  points_cost INTEGER NOT NULL CHECK (points_cost > 0),
+  quantity_total INTEGER CHECK (quantity_total IS NULL OR quantity_total >= 0),
+  quantity_redeemed INTEGER NOT NULL DEFAULT 0 CHECK (quantity_redeemed >= 0),
+  max_per_user INTEGER NOT NULL DEFAULT 1 CHECK (max_per_user > 0),
+  status TEXT NOT NULL DEFAULT 'DRAFT'
+    CHECK (status IN ('DRAFT', 'ACTIVE', 'PAUSED', 'ENDED')),
+  starts_at TIMESTAMPTZ,
+  ends_at TIMESTAMPTZ,
+  created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (ends_at IS NULL OR starts_at IS NULL OR ends_at >= starts_at)
+);
+
+CREATE INDEX IF NOT EXISTS voucher_campaigns_public_idx
+  ON voucher_campaigns (status, starts_at, ends_at);
+
+CREATE INDEX IF NOT EXISTS voucher_campaigns_partner_idx
+  ON voucher_campaigns (partner_id);
+
+-- ============================================================
+-- VOUCHER REDEMPTIONS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS voucher_redemptions (
+  id BIGSERIAL PRIMARY KEY,
+  campaign_id BIGINT NOT NULL REFERENCES voucher_campaigns(id) ON DELETE RESTRICT,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code TEXT NOT NULL UNIQUE,
+  points_spent INTEGER NOT NULL CHECK (points_spent > 0),
+  status TEXT NOT NULL DEFAULT 'ISSUED'
+    CHECK (status IN ('ISSUED', 'REDEEMED', 'CANCELLED', 'EXPIRED')),
+  redeemed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS voucher_redemptions_user_idx
+  ON voucher_redemptions (user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS voucher_redemptions_campaign_idx
+  ON voucher_redemptions (campaign_id, created_at DESC);
