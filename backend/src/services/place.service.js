@@ -17,6 +17,9 @@ const BASE_SELECT = [
   '  p.website,',
   '  p.price_level,',
   '  p.opening_hours,',
+  '  p.google_place_id,',
+  '  p.google_maps_uri,',
+  '  p.google_imported_at,',
   '  p.status,',
   '  p.source,',
   '  p.created_by,',
@@ -47,6 +50,9 @@ function mapRow(row) {
     website: row.website,
     priceLevel: row.price_level,
     openingHours: row.opening_hours,
+    googlePlaceId: row.google_place_id || null,
+    googleMapsUri: row.google_maps_uri || null,
+    googleImportedAt: row.google_imported_at || null,
     status: row.status,
     source: row.source,
     createdBy: row.created_by,
@@ -402,12 +408,15 @@ export async function createPlace(data, client = pool) {
   const { rows } = await client.query(
     `INSERT INTO places (
        name, slug, description, category_id, address, location, phone, website,
-       price_level, opening_hours, status, source, created_by
+       price_level, opening_hours, google_place_id, google_maps_uri,
+       google_imported_at, status, source, created_by
      )
      VALUES (
        $1, $2, $3, $4, $5,
        ST_SetSRID(ST_MakePoint($6, $7), 4326),
-       $8, $9, $10, $11, $12, $13, $14
+       $8, $9, $10, $11, $12, $13,
+       CASE WHEN $12 IS NULL THEN NULL ELSE NOW() END,
+       $14, $15, $16
      )
      RETURNING id`,
     [
@@ -422,6 +431,8 @@ export async function createPlace(data, client = pool) {
       data.website || null,
       data.priceLevel || null,
       data.openingHours || null,
+      data.googlePlaceId || null,
+      data.googleMapsUri || null,
       data.status || 'PENDING',
       data.source || 'USER',
       data.createdBy || null
@@ -440,6 +451,9 @@ export async function updatePlaceFields(placeId, fields, client = pool) {
     'website',
     'price_level',
     'opening_hours',
+    'google_place_id',
+    'google_maps_uri',
+    'google_imported_at',
     'category_id',
     'status'
   ]);
