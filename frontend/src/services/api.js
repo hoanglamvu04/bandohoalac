@@ -310,4 +310,69 @@ export function uploadAdminAdvertisementImage(id, image) {
   return unwrap(client.post('/admin/ads/' + encodeURIComponent(id) + '/image', formData));
 }
 
+
+
+export function getAdminUsers(params = {}) {
+  return unwrap(client.get('/admin/users', { params: cleanParams(params) }));
+}
+
+export function getAdminUser(id) {
+  return unwrap(client.get('/admin/users/' + encodeURIComponent(id)));
+}
+
+export function updateAdminUser(id, payload) {
+  return unwrap(client.patch('/admin/users/' + encodeURIComponent(id), payload));
+}
+
+export function adjustAdminUserWallet(id, payload) {
+  return unwrap(client.post(
+    '/admin/users/' + encodeURIComponent(id) + '/wallet-adjustments',
+    payload
+  ));
+}
+
+export function getAdminPartners(params = {}) {
+  return unwrap(client.get('/admin/partners', { params: cleanParams(params) }));
+}
+
+export function createAdminPartner(payload) {
+  return unwrap(client.post('/admin/partners', payload));
+}
+
+export function updateAdminPartner(id, payload) {
+  return unwrap(client.patch('/admin/partners/' + encodeURIComponent(id), payload));
+}
+
+export function getAdminVouchers(params = {}) {
+  return unwrap(client.get('/admin/vouchers', { params: cleanParams(params) }));
+}
+
+export function createAdminVoucher(payload) {
+  return unwrap(client.post('/admin/vouchers', payload));
+}
+
+export function updateAdminVoucher(id, payload) {
+  return unwrap(client.patch('/admin/vouchers/' + encodeURIComponent(id), payload));
+}
+
+export function getAdminVoucherRedemptions(params = {}) {
+  return unwrap(client.get('/admin/voucher-redemptions', { params: cleanParams(params) }));
+}
+
+export function markAdminVoucherRedeemed(id) {
+  return unwrap(client.post('/admin/voucher-redemptions/' + encodeURIComponent(id) + '/redeem'));
+}
+
+export function getRewards() {
+  return unwrap(client.get('/rewards'));
+}
+
+export function getMyRewards() {
+  return unwrap(client.get('/rewards/me'));
+}
+
+export function redeemReward(id) {
+  return unwrap(client.post('/rewards/' + encodeURIComponent(id) + '/redeem'));
+}
+
 export { API_URL };
