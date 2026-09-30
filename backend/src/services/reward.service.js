@@ -221,11 +221,8 @@ export async function updatePartner(id, values, adminId) {
 
   for (const [key, value] of Object.entries(values || {})) {
     if (!map[key]) continue;
-    const normalizedValue = key === 'quantityTotal'
-      ? normalizeQuantityTotal(value)
-      : value;
-    params.push(normalizedValue);
-    sets.push(map[key] + ' = 
+    params.push(value);
+    sets.push(map[key] + ' = $' + params.length);
     if (key === 'status' && value === 'ACTIVE') {
       sets.push('joined_at = COALESCE(joined_at, NOW())');
     }
@@ -324,7 +321,8 @@ export async function updateVoucherCampaign(id, values, adminId) {
       ? normalizeQuantityTotal(value)
       : value;
     params.push(normalizedValue);
-    sets.push(map[key] + ' = 
+    sets.push(map[key] + ' = $' + params.length);
+  }
 
   if (!sets.length) return getVoucherCampaignAdmin(id);
   params.push(adminId);
