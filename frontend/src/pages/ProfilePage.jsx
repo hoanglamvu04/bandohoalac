@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Award, BadgeCheck, ChevronRight, Coins, Gift, Heart, MapPin, MapPinned, Medal, TrendingUp } from 'lucide-react';
+import { Award, BadgeCheck, Building2, ChevronRight, Coins, Flag, Gift, Heart, MapPin, MapPinned, Medal, TrendingUp } from 'lucide-react';
 import ExplorerProfile from '../components/ExplorerProfile.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getMyFavorites, getUserProfile } from '../services/api.js';
@@ -57,15 +57,37 @@ export default function ProfilePage() {
         onLogout={handleLogout}
       />
 
-      <Link className="profile-rewards-entry" to="/rewards">
-        <span className="profile-rewards-icon"><Gift size={24} /></span>
-        <span>
-          <small>HOLA EXPLORER REWARDS</small>
-          <b>Dùng điểm đóng góp để đổi voucher đối tác</b>
-          <em><Coins size={13} /> Khám phá ưu đãi đang có</em>
-        </span>
-        <ChevronRight size={20} />
-      </Link>
+      <div className="profile-community-links">
+        <Link className="profile-rewards-entry" to="/rewards">
+          <span className="profile-rewards-icon"><Gift size={24} /></span>
+          <span>
+            <small>HOLA EXPLORER REWARDS</small>
+            <b>Dùng điểm đóng góp để đổi voucher đối tác</b>
+            <em><Coins size={13} /> Khám phá ưu đãi đang có</em>
+          </span>
+          <ChevronRight size={20} />
+        </Link>
+
+        <Link className="profile-rewards-entry mission" to="/missions">
+          <span className="profile-rewards-icon"><Flag size={24} /></span>
+          <span>
+            <small>COMMUNITY MISSIONS</small>
+            <b>Tham gia nhiệm vụ để nhận thêm điểm bonus</b>
+            <em><Flag size={13} /> Theo dõi tiến độ chiến dịch</em>
+          </span>
+          <ChevronRight size={20} />
+        </Link>
+
+        <Link className="profile-rewards-entry partner" to="/partner">
+          <span className="profile-rewards-icon"><Building2 size={24} /></span>
+          <span>
+            <small>BUSINESS / PARTNER</small>
+            <b>Quản lý địa điểm đã xác minh và voucher</b>
+            <em><Building2 size={13} /> Dành cho chủ quán và đối tác</em>
+          </span>
+          <ChevronRight size={20} />
+        </Link>
+      </div>
 
       <section className="profile-grid">
         <div className="profile-panel">
