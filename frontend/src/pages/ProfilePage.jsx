@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Award, BadgeCheck, ChevronRight, Heart, MapPin, MapPinned, Medal, TrendingUp } from 'lucide-react';
+import { Award, BadgeCheck, ChevronRight, Coins, Gift, Heart, MapPin, MapPinned, Medal, TrendingUp } from 'lucide-react';
 import ExplorerProfile from '../components/ExplorerProfile.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getMyFavorites, getUserProfile } from '../services/api.js';
@@ -56,6 +56,16 @@ export default function ProfilePage() {
         stats={profile?.stats}
         onLogout={handleLogout}
       />
+
+      <Link className="profile-rewards-entry" to="/rewards">
+        <span className="profile-rewards-icon"><Gift size={24} /></span>
+        <span>
+          <small>HOLA EXPLORER REWARDS</small>
+          <b>Dùng điểm đóng góp để đổi voucher đối tác</b>
+          <em><Coins size={13} /> Khám phá ưu đãi đang có</em>
+        </span>
+        <ChevronRight size={20} />
+      </Link>
 
       <section className="profile-grid">
         <div className="profile-panel">
