@@ -31,7 +31,6 @@ import {
 } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
-import HomeMapPreview from '../components/HomeMapPreview.jsx';
 
 const FEATURE_CARDS = [
   {
@@ -282,20 +281,6 @@ export default function HomePage() {
     [sections]
   );
 
-  const previewPlaces = useMemo(() => {
-    const seen = new Set();
-
-    return displaySections
-      .flatMap((section) => Array.isArray(section?.items) ? section.items : [])
-      .filter((place) => {
-        const id = String(place?.id || '');
-        if (!id || seen.has(id)) return false;
-        seen.add(id);
-        return Number.isFinite(Number(place?.lng)) && Number.isFinite(Number(place?.lat));
-      })
-      .slice(0, 10);
-  }, [displaySections]);
-
   const displayLeaders = useMemo(
     () => leaders.slice(0, 3),
     [leaders]
@@ -364,17 +349,46 @@ export default function HomePage() {
           </div>
         </div>
 
-        <HomeMapPreview places={previewPlaces} />
-      </section>
+        <div className="home-info-showcase">
+          <div className="home-info-main">
+            <span className="home-info-kicker">
+              <Compass size={15} />
+              Giới thiệu nhanh
+            </span>
 
-      <section className="reference-feature-grid">
-        {FEATURE_CARDS.map(({ icon: Icon, title, text, tone, to }) => (
-          <Link to={to} className="reference-feature-card" key={title}>
-            <span className={'reference-feature-icon ' + tone}><Icon size={25} /></span>
-            <div><h3>{title}</h3><p>{text}</p></div>
-            <span className="reference-card-arrow"><ArrowRight size={16} /></span>
-          </Link>
-        ))}
+            <h3>Hola Maps – bản đồ cộng đồng dành riêng cho Hòa Lạc.</h3>
+            <p>
+              Tập trung địa điểm, tuyến đường, lớp dữ liệu và thông tin thực tế
+              tại Hòa Lạc và 8 xã lân cận trong một trải nghiệm dễ tra cứu,
+              dễ đóng góp và luôn được cộng đồng cập nhật.
+            </p>
+
+            <div className="home-info-actions">
+              <Link className="home-info-primary" to="/map">
+                <Map size={16} />
+                Mở bản đồ
+                <ArrowRight size={15} />
+              </Link>
+              <Link className="home-info-secondary" to="/contribute">
+                <Plus size={16} />
+                Đóng góp địa điểm
+              </Link>
+            </div>
+          </div>
+
+          <div className="home-info-banners" aria-label="Thông tin nổi bật về Hola Maps">
+            {FEATURE_CARDS.map(({ icon: Icon, title, text, tone, to }) => (
+              <Link className={'home-info-banner ' + tone} to={to} key={title}>
+                <span className="home-info-banner-icon"><Icon size={19} /></span>
+                <div>
+                  <b>{title}</b>
+                  <span>{text}</span>
+                </div>
+                <ArrowRight className="home-info-banner-arrow" size={15} />
+              </Link>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="reference-category-discovery">
