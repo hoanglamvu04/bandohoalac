@@ -3,6 +3,7 @@ import {
   BadgePercent,
   CheckCircle2,
   Handshake,
+  CheckCircle2 as CheckSelected,
   MapPin,
   Plus,
   Search,
@@ -76,6 +77,9 @@ export default function AdminPartnersRewards() {
   const [partnerForm, setPartnerForm] = useState({ ...EMPTY_PARTNER });
   const [placeQuery, setPlaceQuery] = useState('');
   const [placeResults, setPlaceResults] = useState([]);
+  const [placePickerOpen, setPlacePickerOpen] = useState(false);
+  const [placeLoading, setPlaceLoading] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState(null);
 
   const [voucherId, setVoucherId] = useState(null);
   const [voucherForm, setVoucherForm] = useState({ ...EMPTY_VOUCHER });
@@ -115,23 +119,41 @@ export default function AdminPartnersRewards() {
   }, []);
 
   useEffect(() => {
-    if (placeQuery.trim().length < 2 || partnerId) {
+    if (!placePickerOpen || partnerId || partnerForm.placeId) {
       setPlaceResults([]);
-      return;
+      setPlaceLoading(false);
+      return undefined;
     }
+
     const timer = setTimeout(() => {
-      getAdminPlaces({ q: placeQuery.trim(), status: 'PUBLISHED', limit: 12 })
-        .then((data) => setPlaceResults(Array.isArray(data?.items) ? data.items : []))
-        .catch(() => setPlaceResults([]));
-    }, 250);
+      const needle = placeQuery.trim();
+      setPlaceLoading(true);
+      getAdminPlaces({
+        q: needle || undefined,
+        status: 'PUBLISHED',
+        limit: needle ? 30 : 40
+      })
+        .then((data) => {
+          const items = Array.isArray(data?.items) ? data.items : [];
+          const linkedPlaceIds = new Set(partners.map((item) => String(item.placeId)));
+          setPlaceResults(
+            items.filter((place) => !linkedPlaceIds.has(String(place.id)))
+          );
+        })
+        .catch(() => setPlaceResults([]))
+        .finally(() => setPlaceLoading(false));
+    }, placeQuery.trim() ? 220 : 0);
+
     return () => clearTimeout(timer);
-  }, [placeQuery, partnerId]);
+  }, [placeQuery, placePickerOpen, partnerId, partnerForm.placeId, partners]);
 
   function startPartner() {
     setPartnerId(null);
     setPartnerForm({ ...EMPTY_PARTNER });
     setPlaceQuery('');
     setPlaceResults([]);
+    setPlacePickerOpen(false);
+    setSelectedPlace(null);
   }
 
   function editPartner(item) {
@@ -147,6 +169,8 @@ export default function AdminPartnersRewards() {
     });
     setPlaceQuery(item.placeName || '');
     setPlaceResults([]);
+    setPlacePickerOpen(false);
+    setSelectedPlace(null);
   }
 
   async function savePartner(event) {
@@ -335,24 +359,107 @@ export default function AdminPartnersRewards() {
 
                 {!partnerId && (
                   <div className="admin-place-picker">
-                    <label>
-                      Tìm địa điểm
-                      <span className="admin-place-picker-input"><Search size={16} /><input value={placeQuery} onChange={(e) => setPlaceQuery(e.target.value)} placeholder="VD: Hanashi Coffee..." /></span>
-                    </label>
-                    {!!placeResults.length && (
-                      <div className="admin-place-picker-results">
-                        {placeResults.map((place) => (
-                          <button type="button" key={place.id} onClick={() => {
-                            setPartnerForm((current) => ({ ...current, placeId: place.id, partnerName: current.partnerName || place.name }));
-                            setPlaceQuery(place.name);
-                            setPlaceResults([]);
-                          }}>
-                            <MapPin size={14} /><span><b>{place.name}</b><small>{place.address}</small></span>
-                          </button>
-                        ))}
+                    <div className="admin-place-picker-title">
+                      <div>
+                        <b>Chọn địa điểm có sẵn trên Maps</b>
+                        <span>Chỉ hiển thị địa điểm đã xuất bản và chưa được gắn đối tác.</span>
+                      </div>
+                      {partnerForm.placeId && (
+                        <button
+                          className="admin-place-clear"
+                          type="button"
+                          onClick={() => {
+                            setPartnerForm((current) => ({
+                              ...current,
+                              placeId: '',
+                              partnerName: ''
+                            }));
+                            setSelectedPlace(null);
+                            setPlaceQuery('');
+                            setPlacePickerOpen(true);
+                          }}
+                        >
+                          Chọn lại
+                        </button>
+                      )}
+                    </div>
+
+                    {!partnerForm.placeId ? (
+                      <>
+                        <label>
+                          Tìm hoặc chọn địa điểm
+                          <span className="admin-place-picker-input">
+                            <Search size={16} />
+                            <input
+                              value={placeQuery}
+                              onFocus={() => setPlacePickerOpen(true)}
+                              onChange={(event) => {
+                                setPlaceQuery(event.target.value);
+                                setPlacePickerOpen(true);
+                              }}
+                              placeholder="Bấm vào đây để xem danh sách địa điểm..."
+                              autoComplete="off"
+                            />
+                          </span>
+                        </label>
+
+                        {placePickerOpen && (
+                          <div className="admin-place-picker-dropdown">
+                            <div className="admin-place-picker-dropdown-head">
+                              <span>{placeQuery.trim() ? 'Kết quả tìm kiếm' : 'Địa điểm trên Hola Maps'}</span>
+                              <small>{placeLoading ? 'Đang tải...' : placeResults.length + ' địa điểm'}</small>
+                            </div>
+
+                            {placeLoading ? (
+                              <div className="admin-place-picker-state">Đang tải danh sách địa điểm...</div>
+                            ) : placeResults.length ? (
+                              <div className="admin-place-picker-results">
+                                {placeResults.map((place) => (
+                                  <button
+                                    type="button"
+                                    key={place.id}
+                                    onClick={() => {
+                                      setSelectedPlace(place);
+                                      setPartnerForm((current) => ({
+                                        ...current,
+                                        placeId: place.id,
+                                        partnerName: place.name || current.partnerName
+                                      }));
+                                      setPlaceQuery(place.name || '');
+                                      setPlaceResults([]);
+                                      setPlacePickerOpen(false);
+                                    }}
+                                  >
+                                    <span className="admin-place-result-icon"><MapPin size={15} /></span>
+                                    <span className="admin-place-result-copy">
+                                      <b>{place.name}</b>
+                                      <small>{place.address || 'Hòa Lạc'}</small>
+                                      <em>{place.category || place.categoryName || 'Địa điểm'}</em>
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="admin-place-picker-state">
+                                {placeQuery.trim()
+                                  ? 'Không tìm thấy địa điểm phù hợp.'
+                                  : 'Chưa có địa điểm khả dụng để gắn đối tác.'}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="admin-place-selected-card">
+                        <span className="admin-place-selected-icon"><CheckSelected size={18} /></span>
+                        <div>
+                          <small>ĐÃ CHỌN TỪ HOLA MAPS</small>
+                          <b>{selectedPlace?.name || placeQuery}</b>
+                          <span>{selectedPlace?.address || 'Địa điểm đã xuất bản trên bản đồ'}</span>
+                        </div>
+                        <em>Place #{partnerForm.placeId}</em>
                       </div>
                     )}
-                    {partnerForm.placeId && <small className="admin-place-selected">Đã chọn place #{partnerForm.placeId}: {placeQuery}</small>}
                   </div>
                 )}
 
