@@ -97,20 +97,23 @@
   position:relative;
   width:100%;
   min-width:100%;
-  aspect-ratio:16/6;
-  display:block;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   overflow:hidden;
   border:1px solid rgba(29,106,206,.11);
   border-radius:18px;
-  background:#eaf3ff;
+  background:#f7f9fc;
   scroll-snap-align:start;
 }
 
 .ad-modal-slide img{
   width:100%;
-  height:100%;
+  height:auto;
+  max-height:calc(100dvh - 205px);
   display:block;
-  object-fit:cover;
+  object-fit:contain;
+  object-position:center;
 }
 
 .ad-modal-slide::after{
@@ -382,8 +385,14 @@
   }
 
   .ad-modal-slide{
-    aspect-ratio:16/8.2;
     border-radius:15px;
+  }
+
+  .ad-modal-slide img{
+    width:100%;
+    height:auto;
+    max-height:calc(100dvh - 190px);
+    object-fit:contain;
   }
 
   .ad-modal-ad-label{
@@ -436,10 +445,6 @@
 }
 
 @media(max-width:390px){
-  .ad-modal-slide{
-    aspect-ratio:16/9;
-  }
-
   .ad-modal-footer{
     align-items:flex-start;
   }
@@ -694,18 +699,22 @@
 .admin-ad-image-picker input{display:none}
 
 .admin-ad-preview{
-  aspect-ratio:16/6;
+  min-height:180px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   overflow:hidden;
   border:1px solid #d8e2dd;
   border-radius:14px;
-  background:#edf3f0;
+  background:#f4f7f6;
 }
 
 .admin-ad-preview img{
   width:100%;
-  height:100%;
+  height:auto;
+  max-height:520px;
   display:block;
-  object-fit:cover;
+  object-fit:contain;
 }
 
 .admin-ad-preview.empty{
