@@ -39,6 +39,22 @@ import {
   adminAdjustWalletSchema,
   adminUpdateUserSchema
 } from '../validators/adminUser.validators.js';
+import {
+  createPartnerAdminController,
+  createVoucherCampaignAdminController,
+  listPartnersAdminController,
+  listVoucherCampaignsAdminController,
+  listVoucherRedemptionsAdminController,
+  markVoucherRedeemedAdminController,
+  updatePartnerAdminController,
+  updateVoucherCampaignAdminController
+} from '../controllers/adminRewards.controller.js';
+import {
+  adminCreatePartnerSchema,
+  adminCreateVoucherSchema,
+  adminUpdatePartnerSchema,
+  adminUpdateVoucherSchema
+} from '../validators/reward.validators.js';
 
 const router = Router();
 
@@ -92,6 +108,41 @@ router.post(
   authorize('ADMIN'),
   validateBody(adminAdjustWalletSchema),
   adjustUserWalletAdmin
+);
+
+router.get('/partners', authorize('ADMIN'), listPartnersAdminController);
+router.post(
+  '/partners',
+  authorize('ADMIN'),
+  validateBody(adminCreatePartnerSchema),
+  createPartnerAdminController
+);
+router.patch(
+  '/partners/:id',
+  authorize('ADMIN'),
+  validateBody(adminUpdatePartnerSchema),
+  updatePartnerAdminController
+);
+
+router.get('/vouchers', authorize('ADMIN'), listVoucherCampaignsAdminController);
+router.post(
+  '/vouchers',
+  authorize('ADMIN'),
+  validateBody(adminCreateVoucherSchema),
+  createVoucherCampaignAdminController
+);
+router.patch(
+  '/vouchers/:id',
+  authorize('ADMIN'),
+  validateBody(adminUpdateVoucherSchema),
+  updateVoucherCampaignAdminController
+);
+
+router.get('/voucher-redemptions', authorize('ADMIN'), listVoucherRedemptionsAdminController);
+router.post(
+  '/voucher-redemptions/:id/redeem',
+  authorize('ADMIN'),
+  markVoucherRedeemedAdminController
 );
 
 export default router;
