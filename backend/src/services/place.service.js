@@ -28,6 +28,8 @@ const BASE_SELECT = [
   '  ST_Y(p.location) AS lat,',
   '  c.name AS category,',
   '  c.slug AS category_slug,',
+  "  EXISTS (SELECT 1 FROM place_partners pp WHERE pp.place_id = p.id AND pp.status = 'ACTIVE') AS is_partner,",
+  "  (SELECT pp.partner_name FROM place_partners pp WHERE pp.place_id = p.id AND pp.status = 'ACTIVE' LIMIT 1) AS partner_name,",
   "  COALESCE((SELECT json_agg(pi.url ORDER BY pi.is_cover DESC, pi.id ASC) FROM place_images pi WHERE pi.place_id = p.id), '[]'::json) AS images",
   'FROM places p',
   'LEFT JOIN categories c ON c.id = p.category_id'
@@ -58,6 +60,8 @@ function mapRow(row) {
     lng: Number(row.lng),
     category: row.category || 'Địa điểm',
     categorySlug: row.category_slug || 'other',
+    isPartner: Boolean(row.is_partner),
+    partnerName: row.partner_name || null,
     images: Array.isArray(row.images) ? row.images : [],
     distance: row.distance_m !== undefined && row.distance_m !== null
       ? Math.round(Number(row.distance_m))
