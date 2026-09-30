@@ -11,6 +11,7 @@ import { awardPointsForApproval, penalizeRejection } from './points.service.js';
 import { findUserById } from './user.service.js';
 import { deleteStoredAssets } from './storage.service.js';
 import { createNotification } from './notification.service.js';
+import { applyMissionBonusesForContribution } from './mission.service.js';
 
 function sourceForRole(role) {
   if (role === 'ADMIN' || role === 'MODERATOR') return 'ADMIN';
@@ -135,17 +136,31 @@ export async function approveContribution(contributionId, moderatorId) {
       type: contribution.type
     }, client);
 
+    const missionAwards = await applyMissionBonusesForContribution({
+      contributionId,
+      userId: contribution.user_id,
+      type: contribution.type,
+      client
+    });
+
+    const missionBonus = missionAwards.reduce(
+      (total, item) => total + Number(item.perContributionBonus || 0) + Number(item.completionBonus || 0),
+      0
+    );
+
     await createNotification({
       userId: contribution.user_id,
       type: 'CONTRIBUTION_APPROVED',
       title: 'Đóng góp đã được duyệt',
-      message: points > 0
-        ? 'Đóng góp của bạn đã được duyệt và cộng +' + points + ' điểm.'
+      message: points + missionBonus > 0
+        ? 'Đóng góp của bạn đã được duyệt và cộng +' + (points + missionBonus) + ' điểm.'
         : 'Đóng góp của bạn đã được duyệt.',
       data: {
         contributionId,
         placeId,
         points,
+        missionBonus,
+        missionAwards,
         contributionType: contribution.type
       }
     }, client);
