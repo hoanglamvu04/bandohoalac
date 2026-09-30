@@ -4,15 +4,19 @@ import {
   Camera,
   CheckCircle2,
   Gift,
+  Pencil,
   QrCode,
+  Save,
   ScanLine,
   TicketCheck,
+  X,
   Users
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   getPartnerDashboard,
-  redeemPartnerVoucher
+  redeemPartnerVoucher,
+  updatePartnerManagedPlace
 } from '../services/api.js';
 import { useToast } from '../context/ToastContext.jsx';
 
@@ -37,6 +41,14 @@ export default function PartnerDashboard() {
   const [redeeming, setRedeeming] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerSupported, setScannerSupported] = useState(false);
+  const [editingPlace, setEditingPlace] = useState(null);
+  const [placeForm, setPlaceForm] = useState({
+    phone: '',
+    website: '',
+    openingHours: '',
+    description: ''
+  });
+  const [placeSaving, setPlaceSaving] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -120,6 +132,38 @@ export default function PartnerDashboard() {
           : 'Không thể mở camera quét QR.',
         'error'
       );
+    }
+  }
+
+  function editPlace(place) {
+    setEditingPlace(place);
+    setPlaceForm({
+      phone: place.phone || '',
+      website: place.website || '',
+      openingHours: place.openingHours || '',
+      description: place.description || ''
+    });
+  }
+
+  async function savePlace(event) {
+    event.preventDefault();
+    if (!editingPlace) return;
+
+    setPlaceSaving(true);
+    try {
+      await updatePartnerManagedPlace(editingPlace.placeId, {
+        phone: placeForm.phone.trim() || null,
+        website: placeForm.website.trim() || null,
+        openingHours: placeForm.openingHours.trim() || null,
+        description: placeForm.description.trim() || null
+      });
+      showToast('Đã cập nhật thông tin địa điểm.', 'success');
+      setEditingPlace(null);
+      await load();
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setPlaceSaving(false);
     }
   }
 
@@ -251,7 +295,10 @@ export default function PartnerDashboard() {
                   <b>{place.partnerName || place.name}</b>
                   <span>{place.address || 'Hòa Lạc'}</span>
                 </div>
-                <Link to={'/place/' + place.placeId}>Xem</Link>
+                <div className="partner-place-actions">
+                  <button type="button" onClick={() => editPlace(place)}><Pencil size={13} /> Sửa</button>
+                  <Link to={'/place/' + place.placeId}>Xem</Link>
+                </div>
               </article>
             ))}
           </div>
@@ -281,6 +328,34 @@ export default function PartnerDashboard() {
           )}
         </div>
       </section>
+
+      {editingPlace && (
+        <div className="partner-edit-modal">
+          <form className="partner-edit-card" onSubmit={savePlace}>
+            <div className="partner-edit-head">
+              <div>
+                <span className="eyebrow">BUSINESS DETAILS</span>
+                <h2>{editingPlace.name}</h2>
+              </div>
+              <button type="button" onClick={() => setEditingPlace(null)}><X size={17} /></button>
+            </div>
+
+            <p>
+              Bạn có thể cập nhật các thông tin vận hành của địa điểm đã xác minh.
+              Tên và vị trí bản đồ vẫn do Hola Maps kiểm duyệt riêng.
+            </p>
+
+            <label>Số điện thoại<input value={placeForm.phone} onChange={(e) => setPlaceForm((v) => ({ ...v, phone: e.target.value }))} /></label>
+            <label>Website<input value={placeForm.website} onChange={(e) => setPlaceForm((v) => ({ ...v, website: e.target.value }))} placeholder="https://..." /></label>
+            <label>Giờ mở cửa<textarea rows="3" value={placeForm.openingHours} onChange={(e) => setPlaceForm((v) => ({ ...v, openingHours: e.target.value }))} /></label>
+            <label>Mô tả<textarea rows="5" value={placeForm.description} onChange={(e) => setPlaceForm((v) => ({ ...v, description: e.target.value }))} /></label>
+
+            <button className="primary-action" type="submit" disabled={placeSaving}>
+              <Save size={16} /> {placeSaving ? 'Đang lưu...' : 'Lưu thông tin'}
+            </button>
+          </form>
+        </div>
+      )}
 
       <section className="partner-dashboard-card">
         <div className="partner-card-head">
