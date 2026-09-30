@@ -35,13 +35,16 @@ function fileFilter(_req, file, callback) {
   return callback(null, true);
 }
 
-export const uploadPhotos = multer({
+const uploader = multer({
   storage,
   fileFilter,
   limits: {
     fileSize: env.maxUploadFileSizeMb * 1024 * 1024,
     files: env.maxUploadFileCount
   }
-}).array('photos', env.maxUploadFileCount);
+});
+
+export const uploadPhotos = uploader.array('photos', env.maxUploadFileCount);
+export const uploadSingleImage = uploader.single('image');
 
 export { uploadRoot };
