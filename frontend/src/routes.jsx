@@ -15,6 +15,7 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
 const AdminContributions = lazy(() => import('./pages/admin/AdminContributions.jsx'));
 const MapEditor = lazy(() => import('./pages/admin/MapEditor.jsx'));
 const AdminPlaces = lazy(() => import('./pages/admin/AdminPlaces.jsx'));
+const AdminAdvertisements = lazy(() => import('./pages/admin/AdminAdvertisements.jsx'));
 
 function LoadingPage() {
   return (
@@ -85,7 +86,8 @@ export const router = createBrowserRouter([
       { path: 'admin', element: withRole(AdminDashboard, ['MODERATOR', 'ADMIN']) },
       { path: 'admin/contributions', element: withRole(AdminContributions, ['MODERATOR', 'ADMIN']) },
       { path: 'admin/places', element: withRole(AdminPlaces, ['MODERATOR', 'ADMIN']) },
-      { path: 'admin/map-editor', element: withRole(MapEditor, ['MODERATOR', 'ADMIN']) }
+      { path: 'admin/map-editor', element: withRole(MapEditor, ['MODERATOR', 'ADMIN']) },
+      { path: 'admin/ads', element: withRole(AdminAdvertisements, ['ADMIN']) }
     ]
   }
 ]);
