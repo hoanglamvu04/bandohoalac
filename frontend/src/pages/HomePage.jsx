@@ -20,7 +20,7 @@ import {
   UtensilsCrossed,
   UsersRound
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   addFavorite,
   getHomePlaceSections,
@@ -204,7 +204,6 @@ function FeaturedPlaceCard({ place, index, tone, initialFavorite = false }) {
 }
 
 export default function HomePage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [sections, setSections] = useState([]);
   const [leaders, setLeaders] = useState([]);
