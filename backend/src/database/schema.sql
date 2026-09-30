@@ -264,3 +264,41 @@ CREATE INDEX IF NOT EXISTS notifications_user_created_idx
 CREATE INDEX IF NOT EXISTS notifications_user_unread_idx
   ON notifications (user_id, read_at)
   WHERE read_at IS NULL;
+
+
+-- ============================================================
+-- HOMEPAGE ADVERTISEMENTS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS advertisements (
+  id BIGSERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  image_url TEXT,
+  image_storage_provider TEXT,
+  image_storage_public_id TEXT,
+  image_storage_filename TEXT,
+  target_url TEXT NOT NULL,
+  alt_text TEXT,
+  status TEXT NOT NULL DEFAULT 'DRAFT'
+    CHECK (status IN ('DRAFT', 'ACTIVE', 'ARCHIVED')),
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  starts_at TIMESTAMPTZ,
+  ends_at TIMESTAMPTZ,
+  created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (ends_at IS NULL OR starts_at IS NULL OR ends_at >= starts_at)
+);
+
+CREATE INDEX IF NOT EXISTS advertisements_public_idx
+  ON advertisements (status, sort_order, starts_at, ends_at);
+
+CREATE TABLE IF NOT EXISTS ad_daily_hides (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  hide_date DATE NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, hide_date)
+);
+
+CREATE INDEX IF NOT EXISTS ad_daily_hides_user_date_idx
+  ON ad_daily_hides (user_id, hide_date DESC);
