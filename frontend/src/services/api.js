@@ -278,4 +278,36 @@ export function deleteAdminPlaceImage(id, imageId) {
   ));
 }
 
+
+
+export function getAdvertisements() {
+  return unwrap(client.get('/ads'));
+}
+
+export function hideAdvertisementsToday() {
+  return unwrap(client.post('/ads/hide-today'));
+}
+
+export function getAdminAdvertisements() {
+  return unwrap(client.get('/admin/ads'));
+}
+
+export function createAdminAdvertisement(payload) {
+  return unwrap(client.post('/admin/ads', payload));
+}
+
+export function updateAdminAdvertisement(id, payload) {
+  return unwrap(client.patch('/admin/ads/' + encodeURIComponent(id), payload));
+}
+
+export function archiveAdminAdvertisement(id) {
+  return unwrap(client.delete('/admin/ads/' + encodeURIComponent(id)));
+}
+
+export function uploadAdminAdvertisementImage(id, image) {
+  const formData = new FormData();
+  formData.append('image', image);
+  return unwrap(client.post('/admin/ads/' + encodeURIComponent(id) + '/image', formData));
+}
+
 export { API_URL };
