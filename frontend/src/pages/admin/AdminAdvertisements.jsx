@@ -70,6 +70,17 @@ export default function AdminAdvertisements() {
     [items, selectedId]
   );
 
+  const localPreviewUrl = useMemo(
+    () => imageFile ? URL.createObjectURL(imageFile) : '',
+    [imageFile]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+    };
+  }, [localPreviewUrl]);
+
   function load() {
     setLoading(true);
     return getAdminAdvertisements()
@@ -196,7 +207,7 @@ export default function AdminAdvertisements() {
   }
 
   const editorOpen = creating || Boolean(selectedId);
-  const previewUrl = imageFile ? URL.createObjectURL(imageFile) : selected?.imageUrl || '';
+  const previewUrl = localPreviewUrl || selected?.imageUrl || '';
 
   return (
     <main className="admin-page admin-ads-page page-container">
