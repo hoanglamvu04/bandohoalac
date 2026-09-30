@@ -42,7 +42,9 @@ export async function getLeaderboard(limit = 20, period = 'month') {
     `WITH month_points AS (
        SELECT user_id, COALESCE(SUM(amount), 0)::int AS points
        FROM points_transactions
-       WHERE created_at >= date_trunc('month', NOW())
+       WHERE contribution_id IS NOT NULL
+         AND amount > 0
+         AND created_at >= date_trunc('month', NOW())
          AND created_at < date_trunc('month', NOW()) + interval '1 month'
        GROUP BY user_id
      ),
