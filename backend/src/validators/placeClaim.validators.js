@@ -15,3 +15,11 @@ export const reviewPlaceClaimSchema = z.object({
 export const partnerRedeemCodeSchema = z.object({
   code: z.string().trim().min(6).max(80)
 });
+
+
+export const partnerUpdatePlaceSchema = z.object({
+  phone: z.string().trim().max(80).nullable().optional(),
+  website: z.string().trim().max(500).nullable().optional(),
+  openingHours: z.string().trim().max(1000).nullable().optional(),
+  description: z.string().trim().max(3000).nullable().optional()
+});
