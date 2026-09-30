@@ -28,6 +28,7 @@ export async function awardPointsForApproval({ userId, contributionId, type }, c
   await client.query(
     `UPDATE users
      SET points_total = points_total + $1,
+         points_balance = points_balance + $1,
          approved_count = approved_count + 1,
          trust_score = LEAST($3, trust_score + $2),
          updated_at = NOW()
