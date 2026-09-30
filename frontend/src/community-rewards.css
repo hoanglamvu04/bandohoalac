@@ -2836,3 +2836,278 @@
     grid-column:2;
   }
 }
+
+
+/* ---------- Partner admin readability + picker bug fix ---------- */
+.admin-partners-page{
+  font-size:14px;
+}
+
+.admin-partners-page .section-heading h2{
+  font-size:26px;
+}
+
+.admin-partners-page .section-heading p{
+  font-size:14px;
+  line-height:1.55;
+}
+
+.admin-partners-page .admin-reward-tabs button{
+  min-height:44px;
+  padding:0 14px;
+  font-size:13px;
+}
+
+.admin-partners-page .admin-reward-tabs button span{
+  font-size:11px;
+}
+
+.admin-partners-page .admin-reward-card-head b{
+  font-size:18px;
+}
+
+.admin-partners-page .admin-reward-card-head span{
+  font-size:13px;
+  line-height:1.45;
+}
+
+.admin-partners-page .admin-partner-form-card>label,
+.admin-partners-page .admin-voucher-form-card>label,
+.admin-partners-page .admin-place-picker>label{
+  gap:7px;
+  font-size:14px;
+  font-weight:800;
+}
+
+.admin-partners-page .admin-partner-form-card input,
+.admin-partners-page .admin-partner-form-card textarea,
+.admin-partners-page .admin-partner-form-card select,
+.admin-partners-page .admin-voucher-form-card input,
+.admin-partners-page .admin-voucher-form-card textarea,
+.admin-partners-page .admin-voucher-form-card select{
+  min-height:46px;
+  padding:10px 12px;
+  font-size:15px;
+}
+
+.admin-partners-page .admin-partner-form-card textarea,
+.admin-partners-page .admin-voucher-form-card textarea{
+  min-height:110px;
+  line-height:1.5;
+}
+
+.admin-partners-page .admin-place-picker-title{
+  align-items:center;
+}
+
+.admin-partners-page .admin-place-picker-title b{
+  font-size:16px;
+}
+
+.admin-partners-page .admin-place-picker-title span{
+  margin-top:2px;
+  font-size:13px;
+  line-height:1.45;
+}
+
+.admin-partners-page .admin-place-clear{
+  padding:8px 10px;
+  font-size:12px;
+}
+
+.admin-partners-page .admin-place-picker-input{
+  min-height:52px;
+  padding:0 13px;
+}
+
+.admin-partners-page .admin-place-picker-input input{
+  min-height:50px;
+  font-size:15px;
+  font-weight:600;
+}
+
+.admin-partners-page .admin-place-picker-dropdown{
+  overflow:hidden;
+  border-radius:14px;
+}
+
+/* Important: reset the legacy absolute dropdown style.
+   Without this, result rows are pushed down and clipped by the new dropdown. */
+.admin-partners-page .admin-place-picker-dropdown .admin-place-picker-results{
+  position:static;
+  inset:auto;
+  top:auto;
+  right:auto;
+  bottom:auto;
+  left:auto;
+  z-index:auto;
+  width:100%;
+  max-height:340px;
+  overflow-y:auto;
+  padding:6px;
+  border:0;
+  border-radius:0;
+  background:#fff;
+  box-shadow:none;
+  pointer-events:auto;
+}
+
+.admin-partners-page .admin-place-picker-dropdown-head{
+  min-height:44px;
+  padding:10px 12px;
+}
+
+.admin-partners-page .admin-place-picker-dropdown-head span{
+  font-size:13px;
+}
+
+.admin-partners-page .admin-place-picker-dropdown-head small{
+  font-size:12px;
+}
+
+.admin-partners-page .admin-place-picker-results>button{
+  position:relative;
+  min-height:66px;
+  grid-template-columns:46px minmax(0,1fr);
+  gap:11px;
+  padding:10px;
+  border:1px solid transparent;
+  border-radius:11px;
+  pointer-events:auto;
+}
+
+.admin-partners-page .admin-place-picker-results>button:hover,
+.admin-partners-page .admin-place-picker-results>button:focus-visible{
+  border-color:#b9d8fb;
+  background:#f2f7ff;
+  outline:none;
+}
+
+.admin-partners-page .admin-place-result-icon{
+  width:46px;
+  height:46px;
+  border-radius:12px;
+}
+
+.admin-partners-page .admin-place-result-copy{
+  gap:4px 10px;
+}
+
+.admin-partners-page .admin-place-result-copy b{
+  font-size:14px;
+  font-weight:850;
+}
+
+.admin-partners-page .admin-place-result-copy small{
+  font-size:12px;
+  line-height:1.35;
+}
+
+.admin-partners-page .admin-place-result-copy em{
+  padding:5px 8px;
+  font-size:11px;
+}
+
+.admin-partners-page .admin-place-picker-state{
+  padding:18px 12px;
+  font-size:13px;
+}
+
+.admin-partners-page .admin-place-selected-card{
+  min-height:72px;
+  grid-template-columns:48px minmax(0,1fr) auto;
+  padding:11px 12px;
+}
+
+.admin-partners-page .admin-place-selected-icon{
+  width:48px;
+  height:48px;
+}
+
+.admin-partners-page .admin-place-selected-card small{
+  font-size:11px;
+}
+
+.admin-partners-page .admin-place-selected-card b{
+  font-size:15px;
+}
+
+.admin-partners-page .admin-place-selected-card span{
+  font-size:12px;
+}
+
+.admin-partners-page .admin-place-selected-card em{
+  font-size:11px;
+}
+
+.admin-partners-page .admin-partner-row{
+  min-height:72px;
+}
+
+.admin-partners-page .admin-partner-row small,
+.admin-partners-page .admin-voucher-row small{
+  font-size:11px;
+}
+
+.admin-partners-page .admin-partner-row b,
+.admin-partners-page .admin-voucher-row b{
+  font-size:14px;
+}
+
+.admin-partners-page .admin-partner-row em,
+.admin-partners-page .admin-voucher-row em{
+  font-size:12px;
+}
+
+.admin-partners-page .admin-voucher-row>strong{
+  font-size:15px;
+}
+
+.admin-partners-page .admin-claim-main small{
+  font-size:11px;
+}
+
+.admin-partners-page .admin-claim-main b{
+  font-size:14px;
+}
+
+.admin-partners-page .admin-claim-main span,
+.admin-partners-page .admin-claim-main em,
+.admin-partners-page .admin-claim-main p,
+.admin-partners-page .admin-claim-main blockquote{
+  font-size:12px;
+}
+
+.admin-partners-page .admin-redemption-table small{
+  font-size:11px;
+}
+
+.admin-partners-page .admin-redemption-table b{
+  font-size:13px;
+}
+
+.admin-partners-page .admin-redemption-table em{
+  font-size:12px;
+}
+
+.admin-partners-page .voucher-status{
+  font-size:11px;
+}
+
+@media(max-width:760px){
+  .admin-partners-page .admin-reward-card-head b{
+    font-size:16px;
+  }
+
+  .admin-partners-page .admin-reward-card-head span{
+    font-size:12px;
+  }
+
+  .admin-partners-page .admin-place-picker-dropdown{
+    position:relative;
+  }
+
+  .admin-partners-page .admin-place-picker-dropdown .admin-place-picker-results{
+    max-height:280px;
+  }
+}
