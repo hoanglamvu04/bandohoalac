@@ -55,6 +55,23 @@ import {
   adminUpdatePartnerSchema,
   adminUpdateVoucherSchema
 } from '../validators/reward.validators.js';
+import {
+  createMissionAdminController,
+  listMissionsAdminController,
+  updateMissionAdminController
+} from '../controllers/missions.controller.js';
+import {
+  createMissionSchema,
+  updateMissionSchema
+} from '../validators/mission.validators.js';
+import {
+  listClaimsAdmin,
+  reviewClaimAdmin
+} from '../controllers/placeClaims.controller.js';
+import {
+  reviewPlaceClaimSchema
+} from '../validators/placeClaim.validators.js';
+import { listAuditLogsAdmin } from '../controllers/audit.controller.js';
 
 const router = Router();
 
@@ -144,5 +161,29 @@ router.post(
   authorize('ADMIN'),
   markVoucherRedeemedAdminController
 );
+
+router.get('/place-claims', authorize('ADMIN'), listClaimsAdmin);
+router.post(
+  '/place-claims/:id/review',
+  authorize('ADMIN'),
+  validateBody(reviewPlaceClaimSchema),
+  reviewClaimAdmin
+);
+
+router.get('/missions', authorize('ADMIN'), listMissionsAdminController);
+router.post(
+  '/missions',
+  authorize('ADMIN'),
+  validateBody(createMissionSchema),
+  createMissionAdminController
+);
+router.patch(
+  '/missions/:id',
+  authorize('ADMIN'),
+  validateBody(updateMissionSchema),
+  updateMissionAdminController
+);
+
+router.get('/audit', authorize('ADMIN'), listAuditLogsAdmin);
 
 export default router;
