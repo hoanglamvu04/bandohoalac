@@ -12,6 +12,12 @@ import {
   auditContextFromRequest,
   writeAuditLog
 } from '../services/audit.service.js';
+import {
+  endPartnerShift,
+  getPartnerReconciliation,
+  getPartnerScannerState,
+  startPartnerShift
+} from '../services/partnerOperations.service.js';
 
 export const getDashboard = asyncHandler(async (req, res) => {
   const data = await getPartnerDashboard(req.user.id);
@@ -33,7 +39,8 @@ export const useVoucher = asyncHandler(async (req, res) => {
     userId: req.user.id,
     redemptionId: Number(req.params.id),
     code: req.body.code || null,
-    qrToken: req.body.qrToken || null
+    qrToken: req.body.qrToken || null,
+    shiftId: req.body.shiftId || null
   });
 
   await writeAuditLog({
@@ -143,4 +150,59 @@ export const updateManagedPlaceDetails = asyncHandler(async (req, res) => {
   });
 
   res.json(item);
+});
+
+
+export const getScannerState = asyncHandler(async (req, res) => {
+  const data = await getPartnerScannerState(req.user.id);
+  res.json(data);
+});
+
+export const startShift = asyncHandler(async (req, res) => {
+  const item = await startPartnerShift({
+    userId: req.user.id,
+    partnerId: Number(req.body.partnerId)
+  });
+
+  await writeAuditLog({
+    actorUserId: req.user.id,
+    action: 'PARTNER_SHIFT_STARTED',
+    entityType: 'PARTNER_SHIFT',
+    entityId: item.id,
+    metadata: { partnerId: item.partnerId },
+    ...auditContextFromRequest(req)
+  });
+
+  res.status(201).json(item);
+});
+
+export const endShift = asyncHandler(async (req, res) => {
+  const item = await endPartnerShift({
+    userId: req.user.id,
+    shiftId: Number(req.params.id)
+  });
+
+  await writeAuditLog({
+    actorUserId: req.user.id,
+    action: 'PARTNER_SHIFT_ENDED',
+    entityType: 'PARTNER_SHIFT',
+    entityId: item.id,
+    metadata: {
+      partnerId: item.partnerId,
+      vouchersUsed: item.vouchersUsed
+    },
+    ...auditContextFromRequest(req)
+  });
+
+  res.json(item);
+});
+
+export const getReconciliation = asyncHandler(async (req, res) => {
+  const data = await getPartnerReconciliation({
+    userId: req.user.id,
+    period: req.query.period || 'today',
+    partnerId: req.query.partnerId || null
+  });
+
+  res.json(data);
 });
