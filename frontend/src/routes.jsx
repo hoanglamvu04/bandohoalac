@@ -24,6 +24,7 @@ const ClaimPlacePage = lazy(() => import('./pages/ClaimPlacePage.jsx'));
 const PartnerDashboard = lazy(() => import('./pages/PartnerDashboard.jsx'));
 const AdminMissions = lazy(() => import('./pages/admin/AdminMissions.jsx'));
 const AdminAudit = lazy(() => import('./pages/admin/AdminAudit.jsx'));
+const AdminBranding = lazy(() => import('./pages/admin/AdminBranding.jsx'));
 
 function LoadingPage() {
   return (
@@ -103,7 +104,8 @@ export const router = createBrowserRouter([
       { path: 'admin/users', element: withRole(AdminUsers, ['ADMIN']) },
       { path: 'admin/partners', element: withRole(AdminPartnersRewards, ['ADMIN']) },
       { path: 'admin/missions', element: withRole(AdminMissions, ['ADMIN']) },
-      { path: 'admin/audit', element: withRole(AdminAudit, ['ADMIN']) }
+      { path: 'admin/audit', element: withRole(AdminAudit, ['ADMIN']) },
+      { path: 'admin/brand', element: withRole(AdminBranding, ['ADMIN']) }
     ]
   }
 ]);
