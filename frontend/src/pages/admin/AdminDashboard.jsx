@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, BadgePercent, ClipboardList, Flag, LayoutDashboard, MapPinned, Megaphone, PencilRuler, ShieldCheck, UserCog, Users } from 'lucide-react';
+import { Activity, BadgePercent, ClipboardList, Flag, LayoutDashboard, MapPinned, Megaphone, Palette, PencilRuler, ShieldCheck, UserCog, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getAdminContributions } from '../../services/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -68,6 +68,9 @@ export default function AdminDashboard() {
             </Link>
             <Link className="secondary-action" to="/admin/audit">
               <Activity size={18} /> Nhật ký hệ thống
+            </Link>
+            <Link className="secondary-action" to="/admin/brand">
+              <Palette size={18} /> Quản lý thương hiệu
             </Link>
             <Link className="secondary-action" to="/admin/ads">
               <Megaphone size={18} /> Quản lý quảng cáo
