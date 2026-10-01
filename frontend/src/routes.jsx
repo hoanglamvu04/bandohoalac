@@ -22,6 +22,7 @@ const RewardsPage = lazy(() => import('./pages/RewardsPage.jsx'));
 const MissionsPage = lazy(() => import('./pages/MissionsPage.jsx'));
 const ClaimPlacePage = lazy(() => import('./pages/ClaimPlacePage.jsx'));
 const PartnerDashboard = lazy(() => import('./pages/PartnerDashboard.jsx'));
+const PartnerScanner = lazy(() => import('./pages/PartnerScanner.jsx'));
 const AdminMissions = lazy(() => import('./pages/admin/AdminMissions.jsx'));
 const AdminAudit = lazy(() => import('./pages/admin/AdminAudit.jsx'));
 const AdminBranding = lazy(() => import('./pages/admin/AdminBranding.jsx'));
@@ -94,6 +95,7 @@ export const router = createBrowserRouter([
       { path: 'missions', element: withSuspense(MissionsPage) },
       { path: 'claim-place/:id', element: withRole(ClaimPlacePage) },
       { path: 'partner', element: withRole(PartnerDashboard) },
+      { path: 'partner/scanner', element: withRole(PartnerScanner) },
       { path: 'login', element: withSuspense(Login) },
       { path: 'register', element: withSuspense(Register) },
       { path: 'admin', element: withRole(AdminDashboard, ['MODERATOR', 'ADMIN']) },
