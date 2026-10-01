@@ -31,12 +31,16 @@ import {
 } from '../validators/advertisement.validators.js';
 import {
   adjustUserWalletAdmin,
+  assignPartnerAccessAdmin,
   getUserAdmin,
   listUsersAdmin,
+  updatePartnerAccessAdmin,
   updateUserAdmin
 } from '../controllers/adminUsers.controller.js';
 import {
   adminAdjustWalletSchema,
+  adminAssignPartnerAccessSchema,
+  adminUpdatePartnerAccessSchema,
   adminUpdateUserSchema
 } from '../validators/adminUser.validators.js';
 import {
@@ -132,6 +136,20 @@ router.post(
   authorize('ADMIN'),
   validateBody(adminAdjustWalletSchema),
   adjustUserWalletAdmin
+);
+
+router.post(
+  '/users/:id/partner-access',
+  authorize('ADMIN'),
+  validateBody(adminAssignPartnerAccessSchema),
+  assignPartnerAccessAdmin
+);
+
+router.patch(
+  '/users/:id/partner-access/:membershipId',
+  authorize('ADMIN'),
+  validateBody(adminUpdatePartnerAccessSchema),
+  updatePartnerAccessAdmin
 );
 
 router.get('/partners', authorize('ADMIN'), listPartnersAdminController);
