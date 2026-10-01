@@ -548,3 +548,48 @@ CREATE INDEX IF NOT EXISTS audit_logs_actor_idx
 
 CREATE INDEX IF NOT EXISTS audit_logs_entity_idx
   ON audit_logs (entity_type, entity_id, created_at DESC);
+
+
+-- ============================================================
+-- Brand assets & runtime branding settings
+-- ============================================================
+CREATE TABLE IF NOT EXISTS brand_assets (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  asset_type TEXT NOT NULL CHECK (asset_type IN ('LOGO', 'FAVICON')),
+  url TEXT NOT NULL,
+  storage_provider TEXT,
+  storage_public_id TEXT,
+  storage_filename TEXT,
+  width INTEGER,
+  height INTEGER,
+  created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS brand_assets_type_created_idx
+  ON brand_assets (asset_type, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS brand_settings (
+  id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  header_logo_asset_id BIGINT REFERENCES brand_assets(id) ON DELETE SET NULL,
+  compact_logo_asset_id BIGINT REFERENCES brand_assets(id) ON DELETE SET NULL,
+  footer_logo_asset_id BIGINT REFERENCES brand_assets(id) ON DELETE SET NULL,
+  favicon_asset_id BIGINT REFERENCES brand_assets(id) ON DELETE SET NULL,
+  header_logo_desktop_width INTEGER NOT NULL DEFAULT 198
+    CHECK (header_logo_desktop_width BETWEEN 60 AND 420),
+  header_logo_mobile_width INTEGER NOT NULL DEFAULT 154
+    CHECK (header_logo_mobile_width BETWEEN 50 AND 300),
+  header_logo_compact_width INTEGER NOT NULL DEFAULT 38
+    CHECK (header_logo_compact_width BETWEEN 24 AND 120),
+  footer_logo_desktop_width INTEGER NOT NULL DEFAULT 178
+    CHECK (footer_logo_desktop_width BETWEEN 60 AND 420),
+  footer_logo_mobile_width INTEGER NOT NULL DEFAULT 154
+    CHECK (footer_logo_mobile_width BETWEEN 50 AND 300),
+  updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO brand_settings (id)
+VALUES (1)
+ON CONFLICT (id) DO NOTHING;
