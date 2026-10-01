@@ -413,8 +413,27 @@ export function getPartnerDashboard() {
   return unwrap(client.get('/partner/dashboard'));
 }
 
+export function inspectPartnerVoucher(payload) {
+  return unwrap(client.post('/partner/vouchers/inspect', payload));
+}
+
+export function usePartnerVoucher(id, payload = {}) {
+  return unwrap(client.post(
+    '/partner/vouchers/' + encodeURIComponent(id) + '/use',
+    payload
+  ));
+}
+
 export function redeemPartnerVoucher(code) {
   return unwrap(client.post('/partner/redeem', { code }));
+}
+
+export function addPartnerStaff(payload) {
+  return unwrap(client.post('/partner/staff', payload));
+}
+
+export function updatePartnerStaffStatus(id, payload) {
+  return unwrap(client.patch('/partner/staff/' + encodeURIComponent(id), payload));
 }
 
 export function updatePartnerManagedPlace(id, payload) {
