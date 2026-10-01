@@ -1,13 +1,22 @@
 import { ExternalLink, MessageCircle, UserRound, UsersRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useBrand } from '../context/BrandContext.jsx';
 
 export default function Footer() {
+  const { brand } = useBrand();
+
   return (
-    <footer className="site-footer modern-footer reference-footer">
+    <footer
+      className="site-footer modern-footer reference-footer"
+      style={{
+        '--brand-footer-desktop-width': brand.footerLogoDesktopWidth + 'px',
+        '--brand-footer-mobile-width': brand.footerLogoMobileWidth + 'px'
+      }}
+    >
       <div className="footer-columns">
         <div className="footer-brand">
           <Link className="footer-logo footer-logo-official" to="/" aria-label="Hola Maps">
-            <img src="/logo.svg?v=20260929-2" alt="Hola Maps" />
+            <img src={brand.footerLogoUrl} alt="Hola Maps" />
           </Link>
           <p>
             Bản đồ cộng đồng dành cho Hòa Lạc và 8 xã lân cận.
