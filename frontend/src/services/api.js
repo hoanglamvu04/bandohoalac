@@ -331,6 +331,21 @@ export function adjustAdminUserWallet(id, payload) {
   ));
 }
 
+export function assignAdminUserPartnerAccess(id, payload) {
+  return unwrap(client.post(
+    '/admin/users/' + encodeURIComponent(id) + '/partner-access',
+    payload
+  ));
+}
+
+export function updateAdminUserPartnerAccess(id, membershipId, payload) {
+  return unwrap(client.patch(
+    '/admin/users/' + encodeURIComponent(id) +
+      '/partner-access/' + encodeURIComponent(membershipId),
+    payload
+  ));
+}
+
 export function getAdminPartners(params = {}) {
   return unwrap(client.get('/admin/partners', { params: cleanParams(params) }));
 }
