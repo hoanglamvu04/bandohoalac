@@ -2,9 +2,11 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
 import {
   adjustUserWallet,
+  assignAdminUserPartnerAccess,
   getAdminUser,
   listAdminUsers,
-  updateAdminUser
+  updateAdminUser,
+  updateAdminUserPartnerAccess
 } from '../services/adminUser.service.js';
 import { auditContextFromRequest, writeAuditLog } from '../services/audit.service.js';
 
@@ -74,6 +76,58 @@ export const adjustUserWalletAdmin = asyncHandler(async (req, res) => {
       amount: req.body.amount,
       reason: req.body.reason,
       nextBalance: item.pointsBalance
+    },
+    ...auditContextFromRequest(req)
+  });
+
+  res.json(item);
+});
+
+
+export const assignPartnerAccessAdmin = asyncHandler(async (req, res) => {
+  const userId = Number(req.params.id);
+  const existing = await getAdminUser(userId);
+  if (!existing) throw new AppError('User not found.', 404);
+
+  const item = await assignAdminUserPartnerAccess({
+    userId,
+    partnerId: Number(req.body.partnerId),
+    role: req.body.role,
+    adminId: req.user.id
+  });
+
+  await writeAuditLog({
+    actorUserId: req.user.id,
+    action: 'ADMIN_PARTNER_ACCESS_ASSIGNED',
+    entityType: 'USER',
+    entityId: userId,
+    metadata: {
+      partnerId: Number(req.body.partnerId),
+      role: req.body.role
+    },
+    ...auditContextFromRequest(req)
+  });
+
+  res.status(201).json(item);
+});
+
+export const updatePartnerAccessAdmin = asyncHandler(async (req, res) => {
+  const userId = Number(req.params.id);
+  const item = await updateAdminUserPartnerAccess({
+    userId,
+    membershipId: Number(req.params.membershipId),
+    role: req.body.role,
+    status: req.body.status
+  });
+
+  await writeAuditLog({
+    actorUserId: req.user.id,
+    action: 'ADMIN_PARTNER_ACCESS_UPDATED',
+    entityType: 'USER',
+    entityId: userId,
+    metadata: {
+      membershipId: Number(req.params.membershipId),
+      ...req.body
     },
     ...auditContextFromRequest(req)
   });
