@@ -14,3 +14,16 @@ export const adminAdjustWalletSchema = z.object({
   }),
   reason: z.string().trim().min(3).max(220)
 });
+
+
+export const adminAssignPartnerAccessSchema = z.object({
+  partnerId: z.coerce.number().int().positive(),
+  role: z.enum(['OWNER', 'STAFF'])
+});
+
+export const adminUpdatePartnerAccessSchema = z.object({
+  role: z.enum(['OWNER', 'STAFF']).optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE']).optional()
+}).refine((value) => value.role || value.status, {
+  message: 'At least one partner access field is required.'
+});
