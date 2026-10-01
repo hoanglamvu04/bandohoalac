@@ -684,3 +684,115 @@ ALTER TABLE voucher_redemptions
 CREATE INDEX IF NOT EXISTS voucher_redemptions_used_shift_idx
   ON voucher_redemptions (used_shift_id, used_at DESC);
 
+
+
+-- ============================================================
+-- PARTNER VOUCHER FINANCIAL SETTLEMENT
+-- A USED voucher creates a financial receivable for the partner.
+-- Financial values are snapshotted on each redemption so future
+-- campaign edits never change historical debt.
+-- ============================================================
+ALTER TABLE voucher_campaigns
+  ADD COLUMN IF NOT EXISTS voucher_value_amount BIGINT;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'voucher_campaigns_value_amount_check'
+  ) THEN
+    ALTER TABLE voucher_campaigns
+      ADD CONSTRAINT voucher_campaigns_value_amount_check
+      CHECK (voucher_value_amount IS NULL OR voucher_value_amount > 0);
+  END IF;
+END $$;
+
+-- Best-effort backfill for existing labels such as "Giảm 50.000đ".
+-- New campaigns should always set voucher_value_amount explicitly.
+UPDATE voucher_campaigns
+SET voucher_value_amount = NULLIF(
+  regexp_replace(
+    substring(voucher_value_text from '([0-9][0-9\., ]*)'),
+    '[^0-9]',
+    '',
+    'g'
+  ),
+  ''
+)::BIGINT
+WHERE voucher_value_amount IS NULL
+  AND voucher_value_text IS NOT NULL
+  AND voucher_value_text ~ '[0-9]';
+
+ALTER TABLE voucher_redemptions
+  ADD COLUMN IF NOT EXISTS voucher_face_value_amount BIGINT,
+  ADD COLUMN IF NOT EXISTS customer_discount_amount BIGINT,
+  ADD COLUMN IF NOT EXISTS partner_receivable_amount BIGINT,
+  ADD COLUMN IF NOT EXISTS hola_payable_amount BIGINT,
+  ADD COLUMN IF NOT EXISTS settlement_status TEXT;
+
+ALTER TABLE voucher_redemptions
+  DROP CONSTRAINT IF EXISTS voucher_redemptions_financial_amounts_check;
+
+ALTER TABLE voucher_redemptions
+  ADD CONSTRAINT voucher_redemptions_financial_amounts_check
+  CHECK (
+    (voucher_face_value_amount IS NULL OR voucher_face_value_amount > 0)
+    AND (customer_discount_amount IS NULL OR customer_discount_amount > 0)
+    AND (partner_receivable_amount IS NULL OR partner_receivable_amount > 0)
+    AND (hola_payable_amount IS NULL OR hola_payable_amount > 0)
+  );
+
+ALTER TABLE voucher_redemptions
+  DROP CONSTRAINT IF EXISTS voucher_redemptions_settlement_status_check;
+
+ALTER TABLE voucher_redemptions
+  ADD CONSTRAINT voucher_redemptions_settlement_status_check
+  CHECK (
+    settlement_status IS NULL
+    OR settlement_status IN ('UNPAID', 'PROCESSING', 'PAID', 'VOID')
+  );
+
+CREATE TABLE IF NOT EXISTS partner_settlement_batches (
+  id BIGSERIAL PRIMARY KEY,
+  partner_id BIGINT NOT NULL REFERENCES place_partners(id) ON DELETE RESTRICT,
+  status TEXT NOT NULL DEFAULT 'PROCESSING'
+    CHECK (status IN ('PROCESSING', 'PAID', 'CANCELLED')),
+  voucher_count INTEGER NOT NULL DEFAULT 0 CHECK (voucher_count >= 0),
+  amount_total BIGINT NOT NULL DEFAULT 0 CHECK (amount_total >= 0),
+  period_from TIMESTAMPTZ,
+  period_to TIMESTAMPTZ,
+  note TEXT,
+  created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  paid_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  paid_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE voucher_redemptions
+  ADD COLUMN IF NOT EXISTS settlement_batch_id BIGINT
+    REFERENCES partner_settlement_batches(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS partner_settlement_batches_partner_idx
+  ON partner_settlement_batches (partner_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS partner_settlement_batches_status_idx
+  ON partner_settlement_batches (status, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS voucher_redemptions_settlement_idx
+  ON voucher_redemptions (settlement_status, used_partner_id, used_at DESC);
+
+CREATE INDEX IF NOT EXISTS voucher_redemptions_settlement_batch_idx
+  ON voucher_redemptions (settlement_batch_id);
+
+-- Preserve accounting for vouchers already used before this migration.
+UPDATE voucher_redemptions vr
+SET voucher_face_value_amount = COALESCE(vr.voucher_face_value_amount, vc.voucher_value_amount),
+    customer_discount_amount = COALESCE(vr.customer_discount_amount, vc.voucher_value_amount),
+    partner_receivable_amount = COALESCE(vr.partner_receivable_amount, vc.voucher_value_amount),
+    hola_payable_amount = COALESCE(vr.hola_payable_amount, vc.voucher_value_amount),
+    settlement_status = COALESCE(vr.settlement_status, 'UNPAID')
+FROM voucher_campaigns vc
+WHERE vr.campaign_id = vc.id
+  AND vr.status IN ('USED', 'REDEEMED')
+  AND vc.voucher_value_amount IS NOT NULL;
