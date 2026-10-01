@@ -6,6 +6,7 @@ import {
   Clock3,
   Gift,
   History,
+  ImageUp,
   Mail,
   Pencil,
   QrCode,
@@ -18,6 +19,7 @@ import {
   X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import jsQR from 'jsqr';
 import {
   addPartnerStaff,
   getPartnerDashboard,
@@ -66,7 +68,8 @@ export default function PartnerDashboard() {
   const videoRef = useRef(null);
   const scanTimerRef = useRef(null);
   const streamRef = useRef(null);
-  const detectorRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const canvasRef = useRef(null);
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -79,6 +82,7 @@ export default function PartnerDashboard() {
 
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerSupported, setScannerSupported] = useState(false);
+  const [imageScanning, setImageScanning] = useState(false);
 
   const [editingPlace, setEditingPlace] = useState(null);
   const [placeForm, setPlaceForm] = useState({
@@ -129,7 +133,6 @@ export default function PartnerDashboard() {
     load();
     setScannerSupported(
       typeof window !== 'undefined' &&
-      'BarcodeDetector' in window &&
       Boolean(navigator.mediaDevices?.getUserMedia)
     );
 
@@ -180,54 +183,139 @@ export default function PartnerDashboard() {
     }
   }
 
+  function decodeFrame(source, width, height) {
+    if (!width || !height || typeof document === 'undefined') return null;
+
+    const canvas = canvasRef.current || document.createElement('canvas');
+    canvasRef.current = canvas;
+
+    // Decode a reasonably sized frame to keep scanning smooth on mobile.
+    const maxWidth = 960;
+    const scale = Math.min(1, maxWidth / width);
+    const targetWidth = Math.max(1, Math.round(width * scale));
+    const targetHeight = Math.max(1, Math.round(height * scale));
+
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) return null;
+
+    context.drawImage(source, 0, 0, targetWidth, targetHeight);
+    const frame = context.getImageData(0, 0, targetWidth, targetHeight);
+
+    return jsQR(frame.data, frame.width, frame.height, {
+      inversionAttempts: 'attemptBoth'
+    });
+  }
+
   async function startScanner() {
-    if (!scannerSupported) {
+    if (!navigator.mediaDevices?.getUserMedia) {
       showToast(
-        'Trình duyệt này chưa hỗ trợ quét QR trực tiếp. Bạn vẫn có thể nhập mã voucher.',
+        'Trình duyệt không mở được camera. Hãy chọn ảnh QR hoặc nhập mã voucher.',
         'info'
       );
+      fileInputRef.current?.click();
       return;
     }
 
     try {
-      detectorRef.current = new window.BarcodeDetector({ formats: ['qr_code'] });
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
         audio: false
       });
 
       streamRef.current = stream;
       setScannerOpen(true);
 
-      requestAnimationFrame(async () => {
-        if (!videoRef.current) return;
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+      window.setTimeout(async () => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        video.srcObject = stream;
+        await video.play();
 
         scanTimerRef.current = window.setInterval(async () => {
-          if (!videoRef.current || !detectorRef.current || videoRef.current.readyState < 2) return;
+          const currentVideo = videoRef.current;
+          if (!currentVideo || currentVideo.readyState < 2) return;
 
           try {
-            const results = await detectorRef.current.detect(videoRef.current);
-            const value = results?.[0]?.rawValue;
+            const result = decodeFrame(
+              currentVideo,
+              currentVideo.videoWidth,
+              currentVideo.videoHeight
+            );
+            const value = result?.data;
             if (!value) return;
 
             const parsed = parseVoucherPayload(value);
             stopScanner();
             await inspectVoucher(parsed);
           } catch {
-            // Moving frames can fail intermittently; keep scanning.
+            // A moving frame can be unreadable; continue scanning the next frame.
           }
-        }, 650);
-      });
+        }, 280);
+      }, 80);
     } catch (error) {
       stopScanner();
       showToast(
         error?.name === 'NotAllowedError'
-          ? 'Cần cấp quyền camera để quét QR.'
-          : 'Không thể mở camera quét QR.',
+          ? 'Camera đang bị chặn. Hãy cấp quyền camera hoặc chọn ảnh QR từ máy.'
+          : 'Không thể mở camera. Bạn có thể chọn ảnh QR hoặc nhập mã voucher.',
         'error'
       );
+    }
+  }
+
+  async function scanQrImage(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || imageScanning) return;
+
+    setImageScanning(true);
+    try {
+      let imageSource;
+
+      if ('createImageBitmap' in window) {
+        imageSource = await createImageBitmap(file);
+      } else {
+        imageSource = await new Promise((resolve, reject) => {
+          const image = new Image();
+          const url = URL.createObjectURL(file);
+          image.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve(image);
+          };
+          image.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('IMAGE_LOAD_FAILED'));
+          };
+          image.src = url;
+        });
+      }
+
+      const result = decodeFrame(
+        imageSource,
+        imageSource.width || imageSource.naturalWidth,
+        imageSource.height || imageSource.naturalHeight
+      );
+
+      imageSource.close?.();
+
+      if (!result?.data) {
+        showToast('Không tìm thấy QR trong ảnh này. Hãy thử ảnh rõ hơn.', 'error');
+        return;
+      }
+
+      await inspectVoucher(parseVoucherPayload(result.data));
+    } catch {
+      showToast('Không thể đọc ảnh QR. Hãy thử ảnh khác hoặc nhập mã voucher.', 'error');
+    } finally {
+      setImageScanning(false);
     }
   }
 
@@ -431,6 +519,23 @@ export default function PartnerDashboard() {
           <button className="secondary-action" type="button" onClick={startScanner}>
             <Camera size={16} /> Quét QR
           </button>
+
+          <button
+            className="secondary-action"
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={imageScanning}
+          >
+            <ImageUp size={16} /> {imageScanning ? 'Đang đọc...' : 'Chọn ảnh QR'}
+          </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={scanQrImage}
+          />
         </div>
 
         {voucherPreview && (
@@ -504,7 +609,9 @@ export default function PartnerDashboard() {
                 <span className="partner-scan-frame" />
               </div>
               <p className="partner-scanner-help">
-                QR chỉ được đọc để kiểm tra. Hệ thống chưa sử dụng voucher ở bước này.
+                Giữ QR trong khung khoảng 1–2 giây. Hệ thống đọc QR bằng JavaScript nên
+                không phụ thuộc BarcodeDetector của trình duyệt. Voucher chỉ được kiểm tra,
+                chưa bị sử dụng ở bước này.
               </p>
             </div>
           </div>
