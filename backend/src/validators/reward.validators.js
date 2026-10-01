@@ -26,6 +26,7 @@ const voucherFields = {
   title: z.string().trim().min(2).max(180).optional(),
   description: z.string().trim().max(1200).nullable().optional(),
   voucherValueText: z.string().trim().max(180).nullable().optional(),
+  voucherValueAmount: z.union([z.coerce.number().int().min(1).max(1000000000), z.null()]).optional(),
   terms: z.string().trim().max(2400).nullable().optional(),
   pointsCost: z.coerce.number().int().min(1).max(1000000).optional(),
   quantityTotal: z.union([z.coerce.number().int().min(0), z.null()]).optional(),
