@@ -3199,3 +3199,579 @@
     font-size:10.5px;
   }
 }
+
+
+/* =========================================================
+   Partner Voucher Scanner V2 + STAFF management
+   ========================================================= */
+
+.voucher-status.used,
+.voucher-status.redeemed{
+  color:#0d7652;
+  background:#e2f7ed;
+}
+
+.my-voucher-value{
+  display:block;
+  margin:-5px 0 10px;
+  color:#0d7a57;
+  font-size:11px;
+}
+
+.my-voucher-card.status-used,
+.my-voucher-card.status-redeemed,
+.my-voucher-card.status-expired,
+.my-voucher-card.status-cancelled{
+  border-style:solid;
+  border-color:#dfe6ea;
+  background:linear-gradient(145deg,#fff,#f7f9fa);
+}
+
+.my-voucher-locked{
+  min-height:128px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:14px;
+  border:1px solid #dce6e1;
+  border-radius:14px;
+  background:#f4faf7;
+}
+
+.my-voucher-locked>span{
+  width:48px;
+  height:48px;
+  flex:0 0 48px;
+  display:grid;
+  place-items:center;
+  border-radius:14px;
+  color:#0c7b57;
+  background:#e1f6ec;
+}
+
+.my-voucher-locked>div{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.my-voucher-locked b{
+  color:#174b3b;
+  font-size:14px;
+}
+
+.my-voucher-locked small{
+  color:#71857e;
+  font-size:9px;
+}
+
+.my-voucher-locked em{
+  color:#8a9994;
+  font-size:8px;
+  font-style:normal;
+  letter-spacing:.05em;
+}
+
+.my-voucher-locked.expired,
+.my-voucher-locked.cancelled{
+  border-color:#eadfdc;
+  background:#fff8f6;
+}
+
+.my-voucher-locked.expired>span,
+.my-voucher-locked.cancelled>span{
+  color:#9b5144;
+  background:#fbe9e5;
+}
+
+.my-voucher-locked.expired b,
+.my-voucher-locked.cancelled b{
+  color:#74443b;
+}
+
+.my-voucher-terms{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  margin:8px 0;
+  padding:8px 9px;
+  border-radius:10px;
+  color:#718295;
+  background:#f6f8fa;
+  font-size:8px;
+  line-height:1.5;
+}
+
+.my-voucher-terms b{
+  color:#42586f;
+  font-size:8px;
+}
+
+.partner-voucher-scanner{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.partner-voucher-preview{
+  overflow:hidden;
+  border:1px solid #b9dfcf;
+  border-radius:17px;
+  background:#fff;
+  box-shadow:0 10px 28px rgba(16,88,63,.06);
+}
+
+.partner-voucher-preview.invalid{
+  border-color:#e7d9d5;
+  background:#fffcfb;
+}
+
+.partner-voucher-preview-status{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px 13px;
+  border-bottom:1px solid #e4eee9;
+  background:#f1faf6;
+}
+
+.partner-voucher-preview.invalid .partner-voucher-preview-status{
+  border-bottom-color:#eee1de;
+  background:#fff4f1;
+}
+
+.partner-voucher-preview-status>span{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  flex:0 0 42px;
+  border-radius:13px;
+  color:#0a805a;
+  background:#dff5ea;
+}
+
+.partner-voucher-preview.invalid .partner-voucher-preview-status>span{
+  color:#a05547;
+  background:#fbe3de;
+}
+
+.partner-voucher-preview-status>div{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.partner-voucher-preview-status small{
+  color:#118060;
+  font-size:8px;
+  font-weight:950;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+
+.partner-voucher-preview.invalid .partner-voucher-preview-status small{
+  color:#a75a4c;
+}
+
+.partner-voucher-preview-status b{
+  color:#194b3c;
+  font-size:12px;
+}
+
+.partner-voucher-preview.invalid .partner-voucher-preview-status b{
+  color:#734a42;
+}
+
+.partner-voucher-preview-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:0;
+  padding:11px 13px;
+}
+
+.partner-voucher-preview-grid>span{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  padding:4px 11px;
+  border-right:1px solid #edf1ef;
+}
+
+.partner-voucher-preview-grid>span:first-child{
+  padding-left:0;
+}
+
+.partner-voucher-preview-grid>span:last-child{
+  border-right:0;
+}
+
+.partner-voucher-preview-grid small,
+.partner-voucher-preview-terms small{
+  color:#84918d;
+  font-size:7px;
+  font-weight:850;
+  text-transform:uppercase;
+}
+
+.partner-voucher-preview-grid b{
+  overflow:hidden;
+  color:#23463b;
+  font-size:10px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.partner-voucher-preview-terms{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  margin:0 13px 10px;
+  padding:8px 9px;
+  border-radius:10px;
+  color:#667b74;
+  background:#f7f9f8;
+  font-size:8px;
+  line-height:1.45;
+}
+
+.partner-voucher-preview>footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 13px;
+  border-top:1px solid #e8eeeb;
+}
+
+.partner-voucher-preview>footer>div{
+  min-width:0;
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px 12px;
+  color:#72847e;
+  font-size:8px;
+}
+
+.partner-voucher-preview>footer span{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+}
+
+.partner-use-voucher{
+  flex:0 0 auto;
+  min-height:38px;
+}
+
+.partner-scanner-help{
+  margin:0;
+  padding:9px 12px 11px;
+  color:#6f827a;
+  background:#f7faf8;
+  font-size:8px;
+  line-height:1.45;
+  text-align:center;
+}
+
+.partner-history-list article>div{
+  min-width:0;
+}
+
+.partner-history-list article>div>em{
+  color:#82908b;
+  font-size:7px;
+  font-style:normal;
+}
+
+.partner-staff-card{
+  overflow:visible;
+}
+
+.partner-staff-layout{
+  display:grid;
+  grid-template-columns:minmax(280px,.75fr) minmax(0,1.25fr);
+  gap:12px;
+}
+
+.partner-staff-form{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:12px;
+  border:1px solid #dce8e3;
+  border-radius:14px;
+  background:#f9fcfa;
+}
+
+.partner-staff-form-copy{
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+
+.partner-staff-form-icon{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  flex:0 0 42px;
+  border-radius:13px;
+  color:#0c7956;
+  background:#e1f4eb;
+}
+
+.partner-staff-form-copy>div{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.partner-staff-form-copy b{
+  color:#173f34;
+  font-size:11px;
+}
+
+.partner-staff-form-copy small{
+  color:#738780;
+  font-size:8px;
+  line-height:1.4;
+}
+
+.partner-staff-form>label{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  color:#405b51;
+  font-size:9px;
+  font-weight:850;
+}
+
+.partner-staff-form select{
+  min-height:40px;
+  padding:0 10px;
+  border:1px solid #d2e1db;
+  border-radius:10px;
+  outline:none;
+  background:#fff;
+  color:#21493c;
+}
+
+.partner-staff-email{
+  min-height:42px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:0 9px;
+  border:1px solid #d2e1db;
+  border-radius:10px;
+  background:#fff;
+}
+
+.partner-staff-email svg{
+  color:#6f847c;
+}
+
+.partner-staff-email input{
+  min-width:0;
+  width:100%;
+  min-height:40px;
+  border:0;
+  outline:0;
+  background:transparent;
+}
+
+.partner-staff-form>.primary-action{
+  width:100%;
+  justify-content:center;
+}
+
+.partner-staff-list{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+}
+
+.partner-staff-list>article{
+  display:grid;
+  grid-template-columns:42px minmax(0,1fr) auto;
+  gap:9px;
+  align-items:center;
+  min-height:62px;
+  padding:9px 10px;
+  border:1px solid #e0e8e4;
+  border-radius:12px;
+  background:#fff;
+}
+
+.partner-staff-list>article.inactive{
+  opacity:.68;
+  background:#f7f8f8;
+}
+
+.partner-staff-avatar{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  border-radius:13px;
+  color:#fff;
+  background:linear-gradient(145deg,#18815f,#0d674b);
+  font-size:10px;
+  font-weight:950;
+}
+
+.partner-staff-list>article>div{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.partner-staff-list small{
+  color:#0d7655;
+  font-size:7px;
+  font-weight:900;
+}
+
+.partner-staff-list b{
+  overflow:hidden;
+  color:#23483d;
+  font-size:10px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.partner-staff-list span{
+  overflow:hidden;
+  color:#788a84;
+  font-size:8px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.partner-staff-list>article>button{
+  min-height:31px;
+  padding:0 8px;
+  border:1px solid #d8e4df;
+  border-radius:9px;
+  color:#526b62;
+  background:#f7faf8;
+  font-size:7.5px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.partner-staff-list>article.inactive>button{
+  color:#0c7755;
+  border-color:#badbcd;
+  background:#edf9f4;
+}
+
+.partner-owner-pill{
+  padding:5px 7px;
+  border-radius:999px;
+  color:#8a650e!important;
+  background:#fff1c8;
+  font-size:7px!important;
+  font-weight:950;
+}
+
+.partner-campaign-grid article>em{
+  color:#0a7654;
+  font-size:8px;
+  font-style:normal;
+  font-weight:800;
+}
+
+@media(max-width:920px){
+  .partner-voucher-preview-grid{
+    grid-template-columns:1fr 1fr;
+    gap:8px 0;
+  }
+
+  .partner-voucher-preview-grid>span:nth-child(2){
+    border-right:0;
+  }
+
+  .partner-staff-layout{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:760px){
+  .my-voucher-locked{
+    min-height:96px;
+    padding:10px;
+  }
+
+  .my-voucher-locked>span{
+    width:42px;
+    height:42px;
+    flex-basis:42px;
+  }
+
+  .my-voucher-locked b{
+    font-size:12px;
+  }
+
+  .partner-voucher-preview-status{
+    padding:10px;
+  }
+
+  .partner-voucher-preview-status>span{
+    width:38px;
+    height:38px;
+    flex-basis:38px;
+  }
+
+  .partner-voucher-preview-status b{
+    font-size:10px;
+  }
+
+  .partner-voucher-preview-grid{
+    grid-template-columns:1fr 1fr;
+    padding:9px 10px;
+  }
+
+  .partner-voucher-preview-grid>span{
+    padding:5px 7px;
+  }
+
+  .partner-voucher-preview-grid>span:nth-child(2n){
+    border-right:0;
+  }
+
+  .partner-voucher-preview-grid b{
+    font-size:9px;
+  }
+
+  .partner-voucher-preview>footer{
+    align-items:stretch;
+    flex-direction:column;
+    padding:9px 10px;
+  }
+
+  .partner-use-voucher{
+    width:100%;
+    justify-content:center;
+  }
+
+  .partner-staff-form input,
+  .partner-staff-form select{
+    font-size:16px;
+  }
+
+  .partner-staff-list>article{
+    grid-template-columns:38px minmax(0,1fr) auto;
+  }
+
+  .partner-staff-avatar{
+    width:38px;
+    height:38px;
+  }
+}
