@@ -593,3 +593,61 @@ CREATE TABLE IF NOT EXISTS brand_settings (
 INSERT INTO brand_settings (id)
 VALUES (1)
 ON CONFLICT (id) DO NOTHING;
+
+
+-- ============================================================
+-- PARTNER VOUCHER SCANNER / USAGE HISTORY
+-- ============================================================
+-- Keep redeemed_at for backward compatibility, while USED is the canonical
+-- state for vouchers consumed by a partner.
+ALTER TABLE voucher_redemptions
+  ADD COLUMN IF NOT EXISTS qr_token TEXT,
+  ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS used_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS used_by_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS used_partner_id BIGINT REFERENCES place_partners(id) ON DELETE SET NULL;
+
+UPDATE voucher_redemptions
+SET qr_token = encode(gen_random_bytes(18), 'hex')
+WHERE qr_token IS NULL;
+
+UPDATE voucher_redemptions
+SET status = 'USED',
+    used_at = COALESCE(used_at, redeemed_at)
+WHERE status = 'REDEEMED';
+
+ALTER TABLE voucher_redemptions
+  DROP CONSTRAINT IF EXISTS voucher_redemptions_status_check;
+
+ALTER TABLE voucher_redemptions
+  ADD CONSTRAINT voucher_redemptions_status_check
+  CHECK (status IN ('ISSUED', 'USED', 'REDEEMED', 'CANCELLED', 'EXPIRED'));
+
+CREATE UNIQUE INDEX IF NOT EXISTS voucher_redemptions_qr_token_unique_idx
+  ON voucher_redemptions (qr_token)
+  WHERE qr_token IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS voucher_redemptions_status_used_idx
+  ON voucher_redemptions (status, used_at DESC);
+
+CREATE INDEX IF NOT EXISTS voucher_redemptions_used_by_idx
+  ON voucher_redemptions (used_by_user_id, used_at DESC);
+
+CREATE TABLE IF NOT EXISTS voucher_redemption_events (
+  id BIGSERIAL PRIMARY KEY,
+  redemption_id BIGINT NOT NULL REFERENCES voucher_redemptions(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  actor_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  partner_id BIGINT REFERENCES place_partners(id) ON DELETE SET NULL,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS voucher_redemption_events_redemption_idx
+  ON voucher_redemption_events (redemption_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS voucher_redemption_events_partner_idx
+  ON voucher_redemption_events (partner_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS voucher_redemption_events_actor_idx
+  ON voucher_redemption_events (actor_user_id, created_at DESC);
