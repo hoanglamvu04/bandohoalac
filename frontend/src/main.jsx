@@ -30,6 +30,7 @@ import './mobile-community.css';
 import './mobile-admin-places.css';
 import './mobile-final-pass.css';
 import './brand-management.css';
+import './admin-control-center.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
