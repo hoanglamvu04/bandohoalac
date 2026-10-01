@@ -13,7 +13,27 @@ export const reviewPlaceClaimSchema = z.object({
 });
 
 export const partnerRedeemCodeSchema = z.object({
-  code: z.string().trim().min(6).max(80)
+  code: z.string().trim().min(6).max(180),
+  qrToken: z.string().trim().min(12).max(120).nullable().optional()
+});
+
+export const partnerVoucherInspectSchema = z.object({
+  code: z.string().trim().min(6).max(180),
+  qrToken: z.string().trim().min(12).max(120).nullable().optional()
+});
+
+export const partnerVoucherUseSchema = z.object({
+  code: z.string().trim().min(6).max(180).nullable().optional(),
+  qrToken: z.string().trim().min(12).max(120).nullable().optional()
+});
+
+export const partnerStaffCreateSchema = z.object({
+  partnerId: z.coerce.number().int().positive(),
+  email: z.string().trim().email().max(255)
+});
+
+export const partnerStaffStatusSchema = z.object({
+  status: z.enum(['ACTIVE', 'INACTIVE'])
 });
 
 
