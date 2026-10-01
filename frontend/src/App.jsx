@@ -8,6 +8,7 @@ export default function App() {
   const location = useLocation();
   const isMapRoute = location.pathname === '/map';
   const isProfileRoute = location.pathname === '/profile';
+  const isPartnerScannerRoute = location.pathname === '/partner/scanner';
 
   useEffect(() => {
     document.body.classList.toggle('map-route-active', isMapRoute);
@@ -41,16 +42,21 @@ export default function App() {
     <div className={[
       'app-shell',
       isMapRoute ? 'map-app-shell' : '',
-      isProfileRoute ? 'profile-app-shell' : ''
+      isProfileRoute ? 'profile-app-shell' : '',
+      isPartnerScannerRoute ? 'partner-scanner-app-shell' : ''
     ].filter(Boolean).join(' ')}>
-      <Navbar />
+      {!isPartnerScannerRoute && <Navbar />}
 
-      <main className={isMapRoute ? 'app-main map-app-main' : 'app-main'}>
+      <main className={[
+        'app-main',
+        isMapRoute ? 'map-app-main' : '',
+        isPartnerScannerRoute ? 'partner-scanner-app-main' : ''
+      ].filter(Boolean).join(' ')}>
         <Outlet />
       </main>
 
-      {!isMapRoute && <Footer />}
-      <BottomNav />
+      {!isMapRoute && !isPartnerScannerRoute && <Footer />}
+      {!isPartnerScannerRoute && <BottomNav />}
     </div>
   );
 }
