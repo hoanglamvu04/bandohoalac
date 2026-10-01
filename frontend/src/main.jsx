@@ -3,6 +3,7 @@ import { RouterProvider } from 'react-router-dom';
 import { router } from './routes.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
+import { BrandProvider } from './context/BrandContext.jsx';
 import { registerHolaPwa } from './pwa.js';
 import './style.css';
 import './premium.css';
@@ -28,12 +29,15 @@ import './mobile-profile.css';
 import './mobile-community.css';
 import './mobile-admin-places.css';
 import './mobile-final-pass.css';
+import './brand-management.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <BrandProvider>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </BrandProvider>
   </ToastProvider>
 );
 
