@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useBrand } from '../context/BrandContext.jsx';
 import { REGION_PRESETS } from '../mapConfig.js';
 import {
   getNotifications,
@@ -37,6 +38,7 @@ function notificationTarget(item) {
 
 export default function Navbar() {
   const { user, logout, isModerator } = useAuth();
+  const { brand } = useBrand();
   const navigate = useNavigate();
   const location = useLocation();
   const [regionOpen, setRegionOpen] = useState(false);
@@ -218,14 +220,22 @@ export default function Navbar() {
   }
 
   return (
-    <header className={[
-      'navbar premium-navbar modern-blue-navbar reference-navbar',
-      isHome ? 'home-navbar' : '',
-      isHome && homeHeaderScrolled ? 'home-navbar-scrolled' : ''
-    ].filter(Boolean).join(' ')}>
+    <header
+      className={[
+        'navbar premium-navbar modern-blue-navbar reference-navbar',
+        isHome ? 'home-navbar' : '',
+        isHome && homeHeaderScrolled ? 'home-navbar-scrolled' : ''
+      ].filter(Boolean).join(' ')}
+      style={{
+        '--brand-header-desktop-width': brand.headerLogoDesktopWidth + 'px',
+        '--brand-header-mobile-width': brand.headerLogoMobileWidth + 'px',
+        '--brand-header-compact-width': brand.headerLogoCompactWidth + 'px'
+      }}
+    >
       <Link className="brand premium-brand brand-official" to="/" aria-label="Hola Maps">
         <span className="brand-official-lockup">
-          <img className="brand-official-logo" src="/logo.svg?v=20260929-2" alt="Hola Maps" />
+          <img className="brand-official-logo brand-logo-main" src={brand.headerLogoUrl} alt="Hola Maps" />
+          <img className="brand-official-logo brand-logo-compact" src={brand.compactLogoUrl} alt="Hola Maps" />
         </span>
       </Link>
 
