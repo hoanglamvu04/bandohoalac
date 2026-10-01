@@ -72,6 +72,13 @@ import {
   reviewPlaceClaimSchema
 } from '../validators/placeClaim.validators.js';
 import { listAuditLogsAdmin } from '../controllers/audit.controller.js';
+import {
+  deleteBrandAssetAdmin,
+  getBrandAdmin,
+  updateBrandAdmin,
+  uploadBrandAssetAdmin
+} from '../controllers/adminBrand.controller.js';
+import { adminUpdateBrandSettingsSchema } from '../validators/brand.validators.js';
 
 const router = Router();
 
@@ -185,5 +192,24 @@ router.patch(
 );
 
 router.get('/audit', authorize('ADMIN'), listAuditLogsAdmin);
+
+router.get('/brand', authorize('ADMIN'), getBrandAdmin);
+router.patch(
+  '/brand',
+  authorize('ADMIN'),
+  validateBody(adminUpdateBrandSettingsSchema),
+  updateBrandAdmin
+);
+router.post(
+  '/brand/assets',
+  authorize('ADMIN'),
+  uploadSingleImage,
+  uploadBrandAssetAdmin
+);
+router.delete(
+  '/brand/assets/:id',
+  authorize('ADMIN'),
+  deleteBrandAssetAdmin
+);
 
 export default router;
