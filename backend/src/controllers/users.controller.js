@@ -19,8 +19,6 @@ export const getProfile = asyncHandler(async (req, res) => {
     badges,
     recentActivity,
     contributedPlaces,
-    contributedPhotos,
-    contributedPlaces,
     contributedPhotos
   ] = await Promise.all([
     countPublishedPlacesByUser(userId),
@@ -32,7 +30,9 @@ export const getProfile = asyncHandler(async (req, res) => {
   ]);
 
   const totalReviewed = user.approved_count + user.rejected_count;
-  const approvalRate = totalReviewed > 0 ? Number((user.approved_count / totalReviewed).toFixed(2)) : null;
+  const approvalRate = totalReviewed > 0
+    ? Number((user.approved_count / totalReviewed).toFixed(2))
+    : null;
 
   res.json({
     user: toPublicUser(user),
@@ -42,6 +42,8 @@ export const getProfile = asyncHandler(async (req, res) => {
       approvalRate
     },
     badges,
-    recentActivity
+    recentActivity,
+    contributedPlaces,
+    contributedPhotos
   });
 });
