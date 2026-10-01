@@ -611,13 +611,13 @@ UPDATE voucher_redemptions
 SET qr_token = encode(gen_random_bytes(18), 'hex')
 WHERE qr_token IS NULL;
 
+ALTER TABLE voucher_redemptions
+  DROP CONSTRAINT IF EXISTS voucher_redemptions_status_check;
+
 UPDATE voucher_redemptions
 SET status = 'USED',
     used_at = COALESCE(used_at, redeemed_at)
 WHERE status = 'REDEEMED';
-
-ALTER TABLE voucher_redemptions
-  DROP CONSTRAINT IF EXISTS voucher_redemptions_status_check;
 
 ALTER TABLE voucher_redemptions
   ADD CONSTRAINT voucher_redemptions_status_check
