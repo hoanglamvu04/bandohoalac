@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import {
   BadgePercent,
   CheckCircle2,
+  Clock3,
   Coins,
+  LockKeyhole,
   MapPin,
   Sparkles,
   TicketCheck
@@ -16,6 +18,21 @@ import {
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import VoucherQr from '../components/VoucherQr.jsx';
+
+const STATUS_LABELS = {
+  ISSUED: 'Có thể sử dụng',
+  USED: 'Đã sử dụng',
+  REDEEMED: 'Đã sử dụng',
+  EXPIRED: 'Hết hạn',
+  CANCELLED: 'Đã hủy'
+};
+
+function formatDateTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('vi-VN');
+}
 
 export default function RewardsPage() {
   const { user } = useAuth();
@@ -170,26 +187,71 @@ export default function RewardsPage() {
             <div className="empty-state"><TicketCheck size={24} /><b>Bạn chưa đổi voucher nào</b><span>Tích điểm từ đóng góp và quay lại chọn ưu đãi phù hợp.</span></div>
           ) : (
             <div className="my-voucher-grid">
-              {redemptions.map((item) => (
-                <article className="my-voucher-card" key={item.id}>
-                  <span className={'voucher-status ' + item.status.toLowerCase()}>{item.status}</span>
-                  <small>{item.partnerName}</small>
-                  <h3>{item.campaignTitle}</h3>
-                  <div className="my-voucher-qr">
-                    <VoucherQr code={item.code} size={172} />
-                    <div className="my-voucher-code">
-                      <span>MÃ VOUCHER</span>
-                      <b>{item.code}</b>
-                      <small>Đưa QR hoặc mã này cho quán đối tác để xác nhận.</small>
-                    </div>
-                  </div>
-                  <p><MapPin size={13} /> {item.placeName} · {item.placeAddress}</p>
-                  <footer>
-                    <span><Coins size={14} /> {item.pointsSpent.toLocaleString('vi-VN')} điểm</span>
-                    {item.status === 'REDEEMED' && <span><CheckCircle2 size={14} /> Đã sử dụng</span>}
-                  </footer>
-                </article>
-              ))}
+              {redemptions.map((item) => {
+                const status = item.status === 'REDEEMED' ? 'USED' : item.status;
+                const usable = status === 'ISSUED';
+                return (
+                  <article className={'my-voucher-card status-' + status.toLowerCase()} key={item.id}>
+                    <span className={'voucher-status ' + status.toLowerCase()}>
+                      {STATUS_LABELS[status] || status}
+                    </span>
+
+                    <small>{item.partnerName}</small>
+                    <h3>{item.campaignTitle}</h3>
+                    {item.voucherValueText && <strong className="my-voucher-value">{item.voucherValueText}</strong>}
+
+                    {usable ? (
+                      <div className="my-voucher-qr">
+                        <VoucherQr code={item.code} token={item.qrToken} size={172} />
+                        <div className="my-voucher-code">
+                          <span>MÃ VOUCHER</span>
+                          <b>{item.code}</b>
+                          <small>Đưa QR hoặc mã này cho nhân viên quán để kiểm tra và xác nhận.</small>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={'my-voucher-locked ' + status.toLowerCase()}>
+                        <span>
+                          {status === 'USED'
+                            ? <CheckCircle2 size={24} />
+                            : status === 'EXPIRED'
+                              ? <Clock3 size={24} />
+                              : <LockKeyhole size={24} />}
+                        </span>
+                        <div>
+                          <b>{STATUS_LABELS[status] || status}</b>
+                          {status === 'USED' && item.usedAt && (
+                            <small>{formatDateTime(item.usedAt)}</small>
+                          )}
+                          {status === 'EXPIRED' && item.expiresAt && (
+                            <small>Hết hạn: {formatDateTime(item.expiresAt)}</small>
+                          )}
+                          <em>Mã {item.code}</em>
+                        </div>
+                      </div>
+                    )}
+
+                    <p><MapPin size={13} /> {item.placeName} · {item.placeAddress}</p>
+
+                    {item.terms && (
+                      <div className="my-voucher-terms">
+                        <b>Điều kiện</b>
+                        <span>{item.terms}</span>
+                      </div>
+                    )}
+
+                    <footer>
+                      <span><Coins size={14} /> {item.pointsSpent.toLocaleString('vi-VN')} điểm</span>
+                      {usable && item.expiresAt && (
+                        <span><Clock3 size={14} /> HSD {new Date(item.expiresAt).toLocaleDateString('vi-VN')}</span>
+                      )}
+                      {status === 'USED' && (
+                        <span><CheckCircle2 size={14} /> Đã khóa QR</span>
+                      )}
+                    </footer>
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
