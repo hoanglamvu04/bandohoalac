@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   BadgePercent,
+  Banknote,
   CheckCircle2,
   Handshake,
   CheckCircle2 as CheckSelected,
@@ -13,12 +14,15 @@ import {
 } from 'lucide-react';
 import {
   createAdminPartner,
+  createAdminPartnerSettlement,
   createAdminVoucher,
+  getAdminPartnerSettlements,
   getAdminPartners,
   getAdminPlaces,
   getAdminPlaceClaims,
   getAdminVoucherRedemptions,
   getAdminVouchers,
+  markAdminPartnerSettlementPaid,
   markAdminVoucherRedeemed,
   reviewAdminPlaceClaim,
   updateAdminPartner,
@@ -40,6 +44,16 @@ function toIso(value) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+function formatMoney(value) {
+  return Number(value || 0).toLocaleString('vi-VN') + 'đ';
+}
+
+function formatDateTime(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('vi-VN');
+}
+
 const EMPTY_PARTNER = {
   placeId: '',
   status: 'PENDING',
@@ -55,6 +69,7 @@ const EMPTY_VOUCHER = {
   title: '',
   description: '',
   voucherValueText: '',
+  voucherValueAmount: 50000,
   terms: '',
   pointsCost: 1000,
   quantityTotal: '',
@@ -70,6 +85,7 @@ export default function AdminPartnersRewards() {
   const [partners, setPartners] = useState([]);
   const [vouchers, setVouchers] = useState([]);
   const [redemptions, setRedemptions] = useState([]);
+  const [settlements, setSettlements] = useState({ partners: [], batches: [] });
   const [claims, setClaims] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -97,15 +113,20 @@ export default function AdminPartnersRewards() {
   async function loadAll() {
     setLoading(true);
     try {
-      const [partnerData, voucherData, redemptionData, claimData] = await Promise.all([
+      const [partnerData, voucherData, redemptionData, settlementData, claimData] = await Promise.all([
         getAdminPartners(),
         getAdminVouchers(),
         getAdminVoucherRedemptions(),
+        getAdminPartnerSettlements(),
         getAdminPlaceClaims()
       ]);
       setPartners(Array.isArray(partnerData?.items) ? partnerData.items : []);
       setVouchers(Array.isArray(voucherData?.items) ? voucherData.items : []);
       setRedemptions(Array.isArray(redemptionData?.items) ? redemptionData.items : []);
+      setSettlements({
+        partners: Array.isArray(settlementData?.partners) ? settlementData.partners : [],
+        batches: Array.isArray(settlementData?.batches) ? settlementData.batches : []
+      });
       setClaims(Array.isArray(claimData?.items) ? claimData.items : []);
     } catch (error) {
       showToast(error.message, 'error');
@@ -222,6 +243,7 @@ export default function AdminPartnersRewards() {
       title: item.title || '',
       description: item.description || '',
       voucherValueText: item.voucherValueText || '',
+      voucherValueAmount: item.voucherValueAmount || 50000,
       terms: item.terms || '',
       pointsCost: item.pointsCost || 1000,
       quantityTotal: item.quantityTotal ?? '',
@@ -244,6 +266,7 @@ export default function AdminPartnersRewards() {
       title: voucherForm.title.trim(),
       description: voucherForm.description.trim() || null,
       voucherValueText: voucherForm.voucherValueText.trim() || null,
+      voucherValueAmount: Number(voucherForm.voucherValueAmount || 0) || null,
       terms: voucherForm.terms.trim() || null,
       pointsCost: Number(voucherForm.pointsCost),
       quantityTotal: voucherForm.quantityTotal === '' ? null : Number(voucherForm.quantityTotal),
@@ -276,6 +299,52 @@ export default function AdminPartnersRewards() {
       await loadAll();
     } catch (error) {
       showToast(error.message, 'error');
+    }
+  }
+
+  async function createSettlement(item) {
+    const amount = Number(item?.unpaidAmount || 0);
+    if (!item?.partnerId || amount <= 0) return;
+
+    if (!window.confirm(
+      'Tạo đợt thanh toán cho ' + item.partnerName + ' với ' +
+      formatMoney(amount) + ' công nợ chưa thanh toán?'
+    )) return;
+
+    const noteInput = window.prompt('Ghi chú đợt thanh toán (không bắt buộc):', '');
+    if (noteInput === null) return;
+
+    setSaving(true);
+    try {
+      await createAdminPartnerSettlement({
+        partnerId: Number(item.partnerId),
+        note: noteInput.trim() || null
+      });
+      showToast('Đã gom công nợ vào một đợt thanh toán PROCESSING.', 'success');
+      await loadAll();
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function markSettlementPaid(item) {
+    if (!item?.id || item.status !== 'PROCESSING') return;
+    if (!window.confirm(
+      'Xác nhận Hola Map đã thanh toán ' + formatMoney(item.amountTotal) +
+      ' cho ' + item.partnerName + '?'
+    )) return;
+
+    setSaving(true);
+    try {
+      await markAdminPartnerSettlementPaid(item.id);
+      showToast('Đã đánh dấu đợt đối soát là PAID.', 'success');
+      await loadAll();
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -320,6 +389,9 @@ export default function AdminPartnersRewards() {
         </button>
         <button className={tab === 'redemptions' ? 'active' : ''} onClick={() => setTab('redemptions')} type="button">
           <TicketCheck size={16} /> Voucher đã đổi <span>{redemptions.length}</span>
+        </button>
+        <button className={tab === 'settlements' ? 'active' : ''} onClick={() => setTab('settlements')} type="button">
+          <Banknote size={16} /> Đối soát <span>{settlements.partners.filter((item) => Number(item.unpaidAmount || 0) > 0).length}</span>
         </button>
         <button className={tab === 'claims' ? 'active' : ''} onClick={() => setTab('claims')} type="button">
           <ShieldCheck size={16} /> Xác minh chủ quán <span>{claims.filter((item) => item.status === 'PENDING').length}</span>
@@ -511,7 +583,10 @@ export default function AdminPartnersRewards() {
                   </select>
                 </label>
                 <label>Tên chiến dịch<input value={voucherForm.title} onChange={(e) => setVoucherForm((c) => ({ ...c, title: e.target.value }))} placeholder="Đổi 1.000 điểm - giảm 50.000đ" /></label>
-                <label>Giá trị voucher<input value={voucherForm.voucherValueText} onChange={(e) => setVoucherForm((c) => ({ ...c, voucherValueText: e.target.value }))} placeholder="Giảm 50.000đ hóa đơn từ 200.000đ" /></label>
+                <div className="admin-partner-form-row">
+                  <label>Hola Map hoàn đối tác (VND)<input type="number" min="1" step="1000" value={voucherForm.voucherValueAmount} onChange={(e) => setVoucherForm((c) => ({ ...c, voucherValueAmount: e.target.value }))} placeholder="50000" /></label>
+                  <label>Cách hiển thị ưu đãi<input value={voucherForm.voucherValueText} onChange={(e) => setVoucherForm((c) => ({ ...c, voucherValueText: e.target.value }))} placeholder="Giảm 50.000đ hóa đơn từ 200.000đ" /></label>
+                </div>
                 <label>Mô tả<textarea rows="3" value={voucherForm.description} onChange={(e) => setVoucherForm((c) => ({ ...c, description: e.target.value }))} /></label>
                 <div className="admin-partner-form-row">
                   <label>Điểm cần đổi<input type="number" min="1" value={voucherForm.pointsCost} onChange={(e) => setVoucherForm((c) => ({ ...c, pointsCost: e.target.value }))} /></label>
@@ -529,6 +604,96 @@ export default function AdminPartnersRewards() {
                 <button className="primary-action" type="submit" disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu chiến dịch'}</button>
               </form>
             </div>
+          )}
+
+          {tab === 'settlements' && (
+            <section className="admin-settlement-card">
+              <div className="admin-reward-card-head">
+                <div>
+                  <b>Đối soát & thanh toán Partner</b>
+                  <span>Mỗi voucher USED là một khoản Hola Map phải hoàn cho đối tác. Gom UNPAID thành đợt thanh toán rồi mới đánh dấu PAID.</span>
+                </div>
+              </div>
+
+              <div className="admin-settlement-partners">
+                {settlements.partners.map((item) => (
+                  <article className="admin-settlement-partner-row" key={item.partnerId}>
+                    <div>
+                      <small>PARTNER</small>
+                      <b>{item.partnerName}</b>
+                      <span>{item.unpaidVoucherCount} voucher chưa thanh toán</span>
+                    </div>
+                    <div>
+                      <small>CHỜ THANH TOÁN</small>
+                      <strong>{formatMoney(item.unpaidAmount)}</strong>
+                    </div>
+                    <div>
+                      <small>ĐANG XỬ LÝ</small>
+                      <strong>{formatMoney(item.processingAmount)}</strong>
+                    </div>
+                    <div>
+                      <small>ĐÃ THANH TOÁN</small>
+                      <strong>{formatMoney(item.paidAmount)}</strong>
+                    </div>
+                    <button
+                      type="button"
+                      className="primary-action"
+                      disabled={saving || Number(item.unpaidAmount || 0) <= 0}
+                      onClick={() => createSettlement(item)}
+                    >
+                      <Banknote size={15} /> Tạo đợt thanh toán
+                    </button>
+                  </article>
+                ))}
+              </div>
+
+              <div className="admin-settlement-batches">
+                <div className="admin-reward-card-head">
+                  <div><b>Lịch sử đợt thanh toán</b><span>Mỗi batch khóa chính xác các voucher thuộc đợt đó để không thanh toán trùng.</span></div>
+                </div>
+
+                {!settlements.batches.length ? (
+                  <div className="empty-state"><Banknote size={23} /><b>Chưa có đợt thanh toán</b></div>
+                ) : (
+                  <div className="admin-settlement-batch-list">
+                    {settlements.batches.map((item) => (
+                      <article key={item.id}>
+                        <span>
+                          <small>{item.partnerName} · SET #{item.id}</small>
+                          <b>{item.voucherCount} voucher · {formatMoney(item.amountTotal)}</b>
+                          <em>
+                            {formatDateTime(item.periodFrom)} → {formatDateTime(item.periodTo)}
+                            {item.note ? ' · ' + item.note : ''}
+                          </em>
+                        </span>
+                        <span>
+                          <small>Tạo lúc</small>
+                          <b>{formatDateTime(item.createdAt)}</b>
+                          {item.paidAt && <em>Thanh toán {formatDateTime(item.paidAt)}</em>}
+                        </span>
+                        <span className={'admin-settlement-status ' + String(item.status || '').toLowerCase()}>
+                          {item.status}
+                        </span>
+                        {item.status === 'PROCESSING' ? (
+                          <button
+                            type="button"
+                            className="primary-action"
+                            disabled={saving}
+                            onClick={() => markSettlementPaid(item)}
+                          >
+                            <CheckCircle2 size={15} /> Đã chuyển khoản
+                          </button>
+                        ) : (
+                          <span className="admin-redemption-done">
+                            {item.status === 'PAID' ? 'Đã thanh toán' : 'Đã đóng'}
+                          </span>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
           )}
 
           {tab === 'claims' && (

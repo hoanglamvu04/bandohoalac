@@ -4378,3 +4378,143 @@
     font-size:9px;
   }
 }
+
+
+/* ---------- Partner financial settlement admin ---------- */
+.admin-settlement-card{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  padding:15px;
+  border:1px solid #dfe8e4;
+  border-radius:18px;
+  background:#fff;
+}
+.admin-settlement-partners{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.admin-settlement-partner-row{
+  display:grid;
+  grid-template-columns:minmax(180px,1.35fr) repeat(3,minmax(110px,.72fr)) auto;
+  gap:10px;
+  align-items:center;
+  padding:11px;
+  border:1px solid #e2ebe7;
+  border-radius:13px;
+  background:#fafcfb;
+}
+.admin-settlement-partner-row>div{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.admin-settlement-partner-row small{
+  color:#84948e;
+  font-size:7px;
+  font-weight:900;
+}
+.admin-settlement-partner-row b{
+  overflow:hidden;
+  color:#234b3f;
+  font-size:10px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.admin-settlement-partner-row span{
+  color:#7a8c85;
+  font-size:8px;
+}
+.admin-settlement-partner-row strong{
+  color:#0b7654;
+  font-size:12px;
+}
+.admin-settlement-partner-row>div:nth-child(2) strong{color:#9b6818}
+.admin-settlement-batches{
+  overflow:hidden;
+  border:1px solid #e1eae6;
+  border-radius:14px;
+  background:#fbfcfc;
+}
+.admin-settlement-batches>.admin-reward-card-head{
+  padding:11px 12px;
+  border-bottom:1px solid #e7eeeb;
+}
+.admin-settlement-batch-list{
+  display:flex;
+  flex-direction:column;
+}
+.admin-settlement-batch-list article{
+  display:grid;
+  grid-template-columns:minmax(220px,1.4fr) minmax(170px,.75fr) auto auto;
+  gap:10px;
+  align-items:center;
+  padding:11px 12px;
+  border-bottom:1px solid #edf2ef;
+}
+.admin-settlement-batch-list article:last-child{border-bottom:0}
+.admin-settlement-batch-list article>span:not(.admin-settlement-status){
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.admin-settlement-batch-list small{
+  color:#81918b;
+  font-size:7px;
+}
+.admin-settlement-batch-list b{
+  color:#244c40;
+  font-size:9px;
+}
+.admin-settlement-batch-list em{
+  overflow:hidden;
+  color:#81918b;
+  font-size:7px;
+  font-style:normal;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.admin-settlement-status{
+  width:max-content;
+  padding:5px 8px;
+  border-radius:999px;
+  font-size:7px;
+  font-weight:950;
+}
+.admin-settlement-status.processing{color:#286e99;background:#e7f3fb}
+.admin-settlement-status.paid{color:#0d7856;background:#e4f6ed}
+.admin-settlement-status.cancelled{color:#8a554b;background:#f9e9e5}
+@media(max-width:1050px){
+  .admin-settlement-partner-row{
+    grid-template-columns:minmax(180px,1fr) repeat(3,minmax(100px,.7fr));
+  }
+  .admin-settlement-partner-row>.primary-action{
+    grid-column:1/-1;
+    width:max-content;
+  }
+}
+@media(max-width:760px){
+  .admin-settlement-card{padding:10px}
+  .admin-settlement-partner-row{
+    grid-template-columns:1fr 1fr;
+  }
+  .admin-settlement-partner-row>div:first-child{
+    grid-column:1/-1;
+  }
+  .admin-settlement-partner-row>.primary-action{
+    width:100%;
+  }
+  .admin-settlement-batch-list article{
+    grid-template-columns:minmax(0,1fr) auto;
+  }
+  .admin-settlement-batch-list article>span:nth-child(2){
+    display:none;
+  }
+  .admin-settlement-batch-list article>.primary-action,
+  .admin-settlement-batch-list article>.admin-redemption-done{
+    grid-column:1/-1;
+  }
+}

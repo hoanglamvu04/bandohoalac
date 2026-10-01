@@ -1183,3 +1183,57 @@
     flex:1;
   }
 }
+
+
+/* Financial partner voucher flow */
+.partner-scanner-partner-select{
+  display:flex;align-items:center;gap:7px;padding:5px 7px;border:1px solid #dfe9e5;border-radius:10px;background:#fff
+}
+.partner-scanner-partner-select span{color:#71847e;font-size:7px;font-weight:900;text-transform:uppercase}
+.partner-scanner-partner-select select{
+  max-width:210px;border:0;outline:0;background:transparent;color:#234c40;font-size:9px;font-weight:900
+}
+.partner-camera-off span{display:block;margin-top:4px;color:#83948f;font-size:8px}
+.partner-scan-money{
+  margin:8px 0 4px!important;color:#0c7654!important;font-size:30px!important;letter-spacing:-.03em
+}
+.partner-scan-finance{
+  display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0;padding:8px;border-radius:12px;background:#f3f8f5
+}
+.partner-scan-finance span{display:flex;flex-direction:column;gap:3px;padding:7px;border-radius:9px;background:#fff}
+.partner-scan-finance small{color:#81908b;font-size:7px!important}
+.partner-scan-finance b{color:#18483a;font-size:11px}
+.partner-reconciliation-summary.finance-summary{grid-template-columns:repeat(4,minmax(0,1fr))}
+.partner-reconciliation-summary.finance-summary article.unpaid{border-color:#f0d9aa;background:#fffaf0}
+.partner-reconciliation-summary.finance-summary article.unpaid>span{color:#9d6814;background:#fff0cf}
+.partner-reconciliation-summary.finance-summary article.paid>span{color:#0d7655;background:#e6f6ef}
+.partner-staff-performance strong,.partner-campaign-performance strong{height:auto;min-height:31px;padding:5px 8px;white-space:nowrap}
+.partner-settlement-history{overflow:hidden;border:1px solid #e1e9e5;border-radius:14px;background:#fbfcfc}
+.partner-settlement-history>header{min-height:40px;display:flex;align-items:center;gap:6px;padding:0 10px;border-bottom:1px solid #e8eeeb;color:#31584d}
+.partner-settlement-history>header b{font-size:9px}
+.partner-settlement-list{display:flex;flex-direction:column}
+.partner-settlement-list article{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,.7fr) auto;gap:10px;align-items:center;
+  padding:9px 10px;border-bottom:1px solid #edf1ef
+}
+.partner-settlement-list article:last-child{border-bottom:0}
+.partner-settlement-list article>div{min-width:0;display:flex;flex-direction:column;gap:2px}
+.partner-settlement-list b{color:#315249;font-size:9px}
+.partner-settlement-list small,.partner-settlement-list span{overflow:hidden;color:#84928e;font-size:7px;text-overflow:ellipsis;white-space:nowrap}
+.partner-settlement-list strong{color:#0d7655;font-size:10px;white-space:nowrap}
+.partner-settlement-status{justify-self:end;padding:5px 7px;border-radius:999px;font-size:6.5px!important;font-weight:950!important}
+.partner-settlement-status.unpaid{color:#97620e;background:#fff0cf}
+.partner-settlement-status.processing{color:#276b94;background:#e7f3fb}
+.partner-settlement-status.paid{color:#0d7655;background:#e5f6ee}
+@media(max-width:800px){
+  .partner-reconciliation-summary.finance-summary{grid-template-columns:1fr 1fr}
+  .partner-scanner-toolbar{align-items:flex-start;gap:8px;flex-direction:column}
+  .partner-scanner-partner-select{width:100%}
+  .partner-scanner-partner-select select{max-width:none;flex:1;font-size:16px}
+}
+@media(max-width:520px){
+  .partner-reconciliation-summary.finance-summary{grid-template-columns:1fr}
+  .partner-scan-finance{grid-template-columns:1fr}
+  .partner-settlement-list article{grid-template-columns:minmax(0,1fr) auto}
+  .partner-settlement-list article>div:nth-child(2){display:none}
+}

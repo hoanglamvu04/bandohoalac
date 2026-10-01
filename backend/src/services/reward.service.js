@@ -37,6 +37,9 @@ function mapCampaign(row) {
     title: row.title,
     description: row.description,
     voucherValueText: row.voucher_value_text,
+    voucherValueAmount: row.voucher_value_amount === null || row.voucher_value_amount === undefined
+      ? null
+      : Number(row.voucher_value_amount),
     terms: row.terms,
     pointsCost: Number(row.points_cost || 0),
     quantityTotal,
@@ -62,6 +65,12 @@ function mapRedemption(row) {
     campaignId: String(row.campaign_id),
     campaignTitle: row.campaign_title,
     voucherValueText: row.voucher_value_text || null,
+    voucherValueAmount: Number(row.voucher_face_value_amount || row.voucher_value_amount || 0) || null,
+    customerDiscountAmount: Number(row.customer_discount_amount || 0) || null,
+    partnerReceivableAmount: Number(row.partner_receivable_amount || 0) || null,
+    holaPayableAmount: Number(row.hola_payable_amount || 0) || null,
+    settlementStatus: row.settlement_status || null,
+    settlementBatchId: row.settlement_batch_id ? String(row.settlement_batch_id) : null,
     terms: row.terms || null,
     partnerId: row.partner_id ? String(row.partner_id) : null,
     partnerName: row.partner_name || row.place_name,
@@ -125,6 +134,7 @@ const REDEMPTION_SELECT = `
     vr.*,
     vc.title AS campaign_title,
     vc.voucher_value_text,
+    vc.voucher_value_amount,
     vc.terms,
     vc.ends_at AS campaign_ends_at,
     pp.id AS partner_id,
@@ -282,12 +292,12 @@ export async function getVoucherCampaignAdmin(id, client = pool) {
 export async function createVoucherCampaign(data, adminId) {
   const { rows } = await pool.query(
     `INSERT INTO voucher_campaigns (
-      partner_id, title, description, voucher_value_text, terms,
+      partner_id, title, description, voucher_value_text, voucher_value_amount, terms,
       points_cost, quantity_total, max_per_user, status,
       starts_at, ends_at, created_by, updated_by
     )
     SELECT
-      pp.id, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12
+      pp.id, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13
     FROM place_partners pp
     WHERE pp.id = $1
     RETURNING id`,
@@ -296,6 +306,7 @@ export async function createVoucherCampaign(data, adminId) {
       data.title,
       data.description || null,
       data.voucherValueText || null,
+      data.voucherValueAmount ?? null,
       data.terms || null,
       data.pointsCost,
       data.quantityTotal ?? null,
@@ -316,6 +327,7 @@ export async function updateVoucherCampaign(id, values, adminId) {
     title: 'title',
     description: 'description',
     voucherValueText: 'voucher_value_text',
+    voucherValueAmount: 'voucher_value_amount',
     terms: 'terms',
     pointsCost: 'points_cost',
     quantityTotal: 'quantity_total',
@@ -477,11 +489,20 @@ export async function redeemVoucherCampaign({ campaignId, userId }) {
       try {
         const result = await client.query(
           `INSERT INTO voucher_redemptions (
-             campaign_id, user_id, code, qr_token, points_spent, expires_at
+             campaign_id, user_id, code, qr_token, points_spent, expires_at,
+             voucher_face_value_amount
            )
-           VALUES ($1, $2, $3, $4, $5, $6)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
            RETURNING id`,
-          [campaignId, userId, code, qrToken, cost, campaign.ends_at || null]
+          [
+            campaignId,
+            userId,
+            code,
+            qrToken,
+            cost,
+            campaign.ends_at || null,
+            campaign.voucher_value_amount || null
+          ]
         );
         inserted = result.rows[0];
         break;
@@ -572,41 +593,64 @@ export async function listRedemptionsAdmin({ campaignId, status = 'ALL' } = {}) 
 
 export async function markVoucherRedeemed(id, actorUserId = null) {
   return withTransaction(async (client) => {
+    const voucherResult = await client.query(
+      `SELECT
+         vr.id,
+         vr.campaign_id,
+         vr.status,
+         vr.voucher_face_value_amount,
+         vc.partner_id,
+         vc.voucher_value_amount
+       FROM voucher_redemptions vr
+       JOIN voucher_campaigns vc ON vc.id = vr.campaign_id
+       WHERE vr.id = $1
+       FOR UPDATE OF vr`,
+      [id]
+    );
+    const voucher = voucherResult.rows[0];
+    if (!voucher || normalizeRedemptionStatus(voucher.status) !== 'ISSUED') {
+      throw new AppError('Voucher không tồn tại hoặc đã được xử lý.', 409);
+    }
+
+    const amount = Number(voucher.voucher_face_value_amount || voucher.voucher_value_amount || 0);
+    if (amount <= 0) {
+      throw new AppError('Voucher chưa có giá trị tiền để ghi nhận đối soát.', 409);
+    }
+
     const { rows } = await client.query(
       `UPDATE voucher_redemptions
        SET status = 'USED',
            used_at = COALESCE(used_at, NOW()),
            redeemed_at = COALESCE(redeemed_at, NOW()),
-           used_by_user_id = COALESCE(used_by_user_id, $2)
+           used_by_user_id = COALESCE(used_by_user_id, $2),
+           used_partner_id = COALESCE(used_partner_id, $3),
+           voucher_face_value_amount = COALESCE(voucher_face_value_amount, $4),
+           customer_discount_amount = $4,
+           partner_receivable_amount = $4,
+           hola_payable_amount = $4,
+           settlement_status = 'UNPAID',
+           settlement_batch_id = NULL
        WHERE id = $1
          AND status = 'ISSUED'
        RETURNING id, campaign_id`,
-      [id, actorUserId]
+      [id, actorUserId, voucher.partner_id, amount]
     );
 
     if (!rows[0]) {
       throw new AppError('Voucher không tồn tại hoặc đã được xử lý.', 409);
     }
 
-    const partnerResult = await client.query(
-      'SELECT partner_id FROM voucher_campaigns WHERE id = $1',
-      [rows[0].campaign_id]
-    );
-    const partnerId = partnerResult.rows[0]?.partner_id || null;
-
-    await client.query(
-      `UPDATE voucher_redemptions
-       SET used_partner_id = COALESCE(used_partner_id, $2)
-       WHERE id = $1`,
-      [id, partnerId]
-    );
+    const partnerId = voucher.partner_id;
 
     await client.query(
       `INSERT INTO voucher_redemption_events (
          redemption_id, event_type, actor_user_id, partner_id, metadata
        )
-       VALUES ($1, 'ADMIN_USED', $2, $3, '{}'::jsonb)`,
-      [id, actorUserId, partnerId]
+       VALUES (
+         $1, 'ADMIN_USED', $2, $3,
+         jsonb_build_object('voucherValueAmount', $4, 'settlementStatus', 'UNPAID')
+       )`,
+      [id, actorUserId, partnerId, amount]
     );
 
     return getRedemptionById(id, client);

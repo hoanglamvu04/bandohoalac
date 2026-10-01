@@ -14,17 +14,20 @@ export const reviewPlaceClaimSchema = z.object({
 
 export const partnerRedeemCodeSchema = z.object({
   code: z.string().trim().min(6).max(180),
-  qrToken: z.string().trim().min(12).max(120).nullable().optional()
+  qrToken: z.string().trim().min(12).max(120).nullable().optional(),
+  partnerId: z.coerce.number().int().positive().nullable().optional()
 });
 
 export const partnerVoucherInspectSchema = z.object({
   code: z.string().trim().min(6).max(180),
-  qrToken: z.string().trim().min(12).max(120).nullable().optional()
+  qrToken: z.string().trim().min(12).max(120).nullable().optional(),
+  partnerId: z.coerce.number().int().positive().nullable().optional()
 });
 
 export const partnerVoucherUseSchema = z.object({
   code: z.string().trim().min(6).max(180).nullable().optional(),
   qrToken: z.string().trim().min(12).max(120).nullable().optional(),
+  partnerId: z.coerce.number().int().positive().nullable().optional(),
   shiftId: z.coerce.number().int().positive().nullable().optional()
 });
 
