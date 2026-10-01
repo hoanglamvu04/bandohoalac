@@ -50,3 +50,9 @@ export const adminCreateVoucherSchema = z.object({
 }).superRefine(checkDates);
 
 export const adminUpdateVoucherSchema = z.object(voucherFields).superRefine(checkDates);
+
+
+export const adminCreateSettlementSchema = z.object({
+  partnerId: z.coerce.number().int().positive(),
+  note: z.string().trim().max(500).nullable().optional()
+});
