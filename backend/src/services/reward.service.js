@@ -446,7 +446,7 @@ export async function redeemVoucherCampaign({ campaignId, userId }) {
        FROM voucher_redemptions
        WHERE campaign_id = $1
          AND user_id = $2
-         AND status IN ('ISSUED', 'REDEEMED')`,
+         AND status IN ('ISSUED', 'USED', 'REDEEMED')`,
       [campaignId, userId]
     );
     if (Number(redeemedResult.rows[0]?.count || 0) >= Number(campaign.max_per_user || 1)) {
