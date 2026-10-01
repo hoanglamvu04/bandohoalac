@@ -496,11 +496,6 @@ export default function PartnerDashboard() {
   async function confirmVoucherUse() {
     if (!voucherPreview?.id || !voucherPreview?.valid || usingVoucher) return;
 
-    if (!window.confirm(
-      'Xác nhận voucher ' + voucherPreview.code + ' đã được sử dụng tại ' +
-      voucherPreview.placeName + '?'
-    )) return;
-
     setUsingVoucher(true);
     try {
       const item = await usePartnerVoucher(voucherPreview.id, {
@@ -712,6 +707,22 @@ export default function PartnerDashboard() {
           />
         </div>
 
+        <div className="partner-hardware-scanner-status">
+          <span className="partner-hardware-scanner-dot" />
+          <div>
+            <b>USB / Bluetooth Scanner sẵn sàng</b>
+            <small>
+              Máy quét chuẩn HID/keyboard chỉ cần quét mã rồi gửi Enter.
+              Không cần cài driver riêng trong Hola Maps.
+            </small>
+          </div>
+          {hardwareLastScan && (
+            <em title={hardwareLastScan}>
+              {parseVoucherPayload(hardwareLastScan).code || 'Đã nhận mã'}
+            </em>
+          )}
+        </div>
+
         {voucherPreview && (
           <article className={'partner-voucher-preview ' + (voucherPreview.valid ? 'valid' : 'invalid')}>
             <div className="partner-voucher-preview-status">
@@ -756,36 +767,127 @@ export default function PartnerDashboard() {
                 )}
               </div>
 
-              {voucherPreview.valid && (
-                <button
-                  className="primary-action partner-use-voucher"
-                  type="button"
-                  disabled={usingVoucher}
-                  onClick={confirmVoucherUse}
-                >
-                  <CheckCircle2 size={17} />
-                  {usingVoucher ? 'Đang xác nhận...' : 'Xác nhận đã sử dụng'}
-                </button>
-              )}
+              <div className="partner-voucher-preview-actions">
+                {scannerPaused && (
+                  <button
+                    className="secondary-action"
+                    type="button"
+                    disabled={usingVoucher}
+                    onClick={() => resumeScanner({ clearPreview: true })}
+                  >
+                    <ScanLine size={15} /> Quét mã tiếp
+                  </button>
+                )}
+
+                {voucherPreview.valid && (
+                  <button
+                    className="primary-action partner-use-voucher"
+                    type="button"
+                    disabled={usingVoucher}
+                    onClick={confirmVoucherUse}
+                  >
+                    <CheckCircle2 size={17} />
+                    {usingVoucher ? 'Đang xác nhận...' : 'Xác nhận đã sử dụng'}
+                  </button>
+                )}
+              </div>
             </footer>
           </article>
         )}
 
         {scannerOpen && (
           <div className="partner-scanner-modal">
-            <div className="partner-scanner-card">
+            <div className="partner-scanner-card partner-scanner-continuous">
               <div className="partner-scanner-head">
-                <span><Camera size={17} /> Đưa QR voucher vào khung</span>
-                <button type="button" onClick={stopScanner}>Đóng</button>
+                <span><Camera size={17} /> Máy quét voucher liên tục</span>
+                <div>
+                  <span className="partner-scanner-live">
+                    <i /> Camera đang bật
+                  </span>
+                  <button type="button" onClick={stopScanner}>Đóng</button>
+                </div>
               </div>
-              <div className="partner-scanner-video">
+
+              <div className={scannerPaused
+                ? 'partner-scanner-video paused'
+                : 'partner-scanner-video'}>
                 <video ref={videoRef} playsInline muted />
                 <span className="partner-scan-frame" />
+                <span className="partner-scan-status">
+                  {scannerPaused
+                    ? inspecting
+                      ? 'Đang kiểm tra voucher...'
+                      : voucherPreview
+                        ? 'Đã nhận QR'
+                        : 'Đang xử lý...'
+                    : 'Sẵn sàng quét'}
+                </span>
               </div>
+
+              {scannerPaused && (
+                <div className="partner-scanner-result">
+                  {inspecting && (
+                    <div className="partner-scanner-result-loading">
+                      <ScanLine size={20} />
+                      <b>Đang kiểm tra voucher...</b>
+                    </div>
+                  )}
+
+                  {!inspecting && voucherPreview && (
+                    <>
+                      <div className={voucherPreview.valid
+                        ? 'partner-scanner-result-status valid'
+                        : 'partner-scanner-result-status invalid'}>
+                        <span>
+                          {voucherPreview.valid
+                            ? <CheckCircle2 size={22} />
+                            : voucherPreview.status === 'USED'
+                              ? <TicketCheck size={22} />
+                              : <Clock3 size={22} />}
+                        </span>
+                        <div>
+                          <small>{statusLabel(voucherPreview.status)}</small>
+                          <b>{voucherPreview.voucherValueText || voucherPreview.campaignTitle}</b>
+                          <em>{voucherPreview.userName} · {voucherPreview.placeName}</em>
+                        </div>
+                      </div>
+
+                      <div className="partner-scanner-result-code">
+                        <span>Mã voucher</span>
+                        <b>{voucherPreview.code}</b>
+                      </div>
+
+                      <div className="partner-scanner-result-actions">
+                        <button
+                          className="secondary-action"
+                          type="button"
+                          disabled={usingVoucher}
+                          onClick={() => resumeScanner({ clearPreview: true })}
+                        >
+                          <ScanLine size={15} /> Bỏ qua / quét tiếp
+                        </button>
+
+                        {voucherPreview.valid && (
+                          <button
+                            className="primary-action"
+                            type="button"
+                            disabled={usingVoucher}
+                            onClick={confirmVoucherUse}
+                          >
+                            <CheckCircle2 size={16} />
+                            {usingVoucher ? 'Đang xác nhận...' : 'Xác nhận sử dụng'}
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               <p className="partner-scanner-help">
-                Giữ QR trong khung khoảng 1–2 giây. Hệ thống đọc QR bằng JavaScript nên
-                không phụ thuộc BarcodeDetector của trình duyệt. Voucher chỉ được kiểm tra,
-                chưa bị sử dụng ở bước này.
+                {scannerPaused
+                  ? 'Camera vẫn đang mở. Sau khi xác nhận hoặc bấm quét tiếp, hệ thống sẽ nhận voucher kế tiếp ngay.'
+                  : 'Đưa QR vào khung. Khi nhận mã, máy sẽ beep/rung và tạm khóa để tránh quét trùng. Không cần mở lại camera sau mỗi voucher.'}
               </p>
             </div>
           </div>
