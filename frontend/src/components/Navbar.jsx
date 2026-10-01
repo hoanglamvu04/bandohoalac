@@ -60,6 +60,11 @@ export default function Navbar() {
   const notificationRef = useRef(null);
   const mobileAccountRef = useRef(null);
 
+  const partnerMemberships = user?.partnerAccess?.memberships || [];
+  const isPartnerStaffOnly = partnerMemberships.length > 0
+    && partnerMemberships.every((membership) => membership.role === 'STAFF');
+  const partnerTarget = isPartnerStaffOnly ? '/partner/scanner' : '/partner';
+
   const isHome = location.pathname === '/';
   const params = new URLSearchParams(location.search);
   const regionId = params.get('region') || 'all';
@@ -266,8 +271,8 @@ export default function Navbar() {
           </NavLink>
         ))}
         {user?.partnerAccess?.hasAccess && (
-          <NavLink className="nav-link" to="/partner">
-            <Building2 size={16}/>Partner
+          <NavLink className="nav-link" to={partnerTarget}>
+            <Building2 size={16}/>{isPartnerStaffOnly ? 'Scanner' : 'Partner'}
           </NavLink>
         )}
                 {isModerator && (
@@ -410,9 +415,9 @@ export default function Navbar() {
                 Hồ sơ Explorer
               </Link>
               {user?.partnerAccess?.hasAccess && (
-                <Link to="/partner" onClick={() => setMobileAccountOpen(false)}>
+                <Link to={partnerTarget} onClick={() => setMobileAccountOpen(false)}>
                   <Building2 size={16} />
-                  Partner Portal
+                  {isPartnerStaffOnly ? 'Máy quét Partner' : 'Partner Portal'}
                 </Link>
               )}
               {isModerator && (
