@@ -240,3 +240,62 @@
     line-height: 1.5;
   }
 }
+
+
+/* ============================================================
+   Admin compact spacing pass
+   Keep the larger typography, remove the oversized whitespace.
+   ============================================================ */
+@media (min-width: 761px) {
+  .admin-page.page-container {
+    width: min(1480px, calc(100% - 32px));
+    padding-top: 26px;
+    padding-bottom: 64px;
+    gap: 16px;
+  }
+
+  .admin-page > .section-heading {
+    margin-bottom: 0;
+  }
+
+  .admin-places-heading {
+    align-items: flex-end;
+    gap: 16px;
+  }
+
+  .admin-places-heading h2 {
+    margin-top: 5px;
+  }
+
+  .admin-places-heading p {
+    margin-top: 4px;
+  }
+
+  .admin-places-layout {
+    grid-template-columns: 360px minmax(0, 1fr);
+    gap: 14px;
+    min-height: 680px;
+  }
+
+  .admin-place-browser {
+    padding: 10px;
+  }
+
+  .admin-place-editor {
+    padding: 18px;
+  }
+
+  .admin-place-form-grid {
+    margin-top: 14px;
+  }
+
+  .admin-place-location,
+  .admin-place-images {
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+
+  .admin-place-save-row {
+    margin-top: 14px;
+  }
+}
