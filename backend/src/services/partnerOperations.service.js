@@ -113,8 +113,12 @@ export async function getPartnerScannerState(userId) {
          vr.id,
          vr.code,
          COALESCE(vr.used_at, vr.redeemed_at) AS used_at,
+         vr.voucher_face_value_amount,
+         vr.partner_receivable_amount,
+         vr.settlement_status,
          vc.title AS campaign_title,
          vc.voucher_value_text,
+         vc.voucher_value_amount,
          COALESCE(pp.partner_name, p.name) AS partner_name,
          p.name AS place_name,
          customer.name AS customer_name,
@@ -144,6 +148,9 @@ export async function getPartnerScannerState(userId) {
       usedAt: row.used_at,
       campaignTitle: row.campaign_title,
       voucherValueText: row.voucher_value_text || null,
+      voucherValueAmount: Number(row.voucher_face_value_amount || row.voucher_value_amount || 0) || null,
+      partnerReceivableAmount: Number(row.partner_receivable_amount || 0) || null,
+      settlementStatus: row.settlement_status || null,
       partnerName: row.partner_name,
       placeName: row.place_name,
       customerName: row.customer_name,
@@ -153,6 +160,8 @@ export async function getPartnerScannerState(userId) {
   };
 }
 
+// Shifts are kept as optional operational metadata for existing clients.
+// They are no longer required to scan or confirm a financial voucher.
 export async function startPartnerShift({ userId, partnerId }) {
   return withTransaction(async (client) => {
     const access = await accessForPartner(userId, partnerId, client);
@@ -178,10 +187,7 @@ export async function startPartnerShift({ userId, partnerId }) {
       [partnerId, userId]
     );
 
-    const details = await client.query(
-      SHIFT_SELECT + ' WHERE ps.id = $1',
-      [inserted.rows[0].id]
-    );
+    const details = await client.query(SHIFT_SELECT + ' WHERE ps.id = $1', [inserted.rows[0].id]);
     return mapShift(details.rows[0]);
   });
 }
@@ -202,18 +208,13 @@ export async function endPartnerShift({ userId, shiftId }) {
     if (shift.status === 'OPEN') {
       await client.query(
         `UPDATE partner_shifts
-         SET status = 'CLOSED',
-             ended_at = NOW(),
-             updated_at = NOW()
+         SET status = 'CLOSED', ended_at = NOW(), updated_at = NOW()
          WHERE id = $1`,
         [shiftId]
       );
     }
 
-    const result = await client.query(
-      SHIFT_SELECT + ' WHERE ps.id = $1',
-      [shiftId]
-    );
+    const result = await client.query(SHIFT_SELECT + ' WHERE ps.id = $1', [shiftId]);
     return mapShift(result.rows[0]);
   });
 }
@@ -233,9 +234,17 @@ export async function getPartnerReconciliation({
       hasOwnerAccess: false,
       period,
       partners: [],
-      summary: { vouchersUsed: 0, staffCount: 0, shiftsCount: 0 },
+      summary: {
+        vouchersUsed: 0,
+        staffCount: 0,
+        totalPayable: 0,
+        unpaidAmount: 0,
+        processingAmount: 0,
+        paidAmount: 0
+      },
       byStaff: [],
       byCampaign: [],
+      recentTransactions: [],
       shifts: []
     };
   }
@@ -256,10 +265,15 @@ export async function getPartnerReconciliation({
       ? "NOW() - INTERVAL '7 days'"
       : "NOW() - INTERVAL '30 days'";
 
+  const amountSql = 'COALESCE(vr.partner_receivable_amount, vr.voucher_face_value_amount, vc.voucher_value_amount, 0)';
+
   const summarySql = `SELECT
      COUNT(*) FILTER (WHERE vr.status IN ('USED', 'REDEEMED'))::int AS vouchers_used,
      COUNT(DISTINCT vr.used_by_user_id) FILTER (WHERE vr.used_by_user_id IS NOT NULL)::int AS staff_count,
-     COUNT(DISTINCT vr.used_shift_id) FILTER (WHERE vr.used_shift_id IS NOT NULL)::int AS shifts_count
+     COALESCE(SUM(${amountSql}) FILTER (WHERE vr.status IN ('USED', 'REDEEMED')), 0)::bigint AS total_payable,
+     COALESCE(SUM(${amountSql}) FILTER (WHERE vr.settlement_status = 'UNPAID'), 0)::bigint AS unpaid_amount,
+     COALESCE(SUM(${amountSql}) FILTER (WHERE vr.settlement_status = 'PROCESSING'), 0)::bigint AS processing_amount,
+     COALESCE(SUM(${amountSql}) FILTER (WHERE vr.settlement_status = 'PAID'), 0)::bigint AS paid_amount
    FROM voucher_redemptions vr
    JOIN voucher_campaigns vc ON vc.id = vr.campaign_id
    WHERE vc.partner_id = ANY($1::bigint[])
@@ -269,6 +283,7 @@ export async function getPartnerReconciliation({
      vr.used_by_user_id AS user_id,
      COALESCE(u.name, 'Không xác định') AS user_name,
      COUNT(*)::int AS vouchers_used,
+     COALESCE(SUM(${amountSql}), 0)::bigint AS amount_total,
      MIN(COALESCE(vr.used_at, vr.redeemed_at)) AS first_used_at,
      MAX(COALESCE(vr.used_at, vr.redeemed_at)) AS last_used_at
    FROM voucher_redemptions vr
@@ -278,20 +293,45 @@ export async function getPartnerReconciliation({
      AND vr.status IN ('USED', 'REDEEMED')
      AND COALESCE(vr.used_at, vr.redeemed_at) >= ` + sinceSql + `
    GROUP BY vr.used_by_user_id, u.name
-   ORDER BY vouchers_used DESC, user_name ASC`;
+   ORDER BY amount_total DESC, vouchers_used DESC, user_name ASC`;
 
   const campaignSql = `SELECT
      vc.id AS campaign_id,
      vc.title,
      vc.voucher_value_text,
-     COUNT(*)::int AS vouchers_used
+     vc.voucher_value_amount,
+     COUNT(*)::int AS vouchers_used,
+     COALESCE(SUM(${amountSql}), 0)::bigint AS amount_total,
+     COALESCE(SUM(${amountSql}) FILTER (WHERE vr.settlement_status = 'UNPAID'), 0)::bigint AS unpaid_amount
    FROM voucher_redemptions vr
    JOIN voucher_campaigns vc ON vc.id = vr.campaign_id
    WHERE vc.partner_id = ANY($1::bigint[])
      AND vr.status IN ('USED', 'REDEEMED')
      AND COALESCE(vr.used_at, vr.redeemed_at) >= ` + sinceSql + `
-   GROUP BY vc.id, vc.title, vc.voucher_value_text
-   ORDER BY vouchers_used DESC, vc.title ASC`;
+   GROUP BY vc.id, vc.title, vc.voucher_value_text, vc.voucher_value_amount
+   ORDER BY amount_total DESC, vouchers_used DESC, vc.title ASC`;
+
+  const recentSql = `SELECT
+     vr.id,
+     vr.code,
+     COALESCE(vr.used_at, vr.redeemed_at) AS used_at,
+     vr.settlement_status,
+     ${amountSql} AS amount,
+     vc.title AS campaign_title,
+     COALESCE(pp.partner_name, p.name) AS partner_name,
+     customer.name AS customer_name,
+     cashier.name AS cashier_name
+   FROM voucher_redemptions vr
+   JOIN voucher_campaigns vc ON vc.id = vr.campaign_id
+   JOIN place_partners pp ON pp.id = vc.partner_id
+   JOIN places p ON p.id = pp.place_id
+   JOIN users customer ON customer.id = vr.user_id
+   LEFT JOIN users cashier ON cashier.id = vr.used_by_user_id
+   WHERE vc.partner_id = ANY($1::bigint[])
+     AND vr.status IN ('USED', 'REDEEMED')
+     AND COALESCE(vr.used_at, vr.redeemed_at) >= ` + sinceSql + `
+   ORDER BY COALESCE(vr.used_at, vr.redeemed_at) DESC
+   LIMIT 60`;
 
   const shiftSql = SHIFT_SELECT +
     ` WHERE ps.partner_id = ANY($1::bigint[])
@@ -299,10 +339,11 @@ export async function getPartnerReconciliation({
       ORDER BY ps.started_at DESC
       LIMIT 100`;
 
-  const [summaryResult, staffResult, campaignResult, shiftResult] = await Promise.all([
+  const [summaryResult, staffResult, campaignResult, recentResult, shiftResult] = await Promise.all([
     pool.query(summarySql, [partnerIds]),
     pool.query(staffSql, [partnerIds]),
     pool.query(campaignSql, [partnerIds]),
+    pool.query(recentSql, [partnerIds]),
     pool.query(shiftSql, [partnerIds])
   ]);
 
@@ -318,12 +359,16 @@ export async function getPartnerReconciliation({
     summary: {
       vouchersUsed: Number(raw.vouchers_used || 0),
       staffCount: Number(raw.staff_count || 0),
-      shiftsCount: Number(raw.shifts_count || 0)
+      totalPayable: Number(raw.total_payable || 0),
+      unpaidAmount: Number(raw.unpaid_amount || 0),
+      processingAmount: Number(raw.processing_amount || 0),
+      paidAmount: Number(raw.paid_amount || 0)
     },
     byStaff: staffResult.rows.map((row) => ({
       userId: row.user_id ? String(row.user_id) : null,
       userName: row.user_name,
       vouchersUsed: Number(row.vouchers_used || 0),
+      amountTotal: Number(row.amount_total || 0),
       firstUsedAt: row.first_used_at,
       lastUsedAt: row.last_used_at
     })),
@@ -331,7 +376,21 @@ export async function getPartnerReconciliation({
       campaignId: String(row.campaign_id),
       title: row.title,
       voucherValueText: row.voucher_value_text || null,
-      vouchersUsed: Number(row.vouchers_used || 0)
+      voucherValueAmount: Number(row.voucher_value_amount || 0) || null,
+      vouchersUsed: Number(row.vouchers_used || 0),
+      amountTotal: Number(row.amount_total || 0),
+      unpaidAmount: Number(row.unpaid_amount || 0)
+    })),
+    recentTransactions: recentResult.rows.map((row) => ({
+      id: String(row.id),
+      code: row.code,
+      usedAt: row.used_at,
+      settlementStatus: row.settlement_status || 'UNPAID',
+      amount: Number(row.amount || 0),
+      campaignTitle: row.campaign_title,
+      partnerName: row.partner_name,
+      customerName: row.customer_name,
+      cashierName: row.cashier_name || null
     })),
     shifts: shiftResult.rows.map(mapShift)
   };
