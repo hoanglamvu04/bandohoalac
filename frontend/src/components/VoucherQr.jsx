@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 
-export default function VoucherQr({ code, size = 160 }) {
+export default function VoucherQr({ code, token, size = 160 }) {
   const [src, setSrc] = useState('');
 
   useEffect(() => {
@@ -11,7 +11,11 @@ export default function VoucherQr({ code, size = 160 }) {
       return undefined;
     }
 
-    QRCode.toDataURL('HOLA-VOUCHER:' + code, {
+    const payload = token
+      ? 'HOLA-VOUCHER:' + code + ':' + token
+      : 'HOLA-VOUCHER:' + code;
+
+    QRCode.toDataURL(payload, {
       width: size,
       margin: 1,
       errorCorrectionLevel: 'M'
@@ -26,7 +30,7 @@ export default function VoucherQr({ code, size = 160 }) {
     return () => {
       active = false;
     };
-  }, [code, size]);
+  }, [code, token, size]);
 
   if (!src) {
     return <div className="voucher-qr-placeholder">QR</div>;
