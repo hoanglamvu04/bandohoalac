@@ -23,6 +23,7 @@ import rewardsRoutes from './routes/rewards.routes.js';
 import missionsRoutes from './routes/missions.routes.js';
 import placeClaimsRoutes from './routes/placeClaims.routes.js';
 import partnerPortalRoutes from './routes/partnerPortal.routes.js';
+import brandRoutes from './routes/brand.routes.js';
 
 export function createApp() {
   const app = express();
@@ -58,6 +59,7 @@ export function createApp() {
   app.use('/api/missions', missionsRoutes);
   app.use('/api/place-claims', placeClaimsRoutes);
   app.use('/api/partner', partnerPortalRoutes);
+  app.use('/api/brand', brandRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
