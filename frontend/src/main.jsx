@@ -32,6 +32,7 @@ import './mobile-final-pass.css';
 import './brand-management.css';
 import './admin-control-center.css';
 import './profile-white-dashboard.css';
+import './partner-scanner.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
