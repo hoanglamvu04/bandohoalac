@@ -1,4 +1,4 @@
-import { Home, Map, Plus, ShieldCheck, Trophy, UserRound } from 'lucide-react';
+import { Building2, Home, Map, Plus, ShieldCheck, Trophy, UserRound } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -9,7 +9,11 @@ export default function BottomNav() {
     ['/', 'Trang chủ', Home],
     ['/map', 'Bản đồ', Map],
     ['/contribute', 'Đóng góp', Plus],
-    isModerator ? ['/admin', 'Admin', ShieldCheck] : ['/leaderboard', 'Xếp hạng', Trophy],
+    isModerator
+      ? ['/admin', 'Admin', ShieldCheck]
+      : user?.partnerAccess?.hasAccess
+        ? ['/partner', 'Partner', Building2]
+        : ['/leaderboard', 'Xếp hạng', Trophy],
     [user ? '/profile' : '/login', user ? 'Tôi' : 'Đăng nhập', UserRound]
   ];
 
