@@ -10,7 +10,7 @@ import { getBrandSettings } from '../services/api.js';
 
 const DEFAULT_BRAND = {
   headerLogoUrl: '/logo.svg?v=20260929-2',
-  compactLogoUrl: '/logo.svg?v=20260929-2',
+  compactLogoUrl: '/pwa-icon.svg',
   footerLogoUrl: '/logo.svg?v=20260929-2',
   faviconUrl: '/pwa-icon.svg',
   headerLogoDesktopWidth: 198,
