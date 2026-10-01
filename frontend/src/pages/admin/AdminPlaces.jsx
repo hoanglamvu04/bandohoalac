@@ -549,6 +549,7 @@ export default function AdminPlaces() {
                 <div className="admin-place-images-head">
                   <div>
                     <b>Ảnh địa điểm</b>
+                    <small>Tối đa 20 ảnh mỗi lần tải lên</small>
                     <span>
                       {creating
                         ? (photos.length ? photos.length + ' ảnh đã chọn' : 'Chưa chọn ảnh')
@@ -562,7 +563,7 @@ export default function AdminPlaces() {
                       type="file"
                       multiple
                       accept="image/png,image/jpeg,image/webp"
-                      onChange={(event) => setPhotos(Array.from(event.target.files || []).slice(0, 8))}
+                      onChange={(event) => setPhotos(Array.from(event.target.files || []).slice(0, 20))}
                     />
                   </label>
                 </div>
