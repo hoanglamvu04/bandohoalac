@@ -55,6 +55,7 @@ const EMPTY_VOUCHER = {
   title: '',
   description: '',
   voucherValueText: '',
+  voucherValueAmount: 50000,
   terms: '',
   pointsCost: 1000,
   quantityTotal: '',
@@ -222,6 +223,7 @@ export default function AdminPartnersRewards() {
       title: item.title || '',
       description: item.description || '',
       voucherValueText: item.voucherValueText || '',
+      voucherValueAmount: item.voucherValueAmount || 50000,
       terms: item.terms || '',
       pointsCost: item.pointsCost || 1000,
       quantityTotal: item.quantityTotal ?? '',
@@ -244,6 +246,7 @@ export default function AdminPartnersRewards() {
       title: voucherForm.title.trim(),
       description: voucherForm.description.trim() || null,
       voucherValueText: voucherForm.voucherValueText.trim() || null,
+      voucherValueAmount: Number(voucherForm.voucherValueAmount || 0) || null,
       terms: voucherForm.terms.trim() || null,
       pointsCost: Number(voucherForm.pointsCost),
       quantityTotal: voucherForm.quantityTotal === '' ? null : Number(voucherForm.quantityTotal),
@@ -511,7 +514,10 @@ export default function AdminPartnersRewards() {
                   </select>
                 </label>
                 <label>Tên chiến dịch<input value={voucherForm.title} onChange={(e) => setVoucherForm((c) => ({ ...c, title: e.target.value }))} placeholder="Đổi 1.000 điểm - giảm 50.000đ" /></label>
-                <label>Giá trị voucher<input value={voucherForm.voucherValueText} onChange={(e) => setVoucherForm((c) => ({ ...c, voucherValueText: e.target.value }))} placeholder="Giảm 50.000đ hóa đơn từ 200.000đ" /></label>
+                <div className="admin-partner-form-row">
+                  <label>Hola Map hoàn đối tác (VND)<input type="number" min="1" step="1000" value={voucherForm.voucherValueAmount} onChange={(e) => setVoucherForm((c) => ({ ...c, voucherValueAmount: e.target.value }))} placeholder="50000" /></label>
+                  <label>Cách hiển thị ưu đãi<input value={voucherForm.voucherValueText} onChange={(e) => setVoucherForm((c) => ({ ...c, voucherValueText: e.target.value }))} placeholder="Giảm 50.000đ hóa đơn từ 200.000đ" /></label>
+                </div>
                 <label>Mô tả<textarea rows="3" value={voucherForm.description} onChange={(e) => setVoucherForm((c) => ({ ...c, description: e.target.value }))} /></label>
                 <div className="admin-partner-form-row">
                   <label>Điểm cần đổi<input type="number" min="1" value={voucherForm.pointsCost} onChange={(e) => setVoucherForm((c) => ({ ...c, pointsCost: e.target.value }))} /></label>
