@@ -3775,3 +3775,277 @@
     height:38px;
   }
 }
+
+
+
+/* ---------- Admin user partner access ---------- */
+.admin-user-form-note{
+  margin:-2px 0 2px;
+  color:#758781;
+  font-size:9px;
+  line-height:1.5;
+}
+
+.admin-user-meta .role.partner{
+  color:#0b7656;
+  background:#e7f6ef;
+}
+
+.admin-user-partner-access{
+  display:flex;
+  flex-direction:column;
+  gap:11px;
+  margin-top:14px;
+  padding:14px;
+  border:1px solid #d7e7df;
+  border-radius:16px;
+  background:linear-gradient(145deg,#fcfffd,#f3faf7);
+}
+
+.admin-user-partner-head{
+  display:grid;
+  grid-template-columns:42px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+}
+
+.admin-user-partner-head>span{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  border-radius:13px;
+  color:#0e7b59;
+  background:#e5f6ee;
+}
+
+.admin-user-partner-head h3{
+  margin:0;
+  color:#163d33;
+  font-size:13px;
+}
+
+.admin-user-partner-head p{
+  margin:3px 0 0;
+  color:#758982;
+  font-size:8.5px;
+  line-height:1.45;
+}
+
+.admin-user-partner-head>b{
+  min-width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+  color:#0b7252;
+  background:#e8f6f0;
+  font-size:10px;
+}
+
+.admin-partner-access-assign{
+  display:grid;
+  grid-template-columns:minmax(0,1.45fr) minmax(150px,.7fr) auto;
+  gap:8px;
+  align-items:end;
+  padding:10px;
+  border:1px solid #deebe5;
+  border-radius:13px;
+  background:#fff;
+}
+
+.admin-partner-access-assign label,
+.admin-user-partner-row label{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  color:#526861;
+  font-size:8px;
+  font-weight:850;
+}
+
+.admin-partner-access-assign select,
+.admin-user-partner-row select{
+  width:100%;
+  min-height:38px;
+  padding:0 9px;
+  border:1px solid #d8e5df;
+  border-radius:9px;
+  outline:none;
+  background:#fff;
+  font-size:9px;
+  font-weight:750;
+}
+
+.admin-partner-access-assign .primary-action{
+  min-height:38px;
+  padding:0 12px;
+  white-space:nowrap;
+}
+
+.admin-user-partner-list{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+}
+
+.admin-user-partner-empty{
+  min-height:108px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  border:1px dashed #d4e4dc;
+  border-radius:13px;
+  color:#81938c;
+  background:#fff;
+  text-align:center;
+}
+
+.admin-user-partner-empty b{
+  color:#35584e;
+  font-size:10px;
+}
+
+.admin-user-partner-empty span{
+  font-size:8px;
+}
+
+.admin-user-partner-row{
+  display:grid;
+  grid-template-columns:40px minmax(0,1fr) 90px 104px 30px;
+  gap:8px;
+  align-items:center;
+  padding:9px;
+  border:1px solid #dfe9e4;
+  border-radius:13px;
+  background:#fff;
+}
+
+.admin-user-partner-row.inactive{
+  opacity:.66;
+  background:#f6f8f7;
+}
+
+.admin-user-partner-icon{
+  width:40px;
+  height:40px;
+  display:grid;
+  place-items:center;
+  border-radius:12px;
+  color:#0d7757;
+  background:#e9f7f1;
+}
+
+.admin-user-partner-copy{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.admin-user-partner-copy small{
+  color:#0d7857;
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.03em;
+}
+
+.admin-user-partner-copy b{
+  overflow:hidden;
+  color:#173e34;
+  font-size:10px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.admin-user-partner-copy span{
+  overflow:hidden;
+  color:#7c8d87;
+  font-size:8px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.admin-user-partner-row>a{
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  border:1px solid #d8e5df;
+  border-radius:9px;
+  color:#0c7555;
+  background:#f7fbf9;
+}
+
+@media(max-width:900px){
+  .admin-partner-access-assign{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .admin-partner-access-assign .primary-action{
+    grid-column:1/-1;
+  }
+
+  .admin-user-partner-row{
+    grid-template-columns:40px minmax(0,1fr) 88px 98px;
+  }
+
+  .admin-user-partner-row>a{
+    display:none;
+  }
+}
+
+@media(max-width:760px){
+  .admin-user-partner-access{
+    padding:11px;
+  }
+
+  .admin-user-partner-head{
+    grid-template-columns:38px minmax(0,1fr) auto;
+  }
+
+  .admin-user-partner-head>span{
+    width:38px;
+    height:38px;
+  }
+
+  .admin-user-partner-head h3{
+    font-size:12px;
+  }
+
+  .admin-user-partner-head p{
+    font-size:9px;
+  }
+
+  .admin-partner-access-assign{
+    grid-template-columns:1fr;
+  }
+
+  .admin-partner-access-assign .primary-action{
+    grid-column:auto;
+  }
+
+  .admin-partner-access-assign select,
+  .admin-user-partner-row select{
+    font-size:16px;
+  }
+
+  .admin-user-partner-row{
+    grid-template-columns:38px minmax(0,1fr);
+    gap:8px;
+  }
+
+  .admin-user-partner-row label{
+    grid-column:1/-1;
+  }
+
+  .admin-user-partner-copy b{
+    font-size:11px;
+  }
+
+  .admin-user-partner-copy span{
+    font-size:9px;
+  }
+}
