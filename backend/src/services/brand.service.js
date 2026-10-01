@@ -104,7 +104,7 @@ function mapSettings(row) {
     footerLogo,
     favicon,
     headerLogoUrl: headerLogo?.url || '/logo.svg?v=20260929-2',
-    compactLogoUrl: compactLogo?.url || headerLogo?.url || '/logo.svg?v=20260929-2',
+    compactLogoUrl: compactLogo?.url || '/pwa-icon.svg',
     footerLogoUrl: footerLogo?.url || '/logo.svg?v=20260929-2',
     faviconUrl: favicon?.url || '/pwa-icon.svg',
     headerLogoDesktopWidth: Number(row?.header_logo_desktop_width || DEFAULTS.headerLogoDesktopWidth),
