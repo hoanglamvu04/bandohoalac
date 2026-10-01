@@ -595,6 +595,14 @@ export async function usePartnerVoucher({
 
     if (!row) throw new AppError('Không tìm thấy voucher.', 404);
 
+    if (!parsed.code && !parsed.qrToken) {
+      throw new AppError('Cần mã voucher hoặc QR hợp lệ để xác nhận sử dụng.', 400);
+    }
+
+    if (parsed.code && parsed.code !== String(row.code || '').toUpperCase()) {
+      throw new AppError('Mã voucher không khớp với lượt xác nhận này.', 409);
+    }
+
     const access = await accessForPartner(userId, row.partner_id, client);
     if (!access) {
       throw new AppError('Bạn không có quyền xác nhận voucher của đối tác này.', 403);
@@ -709,26 +717,6 @@ export async function addPartnerStaff({
     );
 
     const membership = rows[0];
-
-    await client.query(
-      `INSERT INTO voucher_redemption_events (
-         redemption_id, event_type, actor_user_id, partner_id, metadata
-       )
-       SELECT vr.id, 'STAFF_GRANTED', $1, $2, $3::jsonb
-       FROM voucher_redemptions vr
-       JOIN voucher_campaigns vc ON vc.id = vr.campaign_id
-       WHERE vc.partner_id = $2
-       ORDER BY vr.id DESC
-       LIMIT 1`,
-      [
-        userId,
-        partnerId,
-        JSON.stringify({
-          staffUserId: String(staffUser.id),
-          staffEmail: staffUser.email
-        })
-      ]
-    ).catch(() => {});
 
     return {
       id: String(membership.id),
