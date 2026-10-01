@@ -2,12 +2,13 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import {
   addPartnerStaff,
   getPartnerDashboard,
-  inspectPartnerVoucher,
-  redeemPartnerVoucherByCode,
   updateManagedPlace,
-  updatePartnerStaffStatus,
-  usePartnerVoucher
+  updatePartnerStaffStatus
 } from '../services/partnerPortal.service.js';
+import {
+  inspectFinancialPartnerVoucher,
+  useFinancialPartnerVoucher
+} from '../services/partnerFinance.service.js';
 import {
   auditContextFromRequest,
   writeAuditLog
@@ -25,21 +26,23 @@ export const getDashboard = asyncHandler(async (req, res) => {
 });
 
 export const inspectVoucherCode = asyncHandler(async (req, res) => {
-  const item = await inspectPartnerVoucher({
+  const item = await inspectFinancialPartnerVoucher({
     userId: req.user.id,
     code: req.body.code,
-    qrToken: req.body.qrToken || null
+    qrToken: req.body.qrToken || null,
+    partnerId: req.body.partnerId || null
   });
 
   res.json(item);
 });
 
 export const useVoucher = asyncHandler(async (req, res) => {
-  const item = await usePartnerVoucher({
+  const item = await useFinancialPartnerVoucher({
     userId: req.user.id,
     redemptionId: Number(req.params.id),
     code: req.body.code || null,
     qrToken: req.body.qrToken || null,
+    partnerId: req.body.partnerId || null,
     shiftId: req.body.shiftId || null
   });
 
@@ -63,9 +66,11 @@ export const useVoucher = asyncHandler(async (req, res) => {
 
 // Backward-compatible endpoint for older clients.
 export const redeemVoucherCode = asyncHandler(async (req, res) => {
-  const item = await redeemPartnerVoucherByCode({
+  const item = await useFinancialPartnerVoucher({
     userId: req.user.id,
-    code: req.body.code
+    code: req.body.code,
+    qrToken: req.body.qrToken || null,
+    partnerId: req.body.partnerId || null
   });
 
   await writeAuditLog({
