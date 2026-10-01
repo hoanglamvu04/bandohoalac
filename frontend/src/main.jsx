@@ -31,6 +31,7 @@ import './mobile-admin-places.css';
 import './mobile-final-pass.css';
 import './brand-management.css';
 import './admin-control-center.css';
+import './profile-white-dashboard.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
