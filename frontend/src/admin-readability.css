@@ -1,0 +1,242 @@
+/* ============================================================
+   Admin readability pass
+   Desktop admin used to run many labels/badges at 8-11px.
+   Keep the dense layout, but raise the readable floor.
+   ============================================================ */
+
+@media (min-width: 761px) {
+  .admin-page {
+    font-size: 14px;
+  }
+
+  .admin-page .eyebrow,
+  .admin-control-center .eyebrow {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .admin-page .section-heading p,
+  .admin-places-heading p {
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .admin-page label {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .admin-page input,
+  .admin-page select,
+  .admin-page textarea {
+    font-size: 14px;
+  }
+
+  .admin-page button,
+  .admin-page .primary-action,
+  .admin-page .secondary-action {
+    font-size: 13px;
+  }
+
+  .admin-page small {
+    font-size: 11px;
+  }
+
+  .admin-status-tabs button {
+    min-height: 38px;
+    padding: 0 15px;
+    font-size: 13px;
+  }
+
+  .admin-stat-card span {
+    font-size: 13px;
+  }
+
+  .admin-hero p {
+    font-size: 14px;
+  }
+
+  .admin-place-search input {
+    font-size: 15px;
+  }
+
+  .admin-place-row {
+    min-height: 66px;
+    gap: 10px;
+    padding: 8px;
+  }
+
+  .admin-place-row small {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+
+  .admin-place-row b {
+    font-size: 14px;
+    line-height: 1.25;
+  }
+
+  .admin-place-row em {
+    font-size: 13px;
+    line-height: 1.3;
+  }
+
+  .admin-place-row strong {
+    font-size: 13px;
+  }
+
+  .admin-place-editor-head .eyebrow {
+    font-size: 12px;
+  }
+
+  .admin-place-editor-head h2 {
+    font-size: 26px;
+  }
+
+  .admin-archive-button {
+    min-height: 38px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+
+  .admin-place-form-grid {
+    gap: 14px;
+  }
+
+  .admin-place-form-grid label,
+  .admin-coordinate-grid label {
+    gap: 7px;
+    font-size: 13px;
+  }
+
+  .admin-place-form-grid input,
+  .admin-place-form-grid select,
+  .admin-place-form-grid textarea,
+  .admin-coordinate-grid input,
+  .admin-coordinate-paste input {
+    min-height: 44px;
+    padding: 11px 13px;
+    font-size: 14px;
+  }
+
+  .admin-place-form-grid textarea {
+    line-height: 1.55;
+  }
+
+  .admin-place-location b,
+  .admin-place-images-head b {
+    font-size: 15px;
+  }
+
+  .admin-place-location span,
+  .admin-place-images-head span,
+  .admin-place-images-head small {
+    font-size: 12px;
+  }
+
+  .admin-coordinate-badge {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 11px !important;
+  }
+
+  .admin-coordinate-paste button {
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .admin-coordinate-note {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .admin-image-picker {
+    min-height: 40px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .admin-place-selected-photos b {
+    font-size: 13px;
+  }
+
+  .admin-place-selected-photos span {
+    font-size: 11px !important;
+  }
+
+  .admin-place-selected-photos button {
+    font-size: 12px;
+  }
+
+  .admin-place-save-row .primary-action,
+  .admin-place-save-row .secondary-action {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  /* Generic admin lists / cards / tables */
+  .admin-page table th {
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  .admin-page table td {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .admin-page article p,
+  .admin-page article span {
+    line-height: 1.45;
+  }
+
+  /* Admin control center */
+  .admin-control-kicker {
+    font-size: 11px;
+  }
+
+  .admin-control-hero-copy > p {
+    font-size: 15px;
+  }
+
+  .admin-control-hero-meta > span {
+    font-size: 12px;
+  }
+
+  .admin-control-focus-card small {
+    font-size: 11px;
+  }
+
+  .admin-control-focus-card > div > span {
+    font-size: 13px;
+  }
+
+  .admin-control-overview small {
+    font-size: 12px;
+  }
+
+  .admin-control-overview em {
+    font-size: 11px;
+  }
+
+  .admin-control-section-head p {
+    font-size: 13px;
+  }
+
+  .admin-control-module-count {
+    font-size: 11px;
+  }
+
+  .admin-control-module-title b {
+    font-size: 15px;
+  }
+
+  .admin-control-module-title em {
+    font-size: 10px;
+  }
+
+  .admin-control-module-copy > small {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+}

@@ -33,6 +33,7 @@ import './brand-management.css';
 import './admin-control-center.css';
 import './profile-white-dashboard.css';
 import './partner-scanner.css';
+import './admin-readability.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
