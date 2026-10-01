@@ -95,10 +95,10 @@ export const listVoucherRedemptionsAdminController = asyncHandler(async (req, re
 });
 
 export const markVoucherRedeemedAdminController = asyncHandler(async (req, res) => {
-  const item = await markVoucherRedeemed(Number(req.params.id));
+  const item = await markVoucherRedeemed(Number(req.params.id), req.user.id);
   await writeAuditLog({
     actorUserId: req.user.id,
-    action: 'ADMIN_VOUCHER_REDEEMED',
+    action: 'ADMIN_VOUCHER_USED',
     entityType: 'VOUCHER_REDEMPTION',
     entityId: item.id,
     metadata: { code: item.code, campaignId: item.campaignId, userId: item.userId },
