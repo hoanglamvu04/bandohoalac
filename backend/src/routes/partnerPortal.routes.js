@@ -2,9 +2,13 @@ import { Router } from 'express';
 import {
   changePartnerStaffStatus,
   createPartnerStaff,
+  endShift,
   getDashboard,
+  getReconciliation,
+  getScannerState,
   inspectVoucherCode,
   redeemVoucherCode,
+  startShift,
   updateManagedPlaceDetails,
   useVoucher
 } from '../controllers/partnerPortal.controller.js';
@@ -13,6 +17,7 @@ import { partnerScanRateLimiter } from '../middleware/rateLimit.js';
 import { validateBody } from '../validators/validate.js';
 import {
   partnerRedeemCodeSchema,
+  partnerShiftStartSchema,
   partnerStaffCreateSchema,
   partnerStaffStatusSchema,
   partnerUpdatePlaceSchema,
@@ -25,6 +30,18 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/dashboard', getDashboard);
+
+router.get('/scanner', getScannerState);
+
+router.get('/reconciliation', getReconciliation);
+
+router.post(
+  '/shifts',
+  validateBody(partnerShiftStartSchema),
+  startShift
+);
+
+router.post('/shifts/:id/end', endShift);
 
 router.post(
   '/vouchers/inspect',
