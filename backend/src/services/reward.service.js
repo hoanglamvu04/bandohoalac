@@ -51,19 +51,32 @@ function mapCampaign(row) {
   };
 }
 
+function normalizeRedemptionStatus(status) {
+  return status === 'REDEEMED' ? 'USED' : status;
+}
+
 function mapRedemption(row) {
   if (!row) return null;
   return {
     id: String(row.id),
     campaignId: String(row.campaign_id),
     campaignTitle: row.campaign_title,
+    voucherValueText: row.voucher_value_text || null,
+    terms: row.terms || null,
+    partnerId: row.partner_id ? String(row.partner_id) : null,
     partnerName: row.partner_name || row.place_name,
+    placeId: row.place_id ? String(row.place_id) : null,
     placeName: row.place_name,
     placeAddress: row.place_address,
     code: row.code,
+    qrToken: row.qr_token || null,
     pointsSpent: Number(row.points_spent || 0),
-    status: row.status,
-    redeemedAt: row.redeemed_at,
+    status: normalizeRedemptionStatus(row.status),
+    expiresAt: row.expires_at || row.campaign_ends_at || null,
+    usedAt: row.used_at || row.redeemed_at || null,
+    redeemedAt: row.used_at || row.redeemed_at || null,
+    usedByUserId: row.used_by_user_id ? String(row.used_by_user_id) : null,
+    usedByName: row.used_by_name || null,
     createdAt: row.created_at,
     userId: row.user_id ? String(row.user_id) : null,
     userName: row.user_name || null,
@@ -111,16 +124,23 @@ const REDEMPTION_SELECT = `
   SELECT
     vr.*,
     vc.title AS campaign_title,
+    vc.voucher_value_text,
+    vc.terms,
+    vc.ends_at AS campaign_ends_at,
+    pp.id AS partner_id,
+    pp.place_id,
     pp.partner_name,
     p.name AS place_name,
     p.address AS place_address,
     u.name AS user_name,
-    u.email AS user_email
+    u.email AS user_email,
+    used_user.name AS used_by_name
   FROM voucher_redemptions vr
   JOIN voucher_campaigns vc ON vc.id = vr.campaign_id
   JOIN place_partners pp ON pp.id = vc.partner_id
   JOIN places p ON p.id = pp.place_id
   JOIN users u ON u.id = vr.user_id
+  LEFT JOIN users used_user ON used_user.id = vr.used_by_user_id
 `;
 
 export async function listPartnersAdmin({ q, status = 'ALL' } = {}) {
@@ -348,7 +368,7 @@ export async function listPublicVoucherCampaigns(userId = null) {
         `SELECT campaign_id, COUNT(*)::int AS count
          FROM voucher_redemptions
          WHERE user_id = $1
-           AND status IN ('ISSUED', 'REDEEMED')
+           AND status IN ('ISSUED', 'USED', 'REDEEMED')
          GROUP BY campaign_id`,
         [userId]
       )
@@ -375,6 +395,22 @@ export async function listPublicVoucherCampaigns(userId = null) {
 
 function generateVoucherCode() {
   return 'HOLA-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+}
+
+function generateVoucherQrToken() {
+  return crypto.randomBytes(18).toString('hex');
+}
+
+async function expireIssuedVouchersForUser(userId, client = pool) {
+  await client.query(
+    `UPDATE voucher_redemptions
+     SET status = 'EXPIRED'
+     WHERE user_id = $1
+       AND status = 'ISSUED'
+       AND expires_at IS NOT NULL
+       AND expires_at < NOW()`,
+    [userId]
+  );
 }
 
 export async function redeemVoucherCampaign({ campaignId, userId }) {
@@ -433,17 +469,19 @@ export async function redeemVoucherCampaign({ campaignId, userId }) {
     }
 
     let code;
+    let qrToken;
     let inserted;
     for (let attempt = 0; attempt < 5; attempt += 1) {
       code = generateVoucherCode();
+      qrToken = generateVoucherQrToken();
       try {
         const result = await client.query(
           `INSERT INTO voucher_redemptions (
-             campaign_id, user_id, code, points_spent
+             campaign_id, user_id, code, qr_token, points_spent, expires_at
            )
-           VALUES ($1, $2, $3, $4)
+           VALUES ($1, $2, $3, $4, $5, $6)
            RETURNING id`,
-          [campaignId, userId, code, cost]
+          [campaignId, userId, code, qrToken, cost, campaign.ends_at || null]
         );
         inserted = result.rows[0];
         break;
@@ -475,6 +513,22 @@ export async function redeemVoucherCampaign({ campaignId, userId }) {
       [campaignId]
     );
 
+    await client.query(
+      `INSERT INTO voucher_redemption_events (
+         redemption_id, event_type, actor_user_id, partner_id, metadata
+       )
+       VALUES ($1, 'ISSUED', $2, $3, $4::jsonb)`,
+      [
+        inserted.id,
+        userId,
+        campaign.partner_id,
+        JSON.stringify({
+          campaignId: String(campaignId),
+          pointsSpent: cost
+        })
+      ]
+    );
+
     return getRedemptionById(inserted.id, client);
   });
 }
@@ -485,6 +539,8 @@ export async function getRedemptionById(id, client = pool) {
 }
 
 export async function listMyRedemptions(userId) {
+  await expireIssuedVouchersForUser(userId);
+
   const [redemptions, wallet] = await Promise.all([
     pool.query(REDEMPTION_SELECT + ' WHERE vr.user_id = $1 ORDER BY vr.created_at DESC', [userId]),
     pool.query('SELECT points_balance FROM users WHERE id = $1', [userId])
@@ -514,15 +570,45 @@ export async function listRedemptionsAdmin({ campaignId, status = 'ALL' } = {}) 
   return rows.map(mapRedemption);
 }
 
-export async function markVoucherRedeemed(id) {
-  const { rows } = await pool.query(
-    `UPDATE voucher_redemptions
-     SET status = 'REDEEMED', redeemed_at = COALESCE(redeemed_at, NOW())
-     WHERE id = $1
-       AND status = 'ISSUED'
-     RETURNING id`,
-    [id]
-  );
-  if (!rows[0]) throw new AppError('Voucher không tồn tại hoặc đã được xử lý.', 409);
-  return getRedemptionById(id);
+export async function markVoucherRedeemed(id, actorUserId = null) {
+  return withTransaction(async (client) => {
+    const { rows } = await client.query(
+      `UPDATE voucher_redemptions
+       SET status = 'USED',
+           used_at = COALESCE(used_at, NOW()),
+           redeemed_at = COALESCE(redeemed_at, NOW()),
+           used_by_user_id = COALESCE(used_by_user_id, $2)
+       WHERE id = $1
+         AND status = 'ISSUED'
+       RETURNING id, campaign_id`,
+      [id, actorUserId]
+    );
+
+    if (!rows[0]) {
+      throw new AppError('Voucher không tồn tại hoặc đã được xử lý.', 409);
+    }
+
+    const partnerResult = await client.query(
+      'SELECT partner_id FROM voucher_campaigns WHERE id = $1',
+      [rows[0].campaign_id]
+    );
+    const partnerId = partnerResult.rows[0]?.partner_id || null;
+
+    await client.query(
+      `UPDATE voucher_redemptions
+       SET used_partner_id = COALESCE(used_partner_id, $2)
+       WHERE id = $1`,
+      [id, partnerId]
+    );
+
+    await client.query(
+      `INSERT INTO voucher_redemption_events (
+         redemption_id, event_type, actor_user_id, partner_id, metadata
+       )
+       VALUES ($1, 'ADMIN_USED', $2, $3, '{}'::jsonb)`,
+      [id, actorUserId, partnerId]
+    );
+
+    return getRedemptionById(id, client);
+  });
 }
