@@ -519,4 +519,65 @@ export default function PartnerScanner() {
                   <span><small>Hola Map hoàn đối tác</small><b>{formatMoney(preview.partnerReceivableAmount || preview.voucherValueAmount)}</b></span>
                 </div>
 
-     
+                <div className="partner-scan-result-meta">
+                  <span><small>Khách hàng</small><b>{preview.userName}</b></span>
+                  <span><small>Mã</small><b>{preview.code}</b></span>
+                  <span><small>Địa điểm</small><b>{preview.placeName}</b></span>
+                </div>
+
+                {preview.justUsed ? (
+                  <div className="partner-scan-result-actions">
+                    <button type="button" className="primary-action" onClick={resetScanner}>
+                      <ScanLine size={16} /> Mở quét voucher tiếp
+                    </button>
+                  </div>
+                ) : (
+                  <div className="partner-scan-result-actions">
+                    <button type="button" className="secondary-action" onClick={resetScanner}>Quét mã khác</button>
+                    {preview.valid && (
+                      <button type="button" className="primary-action" disabled={usingVoucher} onClick={confirmVoucherUse}>
+                        <Banknote size={16} />
+                        {usingVoucher
+                          ? 'Đang xác nhận...'
+                          : 'Xác nhận giảm ' + formatMoney(preview.voucherValueAmount)}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+
+          <section className="partner-scanner-recent">
+            <header>
+              <div><History size={16} /><b>5 giao dịch gần nhất</b></div>
+              <span>Đối soát tài trợ</span>
+            </header>
+
+            {!recentUsage.length ? (
+              <div className="partner-scanner-recent-empty">Chưa có voucher được xác nhận.</div>
+            ) : (
+              <div className="partner-scanner-recent-list">
+                {recentUsage.map((item) => (
+                  <article key={item.id}>
+                    <span><CheckCircle2 size={15} /></span>
+                    <div>
+                      <b>{formatMoney(item.partnerReceivableAmount || item.voucherValueAmount)}</b>
+                      <small>{item.customerName} · {item.code}</small>
+                    </div>
+                    <time>{formatTime(item.usedAt)}</time>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </aside>
+      </section>
+
+      <footer className="partner-scanner-footer">
+        <span><i /> Scanner sẵn sàng</span>
+        <small>{selectedPartner?.partnerName || 'Partner'} · Không cần mở/kết thúc ca</small>
+      </footer>
+    </main>
+  );
+}
