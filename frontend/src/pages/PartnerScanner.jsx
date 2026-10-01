@@ -363,4 +363,160 @@ export default function PartnerScanner() {
   if (!data?.hasAccess) {
     return (
       <main className="partner-scanner-page">
-        <section className="partner-scanner-
+        <section className="partner-scanner-no-access">
+          <Building2 size={40} />
+          <h1>Chưa có quyền Partner Scanner</h1>
+          <p>Admin hoặc OWNER cần cấp quyền STAFF/OWNER cho tài khoản này trước.</p>
+          <Link to="/partner">Về Partner Portal</Link>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="partner-scanner-page">
+      <header className="partner-scanner-topbar">
+        <div className="partner-scanner-brand">
+          <Link to="/partner"><ArrowLeft size={18} /></Link>
+          <span><QrCode size={22} /></span>
+          <div>
+            <small>HOLA MAPS PARTNER</small>
+            <b>Voucher Scanner</b>
+          </div>
+        </div>
+
+        <div className="partner-scanner-session">
+          <span><UserRound size={15} /> {user?.name || 'Nhân viên'}</span>
+          <Link to="/partner">Partner Portal</Link>
+        </div>
+      </header>
+
+      <section className="partner-scanner-workspace">
+        <div className="partner-scanner-main">
+          <div className="partner-scanner-toolbar">
+            <div>
+              <small>ĐỐI TÁC ĐANG XÁC NHẬN</small>
+              <b>{selectedPartner?.partnerName || 'Chọn đối tác'}</b>
+              <span><i /> Mỗi xác nhận sẽ được ghi vào công nợ Hola Map</span>
+            </div>
+
+            <label className="partner-scanner-partner-select">
+              <span>Quán</span>
+              <select
+                value={selectedPartnerId}
+                onChange={(event) => {
+                  setSelectedPartnerId(event.target.value);
+                  resetScanner();
+                }}
+              >
+                {partners.map((partner) => (
+                  <option key={partner.partnerId} value={partner.partnerId}>
+                    {partner.partnerName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className={scannerPaused ? 'partner-live-scanner paused' : 'partner-live-scanner'}>
+            {cameraOn ? (
+              <video ref={videoRef} playsInline muted />
+            ) : (
+              <div className="partner-camera-off">
+                <Camera size={38} />
+                <b>Camera chưa bật</b>
+                <span>Không cần mở ca làm việc.</span>
+                <button type="button" onClick={startCamera}>Bật camera quét voucher</button>
+              </div>
+            )}
+
+            {cameraOn && (
+              <>
+                <span className="partner-live-frame" />
+                <span className="partner-live-status">
+                  {scannerPaused
+                    ? inspecting
+                      ? 'Đang kiểm tra voucher...'
+                      : usingVoucher
+                        ? 'Đang ghi nhận công nợ...'
+                        : 'Chờ xác nhận'
+                    : 'Sẵn sàng quét'}
+                </span>
+              </>
+            )}
+          </div>
+
+          <div className="partner-scanner-manual">
+            <span><ScanLine size={16} /></span>
+            <input
+              value={manualCode}
+              onChange={(event) => setManualCode(event.target.value.toUpperCase())}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  inspectManual();
+                }
+              }}
+              placeholder="Quét USB/Bluetooth hoặc nhập HOLA-XXXXXXXX"
+            />
+            <button type="button" onClick={inspectManual} disabled={!manualCode || inspecting}>Kiểm tra</button>
+          </div>
+
+          <div className="partner-scanner-source-status">
+            <span><i /> USB / Bluetooth HID sẵn sàng</span>
+            <small>{scanSource ? 'Nguồn vừa nhận: ' + scanSource.toUpperCase() : 'Camera chỉ đọc mã; xác nhận tiền luôn cần thao tác riêng.'}</small>
+          </div>
+        </div>
+
+        <aside className="partner-scanner-side">
+          <section className="partner-scan-result-card">
+            {!scannerPaused && !preview && (
+              <div className="partner-scan-waiting">
+                <ShieldCheck size={31} />
+                <b>Đang chờ voucher</b>
+                <span>Quét QR để kiểm tra. Hệ thống chưa phát sinh khoản phải trả ở bước này.</span>
+              </div>
+            )}
+
+            {scannerPaused && inspecting && (
+              <div className="partner-scan-waiting processing">
+                <ScanLine size={30} />
+                <b>Đang kiểm tra voucher...</b>
+              </div>
+            )}
+
+            {preview && (
+              <div className={
+                preview.justUsed || preview.status === 'USED'
+                  ? 'partner-scan-result used'
+                  : preview.valid
+                    ? 'partner-scan-result valid'
+                    : 'partner-scan-result invalid'
+              }>
+                <span className="partner-scan-result-icon">
+                  {preview.justUsed || preview.status === 'USED'
+                    ? <TicketCheck size={27} />
+                    : preview.valid
+                      ? <CheckCircle2 size={27} />
+                      : <ShieldCheck size={27} />}
+                </span>
+
+                <small>
+                  {preview.justUsed
+                    ? 'ĐÃ ÁP DỤNG VOUCHER'
+                    : preview.valid
+                      ? 'VOUCHER HỢP LỆ'
+                      : 'KHÔNG THỂ SỬ DỤNG'}
+                </small>
+
+                <h2 className="partner-scan-money">
+                  {formatMoney(preview.partnerReceivableAmount || preview.voucherValueAmount)}
+                </h2>
+                <p>{preview.message}</p>
+
+                <div className="partner-scan-finance">
+                  <span><small>Khách được giảm</small><b>{formatMoney(preview.customerDiscountAmount || preview.voucherValueAmount)}</b></span>
+                  <span><small>Hola Map hoàn đối tác</small><b>{formatMoney(preview.partnerReceivableAmount || preview.voucherValueAmount)}</b></span>
+                </div>
+
+     
