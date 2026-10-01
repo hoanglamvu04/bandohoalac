@@ -425,4 +425,30 @@ export function getAdminAuditLogs(params = {}) {
   return unwrap(client.get('/admin/audit', { params: cleanParams(params) }));
 }
 
+
+
+export function getBrandSettings() {
+  return unwrap(client.get('/brand'));
+}
+
+export function getAdminBrand() {
+  return unwrap(client.get('/admin/brand'));
+}
+
+export function updateAdminBrand(payload) {
+  return unwrap(client.patch('/admin/brand', payload));
+}
+
+export function uploadAdminBrandAsset({ name, assetType, image }) {
+  const formData = new FormData();
+  formData.append('name', name);
+  formData.append('assetType', assetType);
+  formData.append('image', image);
+  return unwrap(client.post('/admin/brand/assets', formData));
+}
+
+export function deleteAdminBrandAsset(id) {
+  return unwrap(client.delete('/admin/brand/assets/' + encodeURIComponent(id)));
+}
+
 export { API_URL };
