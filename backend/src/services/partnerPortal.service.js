@@ -445,7 +445,7 @@ async function selectVoucherForPartner(client, { code, id, lock = false }) {
      JOIN users u ON u.id = vr.user_id
      LEFT JOIN users used_user ON used_user.id = vr.used_by_user_id
      WHERE ${conditions.join(' AND ')}
-     ${lock ? 'FOR UPDATE' : ''}`,
+     ${lock ? 'FOR UPDATE OF vr' : ''}`,
     params
   );
 
