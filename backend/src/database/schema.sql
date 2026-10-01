@@ -785,14 +785,22 @@ CREATE INDEX IF NOT EXISTS voucher_redemptions_settlement_idx
 CREATE INDEX IF NOT EXISTS voucher_redemptions_settlement_batch_idx
   ON voucher_redemptions (settlement_batch_id);
 
+-- Freeze the current campaign face value for every voucher that already exists.
+-- This also protects still-ISSUED legacy vouchers from later campaign edits.
+UPDATE voucher_redemptions vr
+SET voucher_face_value_amount = COALESCE(vr.voucher_face_value_amount, vc.voucher_value_amount)
+FROM voucher_campaigns vc
+WHERE vr.campaign_id = vc.id
+  AND vr.voucher_face_value_amount IS NULL
+  AND vc.voucher_value_amount IS NOT NULL;
+
 -- Preserve accounting for vouchers already used before this migration.
 UPDATE voucher_redemptions vr
-SET voucher_face_value_amount = COALESCE(vr.voucher_face_value_amount, vc.voucher_value_amount),
-    customer_discount_amount = COALESCE(vr.customer_discount_amount, vc.voucher_value_amount),
-    partner_receivable_amount = COALESCE(vr.partner_receivable_amount, vc.voucher_value_amount),
-    hola_payable_amount = COALESCE(vr.hola_payable_amount, vc.voucher_value_amount),
+SET customer_discount_amount = COALESCE(vr.customer_discount_amount, vr.voucher_face_value_amount, vc.voucher_value_amount),
+    partner_receivable_amount = COALESCE(vr.partner_receivable_amount, vr.voucher_face_value_amount, vc.voucher_value_amount),
+    hola_payable_amount = COALESCE(vr.hola_payable_amount, vr.voucher_face_value_amount, vc.voucher_value_amount),
     settlement_status = COALESCE(vr.settlement_status, 'UNPAID')
 FROM voucher_campaigns vc
 WHERE vr.campaign_id = vc.id
   AND vr.status IN ('USED', 'REDEEMED')
-  AND vc.voucher_value_amount IS NOT NULL;
+  AND COALESCE(vr.voucher_face_value_amount, vc.voucher_value_amount) IS NOT NULL;
