@@ -2,7 +2,21 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
 import { signToken } from '../utils/jwt.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
-import { createUser, findUserByEmail, findUserById, toPublicUser } from '../services/user.service.js';
+import {
+  createUser,
+  findUserByEmail,
+  findUserById,
+  getPartnerAccessSummary,
+  toPublicUser
+} from '../services/user.service.js';
+
+async function toAuthenticatedUser(user) {
+  const partnerAccess = await getPartnerAccessSummary(user.id);
+  return {
+    ...toPublicUser(user),
+    partnerAccess
+  };
+}
 
 export const register = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
@@ -16,7 +30,7 @@ export const register = asyncHandler(async (req, res) => {
   const user = await createUser({ name, email, passwordHash, role: 'USER' });
   const token = signToken({ id: user.id, email: user.email, role: user.role });
 
-  res.status(201).json({ token, user: toPublicUser(user) });
+  res.status(201).json({ token, user: await toAuthenticatedUser(user) });
 });
 
 export const login = asyncHandler(async (req, res) => {
@@ -37,11 +51,11 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   const token = signToken({ id: user.id, email: user.email, role: user.role });
-  res.json({ token, user: toPublicUser(user) });
+  res.json({ token, user: await toAuthenticatedUser(user) });
 });
 
 export const me = asyncHandler(async (req, res) => {
   const user = await findUserById(req.user.id);
   if (!user) throw new AppError('User not found.', 404);
-  res.json({ user: toPublicUser(user) });
+  res.json({ user: await toAuthenticatedUser(user) });
 });
