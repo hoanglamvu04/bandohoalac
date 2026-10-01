@@ -178,4 +178,189 @@ export default function PartnerScanner() {
       oscillator.start(now);
       oscillator.stop(now + duration + 0.02);
     } catch {
-      // Sound and vibration are optio
+      // Sound and vibration are optional enhancements.
+    }
+  }
+
+  function resetScanner() {
+    scanLockedRef.current = false;
+    lastScanRef.current = { value: '', at: 0 };
+    setScannerPaused(false);
+    setPreview(null);
+    setVoucherInput({ code: '', qrToken: null });
+    setManualCode('');
+    setScanSource('');
+  }
+
+  function decodeFrame(source, width, height) {
+    if (!width || !height) return null;
+    const canvas = canvasRef.current || document.createElement('canvas');
+    canvasRef.current = canvas;
+    const maxWidth = 960;
+    const scale = Math.min(1, maxWidth / width);
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) return null;
+    context.drawImage(source, 0, 0, canvas.width, canvas.height);
+    const frame = context.getImageData(0, 0, canvas.width, canvas.height);
+    return jsQR(frame.data, frame.width, frame.height, { inversionAttempts: 'attemptBoth' });
+  }
+
+  async function startCamera() {
+    if (!selectedPartnerId) {
+      showToast('Hãy chọn đối tác trước khi quét voucher.', 'error');
+      return;
+    }
+
+    if (streamRef.current) {
+      setCameraOn(true);
+      resetScanner();
+      window.setTimeout(async () => {
+        if (!videoRef.current) return;
+        videoRef.current.srcObject = streamRef.current;
+        try { await videoRef.current.play(); } catch {}
+      }, 60);
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      showToast('Trình duyệt không hỗ trợ camera. Bạn vẫn có thể dùng máy quét USB/Bluetooth.', 'error');
+      return;
+    }
+
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass && !audioContextRef.current) audioContextRef.current = new AudioContextClass();
+      audioContextRef.current?.resume?.();
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      });
+
+      streamRef.current = stream;
+      setCameraOn(true);
+      resetScanner();
+
+      window.setTimeout(async () => {
+        const video = videoRef.current;
+        if (!video || !streamRef.current) return;
+        video.srcObject = streamRef.current;
+        await video.play();
+
+        scanTimerRef.current = window.setInterval(() => {
+          if (scanLockedRef.current) return;
+          const current = videoRef.current;
+          if (!current || current.readyState < 2) return;
+          try {
+            const result = decodeFrame(current, current.videoWidth, current.videoHeight);
+            if (result?.data) scanHandlerRef.current?.(result.data, 'camera');
+          } catch {
+            // Continue with the next frame.
+          }
+        }, 220);
+      }, 80);
+    } catch (error) {
+      stopCamera();
+      showToast(
+        error?.name === 'NotAllowedError'
+          ? 'Camera đang bị chặn. Hãy cấp quyền hoặc dùng máy quét USB/Bluetooth.'
+          : 'Không thể mở camera.',
+        'error'
+      );
+    }
+  }
+
+  async function handleScan(rawValue, source = 'camera') {
+    if (!selectedPartnerId || scanLockedRef.current) return;
+    const parsed = parseVoucherPayload(rawValue);
+    if (!parsed.code) return;
+
+    const signature = parsed.code + ':' + (parsed.qrToken || '');
+    const now = Date.now();
+    if (lastScanRef.current.value === signature && now - lastScanRef.current.at < 2200) return;
+
+    lastScanRef.current = { value: signature, at: now };
+    scanLockedRef.current = true;
+    setScannerPaused(true);
+    setScanSource(source);
+    setVoucherInput(parsed);
+    setManualCode(parsed.code);
+    setPreview(null);
+    playFeedback('detected');
+    setInspecting(true);
+
+    try {
+      const item = await inspectPartnerVoucher({
+        code: parsed.code,
+        qrToken: parsed.qrToken || null,
+        partnerId: Number(selectedPartnerId)
+      });
+      setPreview(item);
+    } catch (error) {
+      showToast(error.message, 'error');
+      resetScanner();
+    } finally {
+      setInspecting(false);
+    }
+  }
+
+  scanHandlerRef.current = handleScan;
+
+  async function inspectManual() {
+    if (!manualCode.trim()) return;
+    await handleScan(manualCode, 'manual');
+  }
+
+  async function confirmVoucherUse() {
+    if (!preview?.id || !preview.valid || usingVoucher) return;
+    setUsingVoucher(true);
+    try {
+      const used = await usePartnerVoucher(preview.id, {
+        code: voucherInput.code || preview.code,
+        qrToken: voucherInput.qrToken || null,
+        partnerId: Number(selectedPartnerId)
+      });
+
+      const recentItem = {
+        id: used.id,
+        code: used.code,
+        usedAt: used.usedAt || new Date().toISOString(),
+        campaignTitle: used.campaignTitle,
+        voucherValueText: used.voucherValueText,
+        voucherValueAmount: used.voucherValueAmount,
+        partnerReceivableAmount: used.partnerReceivableAmount,
+        settlementStatus: used.settlementStatus,
+        partnerName: used.partnerName,
+        placeName: used.placeName,
+        customerName: used.userName,
+        cashierName: user?.name || null
+      };
+
+      setRecentUsage((current) => [
+        recentItem,
+        ...current.filter((row) => row.id !== recentItem.id)
+      ].slice(0, 5));
+      setPreview({ ...preview, ...used, valid: false, status: 'USED', justUsed: true });
+      playFeedback('success');
+      showToast('Đã ghi nhận khoản Hola Map cần thanh toán cho đối tác.', 'success');
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setUsingVoucher(false);
+    }
+  }
+
+  if (loading) {
+    return <main className="partner-scanner-page"><div className="partner-scanner-loading">Đang mở máy quét...</div></main>;
+  }
+
+  if (!data?.hasAccess) {
+    return (
+      <main className="partner-scanner-page">
+        <section className="partner-scanner-
