@@ -651,6 +651,97 @@ export async function removePlaceImage(placeId, imageId, client = pool) {
   };
 }
 
+export async function listPublishedPlacesByUser(userId, { limit = 100 } = {}, client = pool) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 200);
+
+  const { rows } = await client.query(
+    `SELECT
+       p.id,
+       p.name,
+       p.address,
+       p.rating_avg,
+       p.rating_count,
+       ST_X(p.location) AS lng,
+       ST_Y(p.location) AS lat,
+       c.name AS category,
+       c.slug AS category_slug,
+       COALESCE((
+         SELECT pi.url
+         FROM place_images pi
+         WHERE pi.place_id = p.id
+         ORDER BY pi.is_cover DESC, pi.id ASC
+         LIMIT 1
+       ), '') AS cover_image,
+       (
+         SELECT COUNT(*)::int
+         FROM place_images pi
+         WHERE pi.place_id = p.id
+       ) AS image_count,
+       p.created_at
+     FROM places p
+     LEFT JOIN categories c ON c.id = p.category_id
+     WHERE p.created_by = $1
+       AND p.status = 'PUBLISHED'
+     ORDER BY p.created_at DESC
+     LIMIT $2`,
+    [userId, safeLimit]
+  );
+
+  return rows.map((row) => ({
+    id: String(row.id),
+    name: row.name,
+    address: row.address,
+    category: row.category || 'Địa điểm',
+    categorySlug: row.category_slug || 'other',
+    rating: Number(row.rating_avg) || 0,
+    reviews: Number(row.rating_count) || 0,
+    lat: Number(row.lat),
+    lng: Number(row.lng),
+    coverImage: row.cover_image || null,
+    imageCount: Number(row.image_count) || 0,
+    createdAt: row.created_at
+  }));
+}
+
+export async function listPhotosByUser(userId, { limit = 120 } = {}, client = pool) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 120, 1), 240);
+
+  const { rows } = await client.query(
+    `SELECT
+       pi.id,
+       pi.url,
+       pi.is_cover,
+       pi.created_at,
+       p.id AS place_id,
+       p.name AS place_name,
+       p.address AS place_address,
+       ST_X(p.location) AS lng,
+       ST_Y(p.location) AS lat,
+       c.name AS category
+     FROM place_images pi
+     JOIN places p ON p.id = pi.place_id
+     LEFT JOIN categories c ON c.id = p.category_id
+     WHERE pi.uploaded_by = $1
+       AND p.status = 'PUBLISHED'
+     ORDER BY pi.created_at DESC, pi.id DESC
+     LIMIT $2`,
+    [userId, safeLimit]
+  );
+
+  return rows.map((row) => ({
+    id: String(row.id),
+    url: row.url,
+    isCover: Boolean(row.is_cover),
+    createdAt: row.created_at,
+    placeId: String(row.place_id),
+    placeName: row.place_name,
+    placeAddress: row.place_address,
+    category: row.category || 'Địa điểm',
+    lat: Number(row.lat),
+    lng: Number(row.lng)
+  }));
+}
+
 export async function countPublishedPlacesByUser(userId, client = pool) {
   const { rows } = await client.query(
     "SELECT COUNT(*)::int AS count FROM places WHERE created_by = $1 AND status = 'PUBLISHED'",
