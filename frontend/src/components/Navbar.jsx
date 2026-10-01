@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Bell,
+  Building2,
   Check,
   ChevronDown,
   Compass,
@@ -264,7 +265,12 @@ export default function Navbar() {
             <Icon size={16}/>{label}
           </NavLink>
         ))}
-        {isModerator && (
+        {user?.partnerAccess?.hasAccess && (
+          <NavLink className="nav-link" to="/partner">
+            <Building2 size={16}/>Partner
+          </NavLink>
+        )}
+                {isModerator && (
           <NavLink className="nav-link" to="/admin">
             <ShieldCheck size={16}/>Admin
           </NavLink>
@@ -403,6 +409,12 @@ export default function Navbar() {
                 <UserRound size={16} />
                 Hồ sơ Explorer
               </Link>
+              {user?.partnerAccess?.hasAccess && (
+                <Link to="/partner" onClick={() => setMobileAccountOpen(false)}>
+                  <Building2 size={16} />
+                  Partner Portal
+                </Link>
+              )}
               {isModerator && (
                 <Link to="/admin" onClick={() => setMobileAccountOpen(false)}>
                   <ShieldCheck size={16} />
