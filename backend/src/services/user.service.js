@@ -70,3 +70,38 @@ export async function getRecentActivity(userId, limit = 10, client = pool) {
   );
   return rows;
 }
+
+
+export async function getPartnerAccessSummary(userId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       prm.partner_id,
+       prm.role,
+       prm.status,
+       COALESCE(pp.partner_name, p.name) AS partner_name,
+       p.id AS place_id,
+       p.name AS place_name
+     FROM partner_memberships prm
+     JOIN place_partners pp ON pp.id = prm.partner_id
+     JOIN places p ON p.id = pp.place_id
+     WHERE prm.user_id = $1
+       AND prm.status = 'ACTIVE'
+       AND pp.status = 'ACTIVE'
+     ORDER BY
+       CASE prm.role WHEN 'OWNER' THEN 0 ELSE 1 END,
+       p.name ASC`,
+    [userId]
+  );
+
+  return {
+    hasAccess: rows.length > 0,
+    memberships: rows.map((row) => ({
+      partnerId: String(row.partner_id),
+      role: row.role,
+      status: row.status,
+      partnerName: row.partner_name,
+      placeId: String(row.place_id),
+      placeName: row.place_name
+    }))
+  };
+}
