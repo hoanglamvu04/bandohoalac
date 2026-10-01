@@ -55,10 +55,16 @@ import {
 } from '../controllers/adminRewards.controller.js';
 import {
   adminCreatePartnerSchema,
+  adminCreateSettlementSchema,
   adminCreateVoucherSchema,
   adminUpdatePartnerSchema,
   adminUpdateVoucherSchema
 } from '../validators/reward.validators.js';
+import {
+  createPartnerSettlementAdmin,
+  listPartnerSettlementsAdmin,
+  markPartnerSettlementPaidAdmin
+} from '../controllers/adminSettlements.controller.js';
 import {
   createMissionAdminController,
   listMissionsAdminController,
@@ -185,6 +191,19 @@ router.post(
   '/voucher-redemptions/:id/redeem',
   authorize('ADMIN'),
   markVoucherRedeemedAdminController
+);
+
+router.get('/settlements', authorize('ADMIN'), listPartnerSettlementsAdmin);
+router.post(
+  '/settlements',
+  authorize('ADMIN'),
+  validateBody(adminCreateSettlementSchema),
+  createPartnerSettlementAdmin
+);
+router.post(
+  '/settlements/:id/paid',
+  authorize('ADMIN'),
+  markPartnerSettlementPaidAdmin
 );
 
 router.get('/place-claims', authorize('ADMIN'), listClaimsAdmin);
