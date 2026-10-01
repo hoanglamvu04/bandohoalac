@@ -3254,37 +3254,49 @@
 /* ---------- Desktop footer typography: improve readability ---------- */
 @media(min-width:901px){
   .reference-footer .footer-brand p{
-    max-width:390px;
-    font-size:14px!important;
-    line-height:1.65;
+    max-width:430px;
+    font-size:16px!important;
+    line-height:1.7;
   }
 
   .reference-footer h4{
-    margin-bottom:10px;
-    font-size:15px!important;
+    margin-bottom:12px;
+    font-size:17px!important;
     line-height:1.3;
   }
 
   .reference-footer .footer-column{
-    gap:11px;
+    gap:13px;
   }
 
-  .reference-footer a,
-  .reference-footer .footer-tags span{
-    font-size:13px!important;
-    line-height:1.45;
-  }
-
-  .reference-footer .footer-tags span{
-    padding:6px 10px;
-  }
-
-  .reference-footer .footer-copy{
-    font-size:11px!important;
+  .reference-footer a{
+    font-size:15px!important;
     line-height:1.5;
   }
 
+  .reference-footer .footer-tags span{
+    padding:7px 12px;
+    font-size:14px!important;
+    line-height:1.35;
+  }
+
+  .reference-footer .footer-socials a{
+    width:48px;
+    height:48px;
+  }
+
+  .reference-footer .footer-socials a svg{
+    width:21px;
+    height:21px;
+  }
+
+  .reference-footer .footer-copy{
+    font-size:13px!important;
+    line-height:1.55;
+  }
+
+  .reference-footer .footer-developer,
   .reference-footer .footer-developer>a{
-    font-size:11px!important;
+    font-size:13px!important;
   }
 }
