@@ -29,6 +29,7 @@ import {
   usePartnerVoucher
 } from '../services/api.js';
 import { useToast } from '../context/ToastContext.jsx';
+import PartnerReconciliationPanel from '../components/PartnerReconciliationPanel.jsx';
 
 function parseVoucherPayload(value) {
   const raw = String(value || '').trim();
@@ -631,6 +632,9 @@ export default function PartnerDashboard() {
             Quét voucher, xác nhận sử dụng, quản lý địa điểm và theo dõi lịch sử
             giao dịch tại quán.
           </p>
+          <Link className="partner-scanner-launch" to="/partner/scanner">
+            <ScanLine size={16} /> Mở máy quét thu ngân
+          </Link>
         </div>
         <span className="partner-dashboard-mark"><Building2 size={32} /></span>
       </section>
@@ -641,6 +645,8 @@ export default function PartnerDashboard() {
         <div><TicketCheck size={19} /><span><b>{data.stats?.vouchersPending || 0}</b><small>Chờ sử dụng</small></span></div>
         <div><CheckCircle2 size={19} /><span><b>{data.stats?.vouchersUsed || 0}</b><small>Đã dùng</small></span></div>
       </section>
+
+      {ownerPartners.length > 0 && <PartnerReconciliationPanel />}
 
       <section className="partner-redeem-panel partner-voucher-scanner">
         <div className="partner-redeem-copy">
