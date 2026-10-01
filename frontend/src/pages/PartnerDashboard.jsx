@@ -1,31 +1,64 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
   Camera,
   CheckCircle2,
+  Clock3,
   Gift,
+  History,
+  Mail,
   Pencil,
   QrCode,
   Save,
   ScanLine,
+  ShieldCheck,
   TicketCheck,
-  X,
-  Users
+  UserPlus,
+  Users,
+  X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
+  addPartnerStaff,
   getPartnerDashboard,
-  redeemPartnerVoucher,
-  updatePartnerManagedPlace
+  inspectPartnerVoucher,
+  updatePartnerManagedPlace,
+  updatePartnerStaffStatus,
+  usePartnerVoucher
 } from '../services/api.js';
 import { useToast } from '../context/ToastContext.jsx';
 
-function normalizeScannedCode(value) {
+function parseVoucherPayload(value) {
   const raw = String(value || '').trim();
+  if (!raw) return { code: '', qrToken: null };
+
   if (raw.toUpperCase().startsWith('HOLA-VOUCHER:')) {
-    return raw.slice('HOLA-VOUCHER:'.length).trim();
+    const parts = raw.split(':');
+    return {
+      code: String(parts[1] || '').trim().toUpperCase(),
+      qrToken: parts[2] ? String(parts[2]).trim() : null
+    };
   }
-  return raw;
+
+  return {
+    code: raw.toUpperCase(),
+    qrToken: null
+  };
+}
+
+function formatDateTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('vi-VN');
+}
+
+function statusLabel(status) {
+  if (status === 'USED' || status === 'REDEEMED') return 'Đã sử dụng';
+  if (status === 'ISSUED') return 'Có thể sử dụng';
+  if (status === 'EXPIRED') return 'Hết hạn';
+  if (status === 'CANCELLED') return 'Đã hủy';
+  return status || 'Không xác định';
 }
 
 export default function PartnerDashboard() {
@@ -37,10 +70,16 @@ export default function PartnerDashboard() {
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+
   const [code, setCode] = useState('');
-  const [redeeming, setRedeeming] = useState(false);
+  const [inspecting, setInspecting] = useState(false);
+  const [usingVoucher, setUsingVoucher] = useState(false);
+  const [voucherPreview, setVoucherPreview] = useState(null);
+  const [voucherInput, setVoucherInput] = useState({ code: '', qrToken: null });
+
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerSupported, setScannerSupported] = useState(false);
+
   const [editingPlace, setEditingPlace] = useState(null);
   const [placeForm, setPlaceForm] = useState({
     phone: '',
@@ -50,15 +89,39 @@ export default function PartnerDashboard() {
   });
   const [placeSaving, setPlaceSaving] = useState(false);
 
-  async function load() {
-    setLoading(true);
+  const [staffEmail, setStaffEmail] = useState('');
+  const [staffPartnerId, setStaffPartnerId] = useState('');
+  const [staffSaving, setStaffSaving] = useState(false);
+  const [staffUpdatingId, setStaffUpdatingId] = useState(null);
+
+  const ownerPartners = useMemo(
+    () => (data?.managedPlaces || []).filter(
+      (item) => item.partnerId && item.canManageStaff
+    ),
+    [data?.managedPlaces]
+  );
+
+  const visibleStaff = useMemo(() => {
+    const items = Array.isArray(data?.staffMembers) ? data.staffMembers : [];
+    if (!staffPartnerId) return items;
+    return items.filter((item) => String(item.partnerId) === String(staffPartnerId));
+  }, [data?.staffMembers, staffPartnerId]);
+
+  async function load({ silent = false } = {}) {
+    if (!silent) setLoading(true);
     try {
-      setData(await getPartnerDashboard());
+      const next = await getPartnerDashboard();
+      setData(next);
+      const ownerIds = Array.isArray(next?.ownerPartnerIds) ? next.ownerPartnerIds : [];
+      setStaffPartnerId((current) => {
+        if (current && ownerIds.some((id) => String(id) === String(current))) return current;
+        return ownerIds[0] || '';
+      });
     } catch (error) {
       showToast(error.message, 'error');
       setData(null);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -88,9 +151,41 @@ export default function PartnerDashboard() {
     setScannerOpen(false);
   }
 
+  async function inspectVoucher(payload) {
+    const parsed = typeof payload === 'string'
+      ? parseVoucherPayload(payload)
+      : payload;
+
+    if (!parsed?.code) {
+      showToast('Nhập hoặc quét mã voucher.', 'error');
+      return;
+    }
+
+    if (inspecting) return;
+    setInspecting(true);
+    setVoucherPreview(null);
+
+    try {
+      const item = await inspectPartnerVoucher({
+        code: parsed.code,
+        qrToken: parsed.qrToken || null
+      });
+      setVoucherInput(parsed);
+      setCode(parsed.code);
+      setVoucherPreview(item);
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setInspecting(false);
+    }
+  }
+
   async function startScanner() {
     if (!scannerSupported) {
-      showToast('Trình duyệt này chưa hỗ trợ quét QR trực tiếp. Hãy nhập mã voucher.', 'info');
+      showToast(
+        'Trình duyệt này chưa hỗ trợ quét QR trực tiếp. Bạn vẫn có thể nhập mã voucher.',
+        'info'
+      );
       return;
     }
 
@@ -100,6 +195,7 @@ export default function PartnerDashboard() {
         video: { facingMode: { ideal: 'environment' } },
         audio: false
       });
+
       streamRef.current = stream;
       setScannerOpen(true);
 
@@ -110,17 +206,17 @@ export default function PartnerDashboard() {
 
         scanTimerRef.current = window.setInterval(async () => {
           if (!videoRef.current || !detectorRef.current || videoRef.current.readyState < 2) return;
+
           try {
             const results = await detectorRef.current.detect(videoRef.current);
             const value = results?.[0]?.rawValue;
-            if (value) {
-              const nextCode = normalizeScannedCode(value);
-              setCode(nextCode);
-              stopScanner();
-              await confirmCode(nextCode);
-            }
+            if (!value) return;
+
+            const parsed = parseVoucherPayload(value);
+            stopScanner();
+            await inspectVoucher(parsed);
           } catch {
-            // Keep scanning; intermittent detector errors are expected on moving frames.
+            // Moving frames can fail intermittently; keep scanning.
           }
         }, 650);
       });
@@ -132,6 +228,43 @@ export default function PartnerDashboard() {
           : 'Không thể mở camera quét QR.',
         'error'
       );
+    }
+  }
+
+  async function confirmVoucherUse() {
+    if (!voucherPreview?.id || !voucherPreview?.valid || usingVoucher) return;
+
+    if (!window.confirm(
+      'Xác nhận voucher ' + voucherPreview.code + ' đã được sử dụng tại ' +
+      voucherPreview.placeName + '?'
+    )) return;
+
+    setUsingVoucher(true);
+    try {
+      const item = await usePartnerVoucher(voucherPreview.id, {
+        code: voucherInput.code || voucherPreview.code,
+        qrToken: voucherInput.qrToken || null
+      });
+
+      setVoucherPreview({
+        ...voucherPreview,
+        ...item,
+        valid: false,
+        status: 'USED',
+        message: 'Voucher đã được ghi nhận sử dụng thành công.'
+      });
+      setCode('');
+      showToast('Đã xác nhận voucher ' + item.code + ' là USED.', 'success');
+      await load({ silent: true });
+    } catch (error) {
+      showToast(error.message, 'error');
+      try {
+        await inspectVoucher(voucherInput);
+      } catch {
+        // The toast above is enough.
+      }
+    } finally {
+      setUsingVoucher(false);
     }
   }
 
@@ -159,7 +292,7 @@ export default function PartnerDashboard() {
       });
       showToast('Đã cập nhật thông tin địa điểm.', 'success');
       setEditingPlace(null);
-      await load();
+      await load({ silent: true });
     } catch (error) {
       showToast(error.message, 'error');
     } finally {
@@ -167,24 +300,47 @@ export default function PartnerDashboard() {
     }
   }
 
-  async function confirmCode(value = code) {
-    const normalized = normalizeScannedCode(value);
-    if (!normalized) {
-      showToast('Nhập hoặc quét mã voucher.', 'error');
+  async function addStaff(event) {
+    event.preventDefault();
+    if (!staffPartnerId || !staffEmail.trim()) {
+      showToast('Chọn đối tác và nhập email tài khoản nhân viên.', 'error');
       return;
     }
-    if (redeeming) return;
 
-    setRedeeming(true);
+    setStaffSaving(true);
     try {
-      const item = await redeemPartnerVoucher(normalized);
-      showToast('Xác nhận thành công voucher ' + item.code + '.', 'success');
-      setCode('');
-      await load();
+      await addPartnerStaff({
+        partnerId: Number(staffPartnerId),
+        email: staffEmail.trim()
+      });
+      setStaffEmail('');
+      showToast('Đã cấp quyền STAFF cho nhân viên.', 'success');
+      await load({ silent: true });
     } catch (error) {
       showToast(error.message, 'error');
     } finally {
-      setRedeeming(false);
+      setStaffSaving(false);
+    }
+  }
+
+  async function changeStaffStatus(item) {
+    if (item.role !== 'STAFF' || staffUpdatingId) return;
+    const nextStatus = item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+
+    setStaffUpdatingId(item.id);
+    try {
+      await updatePartnerStaffStatus(item.id, { status: nextStatus });
+      showToast(
+        nextStatus === 'ACTIVE'
+          ? 'Đã kích hoạt lại tài khoản nhân viên.'
+          : 'Đã tạm khóa quyền nhân viên.',
+        'success'
+      );
+      await load({ silent: true });
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setStaffUpdatingId(null);
     }
   }
 
@@ -200,7 +356,7 @@ export default function PartnerDashboard() {
           <h1>Chưa có địa điểm được xác minh</h1>
           <p>
             Partner Dashboard chỉ mở khi tài khoản của bạn đã được xác minh quyền quản lý
-            ít nhất một địa điểm trên Hola Maps.
+            hoặc được OWNER thêm làm nhân viên của một đối tác trên Hola Maps.
           </p>
           <Link className="primary-action" to="/map">Tìm địa điểm của bạn</Link>
         </section>
@@ -214,25 +370,31 @@ export default function PartnerDashboard() {
         <div>
           <span className="eyebrow">HOLA MAPS PARTNER</span>
           <h1>Partner Dashboard</h1>
-          <p>Quản lý địa điểm đã xác minh và xác nhận voucher của khách tại quán.</p>
+          <p>
+            Quét voucher, xác nhận sử dụng, quản lý địa điểm và theo dõi lịch sử
+            giao dịch tại quán.
+          </p>
         </div>
         <span className="partner-dashboard-mark"><Building2 size={32} /></span>
       </section>
 
       <section className="partner-stat-grid">
-        <div><Building2 size={19} /><span><b>{data.stats?.managedPlaces || 0}</b><small>Địa điểm quản lý</small></span></div>
+        <div><Building2 size={19} /><span><b>{data.stats?.managedPlaces || 0}</b><small>Địa điểm truy cập</small></span></div>
         <div><Gift size={19} /><span><b>{data.stats?.campaigns || 0}</b><small>Chiến dịch</small></span></div>
         <div><TicketCheck size={19} /><span><b>{data.stats?.vouchersPending || 0}</b><small>Chờ sử dụng</small></span></div>
-        <div><CheckCircle2 size={19} /><span><b>{data.stats?.vouchersRedeemed || 0}</b><small>Đã sử dụng</small></span></div>
+        <div><CheckCircle2 size={19} /><span><b>{data.stats?.vouchersUsed || 0}</b><small>Đã dùng</small></span></div>
       </section>
 
-      <section className="partner-redeem-panel">
+      <section className="partner-redeem-panel partner-voucher-scanner">
         <div className="partner-redeem-copy">
           <span className="partner-redeem-icon"><QrCode size={24} /></span>
           <div>
-            <span className="eyebrow">XÁC NHẬN VOUCHER</span>
-            <h2>Quét QR hoặc nhập mã của khách</h2>
-            <p>Mỗi voucher chỉ xác nhận được một lần. Hệ thống kiểm tra quyền theo đúng địa điểm đối tác.</p>
+            <span className="eyebrow">VOUCHER SCANNER</span>
+            <h2>Kiểm tra trước, xác nhận sau</h2>
+            <p>
+              Quét QR hoặc nhập mã. Voucher chỉ chuyển sang USED sau khi nhân viên
+              kiểm tra thông tin và bấm xác nhận.
+            </p>
           </div>
         </div>
 
@@ -241,25 +403,94 @@ export default function PartnerDashboard() {
             <ScanLine size={17} />
             <input
               value={code}
-              onChange={(event) => setCode(event.target.value.toUpperCase())}
+              onChange={(event) => {
+                setCode(event.target.value.toUpperCase());
+                setVoucherPreview(null);
+                setVoucherInput({ code: '', qrToken: null });
+              }}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   event.preventDefault();
-                  confirmCode();
+                  inspectVoucher(parseVoucherPayload(code));
                 }
               }}
               placeholder="HOLA-XXXXXXXX"
             />
           </label>
 
-          <button className="primary-action" type="button" onClick={() => confirmCode()} disabled={redeeming}>
-            <CheckCircle2 size={16} /> {redeeming ? 'Đang xác nhận...' : 'Xác nhận mã'}
+          <button
+            className="primary-action"
+            type="button"
+            onClick={() => inspectVoucher(parseVoucherPayload(code))}
+            disabled={inspecting}
+          >
+            <ShieldCheck size={16} />
+            {inspecting ? 'Đang kiểm tra...' : 'Kiểm tra mã'}
           </button>
 
           <button className="secondary-action" type="button" onClick={startScanner}>
             <Camera size={16} /> Quét QR
           </button>
         </div>
+
+        {voucherPreview && (
+          <article className={'partner-voucher-preview ' + (voucherPreview.valid ? 'valid' : 'invalid')}>
+            <div className="partner-voucher-preview-status">
+              <span>
+                {voucherPreview.valid
+                  ? <CheckCircle2 size={25} />
+                  : voucherPreview.status === 'USED'
+                    ? <TicketCheck size={25} />
+                    : <Clock3 size={25} />}
+              </span>
+              <div>
+                <small>{statusLabel(voucherPreview.status)}</small>
+                <b>{voucherPreview.message}</b>
+              </div>
+            </div>
+
+            <div className="partner-voucher-preview-grid">
+              <span><small>Ưu đãi</small><b>{voucherPreview.voucherValueText || voucherPreview.campaignTitle}</b></span>
+              <span><small>Khách hàng</small><b>{voucherPreview.userName}</b></span>
+              <span><small>Địa điểm</small><b>{voucherPreview.placeName}</b></span>
+              <span><small>Mã voucher</small><b>{voucherPreview.code}</b></span>
+            </div>
+
+            {voucherPreview.terms && (
+              <div className="partner-voucher-preview-terms">
+                <small>Điều kiện sử dụng</small>
+                <span>{voucherPreview.terms}</span>
+              </div>
+            )}
+
+            <footer>
+              <div>
+                {voucherPreview.expiresAt && (
+                  <span><Clock3 size={13} /> Hạn: {formatDateTime(voucherPreview.expiresAt)}</span>
+                )}
+                {voucherPreview.usedAt && (
+                  <span>
+                    <History size={13} />
+                    Đã dùng: {formatDateTime(voucherPreview.usedAt)}
+                    {voucherPreview.usedByName ? ' · ' + voucherPreview.usedByName : ''}
+                  </span>
+                )}
+              </div>
+
+              {voucherPreview.valid && (
+                <button
+                  className="primary-action partner-use-voucher"
+                  type="button"
+                  disabled={usingVoucher}
+                  onClick={confirmVoucherUse}
+                >
+                  <CheckCircle2 size={17} />
+                  {usingVoucher ? 'Đang xác nhận...' : 'Xác nhận đã sử dụng'}
+                </button>
+              )}
+            </footer>
+          </article>
+        )}
 
         {scannerOpen && (
           <div className="partner-scanner-modal">
@@ -272,6 +503,9 @@ export default function PartnerDashboard() {
                 <video ref={videoRef} playsInline muted />
                 <span className="partner-scan-frame" />
               </div>
+              <p className="partner-scanner-help">
+                QR chỉ được đọc để kiểm tra. Hệ thống chưa sử dụng voucher ở bước này.
+              </p>
             </div>
           </div>
         )}
@@ -291,12 +525,20 @@ export default function PartnerDashboard() {
                   {place.image ? <img src={place.image} alt="" /> : <Building2 size={20} />}
                 </span>
                 <div>
-                  <small>{place.partnerStatus ? 'PARTNER · ' + place.partnerStatus : 'ĐỊA ĐIỂM ĐÃ XÁC MINH'}</small>
+                  <small>
+                    {place.partnerStatus
+                      ? (place.partnerRole || 'PARTNER') + ' · ' + place.partnerStatus
+                      : 'ĐỊA ĐIỂM ĐÃ XÁC MINH'}
+                  </small>
                   <b>{place.partnerName || place.name}</b>
                   <span>{place.address || 'Hòa Lạc'}</span>
                 </div>
                 <div className="partner-place-actions">
-                  <button type="button" onClick={() => editPlace(place)}><Pencil size={13} /> Sửa</button>
+                  {place.canEditPlace && (
+                    <button type="button" onClick={() => editPlace(place)}>
+                      <Pencil size={13} /> Sửa
+                    </button>
+                  )}
                   <Link to={'/place/' + place.placeId}>Xem</Link>
                 </div>
               </article>
@@ -304,30 +546,135 @@ export default function PartnerDashboard() {
           </div>
         </div>
 
-        <div className="partner-dashboard-card">
+        <div className="partner-dashboard-card partner-usage-history-card">
           <div className="partner-card-head">
-            <div><span className="eyebrow">VOUCHER</span><h2>Lượt đổi gần đây</h2></div>
-            <span>{data.recentRedemptions?.length || 0}</span>
+            <div><span className="eyebrow">LỊCH SỬ SỬ DỤNG</span><h2>Voucher đã dùng</h2></div>
+            <span>{data.usageHistory?.length || 0}</span>
           </div>
 
-          {!data.recentRedemptions?.length ? (
-            <div className="empty-state"><TicketCheck size={22} /><b>Chưa có voucher được đổi</b></div>
+          {!data.usageHistory?.length ? (
+            <div className="empty-state">
+              <History size={22} />
+              <b>Chưa có voucher được sử dụng</b>
+              <span>Lượt xác nhận đầu tiên sẽ xuất hiện tại đây.</span>
+            </div>
           ) : (
-            <div className="partner-redemption-list">
-              {data.recentRedemptions.slice(0, 20).map((item) => (
+            <div className="partner-redemption-list partner-history-list">
+              {data.usageHistory.slice(0, 30).map((item) => (
                 <article key={item.id}>
                   <div>
                     <small>{item.campaignTitle}</small>
                     <b>{item.code}</b>
-                    <span>{item.userName} · {item.placeName}</span>
+                    <span>
+                      {item.userName} · {item.placeName}
+                      {item.usedByName ? ' · NV: ' + item.usedByName : ''}
+                    </span>
+                    <em>{formatDateTime(item.usedAt)}</em>
                   </div>
-                  <span className={'voucher-status ' + item.status.toLowerCase()}>{item.status}</span>
+                  <span className="voucher-status used">USED</span>
                 </article>
               ))}
             </div>
           )}
         </div>
       </section>
+
+      {ownerPartners.length > 0 && (
+        <section className="partner-dashboard-card partner-staff-card">
+          <div className="partner-card-head">
+            <div>
+              <span className="eyebrow">PARTNER STAFF</span>
+              <h2>Nhân viên quán</h2>
+            </div>
+            <span>{visibleStaff.filter((item) => item.role === 'STAFF').length} staff</span>
+          </div>
+
+          <div className="partner-staff-layout">
+            <form className="partner-staff-form" onSubmit={addStaff}>
+              <div className="partner-staff-form-copy">
+                <span className="partner-staff-form-icon"><UserPlus size={21} /></span>
+                <div>
+                  <b>Thêm nhân viên</b>
+                  <small>
+                    Nhân viên dùng tài khoản Hola Maps riêng và chỉ có quyền quét/xác nhận voucher.
+                  </small>
+                </div>
+              </div>
+
+              {ownerPartners.length > 1 && (
+                <label>
+                  Đối tác
+                  <select value={staffPartnerId} onChange={(e) => setStaffPartnerId(e.target.value)}>
+                    {ownerPartners.map((place) => (
+                      <option key={place.partnerId} value={place.partnerId}>
+                        {place.partnerName || place.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              <label>
+                Email tài khoản nhân viên
+                <span className="partner-staff-email">
+                  <Mail size={16} />
+                  <input
+                    type="email"
+                    value={staffEmail}
+                    onChange={(e) => setStaffEmail(e.target.value)}
+                    placeholder="nhanvien@example.com"
+                  />
+                </span>
+              </label>
+
+              <button className="primary-action" type="submit" disabled={staffSaving}>
+                <UserPlus size={16} />
+                {staffSaving ? 'Đang thêm...' : 'Cấp quyền STAFF'}
+              </button>
+            </form>
+
+            <div className="partner-staff-list">
+              {!visibleStaff.length ? (
+                <div className="empty-state">
+                  <Users size={22} />
+                  <b>Chưa có nhân viên</b>
+                  <span>Thêm tài khoản nhân viên để họ quét voucher bằng máy riêng.</span>
+                </div>
+              ) : (
+                visibleStaff.map((item) => (
+                  <article key={item.id} className={item.status === 'ACTIVE' ? 'active' : 'inactive'}>
+                    <span className="partner-staff-avatar">
+                      {(item.userName || '?')
+                        .split(' ')
+                        .map((word) => word[0])
+                        .slice(-2)
+                        .join('')
+                        .toUpperCase()}
+                    </span>
+                    <div>
+                      <small>{item.role} · {item.status}</small>
+                      <b>{item.userName}</b>
+                      <span>{item.userEmail}</span>
+                    </div>
+
+                    {item.role === 'STAFF' ? (
+                      <button
+                        type="button"
+                        disabled={staffUpdatingId === item.id}
+                        onClick={() => changeStaffStatus(item)}
+                      >
+                        {item.status === 'ACTIVE' ? 'Tạm khóa' : 'Kích hoạt'}
+                      </button>
+                    ) : (
+                      <span className="partner-owner-pill">OWNER</span>
+                    )}
+                  </article>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {editingPlace && (
         <div className="partner-edit-modal">
@@ -367,7 +714,10 @@ export default function PartnerDashboard() {
             <article key={item.id}>
               <span>{item.status}</span>
               <b>{item.title}</b>
-              <small>{item.partnerName} · {item.pointsCost.toLocaleString('vi-VN')} điểm</small>
+              <small>
+                {item.partnerName} · {item.pointsCost.toLocaleString('vi-VN')} điểm
+              </small>
+              {item.voucherValueText && <em>{item.voucherValueText}</em>}
               <div>
                 <strong>{item.quantityRedeemed}</strong>
                 <span>/ {item.quantityTotal === null ? '∞' : item.quantityTotal} lượt đổi</span>
