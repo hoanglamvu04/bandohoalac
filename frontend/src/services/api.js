@@ -471,6 +471,18 @@ export function updatePartnerManagedPlace(id, payload) {
   return unwrap(client.patch('/partner/places/' + encodeURIComponent(id), payload));
 }
 
+export function getAdminPartnerSettlements(params = {}) {
+  return unwrap(client.get('/admin/settlements', { params: cleanParams(params) }));
+}
+
+export function createAdminPartnerSettlement(payload) {
+  return unwrap(client.post('/admin/settlements', payload));
+}
+
+export function markAdminPartnerSettlementPaid(id) {
+  return unwrap(client.post('/admin/settlements/' + encodeURIComponent(id) + '/paid'));
+}
+
 export function getAdminAuditLogs(params = {}) {
   return unwrap(client.get('/admin/audit', { params: cleanParams(params) }));
 }
