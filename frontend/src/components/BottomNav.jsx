@@ -4,6 +4,10 @@ import { useAuth } from '../context/AuthContext.jsx';
 
 export default function BottomNav() {
   const { user, isModerator } = useAuth();
+  const partnerMemberships = user?.partnerAccess?.memberships || [];
+  const isPartnerStaffOnly = partnerMemberships.length > 0
+    && partnerMemberships.every((membership) => membership.role === 'STAFF');
+  const partnerTarget = isPartnerStaffOnly ? '/partner/scanner' : '/partner';
 
   const items = [
     ['/', 'Trang chủ', Home],
@@ -12,7 +16,7 @@ export default function BottomNav() {
     isModerator
       ? ['/admin', 'Admin', ShieldCheck]
       : user?.partnerAccess?.hasAccess
-        ? ['/partner', 'Partner', Building2]
+        ? [partnerTarget, isPartnerStaffOnly ? 'Scanner' : 'Partner', Building2]
         : ['/leaderboard', 'Xếp hạng', Trophy],
     [user ? '/profile' : '/login', user ? 'Tôi' : 'Đăng nhập', UserRound]
   ];
