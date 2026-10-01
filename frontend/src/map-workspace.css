@@ -2776,3 +2776,33 @@ body.map-route-active{
     line-height:1.2;
   }
 }
+
+
+/* Desktop discovery filters: slightly more compact */
+@media(min-width:1281px){
+  .hm-discovery-filters{
+    gap:6px;
+  }
+
+  .hm-discovery-filters select,
+  .hm-quick-filter{
+    height:37px;
+    font-size:11px;
+    border-radius:10px;
+  }
+
+  .hm-discovery-filters select{
+    max-width:146px;
+    padding:0 27px 0 9px;
+  }
+
+  .hm-quick-filter{
+    gap:5px;
+    padding:0 10px;
+  }
+
+  .hm-quick-filter svg{
+    width:13px;
+    height:13px;
+  }
+}
