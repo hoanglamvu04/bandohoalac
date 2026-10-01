@@ -583,7 +583,8 @@ export async function usePartnerVoucher({
   userId,
   redemptionId = null,
   code = null,
-  qrToken = null
+  qrToken = null,
+  shiftId = null
 }) {
   return withTransaction(async (client) => {
     const parsed = parseVoucherInput(code, qrToken);
@@ -606,6 +607,36 @@ export async function usePartnerVoucher({
     const access = await accessForPartner(userId, row.partner_id, client);
     if (!access) {
       throw new AppError('Bạn không có quyền xác nhận voucher của đối tác này.', 403);
+    }
+
+    let activeShift = null;
+    if (shiftId) {
+      const shiftResult = await client.query(
+        `SELECT id, partner_id, user_id, status, started_at
+         FROM partner_shifts
+         WHERE id = $1
+           AND partner_id = $2
+           AND user_id = $3
+           AND status = 'OPEN'
+         FOR UPDATE`,
+        [Number(shiftId), row.partner_id, userId]
+      );
+      activeShift = shiftResult.rows[0] || null;
+      if (!activeShift) {
+        throw new AppError('Ca làm việc không còn hoạt động. Hãy bắt đầu ca mới.', 409);
+      }
+    } else {
+      const shiftResult = await client.query(
+        `SELECT id, partner_id, user_id, status, started_at
+         FROM partner_shifts
+         WHERE partner_id = $1
+           AND user_id = $2
+           AND status = 'OPEN'
+         ORDER BY started_at DESC
+         LIMIT 1`,
+        [row.partner_id, userId]
+      );
+      activeShift = shiftResult.rows[0] || null;
     }
 
     if (parsed.qrToken && parsed.qrToken !== row.qr_token) {
@@ -634,11 +665,12 @@ export async function usePartnerVoucher({
            used_at = NOW(),
            redeemed_at = COALESCE(redeemed_at, NOW()),
            used_by_user_id = $2,
-           used_partner_id = $3
+           used_partner_id = $3,
+           used_shift_id = $4
        WHERE id = $1
          AND status = 'ISSUED'
        RETURNING id`,
-      [row.id, userId, row.partner_id]
+      [row.id, userId, row.partner_id, activeShift?.id || null]
     );
 
     if (!updated.rows[0]) {
@@ -656,7 +688,8 @@ export async function usePartnerVoucher({
         row.partner_id,
         JSON.stringify({
           method: parsed.qrToken ? 'QR' : 'CODE',
-          role: access.role || null
+          role: access.role || null,
+          shiftId: activeShift?.id ? String(activeShift.id) : null
         })
       ]
     );
