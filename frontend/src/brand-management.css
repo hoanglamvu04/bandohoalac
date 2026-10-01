@@ -1,0 +1,704 @@
+
+/* ============================================================
+   Runtime branding + Admin Brand Management
+   Loaded last so admin-configured logo sizes override legacy CSS.
+   ============================================================ */
+
+/* ---------- Runtime header logo ---------- */
+.reference-navbar .premium-brand.brand-official{
+  min-width:calc(var(--brand-header-desktop-width,198px) + 7px)!important;
+  width:calc(var(--brand-header-desktop-width,198px) + 7px)!important;
+  flex:0 0 calc(var(--brand-header-desktop-width,198px) + 7px)!important;
+}
+
+.reference-navbar .brand-official-lockup{
+  position:relative;
+  width:var(--brand-header-desktop-width,198px)!important;
+  max-width:var(--brand-header-desktop-width,198px)!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  overflow:visible!important;
+}
+
+.reference-navbar .brand-official-logo{
+  width:var(--brand-header-desktop-width,198px)!important;
+  height:auto!important;
+  max-width:none!important;
+  max-height:58px!important;
+  object-fit:contain!important;
+  object-position:left center!important;
+}
+
+.reference-navbar .brand-logo-compact{
+  display:none!important;
+}
+
+@media(max-width:1100px) and (min-width:761px){
+  .reference-navbar .premium-brand.brand-official{
+    min-width:min(var(--brand-header-desktop-width,198px),178px)!important;
+    width:min(var(--brand-header-desktop-width,198px),178px)!important;
+    flex-basis:min(var(--brand-header-desktop-width,198px),178px)!important;
+  }
+
+  .reference-navbar .brand-official-lockup,
+  .reference-navbar .brand-official-logo{
+    width:min(var(--brand-header-desktop-width,198px),172px)!important;
+    max-width:min(var(--brand-header-desktop-width,198px),172px)!important;
+  }
+}
+
+@media(max-width:760px){
+  .reference-navbar.home-navbar .premium-brand.brand-official,
+  .reference-navbar .premium-brand.brand-official{
+    min-width:var(--brand-header-mobile-width,154px)!important;
+    width:var(--brand-header-mobile-width,154px)!important;
+    flex:0 0 var(--brand-header-mobile-width,154px)!important;
+  }
+
+  .reference-navbar.home-navbar .brand-official-lockup,
+  .reference-navbar .brand-official-lockup{
+    width:var(--brand-header-mobile-width,154px)!important;
+    max-width:var(--brand-header-mobile-width,154px)!important;
+    height:54px!important;
+    overflow:visible!important;
+  }
+
+  .reference-navbar.home-navbar .brand-logo-main,
+  .reference-navbar .brand-logo-main{
+    display:block!important;
+    width:var(--brand-header-mobile-width,154px)!important;
+    max-width:var(--brand-header-mobile-width,154px)!important;
+    height:auto!important;
+    max-height:50px!important;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .premium-brand.brand-official{
+    min-width:var(--brand-header-compact-width,38px)!important;
+    width:var(--brand-header-compact-width,38px)!important;
+    height:42px!important;
+    flex:0 0 var(--brand-header-compact-width,38px)!important;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .brand-official-lockup{
+    width:var(--brand-header-compact-width,38px)!important;
+    max-width:var(--brand-header-compact-width,38px)!important;
+    height:42px!important;
+    display:grid!important;
+    place-items:center!important;
+    overflow:visible!important;
+    border-radius:10px!important;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .brand-logo-main{
+    display:none!important;
+  }
+
+  .reference-navbar.home-navbar.home-navbar-scrolled .brand-logo-compact{
+    display:block!important;
+    width:var(--brand-header-compact-width,38px)!important;
+    max-width:var(--brand-header-compact-width,38px)!important;
+    height:auto!important;
+    max-height:40px!important;
+    object-position:center!important;
+  }
+}
+
+/* ---------- Runtime footer logo ---------- */
+.reference-footer .footer-logo.footer-logo-official{
+  width:max-content!important;
+  height:auto!important;
+}
+
+.reference-footer .footer-logo.footer-logo-official img{
+  width:var(--brand-footer-desktop-width,178px)!important;
+  max-width:min(var(--brand-footer-desktop-width,178px),100%)!important;
+  height:auto!important;
+  object-fit:contain!important;
+  object-position:left center!important;
+}
+
+@media(max-width:680px){
+  .reference-footer .footer-logo.footer-logo-official img{
+    width:var(--brand-footer-mobile-width,154px)!important;
+    max-width:min(var(--brand-footer-mobile-width,154px),100%)!important;
+  }
+}
+
+/* ---------- Admin branding page ---------- */
+.admin-brand-page{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.admin-brand-heading{
+  align-items:flex-end;
+}
+
+.admin-brand-heading h2{
+  margin:6px 0 8px;
+  font-size:34px;
+}
+
+.admin-brand-heading p{
+  max-width:760px;
+  margin:0;
+  color:#6e7f8f;
+  font-size:14px;
+  line-height:1.6;
+}
+
+.admin-brand-status{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:10px 12px;
+  border:1px solid #d9e3ea;
+  border-radius:12px;
+  color:#48627b;
+  background:#fff;
+  font-size:13px;
+  font-weight:850;
+}
+
+.admin-brand-layout{
+  display:grid;
+  grid-template-columns:minmax(0,1.45fr) minmax(320px,.55fr);
+  gap:16px;
+  align-items:start;
+}
+
+.admin-brand-settings-card,
+.admin-brand-upload,
+.admin-brand-library{
+  border:1px solid #dfe7e3;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:0 12px 34px rgba(24,54,83,.06);
+}
+
+.admin-brand-settings-card{
+  padding:18px;
+}
+
+.admin-brand-card-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+}
+
+.admin-brand-card-head h3,
+.admin-brand-subhead h3{
+  margin:4px 0 0;
+  color:#153a63;
+  font-size:20px;
+}
+
+.admin-brand-placement-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:11px;
+  margin-top:18px;
+}
+
+.admin-brand-placement-grid label,
+.admin-brand-upload>label{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  color:#3e556a;
+  font-size:13px;
+  font-weight:850;
+}
+
+.admin-brand-placement-grid label>span{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.admin-brand-placement-grid select,
+.admin-brand-upload input,
+.admin-brand-upload select{
+  width:100%;
+  min-height:46px;
+  padding:0 11px;
+  border:1px solid #d8e3ea;
+  border-radius:11px;
+  outline:none;
+  color:#173652;
+  background:#fff;
+  font-size:14px;
+}
+
+.admin-brand-placement-grid select:focus,
+.admin-brand-upload input:focus,
+.admin-brand-upload select:focus{
+  border-color:#7eb3ee;
+  box-shadow:0 0 0 3px rgba(47,132,232,.1);
+}
+
+.admin-brand-size-section,
+.admin-brand-preview-section{
+  margin-top:22px;
+  padding-top:18px;
+  border-top:1px solid #e8edef;
+}
+
+.admin-brand-subhead{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.admin-brand-subhead small{
+  color:#82909b;
+  font-size:11px;
+}
+
+.admin-brand-size-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;
+  margin-top:13px;
+}
+
+.admin-brand-size-grid>label{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  color:#4b5e70;
+  font-size:12px;
+  font-weight:800;
+}
+
+.admin-brand-size-grid>label>div{
+  min-height:44px;
+  display:grid;
+  grid-template-columns:20px minmax(0,1fr) auto;
+  gap:6px;
+  align-items:center;
+  padding:0 9px;
+  border:1px solid #dae4e8;
+  border-radius:10px;
+  background:#fafcfc;
+}
+
+.admin-brand-size-grid input{
+  width:100%;
+  border:0;
+  outline:0;
+  color:#173c62;
+  background:transparent;
+  font-size:14px;
+  font-weight:850;
+}
+
+.admin-brand-size-grid span{
+  color:#82909a;
+  font-size:11px;
+}
+
+.admin-brand-preview-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:13px;
+}
+
+.admin-brand-preview-card{
+  min-width:0;
+  overflow:hidden;
+  border:1px solid #dee7ec;
+  border-radius:15px;
+  background:#f7fafc;
+}
+
+.admin-brand-preview-card>span{
+  display:block;
+  padding:8px 10px;
+  border-bottom:1px solid #e4eaee;
+  color:#728392;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+
+.admin-brand-preview-card>div{
+  min-height:92px;
+  display:flex;
+  align-items:center;
+  padding:12px;
+  overflow:hidden;
+}
+
+.admin-brand-preview-card img{
+  max-height:64px;
+  object-fit:contain;
+}
+
+.admin-brand-preview-card.mobile>div{
+  position:relative;
+  justify-content:flex-start;
+  min-height:110px;
+  background:linear-gradient(145deg,#f9fbfd,#eef5fb);
+}
+
+.admin-brand-preview-card.mobile i{
+  position:absolute;
+  right:13px;
+  bottom:13px;
+  width:48px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border:1px solid #d6e1e9;
+  border-radius:13px;
+  background:#fff;
+  box-shadow:0 6px 16px rgba(25,60,90,.1);
+}
+
+.admin-brand-preview-card.mobile i img{
+  max-width:42px;
+  max-height:42px;
+}
+
+.admin-brand-preview-card.footer>div{
+  background:linear-gradient(145deg,#fffefa,#f3ebdf);
+}
+
+.admin-brand-preview-card.favicon>div{
+  gap:10px;
+}
+
+.admin-brand-preview-card.favicon img{
+  width:38px;
+  height:38px;
+  border-radius:9px;
+  object-fit:contain;
+}
+
+.admin-brand-preview-card.favicon b{
+  color:#30445a;
+  font-size:13px;
+}
+
+.admin-brand-assets-panel{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.admin-brand-upload,
+.admin-brand-library{
+  padding:15px;
+}
+
+.admin-brand-upload{
+  display:flex;
+  flex-direction:column;
+  gap:11px;
+}
+
+.admin-brand-file-picker{
+  min-height:72px;
+  display:grid!important;
+  grid-template-columns:34px minmax(0,1fr);
+  gap:9px!important;
+  align-items:center;
+  padding:10px;
+  border:1.5px dashed #cbd9e1;
+  border-radius:13px;
+  color:#4c657b!important;
+  background:#f8fafb;
+  cursor:pointer;
+}
+
+.admin-brand-file-picker>svg{
+  color:#176fd6;
+}
+
+.admin-brand-file-picker>span{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.admin-brand-file-picker b{
+  overflow:hidden;
+  font-size:12px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.admin-brand-file-picker small{
+  color:#85939d;
+  font-size:10px;
+  font-weight:600;
+}
+
+.admin-brand-file-picker input{
+  display:none;
+}
+
+.admin-brand-upload-preview{
+  min-height:120px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border:1px solid #e0e7eb;
+  border-radius:13px;
+  background:#f6f9fb;
+}
+
+.admin-brand-upload-preview img{
+  max-width:90%;
+  max-height:110px;
+  object-fit:contain;
+}
+
+.admin-brand-upload-preview.favicon img{
+  width:76px;
+  height:76px;
+  object-fit:contain;
+}
+
+.admin-brand-upload>.secondary-action{
+  width:100%;
+  min-height:42px;
+  justify-content:center;
+}
+
+.admin-brand-library-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:9px;
+  margin-bottom:10px;
+}
+
+.admin-brand-library-head>div{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.admin-brand-library-head b{
+  color:#173a5d;
+  font-size:14px;
+}
+
+.admin-brand-library-head span{
+  color:#82909a;
+  font-size:10px;
+}
+
+.admin-brand-asset-list{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  max-height:520px;
+  overflow:auto;
+}
+
+.admin-brand-asset-row{
+  display:grid;
+  grid-template-columns:62px minmax(0,1fr) 34px;
+  gap:9px;
+  align-items:center;
+  padding:8px;
+  border:1px solid #e2e9ec;
+  border-radius:12px;
+  background:#fafcfc;
+}
+
+.admin-brand-asset-row.used{
+  border-color:#b7d7f7;
+  background:#f3f8ff;
+}
+
+.admin-brand-asset-thumb{
+  width:62px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border-radius:9px;
+  background:#fff;
+}
+
+.admin-brand-asset-thumb.favicon{
+  width:48px;
+  height:48px;
+  margin-left:7px;
+}
+
+.admin-brand-asset-thumb img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
+.admin-brand-asset-row>div{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.admin-brand-asset-row small{
+  color:#176fd5;
+  font-size:9px;
+  font-weight:900;
+}
+
+.admin-brand-asset-row b{
+  overflow:hidden;
+  color:#29435c;
+  font-size:12px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.admin-brand-asset-row span{
+  color:#81909b;
+  font-size:10px;
+}
+
+.admin-brand-asset-row>button{
+  width:32px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  border:0;
+  border-radius:9px;
+  color:#a5483b;
+  background:#fff1ee;
+  cursor:pointer;
+}
+
+.admin-brand-asset-row>button:disabled{
+  color:#9ba5aa;
+  background:#eef1f2;
+  cursor:not-allowed;
+}
+
+@media(max-width:1050px){
+  .admin-brand-layout{
+    grid-template-columns:1fr;
+  }
+
+  .admin-brand-assets-panel{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+}
+
+@media(max-width:760px){
+  .admin-brand-page{
+    width:calc(100% - 20px);
+    gap:12px;
+  }
+
+  .admin-brand-heading{
+    display:block;
+  }
+
+  .admin-brand-heading h2{
+    font-size:26px;
+  }
+
+  .admin-brand-heading p{
+    font-size:12.5px;
+  }
+
+  .admin-brand-status{
+    margin-top:10px;
+    font-size:11px;
+  }
+
+  .admin-brand-settings-card{
+    padding:13px;
+    border-radius:17px;
+  }
+
+  .admin-brand-card-head{
+    align-items:flex-start;
+  }
+
+  .admin-brand-card-head h3,
+  .admin-brand-subhead h3{
+    font-size:17px;
+  }
+
+  .admin-brand-card-head>.primary-action{
+    min-height:40px;
+    padding:0 10px;
+    font-size:11px;
+  }
+
+  .admin-brand-placement-grid{
+    grid-template-columns:1fr;
+    gap:9px;
+  }
+
+  .admin-brand-placement-grid label,
+  .admin-brand-upload>label{
+    font-size:12px;
+  }
+
+  .admin-brand-placement-grid select,
+  .admin-brand-upload input,
+  .admin-brand-upload select{
+    min-height:46px;
+    font-size:16px;
+  }
+
+  .admin-brand-subhead{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  .admin-brand-size-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .admin-brand-size-grid input{
+    font-size:16px;
+  }
+
+  .admin-brand-preview-grid{
+    grid-template-columns:1fr;
+  }
+
+  .admin-brand-preview-card>div{
+    min-height:86px;
+  }
+
+  .admin-brand-assets-panel{
+    display:flex;
+  }
+
+  .admin-brand-upload,
+  .admin-brand-library{
+    padding:13px;
+    border-radius:17px;
+  }
+
+  .admin-brand-asset-list{
+    max-height:none;
+  }
+}
+
+@media(max-width:390px){
+  .admin-brand-size-grid{
+    grid-template-columns:1fr;
+  }
+}
