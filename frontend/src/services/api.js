@@ -428,6 +428,22 @@ export function getPartnerDashboard() {
   return unwrap(client.get('/partner/dashboard'));
 }
 
+export function getPartnerScannerState() {
+  return unwrap(client.get('/partner/scanner'));
+}
+
+export function startPartnerShift(payload) {
+  return unwrap(client.post('/partner/shifts', payload));
+}
+
+export function endPartnerShift(id) {
+  return unwrap(client.post('/partner/shifts/' + encodeURIComponent(id) + '/end'));
+}
+
+export function getPartnerReconciliation(params = {}) {
+  return unwrap(client.get('/partner/reconciliation', { params: cleanParams(params) }));
+}
+
 export function inspectPartnerVoucher(payload) {
   return unwrap(client.post('/partner/vouchers/inspect', payload));
 }
