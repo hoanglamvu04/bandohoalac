@@ -37,16 +37,6 @@ jobs:
 
             cd "$APP_DIR"
 
-            echo "==> Sync optional Google Places key"
-            GOOGLE_PLACES_API_KEY_VALUE="${{ secrets.GOOGLE_PLACES_API_KEY }}"
-            if [ -n "$GOOGLE_PLACES_API_KEY_VALUE" ]; then
-              touch backend/.env
-              TMP_ENV="$(mktemp)"
-              grep -v '^GOOGLE_PLACES_API_KEY=' backend/.env > "$TMP_ENV" || true
-              printf '\nGOOGLE_PLACES_API_KEY=%s\n' "$GOOGLE_PLACES_API_KEY_VALUE" >> "$TMP_ENV"
-              mv "$TMP_ENV" backend/.env
-            fi
-
             echo "==> Sync source"
             git fetch origin main
             git checkout main

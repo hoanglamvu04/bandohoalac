@@ -68,17 +68,6 @@ CREATE INDEX IF NOT EXISTS places_status_idx ON places (status);
 CREATE INDEX IF NOT EXISTS places_category_idx ON places (category_id);
 CREATE INDEX IF NOT EXISTS places_slug_idx ON places (slug);
 
--- Google Places import provenance. Only the stable Place ID is used for
--- duplicate detection; Admin still reviews imported fields before publishing.
-ALTER TABLE places
-  ADD COLUMN IF NOT EXISTS google_place_id TEXT,
-  ADD COLUMN IF NOT EXISTS google_maps_uri TEXT,
-  ADD COLUMN IF NOT EXISTS google_imported_at TIMESTAMPTZ;
-
-CREATE UNIQUE INDEX IF NOT EXISTS places_google_place_id_unique_idx
-  ON places (google_place_id)
-  WHERE google_place_id IS NOT NULL;
-
 -- ============================================================
 -- PLACE IMAGES
 -- ============================================================
