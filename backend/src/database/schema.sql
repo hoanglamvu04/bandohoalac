@@ -651,3 +651,36 @@ CREATE INDEX IF NOT EXISTS voucher_redemption_events_partner_idx
 
 CREATE INDEX IF NOT EXISTS voucher_redemption_events_actor_idx
   ON voucher_redemption_events (actor_user_id, created_at DESC);
+
+
+-- ============================================================
+-- PARTNER SHIFT / CASHIER OPERATIONS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS partner_shifts (
+  id BIGSERIAL PRIMARY KEY,
+  partner_id BIGINT NOT NULL REFERENCES place_partners(id) ON DELETE CASCADE,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'OPEN'
+    CHECK (status IN ('OPEN', 'CLOSED')),
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ended_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS partner_shifts_partner_idx
+  ON partner_shifts (partner_id, started_at DESC);
+
+CREATE INDEX IF NOT EXISTS partner_shifts_user_idx
+  ON partner_shifts (user_id, started_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS partner_shifts_one_open_per_user_partner_idx
+  ON partner_shifts (partner_id, user_id)
+  WHERE status = 'OPEN';
+
+ALTER TABLE voucher_redemptions
+  ADD COLUMN IF NOT EXISTS used_shift_id BIGINT REFERENCES partner_shifts(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS voucher_redemptions_used_shift_idx
+  ON voucher_redemptions (used_shift_id, used_at DESC);
+
