@@ -70,6 +70,13 @@ export default function PartnerDashboard() {
   const streamRef = useRef(null);
   const fileInputRef = useRef(null);
   const canvasRef = useRef(null);
+  const scanLockedRef = useRef(false);
+  const lastScanRef = useRef({ value: '', at: 0 });
+  const audioContextRef = useRef(null);
+  const hardwareBufferRef = useRef('');
+  const hardwareLastKeyAtRef = useRef(0);
+  const scanPayloadHandlerRef = useRef(null);
+  const autoResumeTimerRef = useRef(null);
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -82,6 +89,9 @@ export default function PartnerDashboard() {
 
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerSupported, setScannerSupported] = useState(false);
+  const [scannerPaused, setScannerPaused] = useState(false);
+  const [scanSource, setScanSource] = useState('');
+  const [hardwareLastScan, setHardwareLastScan] = useState('');
   const [imageScanning, setImageScanning] = useState(false);
 
   const [editingPlace, setEditingPlace] = useState(null);
@@ -139,7 +149,62 @@ export default function PartnerDashboard() {
     return stopScanner;
   }, []);
 
+  useEffect(() => {
+    function onScannerKeyDown(event) {
+      const target = event.target;
+      const tag = target?.tagName;
+      const isTypingTarget = target?.isContentEditable
+        || tag === 'INPUT'
+        || tag === 'TEXTAREA'
+        || tag === 'SELECT';
+
+      // If an input is focused, let the existing manual-code input handle Enter.
+      if (isTypingTarget) return;
+
+      const now = Date.now();
+      if (now - hardwareLastKeyAtRef.current > 120) {
+        hardwareBufferRef.current = '';
+      }
+      hardwareLastKeyAtRef.current = now;
+
+      if (event.key === 'Enter') {
+        const raw = hardwareBufferRef.current.trim();
+        hardwareBufferRef.current = '';
+
+        const upper = raw.toUpperCase();
+        const looksLikeHolaVoucher = upper.startsWith('HOLA-')
+          || upper.startsWith('HOLA-VOUCHER:');
+
+        if (looksLikeHolaVoucher && raw.length >= 8) {
+          event.preventDefault();
+          setHardwareLastScan(raw);
+          scanPayloadHandlerRef.current?.(raw, 'hardware');
+        }
+        return;
+      }
+
+      if (
+        event.key.length === 1
+        && !event.ctrlKey
+        && !event.metaKey
+        && !event.altKey
+      ) {
+        hardwareBufferRef.current += event.key;
+        if (hardwareBufferRef.current.length > 300) {
+          hardwareBufferRef.current = hardwareBufferRef.current.slice(-300);
+        }
+      }
+    }
+
+    window.addEventListener('keydown', onScannerKeyDown, true);
+    return () => window.removeEventListener('keydown', onScannerKeyDown, true);
+  }, []);
+
   function stopScanner() {
+    if (autoResumeTimerRef.current) {
+      window.clearTimeout(autoResumeTimerRef.current);
+      autoResumeTimerRef.current = null;
+    }
     if (scanTimerRef.current) {
       window.clearInterval(scanTimerRef.current);
       scanTimerRef.current = null;
@@ -151,7 +216,59 @@ export default function PartnerDashboard() {
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    scanLockedRef.current = false;
+    setScannerPaused(false);
+    setScanSource('');
     setScannerOpen(false);
+  }
+
+  function playScanFeedback(type = 'detected') {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(type === 'success' ? [70, 45, 110] : 65);
+      }
+
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      const context = audioContextRef.current || new AudioContextClass();
+      audioContextRef.current = context;
+      if (context.state === 'suspended') context.resume?.();
+
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const now = context.currentTime;
+      const duration = type === 'success' ? 0.14 : 0.08;
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(type === 'success' ? 1046 : 880, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(now);
+      oscillator.stop(now + duration + 0.02);
+    } catch {
+      // Sound/vibration are enhancements only; scanning must still work.
+    }
+  }
+
+  function resumeScanner({ clearPreview = true } = {}) {
+    if (autoResumeTimerRef.current) {
+      window.clearTimeout(autoResumeTimerRef.current);
+      autoResumeTimerRef.current = null;
+    }
+    if (clearPreview) {
+      setVoucherPreview(null);
+      setVoucherInput({ code: '', qrToken: null });
+      setCode('');
+    }
+    scanLockedRef.current = false;
+    lastScanRef.current = { value: '', at: 0 };
+    setScannerPaused(false);
+    setScanSource('');
   }
 
   async function inspectVoucher(payload) {
@@ -161,10 +278,10 @@ export default function PartnerDashboard() {
 
     if (!parsed?.code) {
       showToast('Nhập hoặc quét mã voucher.', 'error');
-      return;
+      return null;
     }
 
-    if (inspecting) return;
+    if (inspecting) return null;
     setInspecting(true);
     setVoucherPreview(null);
 
@@ -176,12 +293,46 @@ export default function PartnerDashboard() {
       setVoucherInput(parsed);
       setCode(parsed.code);
       setVoucherPreview(item);
+      return item;
     } catch (error) {
       showToast(error.message, 'error');
+      return null;
     } finally {
       setInspecting(false);
     }
   }
+
+  async function handleScannedPayload(rawValue, source = 'camera') {
+    const raw = String(rawValue || '').trim();
+    const parsed = parseVoucherPayload(raw);
+    if (!parsed.code || scanLockedRef.current) return;
+
+    const signature = parsed.code + ':' + (parsed.qrToken || '');
+    const now = Date.now();
+
+    if (
+      lastScanRef.current.value === signature
+      && now - lastScanRef.current.at < 2200
+    ) {
+      return;
+    }
+
+    lastScanRef.current = { value: signature, at: now };
+    scanLockedRef.current = true;
+    setScannerPaused(true);
+    setScanSource(source);
+    playScanFeedback('detected');
+
+    const item = await inspectVoucher(parsed);
+
+    if (!item) {
+      autoResumeTimerRef.current = window.setTimeout(() => {
+        resumeScanner({ clearPreview: true });
+      }, 1300);
+    }
+  }
+
+  scanPayloadHandlerRef.current = handleScannedPayload;
 
   function decodeFrame(source, width, height) {
     if (!width || !height || typeof document === 'undefined') return null;
@@ -212,14 +363,34 @@ export default function PartnerDashboard() {
   async function startScanner() {
     if (!navigator.mediaDevices?.getUserMedia) {
       showToast(
-        'Trình duyệt không mở được camera. Hãy chọn ảnh QR hoặc nhập mã voucher.',
+        'Trình duyệt không mở được camera. Hãy chọn ảnh QR hoặc dùng máy quét USB/Bluetooth.',
         'info'
       );
       fileInputRef.current?.click();
       return;
     }
 
+    // Re-open the scanner UI without requesting camera permission again.
+    if (streamRef.current) {
+      setScannerOpen(true);
+      resumeScanner({ clearPreview: true });
+      window.setTimeout(async () => {
+        const video = videoRef.current;
+        if (!video) return;
+        video.srcObject = streamRef.current;
+        try { await video.play(); } catch {}
+      }, 60);
+      return;
+    }
+
     try {
+      // Initialize audio from this user gesture so future scan beeps are allowed.
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass && !audioContextRef.current) {
+        audioContextRef.current = new AudioContextClass();
+      }
+      audioContextRef.current?.resume?.();
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: 'environment' },
@@ -230,16 +401,22 @@ export default function PartnerDashboard() {
       });
 
       streamRef.current = stream;
+      scanLockedRef.current = false;
+      setScannerPaused(false);
       setScannerOpen(true);
 
       window.setTimeout(async () => {
         const video = videoRef.current;
-        if (!video) return;
+        if (!video || !streamRef.current) return;
 
-        video.srcObject = stream;
+        video.srcObject = streamRef.current;
         await video.play();
 
+        if (scanTimerRef.current) window.clearInterval(scanTimerRef.current);
+
         scanTimerRef.current = window.setInterval(async () => {
+          if (scanLockedRef.current) return;
+
           const currentVideo = videoRef.current;
           if (!currentVideo || currentVideo.readyState < 2) return;
 
@@ -252,25 +429,22 @@ export default function PartnerDashboard() {
             const value = result?.data;
             if (!value) return;
 
-            const parsed = parseVoucherPayload(value);
-            stopScanner();
-            await inspectVoucher(parsed);
+            await handleScannedPayload(value, 'camera');
           } catch {
             // A moving frame can be unreadable; continue scanning the next frame.
           }
-        }, 280);
+        }, 240);
       }, 80);
     } catch (error) {
       stopScanner();
       showToast(
         error?.name === 'NotAllowedError'
-          ? 'Camera đang bị chặn. Hãy cấp quyền camera hoặc chọn ảnh QR từ máy.'
-          : 'Không thể mở camera. Bạn có thể chọn ảnh QR hoặc nhập mã voucher.',
+          ? 'Camera đang bị chặn. Hãy cấp quyền một lần hoặc dùng máy quét USB/Bluetooth.'
+          : 'Không thể mở camera. Bạn vẫn có thể chọn ảnh QR, nhập mã hoặc dùng máy quét ngoài.',
         'error'
       );
     }
   }
-
   async function scanQrImage(event) {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -311,7 +485,7 @@ export default function PartnerDashboard() {
         return;
       }
 
-      await inspectVoucher(parseVoucherPayload(result.data));
+      await handleScannedPayload(result.data, 'image');
     } catch {
       showToast('Không thể đọc ảnh QR. Hãy thử ảnh khác hoặc nhập mã voucher.', 'error');
     } finally {
@@ -342,15 +516,15 @@ export default function PartnerDashboard() {
         message: 'Voucher đã được ghi nhận sử dụng thành công.'
       });
       setCode('');
+      playScanFeedback('success');
       showToast('Đã xác nhận voucher ' + item.code + ' là USED.', 'success');
       await load({ silent: true });
+
+      autoResumeTimerRef.current = window.setTimeout(() => {
+        resumeScanner({ clearPreview: true });
+      }, 1000);
     } catch (error) {
       showToast(error.message, 'error');
-      try {
-        await inspectVoucher(voucherInput);
-      } catch {
-        // The toast above is enough.
-      }
     } finally {
       setUsingVoucher(false);
     }
