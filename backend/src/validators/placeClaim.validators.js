@@ -24,7 +24,8 @@ export const partnerVoucherInspectSchema = z.object({
 
 export const partnerVoucherUseSchema = z.object({
   code: z.string().trim().min(6).max(180).nullable().optional(),
-  qrToken: z.string().trim().min(12).max(120).nullable().optional()
+  qrToken: z.string().trim().min(12).max(120).nullable().optional(),
+  shiftId: z.coerce.number().int().positive().nullable().optional()
 });
 
 export const partnerStaffCreateSchema = z.object({
@@ -42,4 +43,9 @@ export const partnerUpdatePlaceSchema = z.object({
   website: z.string().trim().max(500).nullable().optional(),
   openingHours: z.string().trim().max(1000).nullable().optional(),
   description: z.string().trim().max(3000).nullable().optional()
+});
+
+
+export const partnerShiftStartSchema = z.object({
+  partnerId: z.coerce.number().int().positive()
 });
