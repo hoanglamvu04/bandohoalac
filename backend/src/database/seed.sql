@@ -13,6 +13,7 @@ INSERT INTO categories (name, slug, icon) VALUES
   ('Villa', 'villa', 'building'),
   ('Check-in', 'check-in', 'camera'),
   ('Trải nghiệm', 'trai-nghiem', 'ferris-wheel'),
+  ('Khu du lịch', 'khu-du-lich', 'palmtree'),
   ('Trường học', 'truong-hoc', 'school'),
   ('Y tế', 'y-te', 'hospital'),
   ('Siêu thị & cửa hàng', 'sieu-thi', 'shopping-cart'),

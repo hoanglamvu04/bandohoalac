@@ -120,6 +120,15 @@ const CATEGORY_RULES = [
     ]
   },
   {
+    slug: 'khu-du-lich',
+    terms: [
+      'tourist_destination', 'tourism_area', 'tourism_complex', 'resort_area',
+      'recreation_area', 'recreation_center', 'amusement_park', 'theme_park',
+      'water_park', 'eco_tourism', 'eco_park', 'holiday_park',
+      'visitor_attraction_complex'
+    ]
+  },
+  {
     slug: 'check-in',
     terms: [
       'tourist_attraction', 'attraction', 'viewpoint', 'landmark', 'monument',
@@ -130,8 +139,8 @@ const CATEGORY_RULES = [
   {
     slug: 'trai-nghiem',
     terms: [
-      'arts_and_entertainment', 'museum', 'gallery', 'amusement_park',
-      'theme_park', 'zoo', 'campground', 'camp_site', 'event_venue'
+      'arts_and_entertainment', 'museum', 'gallery', 'zoo',
+      'campground', 'camp_site', 'event_venue'
     ]
   }
 ]

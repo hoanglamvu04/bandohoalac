@@ -79,6 +79,7 @@ function categoryIcon(category) {
   if (normalized.includes('ăn') || normalized.includes('food')) return '🍜';
   if (normalized.includes('home')) return '🏡';
   if (normalized.includes('villa')) return '🏘️';
+  if (normalized.includes('khu du lịch') || normalized.includes('tourist destination')) return '🏝️';
   if (normalized.includes('check')) return '📸';
   if (normalized.includes('trường') || normalized.includes('school')) return '🎓';
   if (normalized.includes('y tế') || normalized.includes('hospital') || normalized.includes('medical')) return '🏥';
