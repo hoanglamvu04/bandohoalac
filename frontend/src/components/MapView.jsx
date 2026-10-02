@@ -80,6 +80,16 @@ function categoryIcon(category) {
   if (normalized.includes('home')) return '🏡';
   if (normalized.includes('villa')) return '🏘️';
   if (normalized.includes('check')) return '📸';
+  if (normalized.includes('trường') || normalized.includes('school')) return '🎓';
+  if (normalized.includes('y tế') || normalized.includes('hospital') || normalized.includes('medical')) return '🏥';
+  if (normalized.includes('siêu thị') || normalized.includes('cửa hàng') || normalized.includes('shop')) return '🛒';
+  if (normalized.includes('ngân hàng') || normalized.includes('atm')) return '🏦';
+  if (normalized.includes('nhiên liệu') || normalized.includes('sạc') || normalized.includes('fuel')) return '⛽';
+  if (normalized.includes('cơ quan') || normalized.includes('government')) return '🏛️';
+  if (normalized.includes('thể thao') || normalized.includes('sport')) return '🏟️';
+  if (normalized.includes('dịch vụ') || normalized.includes('service')) return '🛠️';
+  if (normalized.includes('giao thông') || normalized.includes('transport')) return '🚌';
+  if (normalized.includes('bất động sản') || normalized.includes('real estate')) return '🏢';
   return '📍';
 }
 

@@ -264,7 +264,9 @@ export default function HomePage() {
   }, [user?.id]);
 
   const displaySections = useMemo(
-    () => [...sections].sort((a, b) => {
+    () => sections
+      .filter((section) => CATEGORY_ORDER.includes(section?.category?.slug))
+      .sort((a, b) => {
       const aIndex = CATEGORY_ORDER.indexOf(a?.category?.slug);
       const bIndex = CATEGORY_ORDER.indexOf(b?.category?.slug);
       const safeA = aIndex === -1 ? CATEGORY_ORDER.length : aIndex;

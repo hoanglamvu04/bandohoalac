@@ -10,6 +10,86 @@ const SOURCE_OVERTURE = 'OVERTURE';
 
 const CATEGORY_RULES = [
   {
+    slug: 'truong-hoc',
+    terms: [
+      'school', 'education', 'educational_institution', 'university', 'college',
+      'kindergarten', 'preschool', 'primary_school', 'secondary_school',
+      'high_school', 'language_school', 'training_center'
+    ]
+  },
+  {
+    slug: 'y-te',
+    terms: [
+      'health_and_medical', 'hospital', 'clinic', 'medical_clinic', 'doctor',
+      'dentist', 'dental_clinic', 'pharmacy', 'drugstore', 'laboratory',
+      'medical_center', 'veterinary_clinic'
+    ]
+  },
+  {
+    slug: 'sieu-thi',
+    terms: [
+      'supermarket', 'grocery_store', 'convenience_store', 'department_store',
+      'shopping_center', 'shopping_mall', 'market', 'retail', 'store'
+    ]
+  },
+  {
+    slug: 'ngan-hang-atm',
+    terms: [
+      'bank', 'atm', 'financial_service', 'credit_union', 'money_transfer',
+      'currency_exchange'
+    ]
+  },
+  {
+    slug: 'nhien-lieu-sac',
+    terms: [
+      'gas_station', 'petrol_station', 'fuel_station', 'service_station',
+      'electric_vehicle_charging_station', 'ev_charging_station',
+      'charging_station'
+    ]
+  },
+  {
+    slug: 'co-quan',
+    terms: [
+      'government', 'government_office', 'public_service', 'city_hall',
+      'town_hall', 'police', 'police_station', 'fire_station', 'courthouse',
+      'post_office', 'embassy'
+    ]
+  },
+  {
+    slug: 'the-thao',
+    terms: [
+      'sports_and_recreation', 'sports_center', 'sports_complex', 'gym',
+      'fitness_center', 'stadium', 'soccer_field', 'football_field',
+      'tennis_court', 'badminton_court', 'basketball_court', 'swimming_pool',
+      'golf_course', 'martial_arts'
+    ]
+  },
+  {
+    slug: 'giao-thong',
+    terms: [
+      'transportation', 'bus_station', 'bus_stop', 'train_station',
+      'railway_station', 'taxi_stand', 'parking', 'parking_lot',
+      'airport', 'ferry_terminal', 'transit_station'
+    ]
+  },
+  {
+    slug: 'bat-dong-san',
+    terms: [
+      'real_estate', 'real_estate_agency', 'real_estate_agent',
+      'property_management', 'property_developer', 'housing_development',
+      'apartment_complex'
+    ]
+  },
+  {
+    slug: 'dich-vu',
+    terms: [
+      'professional_services', 'local_service', 'service', 'repair_service',
+      'auto_repair', 'car_repair', 'motorcycle_repair', 'laundry',
+      'dry_cleaning', 'hair_salon', 'beauty_salon', 'barber', 'spa',
+      'printing_service', 'photography_service'
+    ]
+  },
+  {
     slug: 'cafe',
     terms: [
       'cafe', 'coffee', 'coffee_shop', 'coffeehouse', 'tea_room',
@@ -51,12 +131,10 @@ const CATEGORY_RULES = [
     slug: 'trai-nghiem',
     terms: [
       'arts_and_entertainment', 'museum', 'gallery', 'amusement_park',
-      'theme_park', 'zoo', 'sports_and_recreation', 'sports_center',
-      'fitness_center', 'spa', 'campground', 'camp_site', 'golf_course',
-      'horseback_riding', 'swimming_pool', 'event_venue'
+      'theme_park', 'zoo', 'campground', 'camp_site', 'event_venue'
     ]
   }
-];
+]
 
 function firstUseful(value) {
   if (Array.isArray(value)) {

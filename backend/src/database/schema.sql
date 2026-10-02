@@ -37,6 +37,29 @@ CREATE TABLE IF NOT EXISTS categories (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Core discovery + utility taxonomy. Kept in schema so production migrations
+-- receive new categories without running development seed data.
+INSERT INTO categories (name, slug, icon) VALUES
+  ('Cafe', 'cafe', 'coffee'),
+  ('Ăn uống', 'an-uong', 'utensils'),
+  ('Homestay', 'homestay', 'home'),
+  ('Villa', 'villa', 'building'),
+  ('Check-in', 'check-in', 'camera'),
+  ('Trải nghiệm', 'trai-nghiem', 'ferris-wheel'),
+  ('Trường học', 'truong-hoc', 'school'),
+  ('Y tế', 'y-te', 'hospital'),
+  ('Siêu thị & cửa hàng', 'sieu-thi', 'shopping-cart'),
+  ('Ngân hàng & ATM', 'ngan-hang-atm', 'landmark'),
+  ('Nhiên liệu & sạc EV', 'nhien-lieu-sac', 'fuel'),
+  ('Cơ quan công cộng', 'co-quan', 'building-2'),
+  ('Thể thao', 'the-thao', 'dumbbell'),
+  ('Dịch vụ', 'dich-vu', 'wrench'),
+  ('Giao thông', 'giao-thong', 'bus'),
+  ('Bất động sản', 'bat-dong-san', 'house-key')
+ON CONFLICT (slug) DO UPDATE
+SET name = EXCLUDED.name,
+    icon = EXCLUDED.icon;
+
 -- ============================================================
 -- PLACES (single source of truth for every location on the map)
 -- ============================================================
