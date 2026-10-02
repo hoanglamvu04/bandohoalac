@@ -13,9 +13,9 @@ LANGUAGE sql
 IMMUTABLE
 PARALLEL SAFE
 STRICT
-AS $
+AS $$
   SELECT public.unaccent('public.unaccent'::regdictionary, input)
-$;
+$$;
 
 -- ============================================================
 -- USERS
