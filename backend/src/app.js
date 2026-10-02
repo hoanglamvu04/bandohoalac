@@ -35,7 +35,11 @@ export function createApp() {
   if (env.nodeEnv !== 'test') {
     app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
   }
-  app.use('/uploads', express.static(uploadRoot));
+  app.use('/uploads', express.static(uploadRoot, {
+    maxAge: '365d',
+    immutable: true,
+    etag: true
+  }));
   app.use('/api', generalApiRateLimiter);
   app.use('/api/places/bounds', mapReadRateLimiter);
   app.use('/api/map-layers', mapReadRateLimiter);

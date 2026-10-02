@@ -26,5 +26,7 @@ export const env = {
   publicBaseUrl: process.env.PUBLIC_BASE_URL || `http://localhost:${Number(process.env.PORT) || 5000}`,
   routingBaseUrl: process.env.ROUTING_BASE_URL || 'https://router.project-osrm.org',
   routingTimeoutMs: Number(process.env.ROUTING_TIMEOUT_MS) || 10000,
-  overtureCliPath: (process.env.OVERTURE_CLI_PATH || '').trim()
+  overtureCliPath: (process.env.OVERTURE_CLI_PATH || '').trim(),
+  placeBoundsCacheTtlMs: Math.max(Number(process.env.PLACE_BOUNDS_CACHE_TTL_MS) || 30000, 1000),
+  placeBoundsCacheMaxEntries: Math.max(Number(process.env.PLACE_BOUNDS_CACHE_MAX_ENTRIES) || 400, 20)
 };

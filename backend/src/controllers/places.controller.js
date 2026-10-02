@@ -1,7 +1,7 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
 import {
-  listPlaces, listFeaturedPlaces, listHomeSections, getPlaceById, getPlaceBySlug, getNearbyPlaces, getPlacesInBounds
+  listPlaces, listFeaturedPlaces, listHomeSections, getPlaceById, getPlaceBySlug, getNearbyPlaces, getPlacesInBoundsCached
 } from '../services/place.service.js';
 
 export const getPlaces = asyncHandler(async (req, res) => {
@@ -48,7 +48,7 @@ export const getNearby = asyncHandler(async (req, res) => {
 
 export const getBounds = asyncHandler(async (req, res) => {
   const { north, south, east, west } = req.query;
-  const items = await getPlacesInBounds({
+  const { items, cacheStatus } = await getPlacesInBoundsCached({
     north: Number(north),
     south: Number(south),
     east: Number(east),
@@ -56,5 +56,8 @@ export const getBounds = asyncHandler(async (req, res) => {
     category: req.query.category,
     minRating: req.query.minRating
   });
+
+  res.set('X-Hola-Cache', cacheStatus);
+  res.set('Cache-Control', 'public, max-age=5, stale-while-revalidate=25');
   res.json({ items });
 });

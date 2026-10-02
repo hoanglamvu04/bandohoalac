@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import { unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { env } from '../config/env.js';
@@ -58,6 +59,85 @@ function assetFolder(scope) {
   ].join('/'));
 }
 
+function cloudinaryVariantUrl(url, transformation) {
+  const marker = '/image/upload/';
+  if (!url || !String(url).includes(marker)) return url || null;
+  return String(url).replace(marker, marker + transformation + '/');
+}
+
+function publicUploadUrl(filename) {
+  return String(env.publicBaseUrl || '').replace(/\/$/, '') +
+    '/uploads/' + encodeURIComponent(filename);
+}
+
+let warnedMissingCwebp = false;
+
+function runCwebp(inputFile, outputFile, width, quality) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(
+      'cwebp',
+      [
+        '-quiet',
+        '-metadata', 'none',
+        '-q', String(quality),
+        '-resize', String(width), '0',
+        inputFile,
+        '-o', outputFile
+      ],
+      {
+        stdio: 'ignore',
+        windowsHide: true
+      }
+    );
+
+    child.once('error', reject);
+    child.once('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error('cwebp exited with code ' + code));
+    });
+  });
+}
+
+async function createLocalPlaceVariants(file) {
+  const filename = file?.filename;
+  if (!filename) return {};
+
+  const sourcePath = file.path || path.resolve(process.cwd(), env.uploadDir, filename);
+  const parsed = path.parse(filename);
+  const thumbnailFilename = parsed.name + '-thumb.webp';
+  const cardFilename = parsed.name + '-card.webp';
+  const thumbnailPath = path.join(path.dirname(sourcePath), thumbnailFilename);
+  const cardPath = path.join(path.dirname(sourcePath), cardFilename);
+
+  try {
+    await runCwebp(sourcePath, thumbnailPath, 320, 72);
+    await runCwebp(sourcePath, cardPath, 960, 82);
+
+    return {
+      thumbnailUrl: publicUploadUrl(thumbnailFilename),
+      cardUrl: publicUploadUrl(cardFilename),
+      thumbnailFilename,
+      cardFilename
+    };
+  } catch (error) {
+    await Promise.all([
+      unlink(thumbnailPath).catch(() => {}),
+      unlink(cardPath).catch(() => {})
+    ]);
+
+    if (error?.code === 'ENOENT' && !warnedMissingCwebp) {
+      warnedMissingCwebp = true;
+      console.warn(
+        '[Hola Maps] cwebp is not installed; local place images will temporarily use originals.'
+      );
+    } else if (error?.code !== 'ENOENT') {
+      console.warn('[Hola Maps] Failed to create local WebP variants:', error.message);
+    }
+
+    return {};
+  }
+}
+
 async function uploadCloudinaryFile(file, {
   scope = 'misc',
   prefix = 'image'
@@ -99,7 +179,7 @@ async function uploadCloudinaryFile(file, {
     );
   }
 
-  return {
+  const asset = {
     provider: 'cloudinary',
     url: payload.secure_url,
     publicId: payload.public_id,
@@ -109,14 +189,33 @@ async function uploadCloudinaryFile(file, {
     format: payload.format,
     bytes: payload.bytes
   };
+
+  if (scope === 'places') {
+    asset.thumbnailUrl = cloudinaryVariantUrl(
+      payload.secure_url,
+      'c_fill,g_auto,w_320,h_220,f_webp,q_auto:eco'
+    );
+    asset.cardUrl = cloudinaryVariantUrl(
+      payload.secure_url,
+      'c_limit,w_960,f_webp,q_auto:good'
+    );
+  }
+
+  return asset;
 }
 
-function localFileAsset(file) {
-  return {
+async function localFileAsset(file, { scope = 'misc' } = {}) {
+  const asset = {
     provider: 'local',
-    url: `${env.publicBaseUrl}/uploads/${file.filename}`,
+    url: publicUploadUrl(file.filename),
     filename: file.filename
   };
+
+  if (scope === 'places') {
+    Object.assign(asset, await createLocalPlaceVariants(file));
+  }
+
+  return asset;
 }
 
 export async function storeUploadedFiles(files = [], options = {}) {
@@ -136,7 +235,11 @@ export async function storeUploadedFiles(files = [], options = {}) {
     }
   }
 
-  return files.map(localFileAsset);
+  const uploaded = [];
+  for (const file of files) {
+    uploaded.push(await localFileAsset(file, options));
+  }
+  return uploaded;
 }
 
 async function destroyCloudinaryAsset(asset) {
@@ -175,11 +278,18 @@ async function destroyCloudinaryAsset(asset) {
 }
 
 async function deleteLocalAsset(asset) {
-  if (!asset?.filename) return;
-  const fullPath = path.resolve(process.cwd(), env.uploadDir, asset.filename);
-  await unlink(fullPath).catch((error) => {
-    if (error?.code !== 'ENOENT') throw error;
-  });
+  const filenames = [
+    asset?.filename,
+    asset?.thumbnailFilename,
+    asset?.cardFilename
+  ].filter(Boolean);
+
+  for (const filename of new Set(filenames)) {
+    const fullPath = path.resolve(process.cwd(), env.uploadDir, filename);
+    await unlink(fullPath).catch((error) => {
+      if (error?.code !== 'ENOENT') throw error;
+    });
+  }
 }
 
 export async function deleteStoredAssets(assets = []) {

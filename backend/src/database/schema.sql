@@ -3,6 +3,19 @@
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS unaccent;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Immutable wrapper lets PostgreSQL build trigram indexes on accent-folded text.
+CREATE OR REPLACE FUNCTION public.hola_unaccent(input TEXT)
+RETURNS TEXT
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+STRICT
+AS $
+  SELECT public.unaccent('public.unaccent'::regdictionary, input)
+$;
 
 -- ============================================================
 -- USERS
@@ -91,6 +104,19 @@ CREATE INDEX IF NOT EXISTS places_location_idx ON places USING GIST (location);
 CREATE INDEX IF NOT EXISTS places_status_idx ON places (status);
 CREATE INDEX IF NOT EXISTS places_category_idx ON places (category_id);
 CREATE INDEX IF NOT EXISTS places_slug_idx ON places (slug);
+
+CREATE INDEX IF NOT EXISTS places_search_trgm_idx
+  ON places USING GIN (
+    (
+      lower(
+        public.hola_unaccent(
+          COALESCE(name, '') || ' ' ||
+          COALESCE(address, '') || ' ' ||
+          COALESCE(description, '')
+        )
+      )
+    ) gin_trgm_ops
+  );
 
 -- ============================================================
 -- PLACE IMAGES
@@ -244,7 +270,9 @@ CREATE INDEX IF NOT EXISTS map_features_validity_idx ON map_features (valid_from
 ALTER TABLE place_images
   ADD COLUMN IF NOT EXISTS storage_provider TEXT,
   ADD COLUMN IF NOT EXISTS storage_public_id TEXT,
-  ADD COLUMN IF NOT EXISTS storage_asset_folder TEXT;
+  ADD COLUMN IF NOT EXISTS storage_asset_folder TEXT,
+  ADD COLUMN IF NOT EXISTS thumbnail_url TEXT,
+  ADD COLUMN IF NOT EXISTS card_url TEXT;
 
 -- Old data could contain more than one cover because each photo contribution
 -- used to mark its first image as cover. Keep the oldest cover and normalize
