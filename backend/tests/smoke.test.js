@@ -163,3 +163,47 @@ test('unknown route returns 404', async () => {
   const res = await fetch(url('/api/does-not-exist'));
   assert.equal(res.status, 404);
 });
+
+
+test('Public Integration API: meta exposes v1 read-only contract', async () => {
+  const res = await fetch(url('/api/public/v1/meta'));
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('x-hola-api-version'), 'v1');
+  const body = await res.json();
+  assert.equal(body.data.apiVersion, 'v1');
+  assert.equal(body.data.readOnly, true);
+});
+
+test('Public Integration API: categories returns public taxonomy', async () => {
+  const res = await fetch(url('/api/public/v1/categories'));
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body.data.items));
+});
+
+test('Public Integration API: place list hides internal workflow fields', async () => {
+  const res = await fetch(url('/api/public/v1/places?limit=2'));
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body.data.items));
+
+  const item = body.data.items[0];
+  if (item) {
+    assert.ok(item.category);
+    assert.ok(item.location);
+    assert.ok(item.images);
+    assert.equal(Object.prototype.hasOwnProperty.call(item, 'createdBy'), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(item, 'source'), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(item, 'status'), false);
+  }
+});
+
+test('Public Integration API: GeoJSON bounds returns FeatureCollection', async () => {
+  const res = await fetch(url(
+    '/api/public/v1/places/geojson?north=21.145&south=20.885&east=105.665&west=105.325'
+  ));
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.type, 'FeatureCollection');
+  assert.ok(Array.isArray(body.features));
+});

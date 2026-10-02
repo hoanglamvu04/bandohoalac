@@ -30,7 +30,8 @@ export const generalApiRateLimiter = rateLimit({
       req.method === 'GET' &&
       (
         url === '/api/places/bounds' ||
-        url === '/api/map-layers'
+        url === '/api/map-layers' ||
+        url.startsWith('/api/public/v1/')
       )
     );
   }
@@ -69,4 +70,15 @@ export const partnerScanRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Có quá nhiều lần kiểm tra voucher. Hãy chờ một lúc.' }
+});
+
+
+export const publicIntegrationRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Public map API is being requested too quickly. Please wait a moment.'
+  }
 });

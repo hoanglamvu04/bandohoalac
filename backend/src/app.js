@@ -4,9 +4,13 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
 import { uploadRoot } from './middleware/upload.js';
-import { generalApiRateLimiter, mapReadRateLimiter } from './middleware/rateLimit.js';
+import {
+  generalApiRateLimiter,
+  mapReadRateLimiter,
+  publicIntegrationRateLimiter
+} from './middleware/rateLimit.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
-import { resolveCorsOrigin } from './config/cors.js';
+import { resolveCorsOrigin, resolvePublicApiCorsOrigin } from './config/cors.js';
 
 import authRoutes from './routes/auth.routes.js';
 import placesRoutes from './routes/places.routes.js';
@@ -24,13 +28,26 @@ import missionsRoutes from './routes/missions.routes.js';
 import placeClaimsRoutes from './routes/placeClaims.routes.js';
 import partnerPortalRoutes from './routes/partnerPortal.routes.js';
 import brandRoutes from './routes/brand.routes.js';
+import publicIntegrationRoutes from './routes/publicIntegration.routes.js';
 
 export function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
   app.use(helmet());
-  app.use(cors({ origin: resolveCorsOrigin }));
+
+  const appCors = cors({ origin: resolveCorsOrigin });
+  const publicApiCors = cors({
+    origin: resolvePublicApiCorsOrigin,
+    exposedHeaders: ['X-Hola-API-Version', 'X-Hola-Cache', 'RateLimit', 'RateLimit-Policy']
+  });
+
+  app.use((req, res, next) => {
+    if (String(req.path || '').startsWith('/api/public/v1')) {
+      return publicApiCors(req, res, next);
+    }
+    return appCors(req, res, next);
+  });
   app.use(express.json({ limit: '1mb' }));
   if (env.nodeEnv !== 'test') {
     app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
@@ -41,6 +58,7 @@ export function createApp() {
     etag: true
   }));
   app.use('/api', generalApiRateLimiter);
+  app.use('/api/public/v1', publicIntegrationRateLimiter);
   app.use('/api/places/bounds', mapReadRateLimiter);
   app.use('/api/map-layers', mapReadRateLimiter);
 
@@ -48,6 +66,7 @@ export function createApp() {
     res.json({ ok: true, service: 'hola-maps-api', env: env.nodeEnv });
   });
 
+  app.use('/api/public/v1', publicIntegrationRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/places', placesRoutes);
   app.use('/api/categories', categoriesRoutes);
