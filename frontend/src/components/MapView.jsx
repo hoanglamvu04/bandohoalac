@@ -39,6 +39,7 @@ const PLACE_CLUSTER_LAYER_ID = 'hm-place-clusters';
 const PLACE_CLUSTER_COUNT_LAYER_ID = 'hm-place-cluster-count';
 const PLACE_POINT_LAYER_ID = 'hm-place-cluster-point';
 const PLACE_POINT_LABEL_LAYER_ID = 'hm-place-cluster-point-label';
+const PLACE_NAME_LABEL_LAYER_ID = 'hm-place-name-label';
 const PLACE_CLUSTER_MAX_ZOOM = 13;
 
 const BUILDING_2D_LAYER_IDS = [
@@ -72,62 +73,143 @@ function escapeHtml(value = '') {
     .replaceAll("'", '&#039;');
 }
 
+const PLACE_MARKER_LIBRARY = [
+  { id: 'hm-marker-cafe', emoji: '☕', color: '#8b5e3c' },
+  { id: 'hm-marker-food', emoji: '🍜', color: '#d97706' },
+  { id: 'hm-marker-homestay', emoji: '🏡', color: '#7c3aed' },
+  { id: 'hm-marker-villa', emoji: '🏠', color: '#9333ea' },
+  { id: 'hm-marker-tourism', emoji: '🏝️', color: '#0284c7' },
+  { id: 'hm-marker-checkin', emoji: '📸', color: '#db2777' },
+  { id: 'hm-marker-experience', emoji: '🎡', color: '#c2410c' },
+  { id: 'hm-marker-school', emoji: '🎓', color: '#2563eb' },
+  { id: 'hm-marker-health', emoji: '🏥', color: '#dc2626' },
+  { id: 'hm-marker-market', emoji: '🛒', color: '#16a34a' },
+  { id: 'hm-marker-bank', emoji: '🏦', color: '#0369a1' },
+  { id: 'hm-marker-fuel', emoji: '⛽', color: '#0f766e' },
+  { id: 'hm-marker-government', emoji: '🏛️', color: '#475569' },
+  { id: 'hm-marker-sport', emoji: '🏟️', color: '#059669' },
+  { id: 'hm-marker-service', emoji: '🛠️', color: '#64748b' },
+  { id: 'hm-marker-transport', emoji: '🚌', color: '#0d9488' },
+  { id: 'hm-marker-property', emoji: '🏢', color: '#7c2d12' },
+  { id: 'hm-marker-default', emoji: '📍', color: '#174d41' }
+];
+
+const PLACE_MARKER_BY_ID = new Map(
+  PLACE_MARKER_LIBRARY.map((item) => [item.id, item])
+);
+
 function categoryMarkerMeta(category) {
   const normalized = String(category || '').trim().toLowerCase();
 
   if (normalized.includes('cafe') || normalized.includes('coffee')) {
-    return { label: 'CF', color: '#8b5e3c' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-cafe');
   }
   if (normalized.includes('ăn') || normalized.includes('food')) {
-    return { label: 'AU', color: '#d97706' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-food');
   }
   if (normalized.includes('home')) {
-    return { label: 'HS', color: '#7c3aed' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-homestay');
   }
   if (normalized.includes('villa')) {
-    return { label: 'VL', color: '#9333ea' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-villa');
   }
   if (normalized.includes('khu du lịch') || normalized.includes('tourist destination')) {
-    return { label: 'DL', color: '#0284c7' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-tourism');
   }
   if (normalized.includes('check')) {
-    return { label: 'CI', color: '#db2777' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-checkin');
   }
   if (normalized.includes('trải nghiệm')) {
-    return { label: 'TN', color: '#c2410c' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-experience');
   }
   if (normalized.includes('trường') || normalized.includes('school')) {
-    return { label: 'TH', color: '#2563eb' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-school');
   }
   if (normalized.includes('y tế') || normalized.includes('hospital') || normalized.includes('medical')) {
-    return { label: 'YT', color: '#dc2626' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-health');
   }
   if (normalized.includes('siêu thị') || normalized.includes('cửa hàng') || normalized.includes('shop')) {
-    return { label: 'ST', color: '#16a34a' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-market');
   }
   if (normalized.includes('ngân hàng') || normalized.includes('atm')) {
-    return { label: 'NH', color: '#0369a1' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-bank');
   }
   if (normalized.includes('nhiên liệu') || normalized.includes('sạc') || normalized.includes('fuel')) {
-    return { label: 'EV', color: '#0f766e' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-fuel');
   }
   if (normalized.includes('cơ quan') || normalized.includes('government')) {
-    return { label: 'CQ', color: '#475569' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-government');
   }
   if (normalized.includes('thể thao') || normalized.includes('sport')) {
-    return { label: 'TT', color: '#059669' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-sport');
   }
   if (normalized.includes('dịch vụ') || normalized.includes('service')) {
-    return { label: 'DV', color: '#64748b' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-service');
   }
   if (normalized.includes('giao thông') || normalized.includes('transport')) {
-    return { label: 'GT', color: '#0d9488' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-transport');
   }
   if (normalized.includes('bất động sản') || normalized.includes('real estate')) {
-    return { label: 'BDS', color: '#7c2d12' };
+    return PLACE_MARKER_BY_ID.get('hm-marker-property');
   }
 
-  return { label: 'POI', color: '#174d41' };
+  return PLACE_MARKER_BY_ID.get('hm-marker-default');
+}
+
+function createPlaceMarkerImage({ emoji, color }) {
+  const size = 80;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext('2d');
+
+  context.clearRect(0, 0, size, size);
+
+  // Soft shadow.
+  context.beginPath();
+  context.arc(40, 42, 31, 0, Math.PI * 2);
+  context.fillStyle = 'rgba(12, 43, 36, .16)';
+  context.fill();
+
+  // White badge.
+  context.beginPath();
+  context.arc(40, 38, 31, 0, Math.PI * 2);
+  context.fillStyle = '#ffffff';
+  context.fill();
+
+  // Category ring.
+  context.beginPath();
+  context.arc(40, 38, 27, 0, Math.PI * 2);
+  context.lineWidth = 5;
+  context.strokeStyle = color;
+  context.stroke();
+
+  // Very light category tint.
+  context.beginPath();
+  context.arc(40, 38, 23, 0, Math.PI * 2);
+  context.fillStyle = color + '16';
+  context.fill();
+
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.font = '30px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+  context.fillText(emoji, 40, 39);
+
+  return context.getImageData(0, 0, size, size);
+}
+
+function ensurePlaceMarkerImages(map) {
+  if (typeof document === 'undefined') return;
+
+  for (const marker of PLACE_MARKER_LIBRARY) {
+    if (map.hasImage(marker.id)) continue;
+
+    map.addImage(
+      marker.id,
+      createPlaceMarkerImage(marker),
+      { pixelRatio: 2 }
+    );
+  }
 }
 
 function emptyFeatureCollection() {
@@ -152,7 +234,7 @@ function placeFeatureCollection(places = []) {
           name: place.name || '',
           category: place.category || 'Địa điểm',
           rating: Number(place.rating || 0),
-          markerLabel: marker.label,
+          markerIcon: marker.id,
           markerColor: marker.color
         }
       };
@@ -190,6 +272,8 @@ function applyPlaceInteractionState(map, selectedPlaceId, hoveredPlaceId) {
 
 function addPlaceClusterLayers(map, places = []) {
   if (!map?.isStyleLoaded()) return;
+
+  ensurePlaceMarkerImages(map);
 
   const data = placeFeatureCollection(places);
   const source = map.getSource(PLACE_SOURCE_ID);
@@ -252,6 +336,8 @@ function addPlaceClusterLayers(map, places = []) {
     });
   }
 
+  // GPU interaction halo behind the category icon. It is invisible by default
+  // and only appears for selected / hovered places.
   if (!map.getLayer(PLACE_POINT_LAYER_ID)) {
     map.addLayer({
       id: PLACE_POINT_LAYER_ID,
@@ -265,53 +351,91 @@ function addPlaceClusterLayers(map, places = []) {
           ['zoom'],
           12.5,
           ['case',
-            ['boolean', ['feature-state', 'selected'], false], 11,
-            ['boolean', ['feature-state', 'hovered'], false], 10,
-            7
+            ['boolean', ['feature-state', 'selected'], false], 22,
+            ['boolean', ['feature-state', 'hovered'], false], 20,
+            16
           ],
           17,
           ['case',
-            ['boolean', ['feature-state', 'selected'], false], 17,
-            ['boolean', ['feature-state', 'hovered'], false], 15,
-            12
+            ['boolean', ['feature-state', 'selected'], false], 29,
+            ['boolean', ['feature-state', 'hovered'], false], 26,
+            20
           ]
         ],
-        'circle-color': ['coalesce', ['get', 'markerColor'], '#174d41'],
-        'circle-opacity': 0.96,
+        'circle-color': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false], '#f4b942',
+          ['boolean', ['feature-state', 'hovered'], false], '#ffffff',
+          'rgba(255,255,255,0)'
+        ],
+        'circle-opacity': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false], 0.34,
+          ['boolean', ['feature-state', 'hovered'], false], 0.72,
+          0
+        ],
         'circle-stroke-width': [
           'case',
-          ['boolean', ['feature-state', 'selected'], false], 4,
-          ['boolean', ['feature-state', 'hovered'], false], 3,
-          2
+          ['boolean', ['feature-state', 'selected'], false], 3,
+          ['boolean', ['feature-state', 'hovered'], false], 2,
+          0
         ],
-        'circle-stroke-color': '#ffffff'
+        'circle-stroke-color': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false], '#d89a1c',
+          ['boolean', ['feature-state', 'hovered'], false], '#5d8f80',
+          'rgba(255,255,255,0)'
+        ]
       }
     });
   }
 
+  // Real illustrated POI marker. This stays in MapLibre/WebGL instead of DOM.
   if (!map.getLayer(PLACE_POINT_LABEL_LAYER_ID)) {
     map.addLayer({
       id: PLACE_POINT_LABEL_LAYER_ID,
       type: 'symbol',
       source: PLACE_SOURCE_ID,
-      minzoom: 13.2,
       filter: ['!', ['has', 'point_count']],
       layout: {
-        'text-field': ['get', 'markerLabel'],
-        'text-font': ['Noto Sans Regular'],
-        'text-size': [
-          'case',
-          ['boolean', ['feature-state', 'selected'], false], 11,
-          ['boolean', ['feature-state', 'hovered'], false], 10,
-          9
+        'icon-image': ['coalesce', ['get', 'markerIcon'], 'hm-marker-default'],
+        'icon-size': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          12.5, 0.68,
+          14, 0.78,
+          17, 0.94
         ],
-        'text-allow-overlap': true,
-        'text-ignore-placement': true
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true
+      }
+    });
+  }
+
+  // Place names only appear when the user is close enough for them to be useful.
+  if (!map.getLayer(PLACE_NAME_LABEL_LAYER_ID)) {
+    map.addLayer({
+      id: PLACE_NAME_LABEL_LAYER_ID,
+      type: 'symbol',
+      source: PLACE_SOURCE_ID,
+      minzoom: 15.4,
+      filter: ['!', ['has', 'point_count']],
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-font': ['Noto Sans Regular'],
+        'text-size': 11,
+        'text-offset': [0, 2.15],
+        'text-anchor': 'top',
+        'text-max-width': 12,
+        'text-optional': true,
+        'text-allow-overlap': false
       },
       paint: {
-        'text-color': '#ffffff',
-        'text-halo-color': 'rgba(0,0,0,.22)',
-        'text-halo-width': 0.5
+        'text-color': '#173f35',
+        'text-halo-color': 'rgba(255,255,255,.96)',
+        'text-halo-width': 1.6,
+        'text-halo-blur': 0.35
       }
     });
   }
@@ -827,9 +951,9 @@ export default function MapView({
         };
 
         map.on('click', PLACE_CLUSTER_LAYER_ID, zoomToCluster);
-        map.on('click', PLACE_POINT_LAYER_ID, selectClusterPoint);
-        map.on('mousemove', PLACE_POINT_LAYER_ID, hoverClusterPoint);
-        map.on('mouseleave', PLACE_POINT_LAYER_ID, clearClusterPointHover);
+        map.on('click', PLACE_POINT_LABEL_LAYER_ID, selectClusterPoint);
+        map.on('mousemove', PLACE_POINT_LABEL_LAYER_ID, hoverClusterPoint);
+        map.on('mouseleave', PLACE_POINT_LABEL_LAYER_ID, clearClusterPointHover);
 
         map.on('mouseenter', PLACE_CLUSTER_LAYER_ID, () => {
           map.getCanvas().style.cursor = 'pointer';
@@ -837,10 +961,10 @@ export default function MapView({
         map.on('mouseleave', PLACE_CLUSTER_LAYER_ID, () => {
           map.getCanvas().style.cursor = '';
         });
-        map.on('mouseenter', PLACE_POINT_LAYER_ID, () => {
+        map.on('mouseenter', PLACE_POINT_LABEL_LAYER_ID, () => {
           map.getCanvas().style.cursor = 'pointer';
         });
-        map.on('mouseleave', PLACE_POINT_LAYER_ID, () => {
+        map.on('mouseleave', PLACE_POINT_LABEL_LAYER_ID, () => {
           map.getCanvas().style.cursor = '';
         });
 
