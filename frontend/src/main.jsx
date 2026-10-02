@@ -34,6 +34,7 @@ import './admin-control-center.css';
 import './profile-white-dashboard.css';
 import './partner-scanner.css';
 import './admin-readability.css';
+import './admin-place-imports.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>

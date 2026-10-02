@@ -240,6 +240,30 @@ export function markAllNotificationsRead() {
   return unwrap(client.post('/notifications/read-all'));
 }
 
+export function getAdminPlaceImports(params = {}) {
+  return unwrap(client.get('/admin/place-imports', { params: cleanParams(params) }));
+}
+
+export function getAdminPlaceImportStats() {
+  return unwrap(client.get('/admin/place-imports/stats'));
+}
+
+export function updateAdminPlaceImport(id, payload) {
+  return unwrap(client.patch('/admin/place-imports/' + encodeURIComponent(id), payload));
+}
+
+export function approveAdminPlaceImport(id) {
+  return unwrap(client.post('/admin/place-imports/' + encodeURIComponent(id) + '/approve'));
+}
+
+export function rejectAdminPlaceImport(id) {
+  return unwrap(client.post('/admin/place-imports/' + encodeURIComponent(id) + '/reject'));
+}
+
+export function approveAdminHighConfidencePlaceImports(payload = {}) {
+  return unwrap(client.post('/admin/place-imports/approve-high-confidence', payload));
+}
+
 export function getAdminPlaces(params = {}) {
   return unwrap(client.get('/admin/places', { params: cleanParams(params) }));
 }

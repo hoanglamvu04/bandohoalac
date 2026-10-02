@@ -37,6 +37,13 @@ const moderatorModules = [
     tone: 'blue'
   },
   {
+    to: '/admin/place-imports',
+    title: 'Nhập dữ liệu bản đồ',
+    description: 'Duyệt địa điểm quét từ Overture, chống trùng và nhập hàng loạt.',
+    icon: Database,
+    tone: 'cyan'
+  },
+  {
     to: '/admin/map-editor',
     title: 'Biên tập lớp bản đồ',
     description: 'Quản lý dữ liệu đường, vùng, công trình và lớp hiển thị.',

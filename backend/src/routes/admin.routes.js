@@ -89,6 +89,14 @@ import {
   uploadBrandAssetAdmin
 } from '../controllers/adminBrand.controller.js';
 import { adminUpdateBrandSettingsSchema } from '../validators/brand.validators.js';
+import {
+  approveHighConfidencePlaceImportsAdmin,
+  approvePlaceImportAdmin,
+  getPlaceImportStatsAdmin,
+  listPlaceImportsAdmin,
+  rejectPlaceImportAdmin,
+  updatePlaceImportAdmin
+} from '../controllers/adminPlaceImports.controller.js';
 
 const router = Router();
 
@@ -98,6 +106,17 @@ router.get('/contributions', getContributions);
 router.get('/contributions/:id', getContribution);
 router.post('/contributions/:id/approve', approve);
 router.post('/contributions/:id/reject', validateBody(rejectContributionSchema), reject);
+
+router.get('/place-imports', listPlaceImportsAdmin);
+router.get('/place-imports/stats', getPlaceImportStatsAdmin);
+router.patch('/place-imports/:id', updatePlaceImportAdmin);
+router.post('/place-imports/:id/approve', approvePlaceImportAdmin);
+router.post('/place-imports/:id/reject', rejectPlaceImportAdmin);
+router.post(
+  '/place-imports/approve-high-confidence',
+  authorize('ADMIN'),
+  approveHighConfidencePlaceImportsAdmin
+);
 
 router.get('/places', listPlacesAdmin);
 router.post('/places', validateBody(adminCreatePlaceSchema), createPlaceAdmin);

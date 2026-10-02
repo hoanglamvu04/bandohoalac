@@ -804,3 +804,65 @@ FROM voucher_campaigns vc
 WHERE vr.campaign_id = vc.id
   AND vr.status IN ('USED', 'REDEEMED')
   AND COALESCE(vr.voucher_face_value_amount, vc.voucher_value_amount) IS NOT NULL;
+
+
+-- ============================================================
+-- EXTERNAL PLACE IMPORTS (OVERTURE / OSM staging)
+-- ============================================================
+ALTER TABLE places
+  ADD COLUMN IF NOT EXISTS external_source TEXT,
+  ADD COLUMN IF NOT EXISTS external_id TEXT,
+  ADD COLUMN IF NOT EXISTS source_confidence NUMERIC(5,4),
+  ADD COLUMN IF NOT EXISTS last_source_sync_at TIMESTAMPTZ;
+
+ALTER TABLE places
+  DROP CONSTRAINT IF EXISTS places_source_check;
+
+ALTER TABLE places
+  ADD CONSTRAINT places_source_check
+  CHECK (source IN ('ADMIN', 'CTV', 'USER', 'OVERTURE', 'OSM'));
+
+CREATE UNIQUE INDEX IF NOT EXISTS places_external_source_id_uidx
+  ON places (external_source, external_id)
+  WHERE external_source IS NOT NULL AND external_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS imported_places (
+  id BIGSERIAL PRIMARY KEY,
+  source TEXT NOT NULL CHECK (source IN ('OVERTURE', 'OSM')),
+  external_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  basic_category TEXT,
+  taxonomy_primary TEXT,
+  taxonomy_hierarchy JSONB NOT NULL DEFAULT '[]'::jsonb,
+  mapped_category_slug TEXT,
+  address TEXT,
+  phone TEXT,
+  website TEXT,
+  location GEOMETRY(Point, 4326) NOT NULL,
+  confidence NUMERIC(5,4),
+  operating_status TEXT,
+  raw_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  duplicate_of_place_id BIGINT REFERENCES places(id) ON DELETE SET NULL,
+  import_status TEXT NOT NULL DEFAULT 'NEW'
+    CHECK (import_status IN ('NEW', 'REVIEW', 'DUPLICATE', 'APPROVED', 'REJECTED')),
+  approved_place_id BIGINT REFERENCES places(id) ON DELETE SET NULL,
+  reviewed_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMPTZ,
+  imported_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (source, external_id)
+);
+
+CREATE INDEX IF NOT EXISTS imported_places_location_idx
+  ON imported_places USING GIST (location);
+
+CREATE INDEX IF NOT EXISTS imported_places_status_confidence_idx
+  ON imported_places (import_status, confidence DESC, imported_at DESC);
+
+CREATE INDEX IF NOT EXISTS imported_places_category_idx
+  ON imported_places (mapped_category_slug, import_status);
+
+CREATE INDEX IF NOT EXISTS imported_places_duplicate_idx
+  ON imported_places (duplicate_of_place_id)
+  WHERE duplicate_of_place_id IS NOT NULL;
