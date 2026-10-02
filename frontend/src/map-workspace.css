@@ -2967,8 +2967,16 @@ body.map-route-active{
   box-shadow:inset 3px 0 0 #54a68c;
 }
 
-.hm-discovery-filters{
-  position:relative;
+@media(min-width:1281px){
+  .hm-discovery-filters{
+    position:relative;
+  }
+}
+
+@media(max-width:1280px) and (min-width:761px){
+  .hm-discovery-filters{
+    position:absolute;
+  }
 }
 
 .hm-filter-chip-set{
