@@ -890,3 +890,36 @@ CREATE INDEX IF NOT EXISTS imported_places_category_idx
 CREATE INDEX IF NOT EXISTS imported_places_duplicate_idx
   ON imported_places (duplicate_of_place_id)
   WHERE duplicate_of_place_id IS NOT NULL;
+
+
+-- ============================================================
+-- PLACE IMPORT RUN HISTORY / BACKGROUND SCANS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS place_import_runs (
+  id BIGSERIAL PRIMARY KEY,
+  source TEXT NOT NULL DEFAULT 'OVERTURE'
+    CHECK (source IN ('OVERTURE')),
+  status TEXT NOT NULL DEFAULT 'QUEUED'
+    CHECK (status IN ('QUEUED', 'RUNNING', 'SUCCESS', 'FAILED')),
+  bbox TEXT NOT NULL,
+  min_confidence NUMERIC(5,4) NOT NULL DEFAULT 0.55,
+  received_count INTEGER NOT NULL DEFAULT 0,
+  staged_count INTEGER NOT NULL DEFAULT 0,
+  new_count INTEGER NOT NULL DEFAULT 0,
+  review_count INTEGER NOT NULL DEFAULT 0,
+  duplicate_count INTEGER NOT NULL DEFAULT 0,
+  skipped_count INTEGER NOT NULL DEFAULT 0,
+  started_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  started_at TIMESTAMPTZ,
+  finished_at TIMESTAMPTZ,
+  error_message TEXT,
+  log_excerpt TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS place_import_runs_created_idx
+  ON place_import_runs (created_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS place_import_runs_one_active_source_uidx
+  ON place_import_runs (source)
+  WHERE status IN ('QUEUED', 'RUNNING');

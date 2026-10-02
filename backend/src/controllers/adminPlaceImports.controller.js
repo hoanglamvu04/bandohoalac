@@ -11,6 +11,10 @@ import {
   auditContextFromRequest,
   writeAuditLog
 } from '../services/audit.service.js';
+import {
+  listPlaceImportRuns,
+  startOverturePlaceScan
+} from '../services/placeImportRun.service.js';
 
 export const listPlaceImportsAdmin = asyncHandler(async (req, res) => {
   const [items, stats] = await Promise.all([
@@ -103,4 +107,32 @@ export const approveHighConfidencePlaceImportsAdmin = asyncHandler(async (req, r
   });
 
   res.json(result);
+});
+
+
+export const listPlaceImportRunsAdmin = asyncHandler(async (req, res) => {
+  const items = await listPlaceImportRuns({ limit: req.query.limit });
+  res.json({ items });
+});
+
+export const startOverturePlaceScanAdmin = asyncHandler(async (req, res) => {
+  const run = await startOverturePlaceScan({
+    startedBy: req.user.id,
+    minConfidence: req.body?.minConfidence ?? 0.55
+  });
+
+  await writeAuditLog({
+    actorUserId: req.user.id,
+    action: 'PLACE_IMPORT_SCAN_START',
+    entityType: 'PLACE_IMPORT_RUN',
+    entityId: run.id,
+    metadata: {
+      source: run.source,
+      bbox: run.bbox,
+      minConfidence: run.minConfidence
+    },
+    ...auditContextFromRequest(req)
+  });
+
+  res.status(202).json({ run });
 });

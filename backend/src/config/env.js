@@ -25,5 +25,6 @@ export const env = {
   maxUploadFileCount: Math.max(Number(process.env.MAX_UPLOAD_FILE_COUNT) || 20, 20),
   publicBaseUrl: process.env.PUBLIC_BASE_URL || `http://localhost:${Number(process.env.PORT) || 5000}`,
   routingBaseUrl: process.env.ROUTING_BASE_URL || 'https://router.project-osrm.org',
-  routingTimeoutMs: Number(process.env.ROUTING_TIMEOUT_MS) || 10000
+  routingTimeoutMs: Number(process.env.ROUTING_TIMEOUT_MS) || 10000,
+  overtureCliPath: (process.env.OVERTURE_CLI_PATH || '').trim()
 };

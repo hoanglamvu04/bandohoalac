@@ -93,8 +93,10 @@ import {
   approveHighConfidencePlaceImportsAdmin,
   approvePlaceImportAdmin,
   getPlaceImportStatsAdmin,
+  listPlaceImportRunsAdmin,
   listPlaceImportsAdmin,
   rejectPlaceImportAdmin,
+  startOverturePlaceScanAdmin,
   updatePlaceImportAdmin
 } from '../controllers/adminPlaceImports.controller.js';
 
@@ -108,6 +110,12 @@ router.post('/contributions/:id/approve', approve);
 router.post('/contributions/:id/reject', validateBody(rejectContributionSchema), reject);
 
 router.get('/place-imports', listPlaceImportsAdmin);
+router.get('/place-imports/runs', listPlaceImportRunsAdmin);
+router.post(
+  '/place-imports/scan',
+  authorize('ADMIN'),
+  startOverturePlaceScanAdmin
+);
 router.get('/place-imports/stats', getPlaceImportStatsAdmin);
 router.patch('/place-imports/:id', updatePlaceImportAdmin);
 router.post('/place-imports/:id/approve', approvePlaceImportAdmin);
