@@ -795,7 +795,8 @@ export async function removePlaceImage(placeId, imageId, client = pool) {
       ? filenameFromUrl(removed.card_url)
       : undefined,
     assetFolder: removed.storage_asset_folder
-  };}
+  };
+}
 
 export async function listPublishedPlacesByUser(userId, { limit = 100 } = {}, client = pool) {
   const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 200);

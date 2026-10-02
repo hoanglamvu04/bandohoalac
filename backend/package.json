@@ -10,7 +10,8 @@
     "db:seed": "node src/database/seed.js",
     "test": "node --test tests/*.test.js",
     "db:seed:admin": "node src/database/seedAdmin.js",
-    "import:overture:places": "node src/scripts/importOverturePlaces.js"
+    "import:overture:places": "node src/scripts/importOverturePlaces.js",
+    "images:backfill-variants": "node src/scripts/backfillPlaceImageVariants.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

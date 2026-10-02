@@ -66,6 +66,9 @@ jobs:
             echo "==> Apply database schema"
             npm run db:migrate
 
+            echo "==> Backfill optimized place images"
+            npm run images:backfill-variants --prefix backend -- --limit=250 || true
+
             echo "==> Build frontend"
             npm run build
 
