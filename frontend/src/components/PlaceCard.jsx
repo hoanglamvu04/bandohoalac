@@ -2,7 +2,11 @@ import { ArrowUpRight, BadgeCheck, Heart, MapPin, Navigation, Star } from 'lucid
 import { Link } from 'react-router-dom';
 
 export default function PlaceCard({place,index=0,onDirections,directionsActive=false,directionsLoading=false}) {
-  const cover = place.images?.[0] || place.image;
+  const cover =
+    place.cardImages?.[0] ||
+    place.thumbnails?.[0] ||
+    place.images?.[0] ||
+    place.image;
   return (
     <article className="place-card premium-place-card modern-place-card">
       <div className="place-cover" style={cover ? {background:`url("${cover}") center/cover`} : undefined}>

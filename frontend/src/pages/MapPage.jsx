@@ -617,14 +617,17 @@ export default function MapPage() {
     [places, selectedId]
   );
 
-  const selectedImages = useMemo(
-    () => Array.from(new Set(
-      (selectedPlace?.images || []).filter(
+  const selectedImages = useMemo(() => {
+    const preferred = selectedPlace?.cardImages?.length
+      ? selectedPlace.cardImages
+      : selectedPlace?.images || [];
+
+    return Array.from(new Set(
+      preferred.filter(
         (image) => typeof image === 'string' && image.trim()
       )
-    )),
-    [selectedPlace]
-  );
+    ));
+  }, [selectedPlace]);
 
   useEffect(() => {
     setGalleryIndex(0);
@@ -1353,8 +1356,15 @@ export default function MapPage() {
                 onClick={() => togglePlaceSelection(place)}
               >
                 <span className="hm-place-thumb">
-                  {place.images?.[0]
-                    ? <img src={place.images[0]} alt="" loading="lazy" decoding="async" />
+                  {(place.thumbnails?.[0] || place.images?.[0])
+                    ? (
+                      <img
+                        src={place.thumbnails?.[0] || place.images?.[0]}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    )
                     : <MapPin size={17} />}
                 </span>
                 <span className="hm-place-copy">

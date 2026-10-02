@@ -129,7 +129,12 @@ function FeaturedPlaceCard({ place, index, tone, initialFavorite = false }) {
   const { showToast } = useToast();
   const [favorite, setFavorite] = useState(false);
   const [favoriteBusy, setFavoriteBusy] = useState(false);
-  const cover = place.images?.[0] || place.image || null;
+  const cover =
+    place.cardImages?.[0] ||
+    place.thumbnails?.[0] ||
+    place.images?.[0] ||
+    place.image ||
+    null;
   const categoryTone = tone || ['blue', 'green', 'orange', 'purple'][index % 4];
   const detailHref = '/place/' + place.id;
   const canFavorite = true;

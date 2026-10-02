@@ -368,8 +368,15 @@ export default function AdminPlaces() {
                 onClick={() => openPlace(place.id)}
               >
                 <span className="admin-place-row-cover">
-                  {place.images?.[0]
-                    ? <img src={place.images[0]} alt="" />
+                  {(place.thumbnails?.[0] || place.images?.[0])
+                    ? (
+                      <img
+                        src={place.thumbnails?.[0] || place.images?.[0]}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    )
                     : <MapPin size={18} />}
                 </span>
                 <span>
@@ -586,7 +593,12 @@ export default function AdminPlaces() {
                   <div className="admin-place-image-grid">
                     {(detail?.imageItems || []).map((image) => (
                       <article className={image.isCover ? 'admin-place-image cover' : 'admin-place-image'} key={image.id}>
-                        <img src={image.url} alt="" />
+                        <img
+                          src={image.thumbnailUrl || image.cardUrl || image.url}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                        />
                         {image.isCover && <span><Check size={12} /> Cover</span>}
                         <div>
                           {!image.isCover && (
