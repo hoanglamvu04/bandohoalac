@@ -67,6 +67,40 @@ const LAYER_MIN_ZOOM = {
   BUILDING: 14
 };
 
+const CATEGORY_GROUPS = [
+  { id: 'food', label: 'Ăn & uống', icon: '🍽️', slugs: ['cafe', 'an-uong'] },
+  {
+    id: 'tourism',
+    label: 'Du lịch & lưu trú',
+    icon: '🏝️',
+    slugs: ['homestay', 'villa', 'khu-du-lich', 'check-in', 'trai-nghiem']
+  },
+  {
+    id: 'utilities',
+    label: 'Tiện ích',
+    icon: '🏥',
+    slugs: ['y-te', 'truong-hoc', 'sieu-thi', 'ngan-hang-atm']
+  },
+  {
+    id: 'mobility',
+    label: 'Di chuyển',
+    icon: '🚌',
+    slugs: ['giao-thong', 'nhien-lieu-sac']
+  },
+  {
+    id: 'lifestyle',
+    label: 'Đời sống',
+    icon: '🏟️',
+    slugs: ['the-thao', 'dich-vu', 'co-quan']
+  },
+  {
+    id: 'property',
+    label: 'Nhà đất',
+    icon: '🏢',
+    slugs: ['bat-dong-san']
+  }
+];
+
 const MAX_PROGRESSIVE_PLACES = 400;
 const VIEWPORT_PREFETCH_RATIO = 0.35;
 const MAX_LOADED_VIEWPORTS = 24;
@@ -173,6 +207,7 @@ export default function MapPage() {
   const [query, setQuery] = useState(() => searchParams.get('q') || '');
   const [categories, setCategories] = useState([]);
   const [category, setCategory] = useState(() => searchParams.get('category') || 'all');
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [minRating, setMinRating] = useState(() => searchParams.get('rating') || '');
   const [openNow, setOpenNow] = useState(() => searchParams.get('open') === '1');
   const [sortMode, setSortMode] = useState(() => searchParams.get('sort') || 'relevant');
@@ -207,6 +242,17 @@ export default function MapPage() {
   const regionId = searchParams.get('region') || 'all';
   const requestedPlaceId = searchParams.get('place') || '';
   const focusRegion = REGION_PRESETS.find((item) => item.id === regionId) || REGION_PRESETS[0];
+  const categoryBySlug = useMemo(
+    () => new Map(categories.map((item) => [item.slug, item])),
+    [categories]
+  );
+  const activeCategoryGroup = useMemo(
+    () => CATEGORY_GROUPS.find((group) => group.slugs.includes(category)) || null,
+    [category]
+  );
+  const activeCategoryLabel = category === 'all'
+    ? 'Danh mục'
+    : categoryBySlug.get(category)?.name || activeCategoryGroup?.label || 'Danh mục';
 
   useEffect(() => {
     getCategories()
@@ -964,16 +1010,69 @@ export default function MapPage() {
             Đang mở
           </button>
 
-          <select
-            value={category}
-            onChange={(event) => handleCategoryChange(event.target.value)}
-            aria-label="Lọc theo danh mục"
-          >
-            <option value="all">Tất cả danh mục</option>
-            {categories.map((item) => (
-              <option key={item.slug} value={item.slug}>{item.name}</option>
-            ))}
-          </select>
+          <div className="hm-category-picker">
+            <button
+              type="button"
+              className={category === 'all' ? 'hm-category-trigger' : 'hm-category-trigger active'}
+              onClick={() => setCategoryMenuOpen((value) => !value)}
+              aria-expanded={categoryMenuOpen}
+              aria-label="Lọc theo nhóm danh mục"
+            >
+              <span>{activeCategoryGroup?.icon || '▦'}</span>
+              <b>{activeCategoryLabel}</b>
+              <ChevronDown size={14} />
+            </button>
+
+            {categoryMenuOpen && (
+              <div className="hm-category-menu">
+                <button
+                  type="button"
+                  className={category === 'all' ? 'hm-category-all active' : 'hm-category-all'}
+                  onClick={() => {
+                    handleCategoryChange('all');
+                    setCategoryMenuOpen(false);
+                  }}
+                >
+                  <span>▦</span>
+                  <b>Tất cả danh mục</b>
+                </button>
+
+                <div className="hm-category-group-grid">
+                  {CATEGORY_GROUPS.map((group) => {
+                    const groupItems = group.slugs
+                      .map((slug) => categoryBySlug.get(slug))
+                      .filter(Boolean);
+
+                    if (!groupItems.length) return null;
+
+                    return (
+                      <section key={group.id}>
+                        <div className="hm-category-group-title">
+                          <span>{group.icon}</span>
+                          <b>{group.label}</b>
+                        </div>
+                        <div className="hm-category-group-items">
+                          {groupItems.map((item) => (
+                            <button
+                              type="button"
+                              className={category === item.slug ? 'active' : ''}
+                              key={item.slug}
+                              onClick={() => {
+                                handleCategoryChange(item.slug);
+                                setCategoryMenuOpen(false);
+                              }}
+                            >
+                              {item.name}
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
           <select
             value={minRating}

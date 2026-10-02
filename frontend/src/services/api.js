@@ -248,6 +248,14 @@ export function getAdminPlaceImportStats() {
   return unwrap(client.get('/admin/place-imports/stats'));
 }
 
+export function getAdminPlaceImportRuns(params = {}) {
+  return unwrap(client.get('/admin/place-imports/runs', { params: cleanParams(params) }));
+}
+
+export function startAdminOverturePlaceScan(payload = {}) {
+  return unwrap(client.post('/admin/place-imports/scan', payload));
+}
+
 export function updateAdminPlaceImport(id, payload) {
   return unwrap(client.patch('/admin/place-imports/' + encodeURIComponent(id), payload));
 }

@@ -13,12 +13,15 @@ import {
 import {
   approveAdminHighConfidencePlaceImports,
   approveAdminPlaceImport,
+  getAdminPlaceImportRuns,
   getAdminPlaceImports,
   getCategories,
   rejectAdminPlaceImport,
+  startAdminOverturePlaceScan,
   updateAdminPlaceImport
 } from '../../services/api.js';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 const STATUSES = ['ALL', 'NEW', 'REVIEW', 'DUPLICATE', 'APPROVED', 'REJECTED'];
 
@@ -27,8 +30,31 @@ function percent(value) {
   return Math.round(Number(value) * 100) + '%';
 }
 
+function runStatusLabel(status) {
+  if (status === 'QUEUED') return 'Đang chờ';
+  if (status === 'RUNNING') return 'Đang quét';
+  if (status === 'SUCCESS') return 'Hoàn tất';
+  if (status === 'FAILED') return 'Lỗi';
+  return status || '—';
+}
+
+function formatRunTime(value) {
+  if (!value) return '—';
+  try {
+    return new Intl.DateTimeFormat('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(value));
+  } catch {
+    return String(value);
+  }
+}
+
 export default function AdminPlaceImports() {
   const { showToast } = useToast();
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [stats, setStats] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -37,11 +63,15 @@ export default function AdminPlaceImports() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [runs, setRuns] = useState([]);
+  const [scanBusy, setScanBusy] = useState(false);
 
   const categoryMap = useMemo(
     () => new Map(categories.map((category) => [category.slug, category.name])),
     [categories]
   );
+  const hasActiveRun = runs.some((run) => run.status === 'QUEUED' || run.status === 'RUNNING');
+  const canScan = user?.role === 'ADMIN';
 
   function load() {
     setLoading(true);
@@ -65,6 +95,37 @@ export default function AdminPlaceImports() {
       .then((data) => setCategories(Array.isArray(data?.items) ? data.items : []))
       .catch(() => setCategories([]));
   }, []);
+
+  async function loadRuns({ refreshPlaces = false } = {}) {
+    try {
+      const data = await getAdminPlaceImportRuns({ limit: 8 });
+      const nextRuns = Array.isArray(data?.items) ? data.items : [];
+      setRuns(nextRuns);
+      if (refreshPlaces) await load();
+      return nextRuns;
+    } catch (error) {
+      showToast(error.message, 'error');
+      return [];
+    }
+  }
+
+  useEffect(() => {
+    loadRuns();
+  }, []);
+
+  useEffect(() => {
+    if (!hasActiveRun) return undefined;
+
+    const timer = window.setInterval(async () => {
+      const nextRuns = await loadRuns();
+      const stillActive = nextRuns.some(
+        (run) => run.status === 'QUEUED' || run.status === 'RUNNING'
+      );
+      if (!stillActive) await load();
+    }, 2500);
+
+    return () => window.clearInterval(timer);
+  }, [hasActiveRun]);
 
   useEffect(() => {
     const timer = window.setTimeout(load, query.trim() ? 250 : 0);
@@ -112,6 +173,27 @@ export default function AdminPlaceImports() {
     }
   }
 
+  async function startScan() {
+    if (!canScan || scanBusy || hasActiveRun) return;
+
+    setScanBusy(true);
+    try {
+      const data = await startAdminOverturePlaceScan({ minConfidence: 0.55 });
+      if (data?.run) {
+        setRuns((current) => [
+          data.run,
+          ...current.filter((item) => item.id !== data.run.id)
+        ].slice(0, 8));
+      }
+      showToast('Đã bắt đầu quét Overture ở chế độ nền.', 'success');
+    } catch (error) {
+      showToast(error.message, 'error');
+      await loadRuns();
+    } finally {
+      setScanBusy(false);
+    }
+  }
+
   async function approveHighConfidence() {
     if (!window.confirm('Duyệt tối đa 200 địa điểm độ tin cậy từ 80%, đã map danh mục và không bị trùng?')) {
       return;
@@ -141,6 +223,7 @@ export default function AdminPlaceImports() {
     ['Trùng', stats?.duplicates || 0],
     ['Đã duyệt', stats?.approved || 0]
   ];
+  const lastRun = runs[0] || null;
 
   return (
     <main className="admin-page admin-place-imports page-container">
@@ -167,14 +250,30 @@ export default function AdminPlaceImports() {
         </div>
       </div>
 
-      <section className="admin-import-runbook">
+      <section className="admin-import-runbook admin-import-scan-card">
         <Database size={22} />
         <div>
-          <b>Quét dữ liệu Overture</b>
-          <span>Chạy tại thư mục dự án sau khi cài <code>pip install -U overturemaps</code>.</span>
-          <code>.\scripts\import-overture-places.ps1</code>
+          <b>Quét dữ liệu Overture trực tiếp</b>
+          <span>
+            Backend tự tải dữ liệu trong vùng Hòa Lạc, chống trùng và đưa vào staging.
+            Không public địa điểm khi chưa được duyệt.
+          </span>
+          <small>
+            {lastRun
+              ? 'Lần gần nhất: ' + formatRunTime(lastRun.createdAt) + ' · ' + runStatusLabel(lastRun.status)
+              : 'Chưa có lịch sử quét từ Admin.'}
+          </small>
         </div>
-        <small>Importer tự cắt đúng vùng dịch vụ Hòa Lạc và không public trực tiếp.</small>
+        <button
+          type="button"
+          className={hasActiveRun ? 'admin-import-scan-button running' : 'admin-import-scan-button'}
+          onClick={startScan}
+          disabled={!canScan || scanBusy || hasActiveRun}
+          title={canScan ? 'Quét Overture Places' : 'Chỉ ADMIN được chạy quét dữ liệu'}
+        >
+          <RefreshCw size={17} />
+          {hasActiveRun ? 'Đang quét…' : scanBusy ? 'Đang khởi tạo…' : 'Quét Overture'}
+        </button>
       </section>
 
       <section className="admin-import-stats">
@@ -188,6 +287,47 @@ export default function AdminPlaceImports() {
           <small>Sẵn sàng duyệt ≥80%</small>
           <b>{stats?.readyHighConfidence || 0}</b>
         </article>
+      </section>
+
+      <section className="admin-import-history">
+        <div className="admin-import-history-head">
+          <div>
+            <b>Lịch sử quét</b>
+            <span>Theo dõi các lần tải và nhập Overture gần nhất.</span>
+          </div>
+          {hasActiveRun && <small className="running">TỰ ĐỘNG CẬP NHẬT</small>}
+        </div>
+
+        <div className="admin-import-run-list">
+          {!runs.length && <span className="admin-import-no-runs">Chưa có lần quét nào.</span>}
+          {runs.map((run) => (
+            <article className={'run-' + String(run.status || '').toLowerCase()} key={run.id}>
+              <div className="admin-import-run-status">
+                <i />
+                <span>
+                  <b>{runStatusLabel(run.status)}</b>
+                  <small>#{run.id} · {formatRunTime(run.createdAt)}</small>
+                </span>
+              </div>
+
+              <div className="admin-import-run-metrics">
+                <span><b>{run.received || 0}</b><small>Nhận</small></span>
+                <span><b>{run.new || 0}</b><small>Mới</small></span>
+                <span><b>{run.review || 0}</b><small>Xem lại</small></span>
+                <span><b>{run.duplicates || 0}</b><small>Trùng</small></span>
+                <span><b>{run.skipped || 0}</b><small>Bỏ qua</small></span>
+              </div>
+
+              <div className="admin-import-run-note">
+                {run.status === 'FAILED'
+                  ? <span>{run.errorMessage || 'Lần quét gặp lỗi.'}</span>
+                  : run.status === 'SUCCESS'
+                    ? <span>Hoàn tất với confidence ≥ {percent(run.minConfidence)}</span>
+                    : <span>Đang xử lý dữ liệu nền…</span>}
+              </div>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="admin-import-panel">
