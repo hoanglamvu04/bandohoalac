@@ -2951,3 +2951,185 @@ body.map-route-active{
   .hm-category-menu{top:102px}
   .hm-category-group-grid{grid-template-columns:1fr}
 }
+
+
+/* ============================================================
+   Map UX & Performance v2
+   - GPU POI interaction states
+   - filter chips
+   - map/list synchronized hover
+   - three-level mobile result sheet
+   ============================================================ */
+
+.hm-place-row.hovered:not(.active){
+  border-color:#c9ddd5;
+  background:#f2f8f5;
+  box-shadow:inset 3px 0 0 #54a68c;
+}
+
+.hm-discovery-filters{
+  position:relative;
+}
+
+.hm-filter-chip-set{
+  position:absolute;
+  top:calc(100% + 7px);
+  left:0;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  width:max-content;
+  max-width:min(720px,72vw);
+  overflow-x:auto;
+  padding:1px 2px 4px;
+  scrollbar-width:none;
+}
+.hm-filter-chip-set::-webkit-scrollbar{display:none}
+
+.hm-filter-chip,
+.hm-filter-clear{
+  min-height:30px;
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  border:1px solid rgba(23,77,65,.14)!important;
+  border-radius:999px;
+  padding:0 9px;
+  color:#315d51;
+  background:rgba(255,255,255,.97);
+  box-shadow:0 5px 16px rgba(14,42,36,.08);
+  font-size:10px;
+  font-weight:850;
+  white-space:nowrap;
+}
+.hm-filter-chip:hover{
+  border-color:#82ab9e!important;
+  background:#f1f7f4;
+}
+.hm-filter-chip svg{width:11px;height:11px}
+.hm-filter-clear{
+  color:#fff;
+  border-color:#174d41!important;
+  background:#174d41;
+}
+
+.hm-sheet-drag-handle{
+  display:none;
+}
+
+@media(max-width:1280px) and (min-width:761px){
+  .hm-filter-chip-set{
+    max-width:min(680px,calc(100vw - 170px));
+  }
+}
+
+@media(max-width:760px){
+  .hm-filter-chip-set{
+    position:static;
+    flex:0 0 auto;
+    max-width:none;
+    overflow:visible;
+    padding:0;
+  }
+
+  .hm-filter-chip,
+  .hm-filter-clear{
+    min-height:36px;
+    height:36px;
+    border-radius:11px;
+    font-size:11px;
+    box-shadow:0 7px 20px rgba(14,42,36,.09);
+    scroll-snap-align:start;
+  }
+
+  .hm-mobile-panel-backdrop{
+    display:none!important;
+  }
+
+  .hm-mobile-panel-backdrop.sheet-full{
+    display:block!important;
+  }
+
+  .hm-left-panel.open.sheet-peek{
+    height:148px;
+    min-height:148px;
+    max-height:148px;
+    transform:translateY(0);
+  }
+
+  .hm-left-panel.open.sheet-half{
+    height:min(50dvh,500px);
+    min-height:300px;
+    max-height:calc(100dvh - 226px);
+    transform:translateY(0);
+  }
+
+  .hm-left-panel.open.sheet-full{
+    height:calc(100dvh - 166px);
+    min-height:420px;
+    max-height:calc(100dvh - 166px);
+    transform:translateY(0);
+  }
+
+  .hm-sheet-drag-handle{
+    position:sticky;
+    z-index:4;
+    top:0;
+    width:100%;
+    min-height:24px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 auto;
+    border:0;
+    padding:0;
+    background:rgba(252,253,250,.98);
+    cursor:ns-resize;
+    touch-action:none;
+  }
+
+  .hm-sheet-drag-handle>span{
+    width:42px;
+    height:4px;
+    border-radius:999px;
+    background:#c8d4cf;
+    box-shadow:0 1px 0 rgba(255,255,255,.9);
+  }
+
+  .hm-left-panel.sheet-peek .hm-panel-heading{
+    padding-top:7px;
+    padding-bottom:7px;
+  }
+
+  .hm-left-panel.sheet-peek .hm-panel-heading h1{
+    font-size:18px;
+  }
+
+  .hm-left-panel.sheet-peek .hm-place-results{
+    padding-top:7px;
+  }
+
+  .hm-left-panel.sheet-full .hm-place-list{
+    padding-bottom:24px;
+  }
+}
+
+@media(max-width:420px){
+  .hm-left-panel.open.sheet-peek{
+    height:142px;
+    min-height:142px;
+    max-height:142px;
+  }
+
+  .hm-left-panel.open.sheet-half{
+    height:min(48dvh,460px);
+    min-height:280px;
+  }
+
+  .hm-left-panel.open.sheet-full{
+    height:calc(100dvh - 158px);
+    min-height:390px;
+    max-height:calc(100dvh - 158px);
+  }
+}

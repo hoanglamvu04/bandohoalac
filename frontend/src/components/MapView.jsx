@@ -38,6 +38,7 @@ const PLACE_SOURCE_ID = 'hola-place-clusters';
 const PLACE_CLUSTER_LAYER_ID = 'hm-place-clusters';
 const PLACE_CLUSTER_COUNT_LAYER_ID = 'hm-place-cluster-count';
 const PLACE_POINT_LAYER_ID = 'hm-place-cluster-point';
+const PLACE_POINT_LABEL_LAYER_ID = 'hm-place-cluster-point-label';
 const PLACE_CLUSTER_MAX_ZOOM = 13;
 
 const BUILDING_2D_LAYER_IDS = [
@@ -71,31 +72,62 @@ function escapeHtml(value = '') {
     .replaceAll("'", '&#039;');
 }
 
-function categoryIcon(category) {
-  // category can legitimately be null when a published place has no
-  // category_id. Never let API data crash the whole map renderer.
+function categoryMarkerMeta(category) {
   const normalized = String(category || '').trim().toLowerCase();
-  if (normalized.includes('cafe') || normalized.includes('coffee')) return '☕';
-  if (normalized.includes('ăn') || normalized.includes('food')) return '🍜';
-  if (normalized.includes('home')) return '🏡';
-  if (normalized.includes('villa')) return '🏘️';
-  if (normalized.includes('khu du lịch') || normalized.includes('tourist destination')) return '🏝️';
-  if (normalized.includes('check')) return '📸';
-  if (normalized.includes('trường') || normalized.includes('school')) return '🎓';
-  if (normalized.includes('y tế') || normalized.includes('hospital') || normalized.includes('medical')) return '🏥';
-  if (normalized.includes('siêu thị') || normalized.includes('cửa hàng') || normalized.includes('shop')) return '🛒';
-  if (normalized.includes('ngân hàng') || normalized.includes('atm')) return '🏦';
-  if (normalized.includes('nhiên liệu') || normalized.includes('sạc') || normalized.includes('fuel')) return '⛽';
-  if (normalized.includes('cơ quan') || normalized.includes('government')) return '🏛️';
-  if (normalized.includes('thể thao') || normalized.includes('sport')) return '🏟️';
-  if (normalized.includes('dịch vụ') || normalized.includes('service')) return '🛠️';
-  if (normalized.includes('giao thông') || normalized.includes('transport')) return '🚌';
-  if (normalized.includes('bất động sản') || normalized.includes('real estate')) return '🏢';
-  return '📍';
-}
 
-function removeMarkers(markers) {
-  markers.forEach((marker) => marker.remove());
+  if (normalized.includes('cafe') || normalized.includes('coffee')) {
+    return { label: 'CF', color: '#8b5e3c' };
+  }
+  if (normalized.includes('ăn') || normalized.includes('food')) {
+    return { label: 'AU', color: '#d97706' };
+  }
+  if (normalized.includes('home')) {
+    return { label: 'HS', color: '#7c3aed' };
+  }
+  if (normalized.includes('villa')) {
+    return { label: 'VL', color: '#9333ea' };
+  }
+  if (normalized.includes('khu du lịch') || normalized.includes('tourist destination')) {
+    return { label: 'DL', color: '#0284c7' };
+  }
+  if (normalized.includes('check')) {
+    return { label: 'CI', color: '#db2777' };
+  }
+  if (normalized.includes('trải nghiệm')) {
+    return { label: 'TN', color: '#c2410c' };
+  }
+  if (normalized.includes('trường') || normalized.includes('school')) {
+    return { label: 'TH', color: '#2563eb' };
+  }
+  if (normalized.includes('y tế') || normalized.includes('hospital') || normalized.includes('medical')) {
+    return { label: 'YT', color: '#dc2626' };
+  }
+  if (normalized.includes('siêu thị') || normalized.includes('cửa hàng') || normalized.includes('shop')) {
+    return { label: 'ST', color: '#16a34a' };
+  }
+  if (normalized.includes('ngân hàng') || normalized.includes('atm')) {
+    return { label: 'NH', color: '#0369a1' };
+  }
+  if (normalized.includes('nhiên liệu') || normalized.includes('sạc') || normalized.includes('fuel')) {
+    return { label: 'EV', color: '#0f766e' };
+  }
+  if (normalized.includes('cơ quan') || normalized.includes('government')) {
+    return { label: 'CQ', color: '#475569' };
+  }
+  if (normalized.includes('thể thao') || normalized.includes('sport')) {
+    return { label: 'TT', color: '#059669' };
+  }
+  if (normalized.includes('dịch vụ') || normalized.includes('service')) {
+    return { label: 'DV', color: '#64748b' };
+  }
+  if (normalized.includes('giao thông') || normalized.includes('transport')) {
+    return { label: 'GT', color: '#0d9488' };
+  }
+  if (normalized.includes('bất động sản') || normalized.includes('real estate')) {
+    return { label: 'BDS', color: '#7c2d12' };
+  }
+
+  return { label: 'POI', color: '#174d41' };
 }
 
 function emptyFeatureCollection() {
@@ -105,21 +137,55 @@ function emptyFeatureCollection() {
 function placeFeatureCollection(places = []) {
   return {
     type: 'FeatureCollection',
-    features: places.map((place) => ({
-      type: 'Feature',
-      id: String(place.id),
-      geometry: {
-        type: 'Point',
-        coordinates: [Number(place.lng), Number(place.lat)]
-      },
-      properties: {
-        placeId: String(place.id),
-        name: place.name || '',
-        category: place.category || 'Địa điểm',
-        rating: Number(place.rating || 0)
-      }
-    }))
+    features: places.map((place) => {
+      const marker = categoryMarkerMeta(place.category);
+
+      return {
+        type: 'Feature',
+        id: String(place.id),
+        geometry: {
+          type: 'Point',
+          coordinates: [Number(place.lng), Number(place.lat)]
+        },
+        properties: {
+          placeId: String(place.id),
+          name: place.name || '',
+          category: place.category || 'Địa điểm',
+          rating: Number(place.rating || 0),
+          markerLabel: marker.label,
+          markerColor: marker.color
+        }
+      };
+    })
   };
+}
+
+function applyPlaceInteractionState(map, selectedPlaceId, hoveredPlaceId) {
+  if (!map?.getSource(PLACE_SOURCE_ID)) return;
+
+  try {
+    map.removeFeatureState({ source: PLACE_SOURCE_ID });
+
+    if (selectedPlaceId !== undefined && selectedPlaceId !== null) {
+      map.setFeatureState(
+        { source: PLACE_SOURCE_ID, id: String(selectedPlaceId) },
+        { selected: true }
+      );
+    }
+
+    if (
+      hoveredPlaceId !== undefined &&
+      hoveredPlaceId !== null &&
+      String(hoveredPlaceId) !== String(selectedPlaceId)
+    ) {
+      map.setFeatureState(
+        { source: PLACE_SOURCE_ID, id: String(hoveredPlaceId) },
+        { hovered: true }
+      );
+    }
+  } catch {
+    // Feature state can briefly be unavailable while a basemap style switches.
+  }
 }
 
 function addPlaceClusterLayers(map, places = []) {
@@ -177,7 +243,8 @@ function addPlaceClusterLayers(map, places = []) {
       filter: ['has', 'point_count'],
       layout: {
         'text-field': ['get', 'point_count_abbreviated'],
-        'text-size': 11
+        'text-size': 11,
+        'text-font': ['Noto Sans Regular']
       },
       paint: {
         'text-color': '#ffffff'
@@ -190,13 +257,61 @@ function addPlaceClusterLayers(map, places = []) {
       id: PLACE_POINT_LAYER_ID,
       type: 'circle',
       source: PLACE_SOURCE_ID,
-      maxzoom: 14,
       filter: ['!', ['has', 'point_count']],
       paint: {
-        'circle-radius': 8,
-        'circle-color': '#f6c453',
-        'circle-stroke-width': 3,
-        'circle-stroke-color': '#103f35'
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          12.5,
+          ['case',
+            ['boolean', ['feature-state', 'selected'], false], 11,
+            ['boolean', ['feature-state', 'hovered'], false], 10,
+            7
+          ],
+          17,
+          ['case',
+            ['boolean', ['feature-state', 'selected'], false], 17,
+            ['boolean', ['feature-state', 'hovered'], false], 15,
+            12
+          ]
+        ],
+        'circle-color': ['coalesce', ['get', 'markerColor'], '#174d41'],
+        'circle-opacity': 0.96,
+        'circle-stroke-width': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false], 4,
+          ['boolean', ['feature-state', 'hovered'], false], 3,
+          2
+        ],
+        'circle-stroke-color': '#ffffff'
+      }
+    });
+  }
+
+  if (!map.getLayer(PLACE_POINT_LABEL_LAYER_ID)) {
+    map.addLayer({
+      id: PLACE_POINT_LABEL_LAYER_ID,
+      type: 'symbol',
+      source: PLACE_SOURCE_ID,
+      minzoom: 13.2,
+      filter: ['!', ['has', 'point_count']],
+      layout: {
+        'text-field': ['get', 'markerLabel'],
+        'text-font': ['Noto Sans Regular'],
+        'text-size': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false], 11,
+          ['boolean', ['feature-state', 'hovered'], false], 10,
+          9
+        ],
+        'text-allow-overlap': true,
+        'text-ignore-placement': true
+      },
+      paint: {
+        'text-color': '#ffffff',
+        'text-halo-color': 'rgba(0,0,0,.22)',
+        'text-halo-width': 0.5
       }
     });
   }
@@ -484,7 +599,9 @@ function renderRoute(map, route, maplibre, fittedRouteKeyRef) {
 export default function MapView({
   places = [],
   selectedPlaceId,
+  hoveredPlaceId,
   onSelectPlace,
+  onHoverPlace,
   onUserLocation,
   userLocation,
   route,
@@ -497,7 +614,6 @@ export default function MapView({
   const mapRef = useRef(null);
   const maplibreRef = useRef(null);
   const containerRef = useRef(null);
-  const markersRef = useRef([]);
   const userMarkerRef = useRef(null);
   const fittedRouteKeyRef = useRef('');
   const latestMapDataRef = useRef(mapData);
@@ -505,6 +621,10 @@ export default function MapView({
   const latestRouteRef = useRef(route);
   const latestPlacesRef = useRef([]);
   const latestSelectPlaceRef = useRef(onSelectPlace);
+  const latestHoverPlaceRef = useRef(onHoverPlace);
+  const latestSelectedPlaceIdRef = useRef(selectedPlaceId);
+  const latestHoveredPlaceIdRef = useRef(hoveredPlaceId);
+  const hoveredPointerPlaceIdRef = useRef(null);
   const styleSwitchIdRef = useRef(0);
   const styleSwitchTimerRef = useRef(null);
   const appliedStyleKeyRef = useRef('');
@@ -513,7 +633,6 @@ export default function MapView({
 
   const [interactiveReady, setInteractiveReady] = useState(false);
   const [mapBooted, setMapBooted] = useState(false);
-  const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM);
   const [mapError, setMapError] = useState('');
   const [locating, setLocating] = useState(false);
   const [locationNotice, setLocationNotice] = useState(null);
@@ -605,7 +724,6 @@ export default function MapView({
         const notifyViewport = () => {
           const b = map.getBounds();
           const zoom = map.getZoom();
-          setMapZoom(zoom);
           onViewportChange?.({
             west: b.getWest(),
             south: b.getSouth(),
@@ -619,6 +737,11 @@ export default function MapView({
           addCoverage(map);
           addDataLayers(map, mapData);
           addPlaceClusterLayers(map, validPlaces);
+          applyPlaceInteractionState(
+            map,
+            latestSelectedPlaceIdRef.current,
+            latestHoveredPlaceIdRef.current
+          );
           setLayerVisibility(map, activeLayers);
           appliedStyleKeyRef.current = basemapStyleKey(
             basemapMode,
@@ -687,17 +810,39 @@ export default function MapView({
           if (place) latestSelectPlaceRef.current?.(place);
         };
 
+        const hoverClusterPoint = (event) => {
+          const placeId = event.features?.[0]?.properties?.placeId;
+          if (!placeId || String(hoveredPointerPlaceIdRef.current) === String(placeId)) {
+            return;
+          }
+
+          hoveredPointerPlaceIdRef.current = String(placeId);
+          latestHoverPlaceRef.current?.(String(placeId));
+        };
+
+        const clearClusterPointHover = () => {
+          if (hoveredPointerPlaceIdRef.current === null) return;
+          hoveredPointerPlaceIdRef.current = null;
+          latestHoverPlaceRef.current?.(null);
+        };
+
         map.on('click', PLACE_CLUSTER_LAYER_ID, zoomToCluster);
         map.on('click', PLACE_POINT_LAYER_ID, selectClusterPoint);
+        map.on('mousemove', PLACE_POINT_LAYER_ID, hoverClusterPoint);
+        map.on('mouseleave', PLACE_POINT_LAYER_ID, clearClusterPointHover);
 
-        for (const layerId of [PLACE_CLUSTER_LAYER_ID, PLACE_POINT_LAYER_ID]) {
-          map.on('mouseenter', layerId, () => {
-            map.getCanvas().style.cursor = 'pointer';
-          });
-          map.on('mouseleave', layerId, () => {
-            map.getCanvas().style.cursor = '';
-          });
-        }
+        map.on('mouseenter', PLACE_CLUSTER_LAYER_ID, () => {
+          map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', PLACE_CLUSTER_LAYER_ID, () => {
+          map.getCanvas().style.cursor = '';
+        });
+        map.on('mouseenter', PLACE_POINT_LAYER_ID, () => {
+          map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', PLACE_POINT_LAYER_ID, () => {
+          map.getCanvas().style.cursor = '';
+        });
 
         let localSourceErrorCount = 0;
 
@@ -775,7 +920,6 @@ export default function MapView({
       if (idleHandle && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleHandle);
       if (styleSwitchTimerRef.current) window.clearTimeout(styleSwitchTimerRef.current);
       if (locationNoticeTimerRef.current) window.clearTimeout(locationNoticeTimerRef.current);
-      removeMarkers(markersRef.current);
       userMarkerRef.current?.remove();
       mapRef.current?.remove();
       mapRef.current = null;
@@ -802,6 +946,32 @@ export default function MapView({
   useEffect(() => {
     latestSelectPlaceRef.current = onSelectPlace;
   }, [onSelectPlace]);
+
+  useEffect(() => {
+    latestHoverPlaceRef.current = onHoverPlace;
+  }, [onHoverPlace]);
+
+  useEffect(() => {
+    latestSelectedPlaceIdRef.current = selectedPlaceId;
+    const map = mapRef.current;
+    if (!map || !interactiveReady) return;
+    applyPlaceInteractionState(
+      map,
+      selectedPlaceId,
+      latestHoveredPlaceIdRef.current
+    );
+  }, [selectedPlaceId, interactiveReady]);
+
+  useEffect(() => {
+    latestHoveredPlaceIdRef.current = hoveredPlaceId;
+    const map = mapRef.current;
+    if (!map || !interactiveReady) return;
+    applyPlaceInteractionState(
+      map,
+      latestSelectedPlaceIdRef.current,
+      hoveredPlaceId
+    );
+  }, [hoveredPlaceId, interactiveReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -847,6 +1017,11 @@ export default function MapView({
         addCoverage(map);
         addDataLayers(map, latestMapDataRef.current);
         addPlaceClusterLayers(map, latestPlacesRef.current);
+        applyPlaceInteractionState(
+          map,
+          latestSelectedPlaceIdRef.current,
+          latestHoveredPlaceIdRef.current
+        );
         setLayerVisibility(map, latestActiveLayersRef.current);
         setBuildingDimensionVisibility(map, building3D);
         renderRoute(map, latestRouteRef.current, maplibre, fittedRouteKeyRef);
@@ -910,38 +1085,6 @@ export default function MapView({
     addPlaceClusterLayers(map, validPlaces);
   }, [validPlaces, interactiveReady]);
 
-  useEffect(() => {
-    const map = mapRef.current;
-    const maplibre = maplibreRef.current;
-    if (!map || !maplibre || !interactiveReady) return;
-
-    removeMarkers(markersRef.current);
-    markersRef.current = [];
-
-    if (mapZoom < 14) return;
-
-    markersRef.current = validPlaces.map((place) => {
-      const element = document.createElement('button');
-      element.type = 'button';
-      element.className = selectedPlaceId === place.id ? 'hm-place-pin active' : 'hm-place-pin';
-      element.innerHTML = '<span>' + categoryIcon(place.category) + '</span>';
-      element.title = place.name;
-      element.addEventListener('click', () => onSelectPlace?.(place));
-
-      return new maplibre.Marker({ element, anchor: 'bottom' })
-        .setLngLat([Number(place.lng), Number(place.lat)])
-        .setPopup(
-          new maplibre.Popup({ offset: 18, closeButton: false, className: 'hm-data-popup' })
-            .setHTML(
-              '<div class="hm-popup-card"><span>' +
-              escapeHtml(place.category || 'ĐỊA ĐIỂM') +
-              '</span><strong>' + escapeHtml(place.name) +
-              '</strong><p>' + escapeHtml(place.address || 'Hòa Lạc') + '</p></div>'
-            )
-        )
-        .addTo(map);
-    });
-  }, [validPlaces, selectedPlaceId, onSelectPlace, interactiveReady, mapZoom]);
 
   useEffect(() => {
     const map = mapRef.current;

@@ -101,6 +101,8 @@ const CATEGORY_GROUPS = [
   }
 ];
 
+const MOBILE_SHEET_LEVELS = ['peek', 'half', 'full'];
+
 const MAX_PROGRESSIVE_PLACES = 400;
 const VIEWPORT_PREFETCH_RATIO = 0.35;
 const MAX_LOADED_VIEWPORTS = 24;
@@ -212,6 +214,8 @@ export default function MapPage() {
   const [openNow, setOpenNow] = useState(() => searchParams.get('open') === '1');
   const [sortMode, setSortMode] = useState(() => searchParams.get('sort') || 'relevant');
   const [selectedId, setSelectedId] = useState(null);
+  const [hoveredPlaceId, setHoveredPlaceId] = useState(null);
+  const [mobileSheetLevel, setMobileSheetLevel] = useState('half');
   const [activeLayers, setActiveLayers] = useState(DEFAULT_ACTIVE);
   const [basemapMode, setBasemapMode] = useState('streets');
   const [mapData, setMapData] = useState({ type: 'FeatureCollection', features: [] });
@@ -238,6 +242,9 @@ export default function MapPage() {
   const loadedPlaceBoundsRef = useRef([]);
   const lastLayersRequestKeyRef = useRef('');
   const galleryTouchStartRef = useRef(null);
+  const placeRowRefs = useRef(new Map());
+  const sheetDragRef = useRef(null);
+  const sheetDragMovedRef = useRef(false);
 
   const regionId = searchParams.get('region') || 'all';
   const requestedPlaceId = searchParams.get('place') || '';
@@ -253,6 +260,12 @@ export default function MapPage() {
   const activeCategoryLabel = category === 'all'
     ? 'Danh mục'
     : categoryBySlug.get(category)?.name || activeCategoryGroup?.label || 'Danh mục';
+  const hasActiveFilters = Boolean(
+    query.trim() ||
+    category !== 'all' ||
+    openNow ||
+    minRating
+  );
 
   useEffect(() => {
     getCategories()
@@ -618,6 +631,18 @@ export default function MapPage() {
   }, [selectedId]);
 
   useEffect(() => {
+    if (!selectedId || !leftOpen) return undefined;
+
+    const timer = window.requestAnimationFrame(() => {
+      placeRowRefs.current
+        .get(String(selectedId))
+        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+
+    return () => window.cancelAnimationFrame(timer);
+  }, [selectedId, leftOpen]);
+
+  useEffect(() => {
     if (!selectedImages.length) {
       setGalleryIndex(0);
       return;
@@ -720,6 +745,7 @@ export default function MapPage() {
         window.matchMedia('(max-width: 760px)').matches
       ) {
         setLeftOpen(true);
+        setMobileSheetLevel('half');
       }
     } catch (error) {
       console.warn('[Hola Maps] near-me request failed:', error);
@@ -783,6 +809,87 @@ export default function MapPage() {
     }
   }
 
+  function isMobileMapViewport() {
+    return typeof window !== 'undefined' &&
+      window.matchMedia('(max-width: 760px)').matches;
+  }
+
+  function toggleDiscoveryPanel() {
+    if (!isMobileMapViewport()) {
+      setLeftOpen((value) => !value);
+      return;
+    }
+
+    setLeftOpen((value) => {
+      const next = !value;
+      if (next) setMobileSheetLevel('half');
+      return next;
+    });
+  }
+
+  function startSheetDrag(event) {
+    if (!isMobileMapViewport()) return;
+    sheetDragMovedRef.current = false;
+    sheetDragRef.current = {
+      startY: event.clientY,
+      level: mobileSheetLevel
+    };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }
+
+  function finishSheetDrag(event) {
+    const drag = sheetDragRef.current;
+    sheetDragRef.current = null;
+    if (!drag || !isMobileMapViewport()) return;
+
+    const delta = Number(event.clientY) - Number(drag.startY);
+    if (!Number.isFinite(delta) || Math.abs(delta) < 28) return;
+
+    sheetDragMovedRef.current = true;
+    const startIndex = MOBILE_SHEET_LEVELS.indexOf(drag.level);
+    const step = Math.abs(delta) > 150 ? 2 : 1;
+    const direction = delta < 0 ? 1 : -1;
+    const nextIndex = Math.min(
+      MOBILE_SHEET_LEVELS.length - 1,
+      Math.max(0, startIndex + direction * step)
+    );
+
+    setMobileSheetLevel(MOBILE_SHEET_LEVELS[nextIndex]);
+    setLeftOpen(true);
+  }
+
+  function cycleSheetLevel() {
+    if (sheetDragMovedRef.current) {
+      sheetDragMovedRef.current = false;
+      return;
+    }
+    const index = MOBILE_SHEET_LEVELS.indexOf(mobileSheetLevel);
+    setMobileSheetLevel(MOBILE_SHEET_LEVELS[(index + 1) % MOBILE_SHEET_LEVELS.length]);
+  }
+
+  function clearDiscoveryFilters() {
+    lastPlacesRequestKeyRef.current = '';
+    loadedPlaceBoundsRef.current = [];
+    setQuery('');
+    setCategory('all');
+    setOpenNow(false);
+    setMinRating('');
+    setSortMode('relevant');
+    setSelectedId(null);
+    setHoveredPlaceId(null);
+    setPlaceScope('viewport');
+    setNearbyRadius(0);
+    setPlaces([]);
+    syncDiscoveryParams({
+      q: null,
+      category: null,
+      open: null,
+      rating: null,
+      sort: null,
+      place: null
+    });
+  }
+
   function syncDiscoveryParams(next = {}) {
     const params = new URLSearchParams(searchParams);
 
@@ -807,6 +914,7 @@ export default function MapPage() {
       window.matchMedia('(max-width: 760px)').matches
     ) {
       setLeftOpen(true);
+      setMobileSheetLevel('full');
     }
 
     if (placeScope !== 'viewport') {
@@ -955,7 +1063,9 @@ export default function MapPage() {
       <MapView
         places={filteredPlaces}
         selectedPlaceId={selectedId}
+        hoveredPlaceId={hoveredPlaceId}
         onSelectPlace={togglePlaceSelection}
+        onHoverPlace={setHoveredPlaceId}
         onUserLocation={setUserLocation}
         userLocation={userLocation}
         route={routeData}
@@ -970,7 +1080,7 @@ export default function MapPage() {
         <button
           className="hm-map-menu"
           type="button"
-          onClick={() => setLeftOpen((value) => !value)}
+          onClick={toggleDiscoveryPanel}
           aria-label="Mở lớp dữ liệu"
         >
           <Layers size={19} />
@@ -1094,6 +1204,34 @@ export default function MapPage() {
             <option value="rating">Đánh giá cao</option>
             <option value="recent">Mới cập nhật</option>
           </select>
+
+          {hasActiveFilters && (
+            <div className="hm-filter-chip-set" aria-label="Bộ lọc đang áp dụng">
+              {!!query.trim() && (
+                <button type="button" className="hm-filter-chip" onClick={() => handleQueryChange('')}>
+                  “{query.trim()}” <X size={12} />
+                </button>
+              )}
+              {category !== 'all' && (
+                <button type="button" className="hm-filter-chip" onClick={() => handleCategoryChange('all')}>
+                  {activeCategoryLabel} <X size={12} />
+                </button>
+              )}
+              {openNow && (
+                <button type="button" className="hm-filter-chip" onClick={handleOpenNowToggle}>
+                  Đang mở <X size={12} />
+                </button>
+              )}
+              {!!minRating && (
+                <button type="button" className="hm-filter-chip" onClick={() => handleRatingChange('')}>
+                  ★ {minRating}+ <X size={12} />
+                </button>
+              )}
+              <button type="button" className="hm-filter-clear" onClick={clearDiscoveryFilters}>
+                Xóa lọc
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="hm-topbar-status">
@@ -1115,14 +1253,34 @@ export default function MapPage() {
 
       {leftOpen && (
         <button
-          className="hm-mobile-panel-backdrop"
+          className={'hm-mobile-panel-backdrop sheet-' + mobileSheetLevel}
           type="button"
           aria-label="Đóng danh sách địa điểm"
           onClick={() => setLeftOpen(false)}
         />
       )}
 
-      <aside className={leftOpen ? 'hm-left-panel open' : 'hm-left-panel'}>
+      <aside
+        className={
+          (leftOpen ? 'hm-left-panel open ' : 'hm-left-panel ') +
+          'sheet-' + mobileSheetLevel
+        }
+      >
+        <button
+          type="button"
+          className="hm-sheet-drag-handle"
+          onPointerDown={startSheetDrag}
+          onPointerUp={finishSheetDrag}
+          onPointerCancel={() => {
+            sheetDragRef.current = null;
+            sheetDragMovedRef.current = false;
+          }}
+          onClick={cycleSheetLevel}
+          aria-label={'Thay đổi độ cao danh sách: ' + mobileSheetLevel}
+          title="Kéo lên hoặc xuống để đổi độ cao"
+        >
+          <span />
+        </button>
         <div className="hm-panel-heading">
           <div>
             <span>HOLA MAPS ENGINE</span>
@@ -1176,12 +1334,27 @@ export default function MapPage() {
               <button
                 key={place.id}
                 type="button"
-                className={selectedId === place.id ? 'hm-place-row active' : 'hm-place-row'}
+                ref={(node) => {
+                  const key = String(place.id);
+                  if (node) placeRowRefs.current.set(key, node);
+                  else placeRowRefs.current.delete(key);
+                }}
+                className={
+                  selectedId === place.id
+                    ? 'hm-place-row active'
+                    : String(hoveredPlaceId) === String(place.id)
+                      ? 'hm-place-row hovered'
+                      : 'hm-place-row'
+                }
+                onMouseEnter={() => setHoveredPlaceId(String(place.id))}
+                onMouseLeave={() => setHoveredPlaceId(null)}
+                onFocus={() => setHoveredPlaceId(String(place.id))}
+                onBlur={() => setHoveredPlaceId(null)}
                 onClick={() => togglePlaceSelection(place)}
               >
                 <span className="hm-place-thumb">
                   {place.images?.[0]
-                    ? <img src={place.images[0]} alt="" />
+                    ? <img src={place.images[0]} alt="" loading="lazy" decoding="async" />
                     : <MapPin size={17} />}
                 </span>
                 <span className="hm-place-copy">
@@ -1471,7 +1644,11 @@ export default function MapPage() {
         </aside>
       )}
 
-      <div className={leftOpen ? 'hm-basemap-switcher panel-open' : 'hm-basemap-switcher'}>
+      <div className={
+        leftOpen && mobileSheetLevel === 'full'
+          ? 'hm-basemap-switcher panel-open'
+          : 'hm-basemap-switcher'
+      }>
         {BASEMAP_OPTIONS.map((option) => {
           const Icon = option.id === 'satellite'
             ? Satellite
