@@ -5,13 +5,13 @@ Public, read-only API for approved Hòa Lạc websites and integrations.
 Base URL:
 
 ```text
-https://map.dothihoalac.vn/api/public/v1
+https://maps.dothihoalac.vn/api/public/v1
 ```
 
 Public documentation:
 
 ```text
-https://map.dothihoalac.vn/developers
+https://maps.dothihoalac.vn/developers
 ```
 
 OpenAPI schema:
@@ -67,7 +67,7 @@ Only published places are exposed. Internal workflow fields and private user dat
 
 ```js
 const response = await fetch(
-  'https://map.dothihoalac.vn/api/public/v1/places?category=khu-du-lich&limit=20',
+  'https://maps.dothihoalac.vn/api/public/v1/places?category=khu-du-lich&limit=20',
   {
     headers: {
       'X-Hola-API-Key': 'hm_live_...'
