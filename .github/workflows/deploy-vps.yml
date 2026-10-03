@@ -42,6 +42,24 @@ jobs:
             git checkout main
             git reset --hard origin/main
 
+            echo "==> Canonical domain check"
+            DOMAIN_MARKER="$APP_DIR/.maps-domain-migrated"
+            if [ ! -f "$DOMAIN_MARKER" ]; then
+              if getent ahostsv4 maps.dothihoalac.vn >/dev/null 2>&1; then
+                echo "DNS for maps.dothihoalac.vn resolves; attempting one-time domain migration"
+                if bash scripts/migrate-production-domain-to-maps.sh; then
+                  touch "$DOMAIN_MARKER"
+                  echo "Canonical domain migration completed"
+                else
+                  echo "WARN: maps domain migration is not ready yet; keeping the existing domain for this deploy"
+                fi
+              else
+                echo "DNS for maps.dothihoalac.vn is not ready; keeping map.dothihoalac.vn for now"
+              fi
+            else
+              echo "Canonical maps domain migration already completed"
+            fi
+
             echo "==> Ensure image/search runtime tools"
             if command -v apt-get >/dev/null 2>&1; then
               if [ "$(id -u)" -eq 0 ]; then
