@@ -3,8 +3,13 @@ import { isInsideServiceCoverage } from '../config/mapCoverage.js';
 
 const CONTRIBUTION_TYPES = [
   'CREATE_PLACE', 'UPDATE_PLACE', 'ADD_PHOTO', 'FIX_LOCATION',
-  'UPDATE_HOURS', 'UPDATE_PRICE', 'REPORT_CLOSED', 'REPORT_WRONG_INFO'
+  'UPDATE_HOURS', 'UPDATE_PRICE', 'REPORT_CLOSED', 'REPORT_WRONG_INFO',
+  'REPORT_FLOOD', 'REPORT_ROAD_CLOSURE', 'REPORT_ALERT'
 ];
+
+const ROAD_STATUS_TYPES = new Set([
+  'REPORT_FLOOD', 'REPORT_ROAD_CLOSURE', 'REPORT_ALERT'
+]);
 
 const locationSchema = z.object({
   lat: z.coerce.number().min(-90).max(90),
@@ -27,9 +32,13 @@ export const createContributionSchema = z.object({
     phone: z.string().trim().max(30).optional(),
     website: z.string().trim().max(200).optional()
   }).optional(),
-  reason: z.string().trim().max(500).optional()
+  reason: z.string().trim().max(500).optional(),
+  severity: z.enum(['INFO', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
+  expiresHours: z.coerce.number().int().min(1).max(168).optional()
 }).superRefine((data, ctx) => {
-  if (data.type === 'CREATE_PLACE' || data.type === 'FIX_LOCATION') {
+  const isRoadStatus = ROAD_STATUS_TYPES.has(data.type);
+
+  if (data.type === 'CREATE_PLACE' || data.type === 'FIX_LOCATION' || isRoadStatus) {
     if (!data.location) {
       ctx.addIssue({ code: 'custom', message: 'location is required for this contribution type.', path: ['location'] });
     } else if (!isInsideServiceCoverage(data.location.lng, data.location.lat)) {
@@ -43,7 +52,15 @@ export const createContributionSchema = z.object({
   if (data.type === 'CREATE_PLACE' && !data.place?.name) {
     ctx.addIssue({ code: 'custom', message: 'place.name is required to create a place.', path: ['place', 'name'] });
   }
-  if (data.type !== 'CREATE_PLACE' && !data.placeId) {
+  if (data.type !== 'CREATE_PLACE' && !isRoadStatus && !data.placeId) {
     ctx.addIssue({ code: 'custom', message: 'placeId is required for this contribution type.', path: ['placeId'] });
+  }
+
+  if (isRoadStatus && !data.reason?.trim()) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Vui lòng mô tả ngắn tình trạng thực tế.',
+      path: ['reason']
+    });
   }
 });
