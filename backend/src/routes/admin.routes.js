@@ -90,6 +90,26 @@ import {
 } from '../controllers/adminBrand.controller.js';
 import { adminUpdateBrandSettingsSchema } from '../validators/brand.validators.js';
 import {
+  createDeveloperApiClientAdmin,
+  createDeveloperApiKeyAdmin,
+  getDeveloperApiOverviewAdmin,
+  listDeveloperApiClientsAdmin,
+  listDeveloperApiEndpointsAdmin,
+  listDeveloperApiKeysAdmin,
+  listDeveloperApiLogsAdmin,
+  revokeDeveloperApiKeyAdmin,
+  updateDeveloperApiClientAdmin,
+  updateDeveloperApiEndpointAdmin,
+  updateDeveloperApiSettingsAdmin
+} from '../controllers/adminDeveloperApi.controller.js';
+import {
+  createDeveloperApiClientSchema,
+  createDeveloperApiKeySchema,
+  updateDeveloperApiClientSchema,
+  updateDeveloperApiEndpointSchema,
+  updateDeveloperApiSettingsSchema
+} from '../validators/developerApi.validators.js';
+import {
   approveHighConfidencePlaceImportsAdmin,
   approvePlaceImportAdmin,
   getPlaceImportStatsAdmin,
@@ -275,5 +295,18 @@ router.delete(
   authorize('ADMIN'),
   deleteBrandAssetAdmin
 );
+
+
+router.get('/developer-api/overview', authorize('ADMIN'), getDeveloperApiOverviewAdmin);
+router.patch('/developer-api/settings', authorize('ADMIN'), validateBody(updateDeveloperApiSettingsSchema), updateDeveloperApiSettingsAdmin);
+router.get('/developer-api/clients', authorize('ADMIN'), listDeveloperApiClientsAdmin);
+router.post('/developer-api/clients', authorize('ADMIN'), validateBody(createDeveloperApiClientSchema), createDeveloperApiClientAdmin);
+router.patch('/developer-api/clients/:id', authorize('ADMIN'), validateBody(updateDeveloperApiClientSchema), updateDeveloperApiClientAdmin);
+router.get('/developer-api/keys', authorize('ADMIN'), listDeveloperApiKeysAdmin);
+router.post('/developer-api/keys', authorize('ADMIN'), validateBody(createDeveloperApiKeySchema), createDeveloperApiKeyAdmin);
+router.post('/developer-api/keys/:id/revoke', authorize('ADMIN'), revokeDeveloperApiKeyAdmin);
+router.get('/developer-api/endpoints', authorize('ADMIN'), listDeveloperApiEndpointsAdmin);
+router.patch('/developer-api/endpoints/:key', authorize('ADMIN'), validateBody(updateDeveloperApiEndpointSchema), updateDeveloperApiEndpointAdmin);
+router.get('/developer-api/logs', authorize('ADMIN'), listDeveloperApiLogsAdmin);
 
 export default router;
