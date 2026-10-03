@@ -4518,3 +4518,40 @@
     grid-column:1/-1;
   }
 }
+
+
+/* Safe viewport for partner overlays on dashboard and scanner screens. */
+.partner-scanner-modal,
+.partner-edit-modal{
+  inset:var(--app-safe-top, 0px) 0 var(--app-safe-bottom, 0px);
+  padding:clamp(8px, 2.2vh, 18px);
+  overflow:hidden;
+}
+
+.partner-scanner-card,
+.partner-edit-card{
+  max-height:100%;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+
+.partner-edit-head,
+.partner-scanner-head{
+  position:sticky;
+  top:0;
+  z-index:5;
+  background:rgba(255,255,255,.97);
+  backdrop-filter:blur(12px);
+}
+
+@media(max-width:760px){
+  .partner-scanner-modal,
+  .partner-edit-modal{
+    padding:8px;
+  }
+
+  .partner-scanner-card.partner-scanner-continuous,
+  .partner-edit-card{
+    max-height:100%;
+  }
+}

@@ -16,6 +16,79 @@ export default function App() {
   }, [isMapRoute]);
 
   useLayoutEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+
+    const root = document.documentElement;
+    let frame = 0;
+    let observer = null;
+
+    const isVisible = (element) => {
+      if (!element) return false;
+      const style = window.getComputedStyle(element);
+      return style.display !== 'none' && style.visibility !== 'hidden';
+    };
+
+    const syncSafeViewport = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const header = document.querySelector('.navbar');
+        const bottomNav = document.querySelector('.bottom-nav');
+        const visualViewport = window.visualViewport;
+
+        const visualTop = Math.max(0, Number(visualViewport?.offsetTop) || 0);
+        const visualHeight = Number(visualViewport?.height) || window.innerHeight;
+        const visualBottom = Math.max(
+          0,
+          window.innerHeight - (visualTop + visualHeight)
+        );
+
+        const headerBottom = isVisible(header)
+          ? Math.max(0, header.getBoundingClientRect().bottom)
+          : 0;
+
+        const bottomNavTop = isVisible(bottomNav)
+          ? bottomNav.getBoundingClientRect().top
+          : window.innerHeight;
+        const bottomNavInset = isVisible(bottomNav)
+          ? Math.max(0, window.innerHeight - bottomNavTop)
+          : 0;
+
+        root.style.setProperty(
+          '--app-safe-top',
+          Math.max(visualTop, headerBottom) + 'px'
+        );
+        root.style.setProperty(
+          '--app-safe-bottom',
+          Math.max(visualBottom, bottomNavInset) + 'px'
+        );
+        root.style.setProperty('--app-visual-height', visualHeight + 'px');
+      });
+    };
+
+    syncSafeViewport();
+
+    if ('ResizeObserver' in window) {
+      observer = new ResizeObserver(syncSafeViewport);
+      const header = document.querySelector('.navbar');
+      const bottomNav = document.querySelector('.bottom-nav');
+      if (header) observer.observe(header);
+      if (bottomNav) observer.observe(bottomNav);
+    }
+
+    window.addEventListener('resize', syncSafeViewport, { passive: true });
+    window.visualViewport?.addEventListener('resize', syncSafeViewport, { passive: true });
+    window.visualViewport?.addEventListener('scroll', syncSafeViewport, { passive: true });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener('resize', syncSafeViewport);
+      window.visualViewport?.removeEventListener('resize', syncSafeViewport);
+      window.visualViewport?.removeEventListener('scroll', syncSafeViewport);
+    };
+  }, [location.pathname]);
+
+  useLayoutEffect(() => {
     if (typeof window === 'undefined') return;
 
     const root = document.documentElement;

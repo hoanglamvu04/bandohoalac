@@ -1294,3 +1294,45 @@
     display:none!important;
   }
 }
+
+
+/* Safe viewport: profile contribution sheets stay between app chrome. */
+.profile-contribution-modal{
+  inset:var(--app-safe-top, 0px) 0 var(--app-safe-bottom, 0px);
+  padding:clamp(10px, 2.5vh, 24px);
+  overflow:hidden;
+}
+
+.profile-contribution-sheet{
+  max-height:100%;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+
+.profile-contribution-head{
+  position:sticky;
+  top:-20px;
+  z-index:4;
+  margin:-20px -20px 12px;
+  padding:18px 20px 12px;
+  border-bottom:1px solid rgba(223,232,238,.88);
+  background:rgba(255,255,255,.97);
+  backdrop-filter:blur(12px);
+}
+
+@media(max-width:760px){
+  .profile-contribution-modal{
+    padding:0;
+  }
+
+  .profile-contribution-sheet{
+    max-height:100%;
+  }
+
+  .profile-contribution-head{
+    top:-14px;
+    margin:-14px -11px 10px;
+    padding:13px 11px 10px;
+    border-radius:22px 22px 0 0;
+  }
+}

@@ -1,4 +1,7 @@
 :root{
+  --app-safe-top:0px;
+  --app-safe-bottom:0px;
+  --app-visual-height:100dvh;
   --ink:#102f29;
   --ink-2:#1e4d43;
   --gold:#f6c453;
