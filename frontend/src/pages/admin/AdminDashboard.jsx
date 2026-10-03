@@ -4,6 +4,7 @@ import {
   ArrowRight,
   BadgePercent,
   ClipboardList,
+  Code2,
   Database,
   Flag,
   LayoutDashboard,
@@ -94,6 +95,13 @@ const adminModules = [
     description: 'Theo dõi các thao tác quản trị quan trọng trên hệ thống.',
     icon: Activity,
     tone: 'slate'
+  },
+  {
+    to: '/admin/developer-api',
+    title: 'API & Tích hợp',
+    description: 'Quản lý Public API, website kết nối, API key, endpoint và tài liệu.',
+    icon: Code2,
+    tone: 'green'
   }
 ];
 
