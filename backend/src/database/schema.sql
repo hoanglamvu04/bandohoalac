@@ -983,3 +983,115 @@ CREATE INDEX IF NOT EXISTS place_import_runs_created_idx
 CREATE UNIQUE INDEX IF NOT EXISTS place_import_runs_one_active_source_uidx
   ON place_import_runs (source)
   WHERE status IN ('QUEUED', 'RUNNING');
+
+
+-- ============================================================
+-- HOLA MAPS DEVELOPER API
+-- Public integration management, client keys, endpoint policy & usage logs.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS developer_api_settings (
+  id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  access_mode TEXT NOT NULL DEFAULT 'OPEN'
+    CHECK (access_mode IN ('OPEN', 'PARTNER')),
+  docs_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO developer_api_settings (id, enabled, access_mode, docs_enabled)
+VALUES (1, TRUE, 'OPEN', TRUE)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS developer_api_clients (
+  id BIGSERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'ACTIVE'
+    CHECK (status IN ('ACTIVE', 'PAUSED')),
+  allowed_origins TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+  permissions TEXT[] NOT NULL DEFAULT ARRAY['*']::TEXT[],
+  rate_limit_per_minute INTEGER NOT NULL DEFAULT 300
+    CHECK (rate_limit_per_minute BETWEEN 30 AND 600),
+  note TEXT,
+  created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS developer_api_clients_status_idx
+  ON developer_api_clients (status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS developer_api_keys (
+  id BIGSERIAL PRIMARY KEY,
+  client_id BIGINT NOT NULL REFERENCES developer_api_clients(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  key_hash TEXT NOT NULL UNIQUE,
+  key_prefix TEXT NOT NULL,
+  key_last4 TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'ACTIVE'
+    CHECK (status IN ('ACTIVE', 'REVOKED')),
+  last_used_at TIMESTAMPTZ,
+  expires_at TIMESTAMPTZ,
+  created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS developer_api_keys_client_idx
+  ON developer_api_keys (client_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS developer_api_keys_hash_idx
+  ON developer_api_keys (key_hash);
+
+CREATE TABLE IF NOT EXISTS developer_api_endpoints (
+  endpoint_key TEXT PRIMARY KEY,
+  method TEXT NOT NULL DEFAULT 'GET',
+  path_template TEXT NOT NULL,
+  label TEXT NOT NULL,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  requires_key BOOLEAN NOT NULL DEFAULT FALSE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO developer_api_endpoints
+  (endpoint_key, method, path_template, label, enabled, requires_key, sort_order)
+VALUES
+  ('meta', 'GET', '/meta', 'Thông tin API', TRUE, FALSE, 10),
+  ('openapi', 'GET', '/openapi.json', 'OpenAPI schema', TRUE, FALSE, 20),
+  ('categories', 'GET', '/categories', 'Danh mục', TRUE, FALSE, 30),
+  ('places.list', 'GET', '/places', 'Danh sách & tìm kiếm địa điểm', TRUE, FALSE, 40),
+  ('places.bounds', 'GET', '/places/bounds', 'Địa điểm theo vùng bản đồ', TRUE, FALSE, 50),
+  ('places.geojson', 'GET', '/places/geojson', 'GeoJSON địa điểm', TRUE, FALSE, 60),
+  ('places.nearby', 'GET', '/places/nearby', 'Địa điểm lân cận', TRUE, FALSE, 70),
+  ('places.detail', 'GET', '/places/:id', 'Chi tiết địa điểm theo ID', TRUE, FALSE, 80),
+  ('places.slug', 'GET', '/places/slug/:slug', 'Chi tiết địa điểm theo slug', TRUE, FALSE, 90)
+ON CONFLICT (endpoint_key) DO UPDATE
+SET method = EXCLUDED.method,
+    path_template = EXCLUDED.path_template,
+    label = EXCLUDED.label,
+    sort_order = EXCLUDED.sort_order;
+
+CREATE TABLE IF NOT EXISTS developer_api_usage_logs (
+  id BIGSERIAL PRIMARY KEY,
+  client_id BIGINT REFERENCES developer_api_clients(id) ON DELETE SET NULL,
+  key_id BIGINT REFERENCES developer_api_keys(id) ON DELETE SET NULL,
+  endpoint_key TEXT,
+  method TEXT NOT NULL,
+  path TEXT NOT NULL,
+  status_code INTEGER NOT NULL,
+  duration_ms INTEGER NOT NULL DEFAULT 0,
+  origin TEXT,
+  ip_address TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS developer_api_usage_created_idx
+  ON developer_api_usage_logs (created_at DESC);
+CREATE INDEX IF NOT EXISTS developer_api_usage_client_idx
+  ON developer_api_usage_logs (client_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS developer_api_usage_endpoint_idx
+  ON developer_api_usage_logs (endpoint_key, created_at DESC);
