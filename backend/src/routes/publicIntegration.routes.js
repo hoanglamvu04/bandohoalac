@@ -3,6 +3,7 @@ import {
   getPublicApiMeta,
   getPublicCategories,
   getPublicNearbyPlaces,
+  getPublicOpenApi,
   getPublicPlaceById,
   getPublicPlaceBySlug,
   getPublicPlaces,
@@ -19,6 +20,7 @@ import {
 const router = Router();
 
 router.get('/meta', getPublicApiMeta);
+router.get('/openapi.json', getPublicOpenApi);
 router.get('/categories', getPublicCategories);
 router.get('/places/bounds', validateQuery(publicBoundsQuerySchema), getPublicPlacesBounds);
 router.get('/places/geojson', validateQuery(publicBoundsQuerySchema), getPublicPlacesGeoJson);
