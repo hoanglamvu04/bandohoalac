@@ -18,6 +18,7 @@ import {
   Route,
   Search,
   Satellite,
+  SlidersHorizontal,
   TriangleAlert,
   Waves,
   X
@@ -213,7 +214,7 @@ export default function MapPage() {
   const [query, setQuery] = useState(() => searchParams.get('q') || '');
   const [categories, setCategories] = useState([]);
   const [category, setCategory] = useState(() => searchParams.get('category') || 'all');
-  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [minRating, setMinRating] = useState(() => searchParams.get('rating') || '');
   const [openNow, setOpenNow] = useState(() => searchParams.get('open') === '1');
   const [sortMode, setSortMode] = useState(() => searchParams.get('sort') || 'relevant');
@@ -274,6 +275,11 @@ export default function MapPage() {
   const activeCategoryLabel = category === 'all'
     ? 'Danh mục'
     : categoryBySlug.get(category)?.name || activeCategoryGroup?.label || 'Danh mục';
+  const advancedFilterCount = [
+    category !== 'all',
+    Boolean(minRating),
+    sortMode !== 'relevant'
+  ].filter(Boolean).length;
   const hasActiveFilters = Boolean(
     query.trim() ||
     category !== 'all' ||
@@ -993,6 +999,22 @@ export default function MapPage() {
     syncDiscoveryParams({ sort: value === 'relevant' ? null : value });
   }
 
+  function clearAdvancedFilters() {
+    lastPlacesRequestKeyRef.current = '';
+    loadedPlaceBoundsRef.current = [];
+    setSelectedId(null);
+    setPlaceScope('viewport');
+    setCategory('all');
+    setMinRating('');
+    setSortMode('relevant');
+    syncDiscoveryParams({
+      category: null,
+      rating: null,
+      sort: null,
+      place: null
+    });
+  }
+
   function togglePlaceSelection(place) {
     if (!place) return;
 
@@ -1227,7 +1249,7 @@ export default function MapPage() {
             disabled={placeScopeLoading}
           >
             <Navigation size={14} />
-            {placeScope === 'near-me' ? 'Đang gần tôi' : 'Gần tôi'}
+            <span>{placeScope === 'near-me' ? 'Đang gần tôi' : 'Gần tôi'}</span>
           </button>
 
           <button
@@ -1236,141 +1258,117 @@ export default function MapPage() {
             onClick={handleOpenNowToggle}
           >
             <Clock3 size={14} />
-            Đang mở
+            <span>Đang mở</span>
           </button>
 
-          <div className="hm-category-picker">
+          <div className="hm-filter-menu">
             <button
               type="button"
-              className={category === 'all' ? 'hm-category-trigger' : 'hm-category-trigger active'}
-              onClick={() => setCategoryMenuOpen((value) => !value)}
-              aria-expanded={categoryMenuOpen}
-              aria-label="Lọc theo nhóm danh mục"
+              className={advancedFilterCount ? 'hm-filter-trigger active' : 'hm-filter-trigger'}
+              onClick={() => setFilterMenuOpen((value) => !value)}
+              aria-expanded={filterMenuOpen}
+              aria-label="Mở bộ lọc địa điểm"
             >
-              <span>{activeCategoryGroup?.icon || '▦'}</span>
-              <b>{activeCategoryLabel}</b>
+              <SlidersHorizontal size={15} />
+              <span>Bộ lọc</span>
+              {advancedFilterCount > 0 && (
+                <b className="hm-filter-count">{advancedFilterCount}</b>
+              )}
               <ChevronDown size={14} />
             </button>
 
-            {categoryMenuOpen && (
-              <div className="hm-category-menu">
-                <button
-                  type="button"
-                  className={category === 'all' ? 'hm-category-all active' : 'hm-category-all'}
-                  onClick={() => {
-                    handleCategoryChange('all');
-                    setCategoryMenuOpen(false);
-                  }}
-                >
-                  <span>▦</span>
-                  <b>Tất cả danh mục</b>
-                </button>
+            {filterMenuOpen && (
+              <div className="hm-filter-popover">
+                <div className="hm-filter-popover-head">
+                  <div>
+                    <small>TÙY CHỈNH HIỂN THỊ</small>
+                    <strong>Bộ lọc địa điểm</strong>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFilterMenuOpen(false)}
+                    aria-label="Đóng bộ lọc"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
 
-                <div className="hm-category-group-grid">
-                  {CATEGORY_GROUPS.map((group) => {
-                    const groupItems = group.slugs
-                      .map((slug) => categoryBySlug.get(slug))
-                      .filter(Boolean);
+                <label className="hm-filter-field">
+                  <span>Danh mục</span>
+                  <select
+                    value={category}
+                    onChange={(event) => handleCategoryChange(event.target.value)}
+                  >
+                    <option value="all">Tất cả danh mục</option>
+                    {categories.map((item) => (
+                      <option key={item.slug} value={item.slug}>{item.name}</option>
+                    ))}
+                  </select>
+                </label>
 
-                    if (!groupItems.length) return null;
+                <div className="hm-filter-popover-grid">
+                  <label className="hm-filter-field">
+                    <span>Đánh giá</span>
+                    <select
+                      value={minRating}
+                      onChange={(event) => handleRatingChange(event.target.value)}
+                    >
+                      <option value="">Mọi đánh giá</option>
+                      <option value="4">★ 4.0+</option>
+                      <option value="4.5">★ 4.5+</option>
+                    </select>
+                  </label>
 
-                    return (
-                      <section key={group.id}>
-                        <div className="hm-category-group-title">
-                          <span>{group.icon}</span>
-                          <b>{group.label}</b>
-                        </div>
-                        <div className="hm-category-group-items">
-                          {groupItems.map((item) => (
-                            <button
-                              type="button"
-                              className={category === item.slug ? 'active' : ''}
-                              key={item.slug}
-                              onClick={() => {
-                                handleCategoryChange(item.slug);
-                                setCategoryMenuOpen(false);
-                              }}
-                            >
-                              {item.name}
-                            </button>
-                          ))}
-                        </div>
-                      </section>
-                    );
-                  })}
+                  <label className="hm-filter-field">
+                    <span>Sắp xếp</span>
+                    <select
+                      value={sortMode}
+                      onChange={(event) => handleSortChange(event.target.value)}
+                    >
+                      <option value="relevant">Phù hợp</option>
+                      <option value="nearest" disabled={!userLocation}>Gần nhất</option>
+                      <option value="rating">Đánh giá cao</option>
+                      <option value="recent">Mới cập nhật</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="hm-filter-popover-footer">
+                  <span>
+                    {advancedFilterCount
+                      ? advancedFilterCount + ' bộ lọc nâng cao đang bật'
+                      : 'Chưa có bộ lọc nâng cao'}
+                  </span>
+                  {advancedFilterCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearAdvancedFilters();
+                        setFilterMenuOpen(false);
+                      }}
+                    >
+                      Đặt lại
+                    </button>
+                  )}
                 </div>
               </div>
             )}
           </div>
 
-          <select
-            value={minRating}
-            onChange={(event) => handleRatingChange(event.target.value)}
-            aria-label="Lọc theo đánh giá"
+          <button
+            className="hm-report-status"
+            type="button"
+            onClick={openRoadStatusReport}
+            title="Báo ngập, đường cấm hoặc sự cố"
           >
-            <option value="">Mọi đánh giá</option>
-            <option value="4">★ 4.0+</option>
-            <option value="4.5">★ 4.5+</option>
-          </select>
-
-          <select
-            value={sortMode}
-            onChange={(event) => handleSortChange(event.target.value)}
-            aria-label="Sắp xếp địa điểm"
-          >
-            <option value="relevant">Phù hợp</option>
-            <option value="nearest" disabled={!userLocation}>Gần nhất</option>
-            <option value="rating">Đánh giá cao</option>
-            <option value="recent">Mới cập nhật</option>
-          </select>
-
-          {hasActiveFilters && (
-            <div className="hm-filter-chip-set" aria-label="Bộ lọc đang áp dụng">
-              {!!query.trim() && (
-                <button type="button" className="hm-filter-chip" onClick={() => handleQueryChange('')}>
-                  “{query.trim()}” <X size={12} />
-                </button>
-              )}
-              {category !== 'all' && (
-                <button type="button" className="hm-filter-chip" onClick={() => handleCategoryChange('all')}>
-                  {activeCategoryLabel} <X size={12} />
-                </button>
-              )}
-              {openNow && (
-                <button type="button" className="hm-filter-chip" onClick={handleOpenNowToggle}>
-                  Đang mở <X size={12} />
-                </button>
-              )}
-              {!!minRating && (
-                <button type="button" className="hm-filter-chip" onClick={() => handleRatingChange('')}>
-                  ★ {minRating}+ <X size={12} />
-                </button>
-              )}
-              <button type="button" className="hm-filter-clear" onClick={clearDiscoveryFilters}>
-                Xóa lọc
-              </button>
-            </div>
-          )}
+            <TriangleAlert size={16} />
+            <span>Báo tình trạng</span>
+          </button>
         </div>
 
-        <div className="hm-topbar-status">
-          <span className="hm-live-dot" />
-          <b>LOCAL DATA</b>
-          <span>{dataLoading ? 'Đang đồng bộ…' : mapData.features.length + ' đối tượng'}</span>
-        </div>
-
-        {isModerator && (
-          <Link className="hm-map-edit-link" to="/admin/map-editor">
-            <MapIcon size={16} /> Biên tập
-          </Link>
-        )}
-
-        <button className="hm-report-status" type="button" onClick={openRoadStatusReport}>
-          <TriangleAlert size={17} /> Báo tình trạng
-        </button>
-
-        <Link className="hm-add-place" to="/contribute">
-          <Plus size={17} /> Thêm địa điểm
+        <Link className="hm-add-place" to="/contribute" title="Thêm địa điểm">
+          <Plus size={17} />
+          <span>Thêm địa điểm</span>
         </Link>
       </header>
 
