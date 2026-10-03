@@ -137,7 +137,8 @@ export default function AdminDeveloperApi() {
     try {
       await updateAdminDeveloperApiClient(client.id, {
         allowedOrigins: splitOrigins(draft.origins),
-        rateLimitPerMinute: Number(draft.rateLimitPerMinute) || client.rateLimitPerMinute
+        rateLimitPerMinute: Number(draft.rateLimitPerMinute) || client.rateLimitPerMinute,
+        permissions: Array.isArray(draft.permissions) && draft.permissions.length ? draft.permissions : ['*']
       });
       await loadAll();
       showToast('Đã lưu domain và quota.', 'success');
@@ -154,6 +155,33 @@ export default function AdminDeveloperApi() {
       await loadAll();
     } catch (error) { showToast(error.message, 'error'); }
     finally { setBusy(''); }
+  }
+
+  function togglePermission(clientId, endpointKey) {
+    setClientDrafts((current) => {
+      const draft = current[clientId] || { permissions: ['*'] };
+      const currentPermissions = Array.isArray(draft.permissions) ? draft.permissions : ['*'];
+      const allKeys = endpoints
+        .filter((item) => !['meta', 'openapi'].includes(item.key))
+        .map((item) => item.key);
+
+      if (endpointKey === '*') {
+        return {
+          ...current,
+          [clientId]: { ...draft, permissions: currentPermissions.includes('*') ? allKeys : ['*'] }
+        };
+      }
+
+      const base = currentPermissions.includes('*') ? allKeys : currentPermissions;
+      const next = base.includes(endpointKey)
+        ? base.filter((item) => item !== endpointKey)
+        : [...base, endpointKey];
+
+      return {
+        ...current,
+        [clientId]: { ...draft, permissions: next.length ? next : [endpointKey] }
+      };
+    });
   }
 
   async function createKey(event) {
@@ -294,7 +322,34 @@ export default function AdminDeveloperApi() {
                       </div>
                       <label>Domain<textarea rows="3" value={draft.origins || ''} onChange={(e) => setClientDrafts((v) => ({ ...v, [client.id]: { ...draft, origins: e.target.value } }))} /></label>
                       <label>Quota<input type="number" min="30" max="600" value={draft.rateLimitPerMinute || 300} onChange={(e) => setClientDrafts((v) => ({ ...v, [client.id]: { ...draft, rateLimitPerMinute: e.target.value } }))} /></label>
-                      <button className="devapi-secondary" onClick={() => saveClient(client)}>Lưu domain & quota</button>
+                      <div className="devapi-permissions">
+                        <span>Quyền endpoint</span>
+                        <label className="devapi-permission-pill">
+                          <input
+                            type="checkbox"
+                            checked={(draft.permissions || ['*']).includes('*')}
+                            onChange={() => togglePermission(client.id, '*')}
+                          />
+                          Toàn bộ API
+                        </label>
+                        {endpoints
+                          .filter((item) => !['meta', 'openapi'].includes(item.key))
+                          .map((endpoint) => {
+                            const permissions = draft.permissions || ['*'];
+                            const checked = permissions.includes('*') || permissions.includes(endpoint.key);
+                            return (
+                              <label className="devapi-permission-pill" key={endpoint.key}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => togglePermission(client.id, endpoint.key)}
+                                />
+                                {endpoint.label}
+                              </label>
+                            );
+                          })}
+                      </div>
+                      <button className="devapi-secondary" onClick={() => saveClient(client)}>Lưu cấu hình website</button>
                     </article>
                   );
                 })}
