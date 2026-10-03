@@ -563,4 +563,53 @@ export function deleteAdminBrandAsset(id) {
   return unwrap(client.delete('/admin/brand/assets/' + encodeURIComponent(id)));
 }
 
+
+export function getPublicOpenApi() {
+  return unwrap(client.get('/public/v1/openapi.json'));
+}
+
+export function getAdminDeveloperApiOverview() {
+  return unwrap(client.get('/admin/developer-api/overview'));
+}
+
+export function updateAdminDeveloperApiSettings(payload) {
+  return unwrap(client.patch('/admin/developer-api/settings', payload));
+}
+
+export function getAdminDeveloperApiClients() {
+  return unwrap(client.get('/admin/developer-api/clients'));
+}
+
+export function createAdminDeveloperApiClient(payload) {
+  return unwrap(client.post('/admin/developer-api/clients', payload));
+}
+
+export function updateAdminDeveloperApiClient(id, payload) {
+  return unwrap(client.patch('/admin/developer-api/clients/' + encodeURIComponent(id), payload));
+}
+
+export function getAdminDeveloperApiKeys(params = {}) {
+  return unwrap(client.get('/admin/developer-api/keys', { params: cleanParams(params) }));
+}
+
+export function createAdminDeveloperApiKey(payload) {
+  return unwrap(client.post('/admin/developer-api/keys', payload));
+}
+
+export function revokeAdminDeveloperApiKey(id) {
+  return unwrap(client.post('/admin/developer-api/keys/' + encodeURIComponent(id) + '/revoke'));
+}
+
+export function getAdminDeveloperApiEndpoints() {
+  return unwrap(client.get('/admin/developer-api/endpoints'));
+}
+
+export function updateAdminDeveloperApiEndpoint(key, payload) {
+  return unwrap(client.patch('/admin/developer-api/endpoints/' + encodeURIComponent(key), payload));
+}
+
+export function getAdminDeveloperApiLogs(params = {}) {
+  return unwrap(client.get('/admin/developer-api/logs', { params: cleanParams(params) }));
+}
+
 export { API_URL };
