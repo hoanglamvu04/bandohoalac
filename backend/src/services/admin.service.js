@@ -12,6 +12,11 @@ import { findUserById } from './user.service.js';
 import { deleteStoredAssets } from './storage.service.js';
 import { createNotification } from './notification.service.js';
 import { applyMissionBonusesForContribution } from './mission.service.js';
+import {
+  isRoadStatusContributionType,
+  roadStatusDisplayName,
+  roadStatusLayerType
+} from './roadStatus.service.js';
 
 function sourceForRole(role) {
   if (role === 'ADMIN' || role === 'MODERATOR') return 'ADMIN';
@@ -54,6 +59,47 @@ async function applyContributionToPlace(contribution, client) {
     }
 
     return { placeId };
+  }
+
+  if (isRoadStatusContributionType(contribution.type)) {
+    if (!payload.location) {
+      throw new AppError('Road status report has no location.', 400);
+    }
+
+    const layerType = roadStatusLayerType(contribution.type);
+    const properties = {
+      description: payload.reason || '',
+      source: 'COMMUNITY_VERIFIED',
+      sourceType: 'COMMUNITY',
+      sourceLabel: 'Cộng đồng · đã xác minh',
+      verificationStatus: 'VERIFIED',
+      contributionId: contribution.id,
+      reportId: contribution.id,
+      photos: Array.isArray(payload.photos) ? payload.photos : []
+    };
+
+    await client.query(
+      `INSERT INTO map_features (
+         layer_type, name, geometry, properties, severity, status,
+         valid_from, valid_until, created_by, updated_by
+       ) VALUES (
+         $1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326), $5::jsonb, $6, 'ACTIVE',
+         NOW(), $7, $8, $9
+       )`,
+      [
+        layerType,
+        roadStatusDisplayName(contribution.type),
+        Number(payload.location.lng),
+        Number(payload.location.lat),
+        JSON.stringify(properties),
+        payload.severity || 'MEDIUM',
+        payload.expiresAt || null,
+        contribution.user_id,
+        contribution.user_id
+      ]
+    );
+
+    return { placeId: null };
   }
 
   if (!contribution.place_id) {

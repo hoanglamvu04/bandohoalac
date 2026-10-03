@@ -1,11 +1,13 @@
 import { Router } from 'express';
 import { create, listMine } from '../controllers/contributions.controller.js';
+import { confirm as confirmRoadStatus } from '../controllers/roadStatus.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { contributionRateLimiter } from '../middleware/rateLimit.js';
 import { uploadPhotos } from '../middleware/upload.js';
 import { parseJsonFields } from '../middleware/parseJsonFields.js';
 import { validateBody } from '../validators/validate.js';
 import { createContributionSchema } from '../validators/contribution.validators.js';
+import { roadStatusConfirmationSchema } from '../validators/roadStatus.validators.js';
 
 const router = Router();
 
@@ -17,6 +19,14 @@ router.post(
   parseJsonFields('location', 'place'),
   validateBody(createContributionSchema),
   create
+);
+
+router.post(
+  '/:id/status-confirmation',
+  authenticate,
+  contributionRateLimiter,
+  validateBody(roadStatusConfirmationSchema),
+  confirmRoadStatus
 );
 
 router.get('/me', authenticate, listMine);

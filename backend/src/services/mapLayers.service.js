@@ -1,6 +1,7 @@
 import { pool } from '../database/pool.js';
 import { SERVICE_AREA_GEOJSON_STRING } from '../config/mapCoverage.js';
 import { AppError } from '../utils/AppError.js';
+import { listCommunityRoadStatusFeatures } from './roadStatus.service.js';
 
 const ALLOWED_LAYERS = new Set([
   'ROAD', 'TERRAIN', 'WATER', 'BUILDING', 'LANDMARK',
@@ -26,7 +27,11 @@ function rowToFeature(row) {
       status: row.status,
       validFrom: row.valid_from,
       validUntil: row.valid_until,
-      ...(row.properties || {})
+      ...(row.properties || {}),
+      ...(row.properties?.reportId ? {
+        activeConfirmations: Number(row.active_confirmations || 0),
+        resolvedConfirmations: Number(row.resolved_confirmations || 0)
+      } : {})
     }
   };
 }
@@ -85,6 +90,8 @@ export async function listMapFeatures({ types = [], west, south, east, north } =
     'SELECT',
     '  mf.id, mf.layer_type, mf.name, mf.properties, mf.severity, mf.status,',
     '  mf.valid_from, mf.valid_until,',
+    "  (SELECT COUNT(*)::int FROM road_status_confirmations rc WHERE rc.contribution_id::text = mf.properties->>'contributionId' AND rc.verdict = 'STILL_ACTIVE') AS active_confirmations,",
+    "  (SELECT COUNT(*)::int FROM road_status_confirmations rc WHERE rc.contribution_id::text = mf.properties->>'contributionId' AND rc.verdict = 'RESOLVED') AS resolved_confirmations,",
     '  ST_AsGeoJSON(ST_Intersection(mf.geometry, service_area.geom))::json AS geometry',
     'FROM map_features mf',
     'CROSS JOIN service_area',
@@ -93,11 +100,23 @@ export async function listMapFeatures({ types = [], west, south, east, north } =
     'LIMIT 1200'
   ].join('\n');
 
-  const { rows } = await pool.query(sql, params);
+  const [{ rows }, communityStatusFeatures] = await Promise.all([
+    pool.query(sql, params),
+    listCommunityRoadStatusFeatures({
+      types: normalized,
+      west,
+      south,
+      east,
+      north
+    })
+  ]);
 
   return {
     type: 'FeatureCollection',
-    features: rows.filter((row) => row.geometry).map(rowToFeature)
+    features: [
+      ...rows.filter((row) => row.geometry).map(rowToFeature),
+      ...communityStatusFeatures
+    ]
   };
 }
 
