@@ -168,7 +168,8 @@ CREATE TABLE IF NOT EXISTS contributions (
   place_id BIGINT REFERENCES places(id) ON DELETE SET NULL,
   type TEXT NOT NULL CHECK (type IN (
     'CREATE_PLACE', 'UPDATE_PLACE', 'ADD_PHOTO', 'FIX_LOCATION',
-    'UPDATE_HOURS', 'UPDATE_PRICE', 'REPORT_CLOSED', 'REPORT_WRONG_INFO'
+    'UPDATE_HOURS', 'UPDATE_PRICE', 'REPORT_CLOSED', 'REPORT_WRONG_INFO',
+    'REPORT_FLOOD', 'REPORT_ROAD_CLOSURE', 'REPORT_ALERT'
   )),
   status TEXT NOT NULL DEFAULT 'PENDING'
     CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
@@ -183,6 +184,37 @@ CREATE TABLE IF NOT EXISTS contributions (
 CREATE INDEX IF NOT EXISTS contributions_user_idx ON contributions (user_id);
 CREATE INDEX IF NOT EXISTS contributions_status_idx ON contributions (status);
 CREATE INDEX IF NOT EXISTS contributions_place_idx ON contributions (place_id);
+
+-- Existing production databases already have the original CHECK constraint,
+-- so recreate it explicitly when adding live road-status contribution types.
+ALTER TABLE contributions
+  DROP CONSTRAINT IF EXISTS contributions_type_check;
+
+ALTER TABLE contributions
+  ADD CONSTRAINT contributions_type_check
+  CHECK (type IN (
+    'CREATE_PLACE', 'UPDATE_PLACE', 'ADD_PHOTO', 'FIX_LOCATION',
+    'UPDATE_HOURS', 'UPDATE_PRICE', 'REPORT_CLOSED', 'REPORT_WRONG_INFO',
+    'REPORT_FLOOD', 'REPORT_ROAD_CLOSURE', 'REPORT_ALERT'
+  ));
+
+-- One user gets one current vote per live road-status report. Re-submitting
+-- updates the verdict instead of inflating the confirmation total.
+CREATE TABLE IF NOT EXISTS road_status_confirmations (
+  id BIGSERIAL PRIMARY KEY,
+  contribution_id BIGINT NOT NULL REFERENCES contributions(id) ON DELETE CASCADE,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  verdict TEXT NOT NULL CHECK (verdict IN ('STILL_ACTIVE', 'RESOLVED')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (contribution_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS road_status_confirmations_report_idx
+  ON road_status_confirmations (contribution_id, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS road_status_confirmations_user_idx
+  ON road_status_confirmations (user_id, updated_at DESC);
 
 -- ============================================================
 -- CONTRIBUTION CHANGES (field-level diff, mainly for UPDATE_* types)
