@@ -10,6 +10,7 @@ import {
   publicIntegrationRateLimiter
 } from './middleware/rateLimit.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
+import { developerApiGateway } from './middleware/developerApi.js';
 import { resolveCorsOrigin, resolvePublicApiCorsOrigin } from './config/cors.js';
 
 import authRoutes from './routes/auth.routes.js';
@@ -39,7 +40,7 @@ export function createApp() {
   const appCors = cors({ origin: resolveCorsOrigin });
   const publicApiCors = cors({
     origin: resolvePublicApiCorsOrigin,
-    exposedHeaders: ['X-Hola-API-Version', 'X-Hola-Cache', 'RateLimit', 'RateLimit-Policy']
+    exposedHeaders: ['X-Hola-API-Version', 'X-Hola-Cache', 'X-Hola-Client', 'X-Hola-RateLimit-Limit', 'X-Hola-RateLimit-Remaining', 'X-Hola-RateLimit-Reset', 'RateLimit', 'RateLimit-Policy']
   });
 
   app.use((req, res, next) => {
@@ -59,6 +60,7 @@ export function createApp() {
   }));
   app.use('/api', generalApiRateLimiter);
   app.use('/api/public/v1', publicIntegrationRateLimiter);
+  app.use('/api/public/v1', developerApiGateway);
   app.use('/api/places/bounds', mapReadRateLimiter);
   app.use('/api/map-layers', mapReadRateLimiter);
 
