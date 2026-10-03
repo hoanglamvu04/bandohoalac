@@ -1,5 +1,6 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
+import { getDeveloperApiOpenApiDocument } from '../services/developerApi.service.js';
 import {
   publicApiMeta,
   publicCategories,
@@ -108,4 +109,12 @@ export const getPublicPlaceBySlug = asyncHandler(async (req, res) => {
   if (!item) throw new AppError('Place not found.', 404);
   setPublicHeaders(res);
   res.json({ data: item });
+});
+
+
+export const getPublicOpenApi = asyncHandler(async (_req, res) => {
+  setPublicHeaders(res, {
+    cacheControl: 'public, max-age=300, stale-while-revalidate=600'
+  });
+  res.json(getDeveloperApiOpenApiDocument());
 });
