@@ -27,6 +27,8 @@ const PartnerScanner = lazy(() => import('./pages/PartnerScanner.jsx'));
 const AdminMissions = lazy(() => import('./pages/admin/AdminMissions.jsx'));
 const AdminAudit = lazy(() => import('./pages/admin/AdminAudit.jsx'));
 const AdminBranding = lazy(() => import('./pages/admin/AdminBranding.jsx'));
+const AdminDeveloperApi = lazy(() => import('./pages/admin/AdminDeveloperApi.jsx'));
+const DeveloperDocs = lazy(() => import('./pages/DeveloperDocs.jsx'));
 
 function LoadingPage() {
   return (
@@ -99,6 +101,7 @@ export const router = createBrowserRouter([
       { path: 'partner/scanner', element: withRole(PartnerScanner) },
       { path: 'login', element: withSuspense(Login) },
       { path: 'register', element: withSuspense(Register) },
+      { path: 'developers', element: withSuspense(DeveloperDocs) },
       { path: 'admin', element: withRole(AdminDashboard, ['MODERATOR', 'ADMIN']) },
       { path: 'admin/contributions', element: withRole(AdminContributions, ['MODERATOR', 'ADMIN']) },
       { path: 'admin/places', element: withRole(AdminPlaces, ['MODERATOR', 'ADMIN']) },
@@ -109,7 +112,8 @@ export const router = createBrowserRouter([
       { path: 'admin/partners', element: withRole(AdminPartnersRewards, ['ADMIN']) },
       { path: 'admin/missions', element: withRole(AdminMissions, ['ADMIN']) },
       { path: 'admin/audit', element: withRole(AdminAudit, ['ADMIN']) },
-      { path: 'admin/brand', element: withRole(AdminBranding, ['ADMIN']) }
+      { path: 'admin/brand', element: withRole(AdminBranding, ['ADMIN']) },
+      { path: 'admin/developer-api', element: withRole(AdminDeveloperApi, ['ADMIN']) }
     ]
   }
 ]);
