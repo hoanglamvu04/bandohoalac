@@ -158,16 +158,34 @@ export function archiveMapLayerFeature(id) {
   return unwrap(client.delete('/map-layers/' + encodeURIComponent(id)));
 }
 
-export function createContribution({ type, placeId, location, place, reason, photos = [] }) {
+export function createContribution({
+  type,
+  placeId,
+  location,
+  place,
+  reason,
+  severity,
+  expiresHours,
+  photos = []
+}) {
   const formData = new FormData();
   formData.append('type', type);
   if (placeId) formData.append('placeId', String(placeId));
   if (location) formData.append('location', JSON.stringify(location));
   if (place) formData.append('place', JSON.stringify(place));
   if (reason) formData.append('reason', reason);
+  if (severity) formData.append('severity', severity);
+  if (expiresHours) formData.append('expiresHours', String(expiresHours));
   photos.forEach((file) => formData.append('photos', file));
 
   return unwrap(client.post('/contributions', formData));
+}
+
+export function confirmRoadStatus(id, verdict) {
+  return unwrap(client.post(
+    '/contributions/' + encodeURIComponent(id) + '/status-confirmation',
+    { verdict }
+  ));
 }
 
 export function getMyContributions() {
