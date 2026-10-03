@@ -64,6 +64,11 @@ const DATA_LAYER_IDS = {
   ALERT: 'hm-alert'
 };
 
+const DATA_AUX_LAYER_IDS = {
+  FLOOD: ['hm-flood-report-point'],
+  ROAD_CLOSURE: ['hm-road-closure-report-point']
+};
+
 function escapeHtml(value = '') {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -586,6 +591,40 @@ function addDataLayers(map, data) {
   });
 
   add({
+    id: 'hm-flood-report-point',
+    type: 'circle',
+    minzoom: 12.5,
+    source: DATA_SOURCE_ID,
+    filter: [
+      'all',
+      ['==', ['get', 'layerType'], 'FLOOD'],
+      ['==', ['geometry-type'], 'Point']
+    ],
+    paint: {
+      'circle-radius': [
+        'match',
+        ['get', 'severity'],
+        'CRITICAL', 11,
+        'HIGH', 10,
+        'MEDIUM', 9,
+        8
+      ],
+      'circle-color': '#0ea5e9',
+      'circle-opacity': 0.9,
+      'circle-stroke-width': [
+        'case',
+        ['==', ['get', 'verificationStatus'], 'VERIFIED'], 3,
+        2
+      ],
+      'circle-stroke-color': [
+        'case',
+        ['==', ['get', 'verificationStatus'], 'VERIFIED'], '#075985',
+        '#ffffff'
+      ]
+    }
+  });
+
+  add({
     id: DATA_LAYER_IDS.ROAD,
     type: 'line',
     minzoom: 13,
@@ -610,6 +649,40 @@ function addDataLayers(map, data) {
       'line-color': '#dc2626',
       'line-width': 5,
       'line-dasharray': [1.5, 1.3]
+    }
+  });
+
+  add({
+    id: 'hm-road-closure-report-point',
+    type: 'circle',
+    minzoom: 12.5,
+    source: DATA_SOURCE_ID,
+    filter: [
+      'all',
+      ['==', ['get', 'layerType'], 'ROAD_CLOSURE'],
+      ['==', ['geometry-type'], 'Point']
+    ],
+    paint: {
+      'circle-radius': [
+        'match',
+        ['get', 'severity'],
+        'CRITICAL', 11,
+        'HIGH', 10,
+        'MEDIUM', 9,
+        8
+      ],
+      'circle-color': '#dc2626',
+      'circle-opacity': 0.92,
+      'circle-stroke-width': [
+        'case',
+        ['==', ['get', 'verificationStatus'], 'VERIFIED'], 3,
+        2
+      ],
+      'circle-stroke-color': [
+        'case',
+        ['==', ['get', 'verificationStatus'], 'VERIFIED'], '#7f1d1d',
+        '#ffffff'
+      ]
     }
   });
 
@@ -656,6 +729,14 @@ function setLayerVisibility(map, activeLayers) {
     if (map.getLayer(id)) {
       map.setLayoutProperty(id, 'visibility', activeLayers.includes(type) ? 'visible' : 'none');
     }
+  });
+
+  Object.entries(DATA_AUX_LAYER_IDS).forEach(([type, ids]) => {
+    ids.forEach((id) => {
+      if (map.getLayer(id)) {
+        map.setLayoutProperty(id, 'visibility', activeLayers.includes(type) ? 'visible' : 'none');
+      }
+    });
   });
 }
 
@@ -726,6 +807,7 @@ export default function MapView({
   hoveredPlaceId,
   onSelectPlace,
   onHoverPlace,
+  onSelectStatusFeature,
   onUserLocation,
   userLocation,
   route,
@@ -746,6 +828,7 @@ export default function MapView({
   const latestPlacesRef = useRef([]);
   const latestSelectPlaceRef = useRef(onSelectPlace);
   const latestHoverPlaceRef = useRef(onHoverPlace);
+  const latestSelectStatusFeatureRef = useRef(onSelectStatusFeature);
   const latestSelectedPlaceIdRef = useRef(selectedPlaceId);
   const latestHoveredPlaceIdRef = useRef(hoveredPlaceId);
   const hoveredPointerPlaceIdRef = useRef(null);
@@ -1009,23 +1092,48 @@ export default function MapView({
         });
 
         map.on('click', (event) => {
-          const ids = Object.values(DATA_LAYER_IDS).filter((id) => map.getLayer(id));
+          const ids = [
+            ...Object.values(DATA_LAYER_IDS),
+            ...Object.values(DATA_AUX_LAYER_IDS).flat()
+          ].filter((id) => map.getLayer(id));
           if (!ids.length) return;
           const features = map.queryRenderedFeatures(event.point, { layers: ids });
           const feature = features[0];
           if (!feature) return;
 
           const props = feature.properties || {};
+          const sourceLine = props.sourceLabel
+            ? '<small>' + escapeHtml(props.sourceLabel) +
+              (props.verificationStatus === 'VERIFIED' ? ' · Đã xác minh' : ' · Chưa xác minh') +
+              '</small>'
+            : '';
+          const confirmationLine = props.reportId
+            ? '<small>' +
+              escapeHtml(String(props.activeConfirmations || 0)) + ' vẫn còn · ' +
+              escapeHtml(String(props.resolvedConfirmations || 0)) + ' đã hết' +
+              '</small>'
+            : '';
+
           new maplibre.Popup({ closeButton: true, className: 'hm-data-popup' })
             .setLngLat(event.lngLat)
             .setHTML(
               '<div class="hm-popup-card">' +
               '<span>' + escapeHtml(props.layerType || 'DATA') + '</span>' +
               '<strong>' + escapeHtml(props.name || 'Dữ liệu Hola Maps') + '</strong>' +
+              sourceLine +
               (props.description ? '<p>' + escapeHtml(props.description) + '</p>' : '') +
+              confirmationLine +
               '</div>'
             )
             .addTo(map);
+
+          if (props.reportId) {
+            latestSelectStatusFeatureRef.current?.({
+              ...props,
+              lng: event.lngLat.lng,
+              lat: event.lngLat.lat
+            });
+          }
         });
       } catch (error) {
         console.error('[Hola Maps] initialize error', error);
@@ -1074,6 +1182,10 @@ export default function MapView({
   useEffect(() => {
     latestHoverPlaceRef.current = onHoverPlace;
   }, [onHoverPlace]);
+
+  useEffect(() => {
+    latestSelectStatusFeatureRef.current = onSelectStatusFeature;
+  }, [onSelectStatusFeature]);
 
   useEffect(() => {
     latestSelectedPlaceIdRef.current = selectedPlaceId;
