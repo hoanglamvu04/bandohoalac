@@ -25,7 +25,10 @@ import {
 import { Link, useSearchParams } from 'react-router-dom';
 import MapView from '../components/MapView.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useToast } from '../context/ToastContext.jsx';
 import {
+  confirmRoadStatus,
+  createContribution,
   getCategories,
   getDirections,
   getMapLayers,
@@ -203,7 +206,8 @@ function formatDuration(seconds) {
 }
 
 export default function MapPage() {
-  const { isModerator } = useAuth();
+  const { isModerator, user } = useAuth();
+  const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [places, setPlaces] = useState([]);
   const [query, setQuery] = useState(() => searchParams.get('q') || '');
@@ -232,6 +236,16 @@ export default function MapPage() {
   const [placeScopeLoading, setPlaceScopeLoading] = useState(false);
   const [nearbyRadius, setNearbyRadius] = useState(0);
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportType, setReportType] = useState('REPORT_FLOOD');
+  const [reportSeverity, setReportSeverity] = useState('MEDIUM');
+  const [reportReason, setReportReason] = useState('');
+  const [reportLocation, setReportLocation] = useState(null);
+  const [reportPhotos, setReportPhotos] = useState([]);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [selectedStatusFeature, setSelectedStatusFeature] = useState(null);
+  const [statusConfirming, setStatusConfirming] = useState(false);
+  const [statusRefreshKey, setStatusRefreshKey] = useState(0);
 
   const [routeDestination, setRouteDestination] = useState(null);
   const [routeData, setRouteData] = useState(null);
@@ -515,7 +529,7 @@ export default function MapPage() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [viewport, activeLayers]);
+  }, [viewport, activeLayers, statusRefreshKey]);
 
   const filteredPlaces = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -1003,6 +1017,107 @@ export default function MapPage() {
     );
   }
 
+  function openRoadStatusReport() {
+    const center = viewportCenter();
+    if (center) setReportLocation(center);
+    setReportOpen(true);
+  }
+
+  async function useMyLocationForReport() {
+    try {
+      const location = await getBestBrowserLocation({
+        timeout: 10000,
+        targetAccuracy: 60
+      });
+      setUserLocation(location);
+      setReportLocation({ lat: location.lat, lng: location.lng });
+      showToast('Đã lấy vị trí hiện tại cho báo cáo.', 'success');
+    } catch (error) {
+      showToast(error.message || 'Không lấy được vị trí hiện tại.', 'error');
+    }
+  }
+
+  async function submitRoadStatusReport(event) {
+    event.preventDefault();
+    if (!user) {
+      showToast('Bạn cần đăng nhập để gửi báo cáo tình trạng.', 'error');
+      return;
+    }
+
+    const location = reportLocation || viewportCenter();
+    if (!location) {
+      showToast('Chưa xác định được vị trí báo cáo.', 'error');
+      return;
+    }
+    if (!reportReason.trim()) {
+      showToast('Hãy mô tả ngắn tình trạng thực tế.', 'error');
+      return;
+    }
+
+    setReportSubmitting(true);
+    try {
+      await createContribution({
+        type: reportType,
+        location,
+        reason: reportReason.trim(),
+        severity: reportSeverity,
+        photos: reportPhotos
+      });
+
+      setReportOpen(false);
+      setReportReason('');
+      setReportPhotos([]);
+      lastLayersRequestKeyRef.current = '';
+      setStatusRefreshKey((value) => value + 1);
+      showToast(
+        'Đã đăng báo cáo cộng đồng. Người ở gần có thể xác nhận tình trạng này.',
+        'success'
+      );
+    } catch (error) {
+      showToast(error.message || 'Không gửi được báo cáo.', 'error');
+    } finally {
+      setReportSubmitting(false);
+    }
+  }
+
+  async function confirmSelectedStatus(verdict) {
+    if (!selectedStatusFeature?.reportId || statusConfirming) return;
+    if (!user) {
+      showToast('Bạn cần đăng nhập để xác nhận tình trạng.', 'error');
+      return;
+    }
+
+    setStatusConfirming(true);
+    try {
+      const result = await confirmRoadStatus(
+        selectedStatusFeature.reportId,
+        verdict
+      );
+
+      if (result.communityState === 'RESOLVED') {
+        setSelectedStatusFeature(null);
+        showToast('Cộng đồng đã xác nhận tình trạng này đã hết.', 'success');
+      } else {
+        setSelectedStatusFeature((current) => current ? {
+          ...current,
+          activeConfirmations: result.activeConfirmations,
+          resolvedConfirmations: result.resolvedConfirmations
+        } : current);
+        showToast(
+          verdict === 'STILL_ACTIVE' ? 'Đã xác nhận: vẫn còn.' : 'Đã xác nhận: đã hết.',
+          'success'
+        );
+      }
+
+      lastLayersRequestKeyRef.current = '';
+      setStatusRefreshKey((value) => value + 1);
+    } catch (error) {
+      showToast(error.message || 'Không thể xác nhận báo cáo.', 'error');
+    } finally {
+      setStatusConfirming(false);
+    }
+  }
+
   async function startDirections(place) {
     if (!place) return;
 
@@ -1069,6 +1184,7 @@ export default function MapPage() {
         hoveredPlaceId={hoveredPlaceId}
         onSelectPlace={togglePlaceSelection}
         onHoverPlace={setHoveredPlaceId}
+        onSelectStatusFeature={setSelectedStatusFeature}
         onUserLocation={setUserLocation}
         userLocation={userLocation}
         route={routeData}
@@ -1249,10 +1365,154 @@ export default function MapPage() {
           </Link>
         )}
 
+        <button className="hm-report-status" type="button" onClick={openRoadStatusReport}>
+          <TriangleAlert size={17} /> Báo tình trạng
+        </button>
+
         <Link className="hm-add-place" to="/contribute">
           <Plus size={17} /> Thêm địa điểm
         </Link>
       </header>
+
+      {selectedStatusFeature && (
+        <aside className="hm-live-status-card">
+          <button
+            className="hm-live-status-close"
+            type="button"
+            onClick={() => setSelectedStatusFeature(null)}
+            aria-label="Đóng thông tin tình trạng"
+          >
+            <X size={16} />
+          </button>
+          <span className="hm-live-status-kicker">
+            {selectedStatusFeature.sourceLabel || 'Cộng đồng báo cáo'}
+          </span>
+          <strong>{selectedStatusFeature.name || 'Tình trạng khu vực'}</strong>
+          {selectedStatusFeature.description && <p>{selectedStatusFeature.description}</p>}
+          <div className="hm-live-status-meta">
+            <span>
+              {selectedStatusFeature.verificationStatus === 'VERIFIED'
+                ? '✓ Đã xác minh'
+                : 'Đang chờ xác minh'}
+            </span>
+            <span>
+              {Number(selectedStatusFeature.activeConfirmations || 0)} vẫn còn ·{' '}
+              {Number(selectedStatusFeature.resolvedConfirmations || 0)} đã hết
+            </span>
+          </div>
+          <div className="hm-live-status-actions">
+            <button
+              type="button"
+              disabled={statusConfirming}
+              onClick={() => confirmSelectedStatus('STILL_ACTIVE')}
+            >
+              Vẫn còn
+            </button>
+            <button
+              type="button"
+              disabled={statusConfirming}
+              onClick={() => confirmSelectedStatus('RESOLVED')}
+            >
+              Đã hết
+            </button>
+          </div>
+        </aside>
+      )}
+
+      {reportOpen && (
+        <div className="hm-status-modal-backdrop" role="presentation" onMouseDown={() => setReportOpen(false)}>
+          <form
+            className="hm-status-modal"
+            onSubmit={submitRoadStatusReport}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="hm-status-modal-head">
+              <div>
+                <span>HOLA MAPS LIVE</span>
+                <h2>Báo tình trạng khu vực</h2>
+              </div>
+              <button type="button" onClick={() => setReportOpen(false)} aria-label="Đóng">
+                <X size={18} />
+              </button>
+            </div>
+
+            {!user ? (
+              <div className="hm-status-login">
+                <TriangleAlert size={22} />
+                <b>Cần đăng nhập để gửi báo cáo</b>
+                <p>Đăng nhập giúp hạn chế spam và xây dựng điểm tin cậy cho cộng đồng.</p>
+                <Link to="/login" onClick={() => setReportOpen(false)}>Đăng nhập</Link>
+              </div>
+            ) : (
+              <>
+                <label>
+                  Loại tình trạng
+                  <select value={reportType} onChange={(event) => setReportType(event.target.value)}>
+                    <option value="REPORT_FLOOD">🌊 Đường / khu vực ngập</option>
+                    <option value="REPORT_ROAD_CLOSURE">🚧 Đường cấm / không đi được</option>
+                    <option value="REPORT_ALERT">⚠️ Sự cố / cảnh báo khác</option>
+                  </select>
+                </label>
+
+                <label>
+                  Mức độ
+                  <select value={reportSeverity} onChange={(event) => setReportSeverity(event.target.value)}>
+                    <option value="LOW">Thấp</option>
+                    <option value="MEDIUM">Trung bình</option>
+                    <option value="HIGH">Cao</option>
+                    <option value="CRITICAL">Nghiêm trọng</option>
+                  </select>
+                </label>
+
+                <label>
+                  Mô tả thực tế
+                  <textarea
+                    rows="3"
+                    maxLength="500"
+                    value={reportReason}
+                    onChange={(event) => setReportReason(event.target.value)}
+                    placeholder="Ví dụ: nước ngập khoảng 25 cm, xe máy vẫn đi chậm được..."
+                  />
+                </label>
+
+                <div className="hm-status-location">
+                  <div>
+                    <span>Vị trí báo cáo</span>
+                    <b>
+                      {reportLocation
+                        ? Number(reportLocation.lat).toFixed(5) + ', ' + Number(reportLocation.lng).toFixed(5)
+                        : 'Tâm khu vực đang xem'}
+                    </b>
+                  </div>
+                  <button type="button" onClick={useMyLocationForReport}>
+                    <Navigation size={14} /> Dùng vị trí của tôi
+                  </button>
+                </div>
+
+                <label className="hm-status-photo">
+                  Ảnh minh chứng <small>(không bắt buộc)</small>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    onChange={(event) => setReportPhotos(Array.from(event.target.files || []))}
+                  />
+                  {!!reportPhotos.length && <span>{reportPhotos.length} ảnh đã chọn</span>}
+                </label>
+
+                <p className="hm-status-expiry-note">
+                  Báo cáo sẽ tự hết hạn theo loại và mức độ nếu cộng đồng không còn xác nhận.
+                </p>
+
+                <button className="hm-status-submit" type="submit" disabled={reportSubmitting}>
+                  <TriangleAlert size={16} />
+                  {reportSubmitting ? 'Đang gửi...' : 'Gửi báo cáo cộng đồng'}
+                </button>
+              </>
+            )}
+          </form>
+        </div>
+      )}
 
       {leftOpen && (
         <button
