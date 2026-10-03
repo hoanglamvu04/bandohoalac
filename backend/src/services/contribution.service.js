@@ -5,7 +5,17 @@ const LIST_SELECT = `
     ct.id, ct.user_id, ct.place_id, ct.type, ct.status, ct.payload,
     ct.reject_reason, ct.reviewed_by, ct.reviewed_at, ct.created_at, ct.updated_at,
     u.name AS user_name, u.email AS user_email,
-    p.name AS place_name
+    p.name AS place_name,
+    (
+      SELECT COUNT(*)::int
+      FROM road_status_confirmations rc
+      WHERE rc.contribution_id = ct.id AND rc.verdict = 'STILL_ACTIVE'
+    ) AS active_confirmations,
+    (
+      SELECT COUNT(*)::int
+      FROM road_status_confirmations rc
+      WHERE rc.contribution_id = ct.id AND rc.verdict = 'RESOLVED'
+    ) AS resolved_confirmations
   FROM contributions ct
   JOIN users u ON u.id = ct.user_id
   LEFT JOIN places p ON p.id = ct.place_id
@@ -27,7 +37,9 @@ function mapRow(row) {
     reviewedBy: row.reviewed_by,
     reviewedAt: row.reviewed_at,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    activeConfirmations: Number(row.active_confirmations || 0),
+    resolvedConfirmations: Number(row.resolved_confirmations || 0)
   };
 }
 
