@@ -1,6 +1,7 @@
 import { pool } from '../database/pool.js';
 import { SERVICE_AREA_GEOJSON_STRING } from '../config/mapCoverage.js';
 import { AppError } from '../utils/AppError.js';
+import { listCommunityRoadStatusFeatures } from './roadStatus.service.js';
 
 const ALLOWED_LAYERS = new Set([
   'ROAD', 'TERRAIN', 'WATER', 'BUILDING', 'LANDMARK',
@@ -93,11 +94,23 @@ export async function listMapFeatures({ types = [], west, south, east, north } =
     'LIMIT 1200'
   ].join('\n');
 
-  const { rows } = await pool.query(sql, params);
+  const [{ rows }, communityStatusFeatures] = await Promise.all([
+    pool.query(sql, params),
+    listCommunityRoadStatusFeatures({
+      types: normalized,
+      west,
+      south,
+      east,
+      north
+    })
+  ]);
 
   return {
     type: 'FeatureCollection',
-    features: rows.filter((row) => row.geometry).map(rowToFeature)
+    features: [
+      ...rows.filter((row) => row.geometry).map(rowToFeature),
+      ...communityStatusFeatures
+    ]
   };
 }
 
