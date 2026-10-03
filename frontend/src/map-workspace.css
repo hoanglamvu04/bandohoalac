@@ -3141,3 +3141,354 @@ body.map-route-active{
     max-height:calc(100dvh - 158px);
   }
 }
+
+
+/* ============================================================
+   LIVE ROAD STATUS / COMMUNITY REPORTS
+   ============================================================ */
+.hm-report-status {
+  border: 1px solid rgba(220, 38, 38, .2);
+  background: rgba(255, 255, 255, .94);
+  color: #b91c1c;
+  border-radius: 999px;
+  min-height: 40px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .08);
+}
+
+.hm-report-status:hover {
+  background: #fff7f7;
+  border-color: rgba(220, 38, 38, .38);
+}
+
+.hm-live-status-card {
+  position: absolute;
+  z-index: 32;
+  right: 18px;
+  top: 86px;
+  width: min(330px, calc(100vw - 36px));
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .98);
+  border: 1px solid rgba(15, 82, 69, .14);
+  box-shadow: 0 18px 55px rgba(15, 23, 42, .17);
+  color: #173f35;
+}
+
+.hm-live-status-card strong {
+  display: block;
+  margin: 5px 28px 6px 0;
+  font-size: 17px;
+}
+
+.hm-live-status-card p {
+  margin: 0 0 10px;
+  color: #52645f;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+.hm-live-status-kicker {
+  display: block;
+  color: #b45309;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.hm-live-status-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: #f3f6f5;
+  color: #52645f;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.hm-live-status-meta {
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+  border-top: 1px solid #edf1ef;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.hm-live-status-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.hm-live-status-actions button {
+  min-height: 38px;
+  border: 1px solid #dbe7e2;
+  border-radius: 11px;
+  background: #f7faf9;
+  color: #174d41;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.hm-live-status-actions button:last-child {
+  color: #b91c1c;
+  background: #fff7f7;
+  border-color: #fee2e2;
+}
+
+.hm-status-modal-backdrop {
+  position: absolute;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, .42);
+  backdrop-filter: blur(5px);
+}
+
+.hm-status-modal {
+  width: min(520px, 100%);
+  max-height: min(760px, calc(100dvh - 36px));
+  overflow: auto;
+  padding: 20px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, .28);
+  color: #173f35;
+}
+
+.hm-status-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.hm-status-modal-head span {
+  display: block;
+  color: #b45309;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+
+.hm-status-modal-head h2 {
+  margin: 4px 0 0;
+  font-size: 22px;
+}
+
+.hm-status-modal-head > button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: #f3f6f5;
+  color: #52645f;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.hm-status-modal label {
+  display: grid;
+  gap: 7px;
+  margin-top: 13px;
+  color: #334e47;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.hm-status-modal select,
+.hm-status-modal textarea,
+.hm-status-modal input[type="file"] {
+  width: 100%;
+  border: 1px solid #dbe7e2;
+  border-radius: 12px;
+  background: #fff;
+  color: #173f35;
+  padding: 11px 12px;
+  font: inherit;
+  font-weight: 600;
+  outline: none;
+}
+
+.hm-status-modal select:focus,
+.hm-status-modal textarea:focus {
+  border-color: #5d8f80;
+  box-shadow: 0 0 0 3px rgba(93, 143, 128, .12);
+}
+
+.hm-status-location {
+  margin-top: 13px;
+  padding: 12px;
+  border-radius: 13px;
+  background: #f6faf8;
+  border: 1px solid #e4eeea;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hm-status-location div {
+  min-width: 0;
+}
+
+.hm-status-location span,
+.hm-status-location b {
+  display: block;
+}
+
+.hm-status-location span {
+  color: #6b7c76;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.hm-status-location b {
+  margin-top: 3px;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hm-status-location button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid #cfe0da;
+  border-radius: 10px;
+  background: #fff;
+  color: #174d41;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.hm-status-photo small {
+  color: #84938e;
+  font-weight: 600;
+}
+
+.hm-status-photo > span {
+  color: #0f766e;
+  font-size: 11px;
+}
+
+.hm-status-expiry-note {
+  margin: 12px 0 0;
+  color: #6b7c76;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.hm-status-submit {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 15px;
+  border: 0;
+  border-radius: 12px;
+  background: #174d41;
+  color: #fff;
+  font: inherit;
+  font-weight: 850;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.hm-status-submit:disabled,
+.hm-live-status-actions button:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.hm-status-login {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  border-radius: 16px;
+  background: #f8faf9;
+  text-align: center;
+}
+
+.hm-status-login p {
+  max-width: 360px;
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.hm-status-login a {
+  margin-top: 4px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #174d41;
+  color: #fff;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+@media (max-width: 760px) {
+  .hm-report-status {
+    min-height: 38px;
+    padding: 0 10px;
+    font-size: 0;
+  }
+
+  .hm-report-status svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .hm-live-status-card {
+    left: 12px;
+    right: 12px;
+    top: 78px;
+    width: auto;
+  }
+
+  .hm-status-modal-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .hm-status-modal {
+    width: 100%;
+    max-height: 82dvh;
+    border-radius: 22px 22px 0 0;
+    padding: 18px 16px calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .hm-status-location {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
