@@ -49,7 +49,7 @@ const FEATURE_CARDS = [
   },
   {
     icon: UsersRound,
-    title: 'Cộng đồng Explorer',
+    title: 'Cộng đồng đóng góp',
     text: 'Kết nối những người cùng quan tâm và xây dựng Hòa Lạc tốt hơn.',
     tone: 'orange',
     to: '/leaderboard'

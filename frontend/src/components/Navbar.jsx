@@ -4,7 +4,6 @@ import {
   Building2,
   Check,
   ChevronDown,
-  Compass,
   Download,
   LogOut,
   MapPinned,
@@ -25,9 +24,9 @@ import {
 } from '../services/api.js';
 
 const navItems = [
-  { to: '/map', label: 'Khám phá', icon: Compass, includeHome: true },
+  { to: '/map', label: 'Bản đồ', icon: MapPinned },
   { to: '/leaderboard', label: 'Cộng đồng', icon: Trophy },
-  { to: '/profile', label: 'Explorer', icon: UserRound }
+  { to: '/profile', label: 'Trang cá nhân', icon: UserRound }
 ];
 
 function notificationTarget(item) {
@@ -258,14 +257,11 @@ export default function Navbar() {
       )}
 
       <nav className="desktop-nav premium-desktop-nav">
-        {navItems.map(({to,label,icon:Icon,includeHome}) => (
+        {navItems.map(({to,label,icon:Icon}) => (
           <NavLink
             key={to}
             to={to}
-            className={({isActive}) =>
-              (isActive || (includeHome && location.pathname === '/'))
-                ? 'nav-link active'
-                : 'nav-link'}
+            className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'}
           >
             <Icon size={16}/>{label}
           </NavLink>
@@ -405,14 +401,14 @@ export default function Navbar() {
                   {String(user.name || user.email || 'U').trim().charAt(0).toUpperCase()}
                 </span>
                 <div>
-                  <b>{user.name || 'Hola Explorer'}</b>
+                  <b>{user.name || 'Thành viên Hola Maps'}</b>
                   <small>{user.email || 'Tài khoản Hola Maps'}</small>
                 </div>
               </div>
 
               <Link to="/profile" onClick={() => setMobileAccountOpen(false)}>
                 <UserRound size={16} />
-                Hồ sơ Explorer
+                Trang cá nhân
               </Link>
               {user?.partnerAccess?.hasAccess && (
                 <Link to={partnerTarget} onClick={() => setMobileAccountOpen(false)}>

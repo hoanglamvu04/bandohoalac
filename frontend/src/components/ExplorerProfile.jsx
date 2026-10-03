@@ -22,12 +22,19 @@ export default function ExplorerProfile({
     .join('')
     .toUpperCase();
 
-  const levelLabel = user?.explorerLevel?.name
+  const rawLevelLabel = user?.explorerLevel?.name;
+  const localizedLevelLabels = {
+    'Trusted Explorer': 'Thành viên tin cậy',
+    Explorer: 'Thành viên tích cực',
+    'New Explorer': 'Thành viên mới'
+  };
+  const levelLabel = localizedLevelLabels[rawLevelLabel]
+    || rawLevelLabel
     || (user?.trustScore >= 80
-      ? 'Trusted Explorer'
+      ? 'Thành viên tin cậy'
       : user?.trustScore >= 40
-        ? 'Explorer'
-        : 'New Explorer');
+        ? 'Thành viên tích cực'
+        : 'Thành viên mới');
 
   return (
     <section className="explorer-card explorer-card-light">

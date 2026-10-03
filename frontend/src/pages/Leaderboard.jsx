@@ -67,7 +67,7 @@ export default function Leaderboard() {
             <Trophy size={40} strokeWidth={2.2} />
           </div>
 
-          <span className="community-kicker">Cộng đồng Hola Explorer</span>
+          <span className="community-kicker">Cộng đồng Hola Maps</span>
 
           <h1>Những người đang cùng xây bản đồ Hòa Lạc.</h1>
 
@@ -113,7 +113,7 @@ export default function Leaderboard() {
                 <Trophy size={28} strokeWidth={2.25} />
               </span>
               <div>
-                <h2>Top Explorer</h2>
+                <h2>Thành viên nổi bật</h2>
                 <p>Những thành viên đóng góp tích cực nhất cho bản đồ Hòa Lạc</p>
               </div>
             </div>

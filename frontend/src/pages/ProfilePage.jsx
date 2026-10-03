@@ -224,7 +224,7 @@ export default function ProfilePage() {
         <Link className="profile-rewards-entry" to="/rewards">
           <span className="profile-rewards-icon"><Gift size={24} /></span>
           <span>
-            <small>HOLA EXPLORER REWARDS</small>
+            <small>ƯU ĐÃI THÀNH VIÊN</small>
             <b>Dùng điểm đóng góp để đổi voucher đối tác</b>
             <em><Coins size={13} /> Khám phá ưu đãi đang có</em>
           </span>
@@ -234,8 +234,8 @@ export default function ProfilePage() {
         <Link className="profile-rewards-entry mission" to="/missions">
           <span className="profile-rewards-icon"><Flag size={24} /></span>
           <span>
-            <small>COMMUNITY MISSIONS</small>
-            <b>Tham gia nhiệm vụ để nhận thêm điểm bonus</b>
+            <small>NHIỆM VỤ CỘNG ĐỒNG</small>
+            <b>Tham gia nhiệm vụ để nhận thêm điểm thưởng</b>
             <em><Flag size={13} /> Theo dõi tiến độ chiến dịch</em>
           </span>
           <ChevronRight size={20} />
@@ -244,7 +244,7 @@ export default function ProfilePage() {
         <Link className="profile-rewards-entry partner" to="/partner">
           <span className="profile-rewards-icon"><Building2 size={24} /></span>
           <span>
-            <small>BUSINESS / PARTNER</small>
+            <small>DÀNH CHO ĐỐI TÁC</small>
             <b>Quản lý địa điểm đã xác minh và voucher</b>
             <em><Building2 size={13} /> Dành cho chủ quán và đối tác</em>
           </span>
