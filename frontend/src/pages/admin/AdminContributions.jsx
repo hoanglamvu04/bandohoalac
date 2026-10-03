@@ -13,7 +13,10 @@ const TYPE_LABELS = {
   UPDATE_HOURS: 'Cập nhật giờ mở cửa',
   UPDATE_PRICE: 'Cập nhật giá',
   REPORT_CLOSED: 'Báo đóng cửa',
-  REPORT_WRONG_INFO: 'Báo sai thông tin'
+  REPORT_WRONG_INFO: 'Báo sai thông tin',
+  REPORT_FLOOD: 'Báo ngập',
+  REPORT_ROAD_CLOSURE: 'Báo đường cấm',
+  REPORT_ALERT: 'Cảnh báo khu vực'
 };
 
 export default function AdminContributions() {
@@ -39,7 +42,14 @@ export default function AdminContributions() {
     setBusyId(id);
     try {
       await approveContribution(id);
-      showToast('Đã duyệt đóng góp. Địa điểm đã xuất hiện trên bản đồ.', 'success');
+      const item = items.find((entry) => entry.id === id);
+      const isRoadStatus = ['REPORT_FLOOD', 'REPORT_ROAD_CLOSURE', 'REPORT_ALERT'].includes(item?.type);
+      showToast(
+        isRoadStatus
+          ? 'Đã xác minh tình trạng và chuyển thành dữ liệu chính thức trên bản đồ.'
+          : 'Đã duyệt đóng góp. Dữ liệu đã xuất hiện trên bản đồ.',
+        'success'
+      );
       setItems((current) => current.filter((item) => item.id !== id));
     } catch (err) {
       showToast(err.message, 'error');
@@ -106,6 +116,17 @@ export default function AdminContributions() {
               {item.payload?.reason && (
                 <div className="form-status info">
                   Nội dung báo cáo: {item.payload.reason}
+                </div>
+              )}
+
+              {['REPORT_FLOOD', 'REPORT_ROAD_CLOSURE', 'REPORT_ALERT'].includes(item.type) && (
+                <div className="form-status info">
+                  Mức độ: <b>{item.payload?.severity || 'MEDIUM'}</b>
+                  {' · '}{Number(item.activeConfirmations || 0)} người xác nhận vẫn còn
+                  {' · '}{Number(item.resolvedConfirmations || 0)} người báo đã hết
+                  {item.payload?.expiresAt
+                    ? ' · Tự hết hạn ' + new Date(item.payload.expiresAt).toLocaleString('vi-VN')
+                    : ''}
                 </div>
               )}
               {(place.price || place.openingHours || place.phone) && (
