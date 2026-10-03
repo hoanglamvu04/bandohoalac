@@ -270,3 +270,22 @@ Uploaded photos are served statically from `/uploads/<filename>`.
 - Run `npm run db:migrate` against the production database before first
   deploy; do **not** run `db:seed` in production (it creates demo accounts
   with published default passwords).
+
+
+## Production domain
+
+The canonical production hostname for Hola Maps is:
+
+```text
+https://maps.dothihoalac.vn
+```
+
+The legacy hostname `https://map.dothihoalac.vn` should remain as an HTTP 301
+redirect to the canonical `maps` hostname so old links and API integrations
+continue to resolve. The one-time VPS helper is:
+
+```bash
+sudo bash /var/www/bandohoalac/scripts/migrate-production-domain-to-maps.sh
+```
+
+Run it only after the DNS record for `maps.dothihoalac.vn` points to the VPS.
