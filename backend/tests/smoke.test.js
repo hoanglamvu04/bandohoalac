@@ -207,3 +207,17 @@ test('Public Integration API: GeoJSON bounds returns FeatureCollection', async (
   assert.equal(body.type, 'FeatureCollection');
   assert.ok(Array.isArray(body.features));
 });
+
+
+test('Developer API: OpenAPI schema is public while docs are enabled', async () => {
+  const res = await fetch(url('/api/public/v1/openapi.json'));
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.openapi, '3.0.3');
+  assert.equal(body.info.title, 'Hola Maps Developer API');
+});
+
+test('Developer API admin routes reject unauthenticated users', async () => {
+  const res = await fetch(url('/api/admin/developer-api/overview'));
+  assert.equal(res.status, 401);
+});
