@@ -2,6 +2,8 @@ import { Router } from 'express';
 import {
   getPublicApiMeta,
   getPublicCategories,
+  getPublicMapConfig,
+  getPublicMapStyle,
   getPublicNearbyPlaces,
   getPublicOpenApi,
   getPublicPlaceById,
@@ -22,6 +24,8 @@ const router = Router();
 router.get('/', getPublicApiMeta);
 router.get('/meta', getPublicApiMeta);
 router.get('/openapi.json', getPublicOpenApi);
+router.get('/map/config', getPublicMapConfig);
+router.get('/map/style.json', getPublicMapStyle);
 router.get('/categories', getPublicCategories);
 router.get('/places/bounds', validateQuery(publicBoundsQuerySchema), getPublicPlacesBounds);
 router.get('/places/geojson', validateQuery(publicBoundsQuerySchema), getPublicPlacesGeoJson);
