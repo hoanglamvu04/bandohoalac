@@ -79,127 +79,190 @@ function escapeHtml(value = '') {
 }
 
 const PLACE_MARKER_LIBRARY = [
-  { id: 'hm-marker-cafe', emoji: '☕', color: '#8b5e3c' },
-  { id: 'hm-marker-food', emoji: '🍜', color: '#d97706' },
-  { id: 'hm-marker-homestay', emoji: '🏡', color: '#7c3aed' },
-  { id: 'hm-marker-villa', emoji: '🏠', color: '#9333ea' },
-  { id: 'hm-marker-tourism', emoji: '🏝️', color: '#0284c7' },
-  { id: 'hm-marker-checkin', emoji: '📸', color: '#db2777' },
-  { id: 'hm-marker-experience', emoji: '🎡', color: '#c2410c' },
-  { id: 'hm-marker-school', emoji: '🎓', color: '#2563eb' },
-  { id: 'hm-marker-health', emoji: '🏥', color: '#dc2626' },
-  { id: 'hm-marker-market', emoji: '🛒', color: '#16a34a' },
-  { id: 'hm-marker-bank', emoji: '🏦', color: '#0369a1' },
-  { id: 'hm-marker-fuel', emoji: '⛽', color: '#0f766e' },
-  { id: 'hm-marker-government', emoji: '🏛️', color: '#475569' },
-  { id: 'hm-marker-sport', emoji: '🏟️', color: '#059669' },
-  { id: 'hm-marker-service', emoji: '🛠️', color: '#64748b' },
-  { id: 'hm-marker-transport', emoji: '🚌', color: '#0d9488' },
-  { id: 'hm-marker-property', emoji: '🏢', color: '#7c2d12' },
-  { id: 'hm-marker-default', emoji: '📍', color: '#174d41' }
+  { id: 'hm-marker-cafe', key: 'cafe', color: '#9a5b19' },
+  { id: 'hm-marker-food', key: 'food', color: '#ee5a2f' },
+  { id: 'hm-marker-homestay', key: 'homestay', color: '#7857c8' },
+  { id: 'hm-marker-villa', key: 'villa', color: '#6d4dc2' },
+  { id: 'hm-marker-tourism', key: 'tourism', color: '#1684b8' },
+  { id: 'hm-marker-checkin', key: 'checkin', color: '#d84983' },
+  { id: 'hm-marker-experience', key: 'experience', color: '#7148ca' },
+  { id: 'hm-marker-school', key: 'school', color: '#2c6fd6' },
+  { id: 'hm-marker-health', key: 'health', color: '#d64545' },
+  { id: 'hm-marker-market', key: 'market', color: '#2f9561' },
+  { id: 'hm-marker-bank', key: 'bank', color: '#2777a8' },
+  { id: 'hm-marker-fuel', key: 'fuel', color: '#198276' },
+  { id: 'hm-marker-government', key: 'government', color: '#5b6878' },
+  { id: 'hm-marker-sport', key: 'sport', color: '#258967' },
+  { id: 'hm-marker-service', key: 'service', color: '#6b7280' },
+  { id: 'hm-marker-transport', key: 'transport', color: '#168b8a' },
+  { id: 'hm-marker-property', key: 'property', color: '#8a4f31' },
+  { id: 'hm-marker-default', key: 'default', color: '#174d41' }
 ];
 
 const PLACE_MARKER_BY_ID = new Map(
   PLACE_MARKER_LIBRARY.map((item) => [item.id, item])
 );
 
-function categoryMarkerMeta(category) {
-  const normalized = String(category || '').trim().toLowerCase();
+function normalizeMarkerCategory(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[-_/]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
-  if (normalized.includes('cafe') || normalized.includes('coffee')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-cafe');
-  }
-  if (normalized.includes('ăn') || normalized.includes('food')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-food');
-  }
-  if (normalized.includes('home')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-homestay');
-  }
-  if (normalized.includes('villa')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-villa');
-  }
-  if (normalized.includes('khu du lịch') || normalized.includes('tourist destination')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-tourism');
-  }
-  if (normalized.includes('check')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-checkin');
-  }
-  if (normalized.includes('trải nghiệm')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-experience');
-  }
-  if (normalized.includes('trường') || normalized.includes('school')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-school');
-  }
-  if (normalized.includes('y tế') || normalized.includes('hospital') || normalized.includes('medical')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-health');
-  }
-  if (normalized.includes('siêu thị') || normalized.includes('cửa hàng') || normalized.includes('shop')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-market');
-  }
-  if (normalized.includes('ngân hàng') || normalized.includes('atm')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-bank');
-  }
-  if (normalized.includes('nhiên liệu') || normalized.includes('sạc') || normalized.includes('fuel')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-fuel');
-  }
-  if (normalized.includes('cơ quan') || normalized.includes('government')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-government');
-  }
-  if (normalized.includes('thể thao') || normalized.includes('sport')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-sport');
-  }
-  if (normalized.includes('dịch vụ') || normalized.includes('service')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-service');
-  }
-  if (normalized.includes('giao thông') || normalized.includes('transport')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-transport');
-  }
-  if (normalized.includes('bất động sản') || normalized.includes('real estate')) {
-    return PLACE_MARKER_BY_ID.get('hm-marker-property');
-  }
+function categoryMarkerMeta(category) {
+  const raw = typeof category === 'object'
+    ? [category?.name, category?.slug].filter(Boolean).join(' ')
+    : category;
+  const normalized = normalizeMarkerCategory(raw);
+  const has = (...values) => values.some((value) => normalized.includes(value));
+
+  if (has('cafe', 'coffee', 'ca phe')) return PLACE_MARKER_BY_ID.get('hm-marker-cafe');
+  if (has('an uong', 'food', 'restaurant', 'nha hang', 'quan an')) return PLACE_MARKER_BY_ID.get('hm-marker-food');
+  if (has('homestay', 'luu tru', 'hotel', 'resort')) return PLACE_MARKER_BY_ID.get('hm-marker-homestay');
+  if (has('villa', 'biet thu')) return PLACE_MARKER_BY_ID.get('hm-marker-villa');
+  if (has('khu du lich', 'tourism', 'tourist', 'du lich')) return PLACE_MARKER_BY_ID.get('hm-marker-tourism');
+  if (has('check in', 'checkin', 'chup anh')) return PLACE_MARKER_BY_ID.get('hm-marker-checkin');
+  if (has('trai nghiem', 'vui choi', 'giai tri', 'experience')) return PLACE_MARKER_BY_ID.get('hm-marker-experience');
+  if (has('truong', 'school', 'giao duc')) return PLACE_MARKER_BY_ID.get('hm-marker-school');
+  if (has('y te', 'hospital', 'medical', 'benh vien', 'phong kham')) return PLACE_MARKER_BY_ID.get('hm-marker-health');
+  if (has('sieu thi', 'cua hang', 'shop', 'market')) return PLACE_MARKER_BY_ID.get('hm-marker-market');
+  if (has('ngan hang', 'atm', 'bank')) return PLACE_MARKER_BY_ID.get('hm-marker-bank');
+  if (has('nhien lieu', 'tram xang', 'cay xang', 'sac', 'fuel')) return PLACE_MARKER_BY_ID.get('hm-marker-fuel');
+  if (has('co quan', 'government', 'ubnd', 'hanh chinh')) return PLACE_MARKER_BY_ID.get('hm-marker-government');
+  if (has('the thao', 'sport', 'gym', 'fitness')) return PLACE_MARKER_BY_ID.get('hm-marker-sport');
+  if (has('dich vu', 'service', 'spa', 'salon')) return PLACE_MARKER_BY_ID.get('hm-marker-service');
+  if (has('giao thong', 'transport', 'ben xe', 'tram xe')) return PLACE_MARKER_BY_ID.get('hm-marker-transport');
+  if (has('bat dong san', 'real estate', 'nha dat')) return PLACE_MARKER_BY_ID.get('hm-marker-property');
 
   return PLACE_MARKER_BY_ID.get('hm-marker-default');
 }
 
-function createPlaceMarkerImage({ emoji, color }) {
-  const size = 80;
+function strokeLine(context, points) {
+  context.beginPath();
+  points.forEach(([x, y], index) => {
+    if (index === 0) context.moveTo(x, y);
+    else context.lineTo(x, y);
+  });
+  context.stroke();
+}
+
+function drawMarkerGlyph(context, key) {
+  context.save();
+  context.strokeStyle = '#ffffff';
+  context.fillStyle = '#ffffff';
+  context.lineWidth = 3.8;
+  context.lineCap = 'round';
+  context.lineJoin = 'round';
+
+  if (key === 'cafe') {
+    context.strokeRect(34, 33, 23, 14);
+    context.beginPath(); context.arc(58, 40, 6, -Math.PI / 2, Math.PI / 2); context.stroke();
+    strokeLine(context, [[35, 52], [58, 52]]);
+    strokeLine(context, [[39, 29], [39, 24]]);
+    strokeLine(context, [[47, 29], [47, 22]]);
+    strokeLine(context, [[55, 29], [55, 25]]);
+  } else if (key === 'food') {
+    strokeLine(context, [[36, 26], [36, 53]]);
+    strokeLine(context, [[31, 26], [31, 36], [41, 36], [41, 26]]);
+    strokeLine(context, [[58, 26], [53, 40], [58, 40], [58, 53]]);
+  } else if (key === 'homestay' || key === 'villa' || key === 'property') {
+    strokeLine(context, [[31, 39], [48, 25], [65, 39]]);
+    context.strokeRect(35, 38, 26, 18);
+    context.strokeRect(45, 46, 7, 10);
+  } else if (key === 'tourism') {
+    strokeLine(context, [[29, 53], [42, 34], [50, 44], [57, 35], [67, 53]]);
+    context.beginPath(); context.arc(62, 28, 5, 0, Math.PI * 2); context.stroke();
+  } else if (key === 'checkin') {
+    context.strokeRect(31, 32, 34, 23);
+    context.strokeRect(39, 27, 12, 5);
+    context.beginPath(); context.arc(48, 43, 7, 0, Math.PI * 2); context.stroke();
+  } else if (key === 'experience') {
+    context.beginPath(); context.arc(48, 40, 17, 0, Math.PI * 2); context.stroke();
+    strokeLine(context, [[55, 31], [51, 43], [40, 49], [45, 36], [55, 31]]);
+  } else if (key === 'school') {
+    strokeLine(context, [[29, 36], [48, 27], [67, 36], [48, 45], [29, 36]]);
+    strokeLine(context, [[36, 42], [36, 50], [48, 55], [60, 50], [60, 42]]);
+  } else if (key === 'health') {
+    context.fillRect(44, 27, 8, 27);
+    context.fillRect(34, 37, 28, 8);
+  } else if (key === 'market') {
+    context.strokeRect(34, 35, 28, 21);
+    context.beginPath(); context.arc(48, 35, 9, Math.PI, 0); context.stroke();
+  } else if (key === 'bank' || key === 'government') {
+    strokeLine(context, [[30, 35], [48, 26], [66, 35]]);
+    strokeLine(context, [[33, 55], [63, 55]]);
+    for (const x of [37, 48, 59]) strokeLine(context, [[x, 38], [x, 51]]);
+  } else if (key === 'fuel') {
+    context.strokeRect(33, 29, 19, 27);
+    context.strokeRect(37, 33, 11, 8);
+    strokeLine(context, [[52, 34], [59, 34], [62, 39], [62, 52]]);
+    context.beginPath(); context.arc(62, 53, 2.5, 0, Math.PI * 2); context.fill();
+  } else if (key === 'sport') {
+    context.beginPath(); context.arc(48, 40, 17, 0, Math.PI * 2); context.stroke();
+    strokeLine(context, [[33, 40], [63, 40]]);
+    strokeLine(context, [[48, 24], [48, 56]]);
+  } else if (key === 'service') {
+    strokeLine(context, [[34, 27], [61, 54]]);
+    strokeLine(context, [[61, 27], [34, 54]]);
+    context.beginPath(); context.arc(34, 27, 4, 0, Math.PI * 2); context.stroke();
+    context.beginPath(); context.arc(61, 54, 4, 0, Math.PI * 2); context.stroke();
+  } else if (key === 'transport') {
+    context.strokeRect(32, 29, 32, 23);
+    strokeLine(context, [[36, 36], [60, 36]]);
+    context.beginPath(); context.arc(39, 54, 3, 0, Math.PI * 2); context.fill();
+    context.beginPath(); context.arc(57, 54, 3, 0, Math.PI * 2); context.fill();
+  } else {
+    context.beginPath(); context.arc(48, 40, 8, 0, Math.PI * 2); context.stroke();
+    context.beginPath(); context.arc(48, 40, 2.5, 0, Math.PI * 2); context.fill();
+  }
+
+  context.restore();
+}
+
+function createPlaceMarkerImage({ key, color }) {
+  const size = 96;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
 
   context.clearRect(0, 0, size, size);
-
-  // Soft shadow.
+  context.save();
+  context.shadowColor = 'rgba(12, 43, 36, .28)';
+  context.shadowBlur = 10;
+  context.shadowOffsetY = 5;
   context.beginPath();
-  context.arc(40, 42, 31, 0, Math.PI * 2);
-  context.fillStyle = 'rgba(12, 43, 36, .16)';
+  context.moveTo(48, 89);
+  context.bezierCurveTo(42, 78, 19, 59, 19, 39);
+  context.bezierCurveTo(19, 22, 32, 9, 48, 9);
+  context.bezierCurveTo(64, 9, 77, 22, 77, 39);
+  context.bezierCurveTo(77, 59, 54, 78, 48, 89);
+  context.closePath();
+  context.fillStyle = color;
   context.fill();
+  context.restore();
 
-  // White badge.
   context.beginPath();
-  context.arc(40, 38, 31, 0, Math.PI * 2);
-  context.fillStyle = '#ffffff';
-  context.fill();
-
-  // Category ring.
-  context.beginPath();
-  context.arc(40, 38, 27, 0, Math.PI * 2);
+  context.moveTo(48, 89);
+  context.bezierCurveTo(42, 78, 19, 59, 19, 39);
+  context.bezierCurveTo(19, 22, 32, 9, 48, 9);
+  context.bezierCurveTo(64, 9, 77, 22, 77, 39);
+  context.bezierCurveTo(77, 59, 54, 78, 48, 89);
+  context.closePath();
   context.lineWidth = 5;
-  context.strokeStyle = color;
+  context.strokeStyle = '#ffffff';
   context.stroke();
 
-  // Very light category tint.
   context.beginPath();
-  context.arc(40, 38, 23, 0, Math.PI * 2);
-  context.fillStyle = color + '16';
+  context.arc(48, 40, 22, 0, Math.PI * 2);
+  context.fillStyle = 'rgba(255,255,255,.10)';
   context.fill();
 
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.font = '30px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
-  context.fillText(emoji, 40, 39);
-
+  drawMarkerGlyph(context, key);
   return context.getImageData(0, 0, size, size);
 }
 
@@ -408,9 +471,9 @@ function addPlaceClusterLayers(map, places = []) {
           'interpolate',
           ['linear'],
           ['zoom'],
-          12.5, 0.68,
-          14, 0.78,
-          17, 0.94
+          12.5, 0.62,
+          14, 0.72,
+          17, 0.88
         ],
         'icon-allow-overlap': true,
         'icon-ignore-placement': true

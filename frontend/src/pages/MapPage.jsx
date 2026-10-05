@@ -2,11 +2,19 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
   CalendarDays,
+  Camera,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Coffee,
+  Compass,
   Construction,
+  Dumbbell,
+  Fuel,
+  GraduationCap,
+  HeartPulse,
+  House,
   ExternalLink,
   Landmark,
   Layers,
@@ -18,9 +26,12 @@ import {
   Route,
   Search,
   Satellite,
+  ShoppingBag,
   SlidersHorizontal,
   TriangleAlert,
+  UtensilsCrossed,
   Waves,
+  Wrench,
   X
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -192,6 +203,68 @@ function viewportKey(viewport) {
   ].join(':');
 }
 
+
+const PLACE_CATEGORY_VISUALS = [
+  { key: 'cafe', tone: 'cafe', icon: Coffee, aliases: ['cafe', 'coffee', 'ca phe'] },
+  { key: 'food', tone: 'food', icon: UtensilsCrossed, aliases: ['an uong', 'food', 'restaurant', 'nha hang', 'quan an'] },
+  { key: 'homestay', tone: 'stay', icon: House, aliases: ['homestay', 'luu tru', 'hotel', 'resort'] },
+  { key: 'villa', tone: 'stay', icon: Building2, aliases: ['villa', 'biet thu'] },
+  { key: 'tourism', tone: 'tourism', icon: Mountain, aliases: ['khu du lich', 'tourism', 'tourist', 'du lich'] },
+  { key: 'checkin', tone: 'checkin', icon: Camera, aliases: ['check in', 'checkin', 'chup anh'] },
+  { key: 'experience', tone: 'experience', icon: Compass, aliases: ['trai nghiem', 'vui choi', 'giai tri', 'experience'] },
+  { key: 'school', tone: 'school', icon: GraduationCap, aliases: ['truong', 'school', 'giao duc'] },
+  { key: 'health', tone: 'health', icon: HeartPulse, aliases: ['y te', 'hospital', 'medical', 'benh vien', 'phong kham'] },
+  { key: 'market', tone: 'market', icon: ShoppingBag, aliases: ['sieu thi', 'cua hang', 'shop', 'market'] },
+  { key: 'bank', tone: 'bank', icon: Landmark, aliases: ['ngan hang', 'atm', 'bank'] },
+  { key: 'fuel', tone: 'fuel', icon: Fuel, aliases: ['nhien lieu', 'tram xang', 'cay xang', 'sac', 'fuel'] },
+  { key: 'government', tone: 'government', icon: Landmark, aliases: ['co quan', 'government', 'ubnd', 'hanh chinh'] },
+  { key: 'sport', tone: 'sport', icon: Dumbbell, aliases: ['the thao', 'sport', 'gym', 'fitness'] },
+  { key: 'service', tone: 'service', icon: Wrench, aliases: ['dich vu', 'service', 'spa', 'salon'] },
+  { key: 'transport', tone: 'transport', icon: Route, aliases: ['giao thong', 'transport', 'ben xe', 'tram xe'] },
+  { key: 'property', tone: 'property', icon: Building2, aliases: ['bat dong san', 'real estate', 'nha dat'] }
+];
+
+function normalizePlaceCategory(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[-_/]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getPlaceCategoryVisual(place) {
+  const categoryValue = typeof place?.category === 'object'
+    ? [place.category?.name, place.category?.slug].filter(Boolean).join(' ')
+    : place?.category;
+  const haystack = normalizePlaceCategory([
+    categoryValue,
+    place?.categorySlug,
+    place?.category_slug
+  ].filter(Boolean).join(' '));
+
+  return PLACE_CATEGORY_VISUALS.find((item) =>
+    item.aliases.some((alias) => haystack.includes(alias))
+  ) || { key: 'default', tone: 'default', icon: MapPin };
+}
+
+function getPlaceListImage(place) {
+  const candidates = [
+    place?.thumbnails?.[0],
+    place?.thumbnail,
+    place?.cardImages?.[0],
+    place?.cardImage,
+    place?.images?.[0]
+  ];
+  return candidates.find((value) => typeof value === 'string' && value.trim()) || '';
+}
+
+function PlaceCategoryIcon({ place, size = 24 }) {
+  const visual = getPlaceCategoryVisual(place);
+  const Icon = visual.icon;
+  return <Icon size={size} strokeWidth={2.25} aria-hidden="true" />;
+}
 
 function formatDistance(meters) {
   const value = Number(meters) || 0;
@@ -1613,17 +1686,32 @@ export default function MapPage() {
                 onBlur={() => setHoveredPlaceId(null)}
                 onClick={() => togglePlaceSelection(place)}
               >
-                <span className="hm-place-thumb">
-                  {(place.thumbnails?.[0] || place.images?.[0])
-                    ? (
+                <span
+                  className={
+                    'hm-place-thumb ' +
+                    (getPlaceListImage(place) ? 'has-image ' : 'icon-fallback ') +
+                    getPlaceCategoryVisual(place).tone
+                  }
+                >
+                  {getPlaceListImage(place) ? (
+                    <>
                       <img
-                        src={place.thumbnails?.[0] || place.images?.[0]}
-                        alt=""
+                        src={getPlaceListImage(place)}
+                        alt={place.name ? 'Ảnh ' + place.name : ''}
                         loading="lazy"
                         decoding="async"
+                        onError={(event) => {
+                          event.currentTarget.hidden = true;
+                          event.currentTarget.parentElement?.classList.add('image-error');
+                        }}
                       />
-                    )
-                    : <MapPin size={17} />}
+                      <span className="hm-place-fallback-icon">
+                        <PlaceCategoryIcon place={place} size={25} />
+                      </span>
+                    </>
+                  ) : (
+                    <PlaceCategoryIcon place={place} size={25} />
+                  )}
                 </span>
                 <span className="hm-place-copy">
                   <small>{place.category || 'Địa điểm'}</small>
