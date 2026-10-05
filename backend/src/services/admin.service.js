@@ -18,10 +18,18 @@ import {
   roadStatusDisplayName,
   roadStatusLayerType
 } from './roadStatus.service.js';
+import {
+  assertCtvCanModerate,
+  recordCtvReview
+} from './contributionTrust.service.js';
+import {
+  capturePlaceSnapshot,
+  recordPlaceRevision
+} from './placeRevision.service.js';
 
 function sourceForRole(role) {
   if (role === 'ADMIN' || role === 'MODERATOR') return 'ADMIN';
-  if (role === 'CONTRIBUTOR') return 'CTV';
+  if (role === 'CTV' || role === 'CONTRIBUTOR') return 'CTV';
   return 'USER';
 }
 
@@ -63,9 +71,7 @@ async function applyContributionToPlace(contribution, client) {
   }
 
   if (isRoadStatusContributionType(contribution.type)) {
-    if (!payload.location) {
-      throw new AppError('Road status report has no location.', 400);
-    }
+    if (!payload.location) throw new AppError('Road status report has no location.', 400);
 
     const layerType = roadStatusLayerType(contribution.type);
     const properties = {
@@ -103,21 +109,13 @@ async function applyContributionToPlace(contribution, client) {
     return { placeId: null };
   }
 
-  if (!contribution.place_id) {
-    throw new AppError('This contribution has no associated place.', 400);
-  }
-
+  if (!contribution.place_id) throw new AppError('This contribution has no associated place.', 400);
   const placeId = contribution.place_id;
 
   if (contribution.type === 'UPDATE_PLACE') {
     const fieldMap = {
-      name: 'name',
-      address: 'address',
-      description: 'description',
-      phone: 'phone',
-      website: 'website',
-      price: 'price_level',
-      openingHours: 'opening_hours'
+      name: 'name', address: 'address', description: 'description', phone: 'phone',
+      website: 'website', price: 'price_level', openingHours: 'opening_hours'
     };
     const updates = {};
     for (const [payloadKey, column] of Object.entries(fieldMap)) {
@@ -145,17 +143,14 @@ async function applyContributionToPlace(contribution, client) {
     await updatePlaceLocation(placeId, payload.location.lat, payload.location.lng, client);
     await recordChange(contribution.id, 'location', null, `${payload.location.lat},${payload.location.lng}`, client);
   }
-
   if (contribution.type === 'UPDATE_HOURS' && place.openingHours) {
     await updatePlaceFields(placeId, { opening_hours: place.openingHours }, client);
     await recordChange(contribution.id, 'opening_hours', null, place.openingHours, client);
   }
-
   if (contribution.type === 'UPDATE_PRICE' && place.price) {
     await updatePlaceFields(placeId, { price_level: place.price }, client);
     await recordChange(contribution.id, 'price_level', null, place.price, client);
   }
-
   if (contribution.type === 'REPORT_CLOSED') {
     await updatePlaceFields(placeId, { status: 'ARCHIVED' }, client);
   }
@@ -163,31 +158,50 @@ async function applyContributionToPlace(contribution, client) {
   return { placeId };
 }
 
-export async function approveContribution(contributionId, moderatorId, review = {}) {
+export async function approveContribution(contributionId, reviewer, review = {}) {
   return withTransaction(async (client) => {
     const contribution = await getContributionForUpdate(contributionId, client);
     if (!contribution) throw new AppError('Contribution not found.', 404);
     if (contribution.status !== 'PENDING') throw new AppError('Contribution has already been reviewed.', 409);
 
+    assertCtvCanModerate(reviewer, contribution);
+
     const score = evaluateContributionScore(review.scoreBreakdown);
     const scoreNote = String(review.scoreNote || '').trim().slice(0, 1000) || null;
+    const beforeSnapshot = contribution.place_id
+      ? await capturePlaceSnapshot(contribution.place_id, client)
+      : null;
     const { placeId } = await applyContributionToPlace(contribution, client);
+    const afterSnapshot = placeId ? await capturePlaceSnapshot(placeId, client) : null;
+
+    if (placeId && afterSnapshot) {
+      await recordPlaceRevision({
+        placeId,
+        action: contribution.type === 'CREATE_PLACE' ? 'CREATE' : 'CONTRIBUTION_APPLY',
+        beforeSnapshot,
+        afterSnapshot,
+        actorUserId: reviewer.id,
+        contributionId,
+        reason: 'Áp dụng đóng góp ' + contribution.type
+      }, client);
+    }
 
     const moderation = {
       pointsAwarded: score.total,
       maxPoints: score.maxPoints,
       scoreBreakdown: score.breakdown,
       scoreNote,
-      scoredBy: moderatorId,
+      scoredBy: reviewer.id,
       scoredAt: new Date().toISOString()
     };
 
     await markContributionReviewed(contributionId, {
       status: 'APPROVED',
-      reviewedBy: moderatorId,
+      reviewedBy: reviewer.id,
       placeId,
       moderation
     }, client);
+    await recordCtvReview(reviewer.id, client);
 
     const points = await awardPointsForApproval({
       userId: contribution.user_id,
@@ -202,16 +216,13 @@ export async function approveContribution(contributionId, moderatorId, review = 
       type: contribution.type,
       client
     });
-
     const missionBonus = missionAwards.reduce(
       (total, item) => total + Number(item.perContributionBonus || 0) + Number(item.completionBonus || 0),
       0
     );
 
     let notificationMessage = `Đóng góp của bạn đã được duyệt: +${points}/${score.maxPoints} điểm chất lượng.`;
-    if (missionBonus > 0) {
-      notificationMessage += ` Thưởng nhiệm vụ: +${missionBonus} điểm.`;
-    }
+    if (missionBonus > 0) notificationMessage += ` Thưởng nhiệm vụ: +${missionBonus} điểm.`;
 
     await createNotification({
       userId: contribution.user_id,
@@ -219,15 +230,9 @@ export async function approveContribution(contributionId, moderatorId, review = 
       title: 'Đóng góp đã được duyệt',
       message: notificationMessage,
       data: {
-        contributionId,
-        placeId,
-        points,
-        maxPoints: score.maxPoints,
-        scoreBreakdown: score.breakdown,
-        scoreNote,
-        missionBonus,
-        missionAwards,
-        contributionType: contribution.type
+        contributionId, placeId, points, maxPoints: score.maxPoints,
+        scoreBreakdown: score.breakdown, scoreNote, missionBonus,
+        missionAwards, contributionType: contribution.type
       }
     }, client);
 
@@ -235,27 +240,27 @@ export async function approveContribution(contributionId, moderatorId, review = 
   });
 }
 
-export async function rejectContribution(contributionId, moderatorId, reason) {
+export async function rejectContribution(contributionId, reviewer, reason) {
   const reviewed = await withTransaction(async (client) => {
     const contribution = await getContributionForUpdate(contributionId, client);
     if (!contribution) throw new AppError('Contribution not found.', 404);
     if (contribution.status !== 'PENDING') throw new AppError('Contribution has already been reviewed.', 409);
 
+    assertCtvCanModerate(reviewer, contribution);
+
     await markContributionReviewed(contributionId, {
       status: 'REJECTED',
-      reviewedBy: moderatorId,
+      reviewedBy: reviewer.id,
       rejectReason: reason
     }, client);
-
+    await recordCtvReview(reviewer.id, client);
     await penalizeRejection(contribution.user_id, client);
 
     await createNotification({
       userId: contribution.user_id,
       type: 'CONTRIBUTION_REJECTED',
       title: 'Đóng góp chưa được duyệt',
-      message: reason
-        ? 'Lý do: ' + reason
-        : 'Đóng góp của bạn chưa đáp ứng tiêu chí xuất bản.',
+      message: reason ? 'Lý do: ' + reason : 'Đóng góp của bạn chưa đáp ứng tiêu chí xuất bản.',
       data: {
         contributionId,
         placeId: contribution.place_id,
@@ -267,9 +272,6 @@ export async function rejectContribution(contributionId, moderatorId, reason) {
   });
 
   const assets = reviewed?.payload?.photoAssets;
-  if (Array.isArray(assets) && assets.length) {
-    await deleteStoredAssets(assets);
-  }
-
+  if (Array.isArray(assets) && assets.length) await deleteStoredAssets(assets);
   return reviewed;
 }
