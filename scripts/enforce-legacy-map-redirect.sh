@@ -7,11 +7,6 @@ OLD_DOMAIN="${OLD_DOMAIN:-map.dothihoalac.vn}"
 log() { printf '[map-301] %s\n' "$*"; }
 warn() { printf '[map-301] WARN: %s\n' "$*" >&2; }
 
-reload_nginx() {
-  nginx -t
-  systemctl reload nginx 2>/dev/null || nginx -s reload
-}
-
 if [ "$(id -u)" -ne 0 ]; then
   warn "Run as root (or with sudo)."
   exit 1
@@ -36,11 +31,14 @@ BACKUP="${REAL_CONFIG}.before-map-301-$(date +%Y%m%d%H%M%S)"
 cp -a "$REAL_CONFIG" "$BACKUP"
 log "Backed up Nginx config to $BACKUP"
 
-# The canonical vhost currently serves both hostnames. Keep that vhost intact
-# and add a safe Nginx return rule for requests whose Host is the old domain.
-# $request_uri preserves both the path and the query string.
+# Keep the canonical vhost intact and add a host-specific return rule to every
+# server block that still accepts the old hostname. $request_uri preserves the
+# complete path plus query string. Existing generated rules are stripped first
+# so this operation is idempotent.
 TMP_FILE="$(mktemp)"
 awk -v old="$OLD_DOMAIN" -v new="$NEW_DOMAIN" '
+  /# HOLA_MAPS_LEGACY_301/ { next }
+  /if \(\$host = map\.dothihoalac\.vn\).*return 301 https:\/\/maps\.dothihoalac\.vn\$request_uri/ { next }
   {
     print $0
     if ($0 ~ /^[[:space:]]*server_name[[:space:]]/ && index($0, old) > 0) {
@@ -49,20 +47,7 @@ awk -v old="$OLD_DOMAIN" -v new="$NEW_DOMAIN" '
     }
   }
 ' "$REAL_CONFIG" > "$TMP_FILE"
-
-# If this script is rerun, collapse duplicate marker/rule pairs first.
-awk '
-  /# HOLA_MAPS_LEGACY_301/ {
-    if (seen_marker) { skip_rule=1; next }
-    seen_marker=1
-    print
-    next
-  }
-  skip_rule && /if \(\$host = map\.dothihoalac\.vn\)/ { skip_rule=0; next }
-  { print }
-' "$TMP_FILE" > "${TMP_FILE}.clean"
-mv "${TMP_FILE}.clean" "$REAL_CONFIG"
-rm -f "$TMP_FILE"
+mv "$TMP_FILE" "$REAL_CONFIG"
 
 if ! nginx -t; then
   cp -a "$BACKUP" "$REAL_CONFIG"
