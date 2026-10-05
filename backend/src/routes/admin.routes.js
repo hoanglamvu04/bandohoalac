@@ -35,11 +35,13 @@ import {
   getUserAdmin,
   listUsersAdmin,
   updatePartnerAccessAdmin,
-  updateUserAdmin
+  updateUserAdmin,
+  updateUserReputationControlAdmin
 } from '../controllers/adminUsers.controller.js';
 import {
   adminAdjustWalletSchema,
   adminAssignPartnerAccessSchema,
+  adminReputationControlSchema,
   adminUpdatePartnerAccessSchema,
   adminUpdateUserSchema
 } from '../validators/adminUser.validators.js';
@@ -168,6 +170,7 @@ router.get('/users', adminOnly, listUsersAdmin);
 router.get('/users/:id', adminOnly, getUserAdmin);
 router.patch('/users/:id', adminOnly, validateBody(adminUpdateUserSchema), updateUserAdmin);
 router.post('/users/:id/wallet-adjustments', adminOnly, validateBody(adminAdjustWalletSchema), adjustUserWalletAdmin);
+router.put('/users/:id/reputation-control', adminOnly, validateBody(adminReputationControlSchema), updateUserReputationControlAdmin);
 router.post('/users/:id/partner-access', adminOnly, validateBody(adminAssignPartnerAccessSchema), assignPartnerAccessAdmin);
 router.patch('/users/:id/partner-access/:membershipId', adminOnly, validateBody(adminUpdatePartnerAccessSchema), updatePartnerAccessAdmin);
 

@@ -1,0 +1,157 @@
+/* Reputation v2.2 — confidence, freshness, stability and admin controls */
+.profile-white-dashboard .explorer-reputation-v22-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:10px 0 2px;
+}
+.profile-white-dashboard .explorer-reputation-v22-meta>span{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:5px 8px;
+  border-radius:999px;
+  font-size:9px;
+  font-weight:850;
+}
+.profile-white-dashboard .explorer-reputation-v22-meta .confidence.high{color:#17684f;background:#e9f7f1}
+.profile-white-dashboard .explorer-reputation-v22-meta .confidence.medium{color:#8a651f;background:#fff4dc}
+.profile-white-dashboard .explorer-reputation-v22-meta .confidence.low{color:#6f7774;background:#f0f3f2}
+.profile-white-dashboard .explorer-reputation-v22-meta .freshness{color:#45665d;background:#eef5f2}
+.profile-white-dashboard .explorer-reputation-v22-meta .risk{color:#9a4c38;background:#fff0ea}
+
+.reputation-v22-status-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  margin:10px 0;
+}
+.reputation-v22-status-grid article{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-width:0;
+  padding:10px 11px;
+  border:1px solid #e1e9e6;
+  border-radius:12px;
+  color:#2b554a;
+  background:#f9fbfa;
+}
+.reputation-v22-status-grid article>span{min-width:0;flex:1;display:grid;gap:2px}
+.reputation-v22-status-grid small{color:#82928d;font-size:8px;font-weight:900;letter-spacing:.06em}
+.reputation-v22-status-grid b{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reputation-v22-status-grid em{font-size:8px;font-style:normal;font-weight:850;white-space:nowrap}
+.reputation-v22-status-grid .confidence.high{border-color:#d4e9e0;background:#f3fbf7;color:#17684f}
+.reputation-v22-status-grid .confidence.medium{border-color:#eee2c8;background:#fffaf0;color:#8b641c}
+.reputation-v22-status-grid .confidence.low{color:#677671}
+.reputation-v22-status-grid .freshness.cooling,
+.reputation-v22-status-grid .freshness.stale{color:#8a651f;background:#fffaf0}
+.reputation-v22-status-grid .freshness.dormant{color:#984a3f;background:#fff3ef}
+.reputation-v22-status-grid .stability.at-risk{color:#984a3f;background:#fff3ef;border-color:#f0d8d1}
+
+.reputation-stability-reasons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:-2px 0 10px;
+}
+.reputation-stability-reasons span{
+  padding:5px 8px;
+  border-radius:999px;
+  color:#8b5c2a;
+  background:#fff5e5;
+  font-size:8px;
+  font-weight:850;
+}
+
+.reputation-permission-gate{
+  display:grid;
+  gap:4px;
+  margin-top:9px;
+  padding:9px 10px;
+  border-radius:10px;
+  color:#7f5c21;
+  background:#fff8e9;
+  font-size:9px;
+  font-weight:800;
+}
+
+.reputation-control-card{margin-top:10px}
+.reputation-control-card .reputation-card-title>em{
+  margin-left:auto;
+  padding:4px 7px;
+  border-radius:999px;
+  color:#17684f;
+  background:#e9f7f1;
+  font-size:8px;
+  font-style:normal;
+  font-weight:900;
+}
+.reputation-control-form{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;
+  margin-top:12px;
+}
+.reputation-control-form label{
+  display:grid;
+  gap:5px;
+  color:#61766f;
+  font-size:9px;
+  font-weight:850;
+}
+.reputation-control-form input,
+.reputation-control-form select{
+  min-width:0;
+  width:100%;
+  box-sizing:border-box;
+  padding:9px 10px;
+  border:1px solid #dce6e2;
+  border-radius:10px;
+  outline:0;
+  color:#214d42;
+  background:#fbfdfc;
+  font:inherit;
+  font-size:10px;
+}
+.reputation-control-form input:focus,
+.reputation-control-form select:focus{border-color:#6da28f;box-shadow:0 0 0 3px rgba(65,125,105,.08)}
+.reputation-control-form .reason{grid-column:1/-1}
+.reputation-control-actions{
+  grid-column:1/-1;
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+}
+.reputation-control-actions button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+}
+.reputation-control-actions .secondary-action{
+  padding:9px 12px;
+  border:1px solid #dde5e2;
+  border-radius:10px;
+  color:#5e716b;
+  background:#fff;
+  font-size:10px;
+  font-weight:850;
+  cursor:pointer;
+}
+
+@media(max-width:900px){
+  .reputation-v22-status-grid{grid-template-columns:1fr}
+  .reputation-control-form{grid-template-columns:1fr 1fr}
+  .reputation-control-form .reason{grid-column:1/-1}
+}
+
+@media(max-width:760px){
+  .profile-white-dashboard .explorer-reputation-v22-meta{align-items:flex-start}
+  .profile-white-dashboard .explorer-reputation-v22-meta>span{max-width:100%}
+  .reputation-control-form{grid-template-columns:1fr}
+  .reputation-control-form .reason,
+  .reputation-control-actions{grid-column:auto}
+  .reputation-control-actions{flex-direction:column}
+  .reputation-control-actions button{width:100%}
+}

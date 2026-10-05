@@ -28,3 +28,24 @@ export const adminUpdatePartnerAccessSchema = z.object({
 }).refine((value) => value.role || value.status, {
   message: 'At least one partner access field is required.'
 });
+
+export const adminReputationControlSchema = z.object({
+  scoreAdjustment: z.coerce.number().int().min(-15).max(15).optional(),
+  permissionCeiling: z.enum([
+    'NEW_MEMBER',
+    'EXPLORER',
+    'CONTRIBUTOR',
+    'TRUSTED_CONTRIBUTOR',
+    'LOCAL_EXPERT'
+  ]).nullable().optional(),
+  expiresAt: z.string().datetime().nullable().optional(),
+  reason: z.string().trim().min(5).max(500),
+  clear: z.boolean().optional().default(false)
+}).refine((value) => (
+  value.clear
+  || value.scoreAdjustment !== undefined
+  || value.permissionCeiling !== undefined
+  || value.expiresAt !== undefined
+), {
+  message: 'Cần có ít nhất một thay đổi Reputation hoặc chọn clear.'
+});

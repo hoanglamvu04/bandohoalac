@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import {
+  AlertTriangle,
   BadgeCheck,
   Camera,
   ChevronRight,
   Coins,
   Crown,
+  Gauge,
   History,
   LogOut,
   MapPin,
@@ -40,6 +42,8 @@ function formatRequirement(item) {
 function historyLabel(item) {
   if (item?.type === 'CONTRIBUTION_APPROVED') return 'Đóng góp được duyệt';
   if (item?.type === 'CONTRIBUTION_REJECTED') return 'Đóng góp chưa được duyệt';
+  if (item?.type === 'ADMIN_REPUTATION_CONTROL') return 'Admin điều chỉnh Reputation';
+  if (item?.type === 'ADMIN_REPUTATION_CONTROL_CLEARED') return 'Admin gỡ điều chỉnh Reputation';
   return 'Uy tín được cập nhật';
 }
 
@@ -52,6 +56,23 @@ function permissionSummary(permissions) {
   }
   if (permissions.advancedSuggestions) return 'Ưu tiên duyệt · mở đề xuất nâng cao';
   return `Hàng chờ ${String(permissions.priorityLabel || 'tiêu chuẩn').toLowerCase()}`;
+}
+
+function confidenceLabel(band) {
+  if (band === 'HIGH') return 'Cao';
+  if (band === 'MEDIUM') return 'Trung bình';
+  return 'Đang xây dựng';
+}
+
+function freshnessLabel(state) {
+  const labels = {
+    BUILDING: 'Đang xây dựng dữ liệu',
+    ACTIVE: 'Hoạt động gần đây',
+    COOLING: 'Ít hoạt động',
+    STALE: 'Hoạt động đã cũ',
+    DORMANT: 'Lâu chưa hoạt động'
+  };
+  return labels[state] || 'Đang theo dõi';
 }
 
 export default function ExplorerProfile({
@@ -102,6 +123,9 @@ export default function ExplorerProfile({
     : [];
   const permissions = reputation?.permissions || null;
   const history = Array.isArray(reputation?.history) ? reputation.history.slice(0, 3) : [];
+  const confidence = reputation?.confidence || null;
+  const freshness = reputation?.freshness || null;
+  const stability = reputation?.stability || null;
 
   return (
     <section className="explorer-card explorer-card-light">
@@ -160,12 +184,26 @@ export default function ExplorerProfile({
         <div className="explorer-reputation-heading">
           <span>
             <ShieldCheck size={15} />
-            <b>Reputation v2.1</b>
+            <b>Reputation v2.2</b>
           </span>
           <em>
             {nextLevel ? `Tiến tới ${nextLevel.name}` : 'Bạn đã đạt cấp cao nhất'}
           </em>
         </div>
+
+        <div className="explorer-reputation-v22-meta">
+          <span className={'confidence ' + String(confidence?.band || 'LOW').toLowerCase()}>
+            <Gauge size={13} /> Confidence {Number(confidence?.score || 0)}/100 · {confidenceLabel(confidence?.band)}
+          </span>
+          <span className={'freshness ' + String(freshness?.state || 'BUILDING').toLowerCase()}>
+            {freshnessLabel(freshness?.state)}
+            {Number(freshness?.penalty || 0) > 0 ? ` · -${freshness.penalty} điểm` : ''}
+          </span>
+          {stability?.atRisk && (
+            <span className="risk"><AlertTriangle size={12} /> Cấp hiện tại cần được duy trì</span>
+          )}
+        </div>
+
         <div className="explorer-reputation-track" aria-label="Tiến độ cấp thành viên">
           <span style={{ width: `${Math.round(reputationProgress * 100)}%` }} />
         </div>
@@ -185,7 +223,7 @@ export default function ExplorerProfile({
         <div className="explorer-reputation-permission">
           <Sparkles size={14} />
           <span>{permissionSummary(permissions)}</span>
-          <em>Không cấp quyền tự duyệt</em>
+          <em>{permissions?.confidenceGated ? 'Quyền đang giới hạn theo confidence' : 'Không cấp quyền tự duyệt'}</em>
         </div>
 
         {history.length > 0 && (

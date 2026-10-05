@@ -3,8 +3,11 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle2,
+  Clock,
   Gauge,
   History,
+  RotateCcw,
+  Save,
   Search,
   ShieldCheck,
   Sparkles,
@@ -12,7 +15,15 @@ import {
   Zap
 } from 'lucide-react';
 import { getAdminUser, getAdminUsers } from '../../services/api.js';
+import { updateAdminReputationControl } from '../../services/reputationApi.js';
 import { useToast } from '../../context/ToastContext.jsx';
+
+const EMPTY_CONTROL = {
+  scoreAdjustment: '0',
+  permissionCeiling: '',
+  expiresAt: '',
+  reason: ''
+};
 
 function formatPercent(value) {
   if (value == null) return '—';
@@ -22,6 +33,8 @@ function formatPercent(value) {
 function eventLabel(item) {
   if (item?.type === 'CONTRIBUTION_APPROVED') return 'Đóng góp được duyệt';
   if (item?.type === 'CONTRIBUTION_REJECTED') return 'Đóng góp bị từ chối';
+  if (item?.type === 'ADMIN_REPUTATION_CONTROL') return 'Admin cập nhật Reputation control';
+  if (item?.type === 'ADMIN_REPUTATION_CONTROL_CLEARED') return 'Admin gỡ Reputation control';
   return 'Cập nhật uy tín';
 }
 
@@ -34,6 +47,45 @@ function flagLabel(flag) {
   return labels[flag] || flag;
 }
 
+function stabilityLabel(reason) {
+  const labels = {
+    INACTIVITY_DECAY: 'Giảm nhẹ do lâu không hoạt động',
+    LOW_CONFIDENCE_FOR_PRIVILEGES: 'Confidence chưa đủ để giữ toàn bộ quyền',
+    NEAR_LEVEL_FLOOR: 'Điểm đang sát ngưỡng tối thiểu của cấp',
+    ADMIN_ADJUSTMENT: 'Đang có điều chỉnh giảm từ Admin'
+  };
+  return labels[reason] || reason;
+}
+
+function confidenceLabel(band) {
+  if (band === 'HIGH') return 'Cao';
+  if (band === 'MEDIUM') return 'Trung bình';
+  return 'Thấp';
+}
+
+function freshnessLabel(state) {
+  const labels = {
+    BUILDING: 'Đang xây dựng',
+    ACTIVE: 'Đang hoạt động',
+    COOLING: 'Ít hoạt động',
+    STALE: 'Dữ liệu hoạt động cũ',
+    DORMANT: 'Lâu chưa hoạt động'
+  };
+  return labels[state] || state || '—';
+}
+
+function toControlForm(control) {
+  if (!control) return EMPTY_CONTROL;
+  return {
+    scoreAdjustment: String(control.scoreAdjustment ?? 0),
+    permissionCeiling: control.permissionCeiling || '',
+    expiresAt: control.expiresAt
+      ? new Date(control.expiresAt).toISOString().slice(0, 16)
+      : '',
+    reason: control.reason || ''
+  };
+}
+
 export default function AdminReputation() {
   const { showToast } = useToast();
   const [users, setUsers] = useState([]);
@@ -42,6 +94,8 @@ export default function AdminReputation() {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [controlForm, setControlForm] = useState(EMPTY_CONTROL);
+  const [controlSaving, setControlSaving] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -59,7 +113,10 @@ export default function AdminReputation() {
     if (!selectedId) return;
     setDetailLoading(true);
     getAdminUser(selectedId)
-      .then(setDetail)
+      .then((data) => {
+        setDetail(data);
+        setControlForm(toControlForm(data?.reputationInspector?.control));
+      })
       .catch((error) => showToast(error.message, 'error'))
       .finally(() => setDetailLoading(false));
   }, [selectedId]);
@@ -77,20 +134,75 @@ export default function AdminReputation() {
   const reputation = inspector?.reputation || null;
   const signals = inspector?.signals || null;
   const history = Array.isArray(inspector?.history) ? inspector.history : [];
+  const control = inspector?.control || null;
   const permissions = reputation?.permissions || {};
   const components = reputation?.components || {};
+  const confidence = reputation?.confidence || {};
+  const freshness = reputation?.freshness || {};
+  const stability = reputation?.stability || {};
+
+  async function saveControl(event) {
+    event.preventDefault();
+    if (!selectedId) return;
+    if (controlForm.reason.trim().length < 5) {
+      showToast('Nhập lý do điều chỉnh Reputation tối thiểu 5 ký tự.', 'error');
+      return;
+    }
+
+    setControlSaving(true);
+    try {
+      const updated = await updateAdminReputationControl(selectedId, {
+        scoreAdjustment: Number(controlForm.scoreAdjustment || 0),
+        permissionCeiling: controlForm.permissionCeiling || null,
+        expiresAt: controlForm.expiresAt
+          ? new Date(controlForm.expiresAt).toISOString()
+          : null,
+        reason: controlForm.reason.trim()
+      });
+      setDetail(updated);
+      setControlForm(toControlForm(updated?.reputationInspector?.control));
+      showToast('Đã cập nhật Reputation control.', 'success');
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setControlSaving(false);
+    }
+  }
+
+  async function clearControl() {
+    if (!selectedId || controlSaving) return;
+    if (controlForm.reason.trim().length < 5) {
+      showToast('Nhập lý do trước khi gỡ Reputation control.', 'error');
+      return;
+    }
+
+    setControlSaving(true);
+    try {
+      const updated = await updateAdminReputationControl(selectedId, {
+        clear: true,
+        reason: controlForm.reason.trim()
+      });
+      setDetail(updated);
+      setControlForm(EMPTY_CONTROL);
+      showToast('Đã gỡ Reputation control.', 'success');
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setControlSaving(false);
+    }
+  }
 
   return (
     <main className="admin-page reputation-inspector-page page-container">
       <section className="section-heading reputation-inspector-heading">
         <div>
-          <span className="eyebrow">REPUTATION V2.1</span>
+          <span className="eyebrow">REPUTATION V2.2</span>
           <h2>Reputation Inspector</h2>
-          <p>Giải thích điểm uy tín, quyền theo cấp, tín hiệu bất thường và lịch sử tăng giảm của từng tài khoản.</p>
+          <p>Score + Confidence + Freshness, quyền theo cấp, anti-farm và kiểm soát thủ công có audit.</p>
         </div>
         <div className="reputation-policy-note">
           <ShieldCheck size={18} />
-          <span><b>Không tự duyệt</b><small>Uy tín chỉ tăng ưu tiên kiểm duyệt.</small></span>
+          <span><b>Không tự duyệt</b><small>Confidence chỉ mở quyền mềm khi dữ liệu đủ chắc chắn.</small></span>
         </div>
       </section>
 
@@ -134,12 +246,35 @@ export default function AdminReputation() {
                 <div>
                   <small>USER #{detail.id}</small>
                   <h3>{detail.name}</h3>
-                  <span>{reputation.name}</span>
+                  <span>{reputation.name} · base {reputation.baseScore}/100</span>
                 </div>
                 <div className="reputation-inspector-score">
-                  <strong>{reputation.score}</strong><span>/100</span><small>uy tín</small>
+                  <strong>{reputation.score}</strong><span>/100</span><small>uy tín hiệu lực</small>
                 </div>
               </div>
+
+              <div className="reputation-v22-status-grid">
+                <article className={'confidence ' + String(confidence.band || 'LOW').toLowerCase()}>
+                  <Gauge size={17} />
+                  <span><small>CONFIDENCE</small><b>{confidence.score ?? 0}/100 · {confidenceLabel(confidence.band)}</b></span>
+                </article>
+                <article className={'freshness ' + String(freshness.state || 'BUILDING').toLowerCase()}>
+                  <Clock size={17} />
+                  <span><small>FRESHNESS</small><b>{freshnessLabel(freshness.state)}</b></span>
+                  <em>{Number(freshness.penalty || 0) > 0 ? `-${freshness.penalty} điểm` : 'Không decay'}</em>
+                </article>
+                <article className={stability.atRisk ? 'stability at-risk' : 'stability'}>
+                  {stability.atRisk ? <AlertTriangle size={17} /> : <CheckCircle2 size={17} />}
+                  <span><small>STABILITY</small><b>{stability.atRisk ? 'Cần duy trì' : 'Ổn định'}</b></span>
+                  <em>buffer {stability.bufferToFloor ?? 0}</em>
+                </article>
+              </div>
+
+              {Array.isArray(stability.reasons) && stability.reasons.length > 0 && (
+                <div className="reputation-stability-reasons">
+                  {stability.reasons.map((reason) => <span key={reason}>{stabilityLabel(reason)}</span>)}
+                </div>
+              )}
 
               <div className="reputation-component-grid">
                 <article><span>Chất lượng</span><b>{components.quality ?? 0}/35</b></article>
@@ -151,7 +286,7 @@ export default function AdminReputation() {
 
               <div className="reputation-inspector-grid">
                 <article className="reputation-inspector-card">
-                  <div className="reputation-card-title"><Zap size={17} /><div><b>Quyền theo Reputation</b><small>Quyền mềm, không thay role hệ thống</small></div></div>
+                  <div className="reputation-card-title"><Zap size={17} /><div><b>Quyền theo Reputation</b><small>Score xác định cấp, Confidence xác định độ mở quyền</small></div></div>
                   <div className="reputation-permission-list">
                     <span className="enabled"><CheckCircle2 size={14} /> Ưu tiên: {permissions.priorityLabel || 'Tiêu chuẩn'}</span>
                     <span className={permissions.advancedSuggestions ? 'enabled' : 'disabled'}>
@@ -165,6 +300,12 @@ export default function AdminReputation() {
                     </span>
                     <span className="disabled">× Tự duyệt: luôn tắt</span>
                   </div>
+                  {(permissions.confidenceGated || permissions.ceilingApplied) && (
+                    <div className="reputation-permission-gate">
+                      {permissions.confidenceGated && <span>Confidence đang giới hạn một phần quyền.</span>}
+                      {permissions.ceilingApplied && <span>Admin permission ceiling đang có hiệu lực.</span>}
+                    </div>
+                  )}
                 </article>
 
                 <article className="reputation-inspector-card">
@@ -172,7 +313,7 @@ export default function AdminReputation() {
                   <div className="reputation-signal-grid">
                     <span><small>24 giờ</small><b>{signals?.submissions24h ?? 0}</b><em>đóng góp</em></span>
                     <span><small>7 ngày</small><b>{signals?.submissions7d ?? 0}</b><em>đóng góp</em></span>
-                    <span><small>Từ chối 30d</small><b>{formatPercent(signals?.rejectionRate30d)}</b><em>{signals?.reviewed30d ?? 0} đã duyệt</em></span>
+                    <span><small>Từ chối 30d</small><b>{formatPercent(signals?.rejectionRate30d)}</b><em>{signals?.reviewed30d ?? 0} đã review</em></span>
                     <span><small>Cụm lặp 7d</small><b>{signals?.duplicateClusters7d ?? 0}</b><em>fingerprint</em></span>
                   </div>
                   <div className={'reputation-risk-band ' + String(signals?.riskBand || 'LOW').toLowerCase()}>
@@ -186,10 +327,71 @@ export default function AdminReputation() {
                 </article>
               </div>
 
+              <article className="reputation-inspector-card reputation-control-card">
+                <div className="reputation-card-title">
+                  <ShieldCheck size={17} />
+                  <div><b>Admin Reputation Control</b><small>Chỉ điều chỉnh có giới hạn, luôn ghi event + audit log</small></div>
+                  {control && <em>Đang có hiệu lực</em>}
+                </div>
+
+                <form className="reputation-control-form" onSubmit={saveControl}>
+                  <label>
+                    Điều chỉnh score (-15 → +15)
+                    <input
+                      type="number"
+                      min="-15"
+                      max="15"
+                      value={controlForm.scoreAdjustment}
+                      onChange={(event) => setControlForm((current) => ({ ...current, scoreAdjustment: event.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    Trần quyền
+                    <select
+                      value={controlForm.permissionCeiling}
+                      onChange={(event) => setControlForm((current) => ({ ...current, permissionCeiling: event.target.value }))}
+                    >
+                      <option value="">Không giới hạn</option>
+                      <option value="NEW_MEMBER">Thành viên mới</option>
+                      <option value="EXPLORER">Người khám phá</option>
+                      <option value="CONTRIBUTOR">Người đóng góp</option>
+                      <option value="TRUSTED_CONTRIBUTOR">Người đóng góp tin cậy</option>
+                      <option value="LOCAL_EXPERT">Chuyên gia địa phương</option>
+                    </select>
+                  </label>
+                  <label>
+                    Hết hạn
+                    <input
+                      type="datetime-local"
+                      value={controlForm.expiresAt}
+                      onChange={(event) => setControlForm((current) => ({ ...current, expiresAt: event.target.value }))}
+                    />
+                  </label>
+                  <label className="reason">
+                    Lý do
+                    <input
+                      value={controlForm.reason}
+                      onChange={(event) => setControlForm((current) => ({ ...current, reason: event.target.value }))}
+                      placeholder="Ví dụ: giới hạn tạm thời trong quá trình kiểm tra dữ liệu..."
+                    />
+                  </label>
+                  <div className="reputation-control-actions">
+                    <button className="primary-action" type="submit" disabled={controlSaving}>
+                      <Save size={15} /> {controlSaving ? 'Đang lưu...' : 'Lưu control'}
+                    </button>
+                    {control && (
+                      <button type="button" className="secondary-action" disabled={controlSaving} onClick={clearControl}>
+                        <RotateCcw size={15} /> Gỡ control
+                      </button>
+                    )}
+                  </div>
+                </form>
+              </article>
+
               <article className="reputation-inspector-card reputation-history-card">
-                <div className="reputation-card-title"><History size={17} /><div><b>Lịch sử Reputation</b><small>Score trước/sau và nguyên nhân thay đổi</small></div></div>
+                <div className="reputation-card-title"><History size={17} /><div><b>Lịch sử Reputation</b><small>Score trước/sau, confidence và nguyên nhân thay đổi</small></div></div>
                 {!history.length ? (
-                  <div className="reputation-history-empty"><Sparkles size={18} /> Lịch sử sẽ bắt đầu ghi từ Reputation v2.1.</div>
+                  <div className="reputation-history-empty"><Sparkles size={18} /> Chưa có biến động Reputation được ghi nhận.</div>
                 ) : (
                   <div className="reputation-admin-history">
                     {history.map((item) => (

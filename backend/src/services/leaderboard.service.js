@@ -16,6 +16,7 @@ function mapRows(rows) {
       placesCount: Number(row.places_count) || 0,
       photosCount: Number(row.photos_count) || 0,
       reputationScore: reputation.score,
+      reputationConfidence: reputation.confidence?.score || 0,
       reputationLevel: {
         code: reputation.code,
         name: reputation.name
@@ -33,7 +34,15 @@ export async function getLeaderboard(limit = 20, period = 'month') {
       `WITH quality_points AS (
          SELECT user_id, COALESCE(SUM(amount), 0)::int AS points
          FROM points_transactions
-         WHERE contribution_id IS NOT NULL AND amount > 0
+         WHERE contribution_id IS NOT NULL
+           AND amount > 0
+           AND reason LIKE '%_QUALITY_APPROVED'
+         GROUP BY user_id
+       ),
+       last_reviews AS (
+         SELECT user_id, MAX(reviewed_at) AS last_reviewed_at
+         FROM contributions
+         WHERE status IN ('APPROVED', 'REJECTED')
          GROUP BY user_id
        )
        SELECT
@@ -41,6 +50,9 @@ export async function getLeaderboard(limit = 20, period = 'month') {
          u.approved_count, u.rejected_count, u.created_at,
          u.points_total AS points,
          COALESCE(qp.points, 0) AS quality_points,
+         lr.last_reviewed_at,
+         COALESCE(rc.score_adjustment, 0)::int AS score_adjustment,
+         rc.permission_ceiling,
          (SELECT COUNT(*)::int
           FROM places
           WHERE created_by = u.id AND status = 'PUBLISHED') AS places_count,
@@ -49,6 +61,10 @@ export async function getLeaderboard(limit = 20, period = 'month') {
           WHERE uploaded_by = u.id) AS photos_count
        FROM users u
        LEFT JOIN quality_points qp ON qp.user_id = u.id
+       LEFT JOIN last_reviews lr ON lr.user_id = u.id
+       LEFT JOIN reputation_controls rc
+         ON rc.user_id = u.id
+        AND (rc.expires_at IS NULL OR rc.expires_at > NOW())
        WHERE u.role IN ('USER', 'CONTRIBUTOR', 'CTV', 'MODERATOR', 'ADMIN')
        ORDER BY u.approved_count DESC, u.trust_score DESC, u.points_total DESC, u.id ASC
        LIMIT $1`,
@@ -59,6 +75,7 @@ export async function getLeaderboard(limit = 20, period = 'month') {
       .map((row) => ({ row, reputation: reputationFromRow(row) }))
       .sort((a, b) =>
         b.reputation.score - a.reputation.score ||
+        b.reputation.confidence.score - a.reputation.confidence.score ||
         Number(b.row.approved_count || 0) - Number(a.row.approved_count || 0) ||
         Number(b.row.quality_points || 0) - Number(a.row.quality_points || 0) ||
         Number(b.row.points_total || 0) - Number(a.row.points_total || 0) ||
@@ -83,7 +100,15 @@ export async function getLeaderboard(limit = 20, period = 'month') {
      quality_points AS (
        SELECT user_id, COALESCE(SUM(amount), 0)::int AS points
        FROM points_transactions
-       WHERE contribution_id IS NOT NULL AND amount > 0
+       WHERE contribution_id IS NOT NULL
+         AND amount > 0
+         AND reason LIKE '%_QUALITY_APPROVED'
+       GROUP BY user_id
+     ),
+     last_reviews AS (
+       SELECT user_id, MAX(reviewed_at) AS last_reviewed_at
+       FROM contributions
+       WHERE status IN ('APPROVED', 'REJECTED')
        GROUP BY user_id
      ),
      month_places AS (
@@ -106,11 +131,18 @@ export async function getLeaderboard(limit = 20, period = 'month') {
        u.approved_count, u.rejected_count, u.created_at,
        COALESCE(mp.points, 0) AS points,
        COALESCE(qp.points, 0) AS quality_points,
+       lr.last_reviewed_at,
+       COALESCE(rc.score_adjustment, 0)::int AS score_adjustment,
+       rc.permission_ceiling,
        COALESCE(mpl.count, 0) AS places_count,
        COALESCE(mph.count, 0) AS photos_count
      FROM users u
      LEFT JOIN month_points mp ON mp.user_id = u.id
      LEFT JOIN quality_points qp ON qp.user_id = u.id
+     LEFT JOIN last_reviews lr ON lr.user_id = u.id
+     LEFT JOIN reputation_controls rc
+       ON rc.user_id = u.id
+      AND (rc.expires_at IS NULL OR rc.expires_at > NOW())
      LEFT JOIN month_places mpl ON mpl.user_id = u.id
      LEFT JOIN month_photos mph ON mph.user_id = u.id
      WHERE u.role IN ('USER', 'CONTRIBUTOR', 'CTV', 'MODERATOR', 'ADMIN')
