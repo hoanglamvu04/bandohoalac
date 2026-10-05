@@ -17,6 +17,5 @@ CREATE TABLE IF NOT EXISTS reputation_controls (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_reputation_controls_active
-  ON reputation_controls (expires_at)
-  WHERE expires_at IS NULL OR expires_at > NOW();
+CREATE INDEX IF NOT EXISTS idx_reputation_controls_expires
+  ON reputation_controls (expires_at);
