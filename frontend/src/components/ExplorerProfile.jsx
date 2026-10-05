@@ -1,14 +1,18 @@
+import { useEffect, useState } from 'react';
 import {
   BadgeCheck,
   Camera,
   ChevronRight,
   Coins,
   Crown,
+  History,
   LogOut,
   MapPin,
   ShieldCheck,
+  Sparkles,
   Star
 } from 'lucide-react';
+import { getMyReputationSummary } from '../services/reputationApi.js';
 
 function formatRequirement(item) {
   if (!item) return '';
@@ -33,12 +37,43 @@ function formatRequirement(item) {
   return `${item.current}/${item.target} ${item.label}`;
 }
 
+function historyLabel(item) {
+  if (item?.type === 'CONTRIBUTION_APPROVED') return 'Đóng góp được duyệt';
+  if (item?.type === 'CONTRIBUTION_REJECTED') return 'Đóng góp chưa được duyệt';
+  return 'Uy tín được cập nhật';
+}
+
+function permissionSummary(permissions) {
+  if (!permissions) return 'Hàng chờ kiểm duyệt tiêu chuẩn';
+  if (permissions.expeditedReview) {
+    return permissions.sensitiveCorrections
+      ? 'Ưu tiên duyệt cao · mở đề xuất chỉnh sửa nâng cao'
+      : 'Ưu tiên duyệt cao';
+  }
+  if (permissions.advancedSuggestions) return 'Ưu tiên duyệt · mở đề xuất nâng cao';
+  return `Hàng chờ ${String(permissions.priorityLabel || 'tiêu chuẩn').toLowerCase()}`;
+}
+
 export default function ExplorerProfile({
   user,
   stats,
   onLogout,
   onOpenStat
 }) {
+  const [privateReputation, setPrivateReputation] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getMyReputationSummary()
+      .then((data) => {
+        if (!cancelled) setPrivateReputation(data?.reputation || null);
+      })
+      .catch(() => {
+        if (!cancelled) setPrivateReputation(null);
+      });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
   const initials = (user?.name || '?')
     .split(' ')
     .map((word) => word[0])
@@ -46,7 +81,7 @@ export default function ExplorerProfile({
     .join('')
     .toUpperCase();
 
-  const reputation = user?.reputation || user?.explorerLevel || null;
+  const reputation = privateReputation || user?.reputation || user?.explorerLevel || null;
   const rawLevelLabel = reputation?.name;
   const localizedLevelLabels = {
     'Trusted Explorer': 'Người đóng góp tin cậy',
@@ -65,6 +100,8 @@ export default function ExplorerProfile({
   const blockers = Array.isArray(reputation?.blockers)
     ? reputation.blockers.slice(0, 3)
     : [];
+  const permissions = reputation?.permissions || null;
+  const history = Array.isArray(reputation?.history) ? reputation.history.slice(0, 3) : [];
 
   return (
     <section className="explorer-card explorer-card-light">
@@ -123,7 +160,7 @@ export default function ExplorerProfile({
         <div className="explorer-reputation-heading">
           <span>
             <ShieldCheck size={15} />
-            <b>Reputation v2</b>
+            <b>Reputation v2.1</b>
           </span>
           <em>
             {nextLevel ? `Tiến tới ${nextLevel.name}` : 'Bạn đã đạt cấp cao nhất'}
@@ -144,6 +181,34 @@ export default function ExplorerProfile({
             <span className="explorer-reputation-ready">Đã đủ mọi điều kiện cấp hiện tại</span>
           )}
         </div>
+
+        <div className="explorer-reputation-permission">
+          <Sparkles size={14} />
+          <span>{permissionSummary(permissions)}</span>
+          <em>Không cấp quyền tự duyệt</em>
+        </div>
+
+        {history.length > 0 && (
+          <div className="explorer-reputation-history">
+            <div className="explorer-reputation-history-title">
+              <History size={14} />
+              <b>Lịch sử uy tín gần đây</b>
+            </div>
+            <div className="explorer-reputation-history-list">
+              {history.map((item) => (
+                <div key={item.id}>
+                  <span>
+                    <b>{historyLabel(item)}</b>
+                    <small>{new Date(item.createdAt).toLocaleDateString('vi-VN')}</small>
+                  </span>
+                  <em className={Number(item.delta) >= 0 ? 'positive' : 'negative'}>
+                    {Number(item.delta) > 0 ? '+' : ''}{Number(item.delta)}
+                  </em>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="explorer-stats explorer-stats-light">
