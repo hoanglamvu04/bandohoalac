@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateReputation } from '../src/services/reputation.service.js';
+import {
+  calculateReputation,
+  getReputationPermissions
+} from '../src/services/reputation.service.js';
 
 const NOW = new Date('2026-10-05T00:00:00Z');
 
@@ -85,4 +88,51 @@ test('reputation score is always capped at 100', () => {
     createdAt: createdDaysAgo(9999)
   }, NOW);
   assert.equal(reputation.score, 100);
+});
+
+test('same activity volume produces different reputation when contribution quality differs', () => {
+  const lowQuality = calculateReputation({
+    qualityPoints: 80,
+    approvedCount: 30,
+    rejectedCount: 3,
+    trustScore: 80,
+    createdAt: createdDaysAgo(120)
+  }, NOW);
+  const highQuality = calculateReputation({
+    qualityPoints: 500,
+    approvedCount: 30,
+    rejectedCount: 3,
+    trustScore: 80,
+    createdAt: createdDaysAgo(120)
+  }, NOW);
+
+  assert.ok(highQuality.score > lowQuality.score);
+  assert.ok(highQuality.components.quality > lowQuality.components.quality);
+});
+
+test('Reputation v2.1 grants review priority without ever granting self approval', () => {
+  const standard = getReputationPermissions('NEW_MEMBER');
+  const trusted = getReputationPermissions('TRUSTED_CONTRIBUTOR');
+  const expert = getReputationPermissions('LOCAL_EXPERT');
+
+  assert.equal(standard.expeditedReview, false);
+  assert.equal(trusted.expeditedReview, true);
+  assert.ok(expert.moderationPriority > trusted.moderationPriority);
+  assert.equal(standard.selfApproval, false);
+  assert.equal(trusted.selfApproval, false);
+  assert.equal(expert.selfApproval, false);
+});
+
+test('calculated reputation exposes v2.1 permissions', () => {
+  const reputation = calculateReputation({
+    qualityPoints: 420,
+    approvedCount: 28,
+    rejectedCount: 4,
+    trustScore: 78,
+    createdAt: createdDaysAgo(90)
+  }, NOW);
+
+  assert.equal(reputation.version, '2.1');
+  assert.equal(reputation.permissions.priorityLabel, 'Ưu tiên cao');
+  assert.equal(reputation.permissions.selfApproval, false);
 });
