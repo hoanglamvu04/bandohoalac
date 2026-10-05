@@ -19,6 +19,7 @@ import {
 
 const router = Router();
 
+router.get('/', getPublicApiMeta);
 router.get('/meta', getPublicApiMeta);
 router.get('/openapi.json', getPublicOpenApi);
 router.get('/categories', getPublicCategories);
