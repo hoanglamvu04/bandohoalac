@@ -6,14 +6,19 @@ import Footer from './components/Footer.jsx';
 
 export default function App() {
   const location = useLocation();
-  const isMapRoute = location.pathname === '/map';
+  const isEmbedRoute = location.pathname === '/embed';
+  const isMapRoute = location.pathname === '/map' || isEmbedRoute;
   const isProfileRoute = location.pathname === '/profile';
   const isPartnerScannerRoute = location.pathname === '/partner/scanner';
 
   useEffect(() => {
     document.body.classList.toggle('map-route-active', isMapRoute);
-    return () => document.body.classList.remove('map-route-active');
-  }, [isMapRoute]);
+    document.body.classList.toggle('map-embed-active', isEmbedRoute);
+    return () => {
+      document.body.classList.remove('map-route-active');
+      document.body.classList.remove('map-embed-active');
+    };
+  }, [isMapRoute, isEmbedRoute]);
 
   useLayoutEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
@@ -94,8 +99,6 @@ export default function App() {
     const root = document.documentElement;
     const previousInlineBehavior = root.style.scrollBehavior;
 
-    // The global stylesheet enables smooth scrolling. Temporarily disable it
-    // so route changes start at the top before the new page is painted.
     root.style.scrollBehavior = 'auto';
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     root.scrollTop = 0;
@@ -115,21 +118,23 @@ export default function App() {
     <div className={[
       'app-shell',
       isMapRoute ? 'map-app-shell' : '',
+      isEmbedRoute ? 'map-embed-shell' : '',
       isProfileRoute ? 'profile-app-shell' : '',
       isPartnerScannerRoute ? 'partner-scanner-app-shell' : ''
     ].filter(Boolean).join(' ')}>
-      {!isPartnerScannerRoute && <Navbar />}
+      {!isPartnerScannerRoute && !isEmbedRoute && <Navbar />}
 
       <main className={[
         'app-main',
         isMapRoute ? 'map-app-main' : '',
+        isEmbedRoute ? 'map-embed-main' : '',
         isPartnerScannerRoute ? 'partner-scanner-app-main' : ''
       ].filter(Boolean).join(' ')}>
         <Outlet />
       </main>
 
-      {!isMapRoute && !isPartnerScannerRoute && <Footer />}
-      {!isPartnerScannerRoute && <BottomNav />}
+      {!isMapRoute && !isPartnerScannerRoute && !isEmbedRoute && <Footer />}
+      {!isPartnerScannerRoute && !isEmbedRoute && <BottomNav />}
     </div>
   );
 }
