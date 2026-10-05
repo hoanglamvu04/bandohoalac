@@ -8,6 +8,7 @@ import {
   getContributionForUpdate, markContributionReviewed, recordChange, getContributionById
 } from './contribution.service.js';
 import { awardPointsForApproval, penalizeRejection } from './points.service.js';
+import { evaluateContributionScore } from './contributionScoring.service.js';
 import { findUserById } from './user.service.js';
 import { deleteStoredAssets } from './storage.service.js';
 import { createNotification } from './notification.service.js';
@@ -162,24 +163,37 @@ async function applyContributionToPlace(contribution, client) {
   return { placeId };
 }
 
-export async function approveContribution(contributionId, moderatorId) {
+export async function approveContribution(contributionId, moderatorId, review = {}) {
   return withTransaction(async (client) => {
     const contribution = await getContributionForUpdate(contributionId, client);
     if (!contribution) throw new AppError('Contribution not found.', 404);
     if (contribution.status !== 'PENDING') throw new AppError('Contribution has already been reviewed.', 409);
 
+    const score = evaluateContributionScore(review.scoreBreakdown);
+    const scoreNote = String(review.scoreNote || '').trim().slice(0, 1000) || null;
     const { placeId } = await applyContributionToPlace(contribution, client);
+
+    const moderation = {
+      pointsAwarded: score.total,
+      maxPoints: score.maxPoints,
+      scoreBreakdown: score.breakdown,
+      scoreNote,
+      scoredBy: moderatorId,
+      scoredAt: new Date().toISOString()
+    };
 
     await markContributionReviewed(contributionId, {
       status: 'APPROVED',
       reviewedBy: moderatorId,
-      placeId
+      placeId,
+      moderation
     }, client);
 
     const points = await awardPointsForApproval({
       userId: contribution.user_id,
       contributionId,
-      type: contribution.type
+      type: contribution.type,
+      amount: score.total
     }, client);
 
     const missionAwards = await applyMissionBonusesForContribution({
@@ -194,17 +208,23 @@ export async function approveContribution(contributionId, moderatorId) {
       0
     );
 
+    let notificationMessage = `Đóng góp của bạn đã được duyệt: +${points}/${score.maxPoints} điểm chất lượng.`;
+    if (missionBonus > 0) {
+      notificationMessage += ` Thưởng nhiệm vụ: +${missionBonus} điểm.`;
+    }
+
     await createNotification({
       userId: contribution.user_id,
       type: 'CONTRIBUTION_APPROVED',
       title: 'Đóng góp đã được duyệt',
-      message: points + missionBonus > 0
-        ? 'Đóng góp của bạn đã được duyệt và cộng +' + (points + missionBonus) + ' điểm.'
-        : 'Đóng góp của bạn đã được duyệt.',
+      message: notificationMessage,
       data: {
         contributionId,
         placeId,
         points,
+        maxPoints: score.maxPoints,
+        scoreBreakdown: score.breakdown,
+        scoreNote,
         missionBonus,
         missionAwards,
         contributionType: contribution.type
@@ -246,9 +266,6 @@ export async function rejectContribution(contributionId, moderatorId, reason) {
     return getContributionById(contributionId, client);
   });
 
-  // Rejected submissions should not consume Cloudinary/local storage forever.
-  // Cleanup happens after the DB transaction so a storage outage cannot roll
-  // back the moderation decision.
   const assets = reviewed?.payload?.photoAssets;
   if (Array.isArray(assets) && assets.length) {
     await deleteStoredAssets(assets);
