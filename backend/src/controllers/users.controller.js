@@ -1,6 +1,7 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
 import { findUserById, getUserBadges, getRecentActivity, toPublicUser } from '../services/user.service.js';
+import { getUserReputation } from '../services/reputation.service.js';
 import {
   countPublishedPlacesByUser,
   countPhotosByUser,
@@ -19,27 +20,33 @@ export const getProfile = asyncHandler(async (req, res) => {
     badges,
     recentActivity,
     contributedPlaces,
-    contributedPhotos
+    contributedPhotos,
+    reputation
   ] = await Promise.all([
     countPublishedPlacesByUser(userId),
     countPhotosByUser(userId),
     getUserBadges(userId),
     getRecentActivity(userId),
     listPublishedPlacesByUser(userId),
-    listPhotosByUser(userId)
+    listPhotosByUser(userId),
+    getUserReputation(userId)
   ]);
 
-  const totalReviewed = user.approved_count + user.rejected_count;
+  const totalReviewed = Number(user.approved_count || 0) + Number(user.rejected_count || 0);
   const approvalRate = totalReviewed > 0
-    ? Number((user.approved_count / totalReviewed).toFixed(2))
+    ? Number((Number(user.approved_count || 0) / totalReviewed).toFixed(2))
     : null;
 
   res.json({
-    user: toPublicUser(user),
+    user: toPublicUser(user, reputation),
     stats: {
       placesContributed: placesCount,
       photosContributed: photosCount,
-      approvalRate
+      approvalRate,
+      approvedContributions: Number(user.approved_count || 0),
+      rejectedContributions: Number(user.rejected_count || 0),
+      qualityPoints: Number(reputation?.metrics?.qualityPoints || 0),
+      reputationScore: Number(reputation?.score || 0)
     },
     badges,
     recentActivity,
