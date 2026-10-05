@@ -4,6 +4,7 @@ import {
   Camera,
   KeyRound,
   MapPin,
+  ShieldCheck,
   Trophy,
   UsersRound
 } from 'lucide-react';
@@ -72,7 +73,7 @@ export default function Leaderboard() {
           <h1>Những người đang cùng xây bản đồ Hòa Lạc.</h1>
 
           <p className="community-hero-copy">
-            Mỗi ảnh thật, cập nhật chính xác và địa điểm mới đều giúp Hola Maps hữu ích hơn.
+            Điểm thưởng ghi nhận hoạt động. Uy tín ghi nhận chất lượng, độ chính xác và đóng góp bền vững.
           </p>
 
           <div className="community-values" aria-label="Giá trị cộng đồng">
@@ -87,8 +88,8 @@ export default function Leaderboard() {
             <div className="community-value">
               <span className="community-value-icon"><UsersRound size={22} /></span>
               <span>
-                <b>Kết nối cộng đồng</b>
-                <span>Cùng xây dựng Hòa Lạc</span>
+                <b>Danh tiếng minh bạch</b>
+                <span>Lên cấp bằng chất lượng thật</span>
               </span>
             </div>
 
@@ -96,7 +97,7 @@ export default function Leaderboard() {
               <span className="community-value-icon"><KeyRound size={22} /></span>
               <span>
                 <b>Bản đồ hữu ích hơn</b>
-                <span>Cho mọi người khám phá</span>
+                <span>Ưu tiên dữ liệu đáng tin cậy</span>
               </span>
             </div>
           </div>
@@ -113,8 +114,12 @@ export default function Leaderboard() {
                 <Trophy size={28} strokeWidth={2.25} />
               </span>
               <div>
-                <h2>Thành viên nổi bật</h2>
-                <p>Những thành viên đóng góp tích cực nhất cho bản đồ Hòa Lạc</p>
+                <h2>{period === 'all' ? 'Bảng uy tín cộng đồng' : 'Thành viên nổi bật tháng này'}</h2>
+                <p>
+                  {period === 'all'
+                    ? 'Xếp hạng theo Reputation v2, không dựa riêng vào tổng điểm.'
+                    : 'Xếp hạng theo hoạt động đóng góp trong tháng hiện tại.'}
+                </p>
               </div>
             </div>
 
@@ -132,12 +137,12 @@ export default function Leaderboard() {
                   className={period === 'all' ? 'active' : ''}
                   onClick={() => setPeriod('all')}
                 >
-                  Tất cả
+                  Uy tín
                 </button>
               </div>
-              <div className="community-period" aria-label={period === 'month' ? periodLabel : 'Tất cả thời gian'}>
-                <CalendarDays size={17} />
-                <span>{period === 'month' ? periodLabel : 'Tất cả thời gian'}</span>
+              <div className="community-period" aria-label={period === 'month' ? periodLabel : 'Reputation v2'}>
+                {period === 'all' ? <ShieldCheck size={17} /> : <CalendarDays size={17} />}
+                <span>{period === 'month' ? periodLabel : 'Reputation v2'}</span>
               </div>
             </div>
           </header>
@@ -145,7 +150,7 @@ export default function Leaderboard() {
           <div className="community-table-head" aria-hidden="true">
             <span>#</span>
             <span>Thành viên</span>
-            <span>Điểm</span>
+            <span>{period === 'all' ? 'Uy tín' : 'Điểm tháng'}</span>
           </div>
 
           {loading && (
@@ -171,6 +176,9 @@ export default function Leaderboard() {
                 const placesCount = Number(person.placesCount) || 0;
                 const photosCount = Number(person.photosCount) || 0;
                 const points = Number(person.points) || 0;
+                const allTimePoints = Number(person.allTimePoints) || 0;
+                const reputationScore = Number(person.reputationScore) || 0;
+                const levelName = person.reputationLevel?.name || 'Thành viên mới';
 
                 return (
                   <article
@@ -185,15 +193,25 @@ export default function Leaderboard() {
 
                     <div className="community-person">
                       <b>{person.name}</b>
+                      <span className="community-reputation-level">
+                        <ShieldCheck size={11} /> {levelName}
+                      </span>
                       <div className="community-person-meta">
                         <span><MapPin size={14} /> {placesCount} địa điểm</span>
                         <span><Camera size={14} /> {photosCount} ảnh</span>
+                        {period === 'all' && (
+                          <span className="community-quality-points">
+                            {allTimePoints.toLocaleString('vi-VN')} điểm thưởng
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    <strong className="community-score">
-                      {points.toLocaleString('vi-VN')}
-                      <small>điểm</small>
+                    <strong className={period === 'all' ? 'community-score reputation-score' : 'community-score'}>
+                      {period === 'all'
+                        ? reputationScore
+                        : points.toLocaleString('vi-VN')}
+                      <small>{period === 'all' ? '/100 uy tín' : 'điểm'}</small>
                     </strong>
                   </article>
                 );
