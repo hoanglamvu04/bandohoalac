@@ -4,8 +4,12 @@ const LIST_SELECT = `
   SELECT
     ct.id, ct.user_id, ct.place_id, ct.type, ct.status, ct.payload,
     ct.reject_reason, ct.reviewed_by, ct.reviewed_at, ct.created_at, ct.updated_at,
+    ct.risk_score, ct.risk_flags, ct.fingerprint,
     u.name AS user_name, u.email AS user_email,
     p.name AS place_name,
+    rv.name AS reviewer_name, rv.role AS reviewer_role,
+    rv.ctv_level AS reviewer_ctv_level, rv.ctv_trust_score AS reviewer_ctv_trust_score,
+    cma.verdict AS ctv_audit_verdict, cma.note AS ctv_audit_note,
     (
       SELECT COUNT(*)::int
       FROM road_status_confirmations rc
@@ -19,6 +23,8 @@ const LIST_SELECT = `
   FROM contributions ct
   JOIN users u ON u.id = ct.user_id
   LEFT JOIN places p ON p.id = ct.place_id
+  LEFT JOIN users rv ON rv.id = ct.reviewed_by
+  LEFT JOIN ctv_moderation_audits cma ON cma.contribution_id = ct.id
 `;
 
 function mapRow(row) {
@@ -36,6 +42,16 @@ function mapRow(row) {
     moderation: row.payload?.moderation || null,
     rejectReason: row.reject_reason,
     reviewedBy: row.reviewed_by,
+    reviewerName: row.reviewer_name || null,
+    reviewerRole: row.reviewer_role || null,
+    reviewerCtvLevel: row.reviewer_ctv_level ? Number(row.reviewer_ctv_level) : null,
+    reviewerCtvTrustScore: row.reviewer_ctv_trust_score !== null && row.reviewer_ctv_trust_score !== undefined
+      ? Number(row.reviewer_ctv_trust_score)
+      : null,
+    ctvAuditVerdict: row.ctv_audit_verdict || null,
+    ctvAuditNote: row.ctv_audit_note || null,
+    riskScore: Number(row.risk_score || 0),
+    riskFlags: Array.isArray(row.risk_flags) ? row.risk_flags : [],
     reviewedAt: row.reviewed_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -44,12 +60,29 @@ function mapRow(row) {
   };
 }
 
-export async function createContribution({ userId, placeId, type, payload }, client = pool) {
+export async function createContribution({
+  userId,
+  placeId,
+  type,
+  payload,
+  riskScore = 0,
+  riskFlags = [],
+  fingerprint = null
+}, client = pool) {
   const { rows } = await client.query(
-    `INSERT INTO contributions (user_id, place_id, type, payload)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO contributions (
+       user_id, place_id, type, payload, risk_score, risk_flags, fingerprint
+     ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
      RETURNING id`,
-    [userId, placeId || null, type, JSON.stringify(payload || {})]
+    [
+      userId,
+      placeId || null,
+      type,
+      JSON.stringify(payload || {}),
+      Math.max(0, Math.min(100, Number(riskScore) || 0)),
+      JSON.stringify(riskFlags || []),
+      fingerprint || null
+    ]
   );
   return rows[0].id;
 }
@@ -81,7 +114,7 @@ export async function listContributions({ status, limit = 50, offset = 0 } = {})
   }
   params.push(limit, offset);
   const { rows } = await pool.query(
-    `${LIST_SELECT} ${where} ORDER BY ct.created_at ASC LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    `${LIST_SELECT} ${where} ORDER BY ct.risk_score DESC, ct.created_at ASC LIMIT $${params.length - 1} OFFSET $${params.length}`,
     params
   );
   return rows.map(mapRow);
@@ -120,7 +153,11 @@ export async function recordChange(contributionId, field, oldValue, newValue, cl
   await client.query(
     `INSERT INTO contribution_changes (contribution_id, field, old_value, new_value)
      VALUES ($1, $2, $3, $4)`,
-    [contributionId, field, oldValue === undefined || oldValue === null ? null : String(oldValue),
-      newValue === undefined || newValue === null ? null : String(newValue)]
+    [
+      contributionId,
+      field,
+      oldValue === undefined || oldValue === null ? null : String(oldValue),
+      newValue === undefined || newValue === null ? null : String(newValue)
+    ]
   );
 }
