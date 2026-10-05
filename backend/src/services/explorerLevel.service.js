@@ -1,28 +1,12 @@
-export const EXPLORER_LEVELS = [
-  { code: 'EXPLORER', name: 'Explorer', minPoints: 0, nextPoints: 100 },
-  { code: 'LOCAL_EXPLORER', name: 'Local Explorer', minPoints: 100, nextPoints: 500 },
-  { code: 'TRUSTED_EXPLORER', name: 'Trusted Explorer', minPoints: 500, nextPoints: 1500 },
-  { code: 'HOA_LAC_EXPERT', name: 'Hòa Lạc Expert', minPoints: 1500, nextPoints: 5000 },
-  { code: 'HOA_LAC_INSIDER', name: 'Hòa Lạc Insider', minPoints: 5000, nextPoints: null }
-];
+import { calculateReputation, REPUTATION_LEVELS } from './reputation.service.js';
 
-export function getExplorerLevel(points = 0) {
-  const total = Math.max(Number(points) || 0, 0);
-  const current = [...EXPLORER_LEVELS]
-    .reverse()
-    .find((level) => total >= level.minPoints) || EXPLORER_LEVELS[0];
+// Backward-compatible exports. Member levels are now Reputation v2 levels,
+// not reward-point thresholds.
+export const EXPLORER_LEVELS = REPUTATION_LEVELS;
 
-  const next = EXPLORER_LEVELS.find((level) => level.minPoints > total) || null;
-  const span = next ? Math.max(next.minPoints - current.minPoints, 1) : 1;
-  const progress = next
-    ? Math.min(Math.max((total - current.minPoints) / span, 0), 1)
-    : 1;
-
-  return {
-    ...current,
-    points: total,
-    nextLevel: next ? { code: next.code, name: next.name, minPoints: next.minPoints } : null,
-    pointsToNext: next ? Math.max(next.minPoints - total, 0) : 0,
-    progress: Number(progress.toFixed(4))
-  };
+export function getExplorerLevel(metrics = {}) {
+  if (typeof metrics === 'number') {
+    return calculateReputation({ qualityPoints: metrics });
+  }
+  return calculateReputation(metrics || {});
 }
