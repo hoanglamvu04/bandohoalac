@@ -10,6 +10,10 @@ import {
   buildContributionFingerprint,
   evaluateContributionRisk
 } from '../services/contributionTrust.service.js';
+import {
+  getReputationHistory,
+  getUserReputation
+} from '../services/reputation.service.js';
 
 export const create = asyncHandler(async (req, res) => {
   const { type, placeId, location, place, reason, severity, expiresHours } = req.body;
@@ -68,10 +72,14 @@ export const create = asyncHandler(async (req, res) => {
       fingerprint
     });
 
+    const reputation = await getUserReputation(req.user.id);
+
     res.status(201).json({
       id: contributionId,
       status: 'PENDING',
       riskBand: risk.band,
+      reviewPriority: reputation?.permissions?.priorityLabel || 'Tiêu chuẩn',
+      expeditedReview: Boolean(reputation?.permissions?.expeditedReview),
       message: isRoadStatus
         ? 'Đã ghi nhận tình trạng. Báo cáo cộng đồng sẽ tự hết hạn nếu không còn hiệu lực.'
         : 'Đóng góp đã được ghi nhận và đang chờ duyệt.'
@@ -85,4 +93,14 @@ export const create = asyncHandler(async (req, res) => {
 export const listMine = asyncHandler(async (req, res) => {
   const items = await listContributionsByUser(req.user.id);
   res.json({ items });
+});
+
+export const getMyReputation = asyncHandler(async (req, res) => {
+  const [reputation, history] = await Promise.all([
+    getUserReputation(req.user.id),
+    getReputationHistory(req.user.id, { limit: 8 })
+  ]);
+
+  if (!reputation) throw new AppError('User not found.', 404);
+  res.json({ reputation: { ...reputation, history } });
 });
