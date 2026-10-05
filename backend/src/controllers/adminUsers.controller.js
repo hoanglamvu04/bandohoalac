@@ -8,6 +8,7 @@ import {
   updateAdminUser,
   updateAdminUserPartnerAccess
 } from '../services/adminUser.service.js';
+import { updateReputationControl } from '../services/reputation.service.js';
 import { auditContextFromRequest, writeAuditLog } from '../services/audit.service.js';
 
 export const listUsersAdmin = asyncHandler(async (req, res) => {
@@ -83,6 +84,48 @@ export const adjustUserWalletAdmin = asyncHandler(async (req, res) => {
   res.json(item);
 });
 
+export const updateUserReputationControlAdmin = asyncHandler(async (req, res) => {
+  const userId = Number(req.params.id);
+  const existing = await getAdminUser(userId);
+  if (!existing) throw new AppError('User not found.', 404);
+
+  if (
+    Number(req.user.id) === userId
+    && !req.body.clear
+    && Number(req.body.scoreAdjustment || 0) > 0
+  ) {
+    throw new AppError('Admin không thể tự cộng điểm Reputation cho chính mình.', 400);
+  }
+
+  const result = await updateReputationControl({
+    userId,
+    adminId: req.user.id,
+    scoreAdjustment: req.body.scoreAdjustment ?? 0,
+    permissionCeiling: req.body.permissionCeiling ?? null,
+    expiresAt: req.body.expiresAt ?? null,
+    reason: req.body.reason,
+    clear: Boolean(req.body.clear)
+  });
+  if (!result) throw new AppError('User not found.', 404);
+
+  const item = await getAdminUser(userId);
+
+  await writeAuditLog({
+    actorUserId: req.user.id,
+    action: req.body.clear ? 'ADMIN_REPUTATION_CONTROL_CLEARED' : 'ADMIN_REPUTATION_CONTROL_UPDATED',
+    entityType: 'USER',
+    entityId: userId,
+    metadata: {
+      before: existing.reputationInspector?.reputation || null,
+      after: result.reputation,
+      control: result.control,
+      reason: req.body.reason
+    },
+    ...auditContextFromRequest(req)
+  });
+
+  res.json(item);
+});
 
 export const assignPartnerAccessAdmin = asyncHandler(async (req, res) => {
   const userId = Number(req.params.id);
