@@ -193,9 +193,14 @@ export function publicApiMeta() {
       'geojson',
       'nearby',
       'categories',
-      'optimized-images'
+      'optimized-images',
+      'maplibre-style',
+      'pmtiles',
+      'embed'
     ],
     endpoints: {
+      mapConfig: '/api/public/v1/map/config',
+      mapStyle: '/api/public/v1/map/style.json',
       categories: '/api/public/v1/categories',
       places: '/api/public/v1/places',
       bounds: '/api/public/v1/places/bounds',
