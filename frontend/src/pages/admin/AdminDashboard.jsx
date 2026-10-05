@@ -84,6 +84,13 @@ const adminModules = [
     tone: 'violet'
   },
   {
+    to: '/admin/reputation',
+    title: 'Reputation Inspector',
+    description: 'Giải thích uy tín, quyền theo cấp, lịch sử và tín hiệu chống farm.',
+    icon: ShieldCheck,
+    tone: 'green'
+  },
+  {
     to: '/admin/partners',
     title: 'Đối tác & Voucher',
     description: 'Quản lý địa điểm đối tác và chương trình đổi thưởng.',
