@@ -1,6 +1,7 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
 import { getDeveloperApiOpenApiDocument } from '../services/developerApi.service.js';
+import { publicMapConfig, publicMapStyle } from '../services/publicMapSdk.service.js';
 import {
   publicApiMeta,
   publicCategories,
@@ -26,6 +27,21 @@ export const getPublicApiMeta = asyncHandler(async (_req, res) => {
     cacheControl: 'public, max-age=300, stale-while-revalidate=600'
   });
   res.json({ data: publicApiMeta() });
+});
+
+export const getPublicMapConfig = asyncHandler(async (_req, res) => {
+  setPublicHeaders(res, {
+    cacheControl: 'public, max-age=300, stale-while-revalidate=600'
+  });
+  res.json({ data: publicMapConfig() });
+});
+
+export const getPublicMapStyle = asyncHandler(async (_req, res) => {
+  setPublicHeaders(res, {
+    cacheControl: 'public, max-age=300, stale-while-revalidate=600'
+  });
+  res.type('application/json');
+  res.json(publicMapStyle());
 });
 
 export const getPublicCategories = asyncHandler(async (_req, res) => {
@@ -110,7 +126,6 @@ export const getPublicPlaceBySlug = asyncHandler(async (req, res) => {
   setPublicHeaders(res);
   res.json({ data: item });
 });
-
 
 export const getPublicOpenApi = asyncHandler(async (_req, res) => {
   setPublicHeaders(res, {
