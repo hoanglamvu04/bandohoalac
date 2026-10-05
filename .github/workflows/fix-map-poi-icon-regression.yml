@@ -20,44 +20,11 @@ jobs:
           ref: main
           fetch-depth: 0
 
+      - name: Fetch hotfix script
+        run: git show origin/fix/map-poi-icons:scripts/fix-map-poi-icons.py > /tmp/fix-map-poi-icons.py
+
       - name: Restore stable POI icon sizing
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('frontend/src/components/MapView.jsx')
-          text = path.read_text()
-          old = """        'icon-size': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          12.5, ['case',
-            ['boolean', ['feature-state', 'selected'], false], 0.80,
-            ['boolean', ['feature-state', 'hovered'], false], 0.70,
-            0.62
-          ],
-          14, ['case',
-            ['boolean', ['feature-state', 'selected'], false], 0.92,
-            ['boolean', ['feature-state', 'hovered'], false], 0.82,
-            0.72
-          ],
-          17, ['case',
-            ['boolean', ['feature-state', 'selected'], false], 1.08,
-            ['boolean', ['feature-state', 'hovered'], false], 0.98,
-            0.88
-          ]
-        ],"""
-          new = """        'icon-size': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          12.5, 0.62,
-          14, 0.72,
-          17, 0.88
-        ],"""
-          if old not in text:
-              raise SystemExit('POI icon-size regression block not found')
-          path.write_text(text.replace(old, new, 1))
-          PY
+        run: python3 /tmp/fix-map-poi-icons.py
 
       - name: Commit fix to main
         run: |
