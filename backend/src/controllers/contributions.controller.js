@@ -1,10 +1,15 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { AppError } from '../utils/AppError.js';
 import { createContribution, listContributionsByUser } from '../services/contribution.service.js';
 import { deleteStoredAssets, storeUploadedFiles } from '../services/storage.service.js';
 import {
   defaultRoadStatusExpiryHours,
   isRoadStatusContributionType
 } from '../services/roadStatus.service.js';
+import {
+  buildContributionFingerprint,
+  evaluateContributionRisk
+} from '../services/contributionTrust.service.js';
 
 export const create = asyncHandler(async (req, res) => {
   const { type, placeId, location, place, reason, severity, expiresHours } = req.body;
@@ -23,28 +28,50 @@ export const create = asyncHandler(async (req, res) => {
   });
 
   try {
+    const payload = {
+      location,
+      place,
+      reason,
+      ...(isRoadStatus ? {
+        severity: normalizedSeverity,
+        expiresAt,
+        communityState: 'ACTIVE',
+        sourceType: 'COMMUNITY'
+      } : {}),
+      photos: uploadedAssets.map((asset) => asset.url),
+      photoAssets: uploadedAssets
+    };
+
+    const fingerprint = buildContributionFingerprint({ type, placeId, payload });
+    const risk = await evaluateContributionRisk({
+      userId: req.user.id,
+      type,
+      placeId: placeId || null,
+      payload,
+      fingerprint
+    });
+
+    if (risk.blocked) {
+      throw new AppError(
+        risk.blockReason || 'Đóng góp bị chặn do có dấu hiệu gửi lặp hoặc spam.',
+        429
+      );
+    }
+
     const contributionId = await createContribution({
       userId: req.user.id,
       placeId: placeId || null,
       type,
-      payload: {
-        location,
-        place,
-        reason,
-        ...(isRoadStatus ? {
-          severity: normalizedSeverity,
-          expiresAt,
-          communityState: 'ACTIVE',
-          sourceType: 'COMMUNITY'
-        } : {}),
-        photos: uploadedAssets.map((asset) => asset.url),
-        photoAssets: uploadedAssets
-      }
+      payload,
+      riskScore: risk.score,
+      riskFlags: risk.flags,
+      fingerprint
     });
 
     res.status(201).json({
       id: contributionId,
       status: 'PENDING',
+      riskBand: risk.band,
       message: isRoadStatus
         ? 'Đã ghi nhận tình trạng. Báo cáo cộng đồng sẽ tự hết hạn nếu không còn hiệu lực.'
         : 'Đóng góp đã được ghi nhận và đang chờ duyệt.'
