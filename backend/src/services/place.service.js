@@ -25,6 +25,7 @@ const BASE_SELECT = [
   '  p.rating_count,',
   '  p.created_at,',
   '  p.updated_at,',
+  '  p.last_verified_at,',
   '  ST_X(p.location) AS lng,',
   '  ST_Y(p.location) AS lat,',
   '  c.name AS category,',
@@ -78,7 +79,8 @@ function mapRow(row) {
       ? Math.round(Number(row.distance_m))
       : undefined,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    lastVerifiedAt: row.last_verified_at || null
   };
 }
 
