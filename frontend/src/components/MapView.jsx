@@ -471,21 +471,9 @@ function addPlaceClusterLayers(map, places = []) {
           'interpolate',
           ['linear'],
           ['zoom'],
-          12.5, ['case',
-            ['boolean', ['feature-state', 'selected'], false], 0.80,
-            ['boolean', ['feature-state', 'hovered'], false], 0.70,
-            0.62
-          ],
-          14, ['case',
-            ['boolean', ['feature-state', 'selected'], false], 0.92,
-            ['boolean', ['feature-state', 'hovered'], false], 0.82,
-            0.72
-          ],
-          17, ['case',
-            ['boolean', ['feature-state', 'selected'], false], 1.08,
-            ['boolean', ['feature-state', 'hovered'], false], 0.98,
-            0.88
-          ]
+          12.5, 0.62,
+          14, 0.72,
+          17, 0.88
         ],
         'icon-allow-overlap': true,
         'icon-ignore-placement': true
