@@ -4,8 +4,10 @@ export const adminUpdateUserSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
   email: z.string().trim().toLowerCase().email().optional(),
   bio: z.string().trim().max(600).nullable().optional(),
-  role: z.enum(['USER', 'CONTRIBUTOR', 'MODERATOR', 'ADMIN']).optional(),
-  accountStatus: z.enum(['ACTIVE', 'SUSPENDED']).optional()
+  role: z.enum(['USER', 'CONTRIBUTOR', 'CTV', 'MODERATOR', 'ADMIN']).optional(),
+  accountStatus: z.enum(['ACTIVE', 'SUSPENDED']).optional(),
+  ctvLevel: z.coerce.number().int().min(1).max(2).optional(),
+  ctvTrustScore: z.coerce.number().int().min(0).max(100).optional()
 });
 
 export const adminAdjustWalletSchema = z.object({
@@ -14,7 +16,6 @@ export const adminAdjustWalletSchema = z.object({
   }),
   reason: z.string().trim().min(3).max(220)
 });
-
 
 export const adminAssignPartnerAccessSchema = z.object({
   partnerId: z.coerce.number().int().positive(),

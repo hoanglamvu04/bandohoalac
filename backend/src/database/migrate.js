@@ -1,23 +1,35 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { pool } from './pool.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+async function runSqlFile(filePath, label) {
+  const sql = readFileSync(filePath, 'utf8');
+  console.log('Applying ' + label + '...');
+  await pool.query(sql);
+  console.log(label + ' applied successfully.');
+}
+
 async function run() {
   const shouldSeed = process.argv.includes('--seed');
 
-  const schemaSql = readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
-  console.log('Applying schema.sql...');
-  await pool.query(schemaSql);
-  console.log('Schema applied successfully.');
+  await runSqlFile(path.join(__dirname, 'schema.sql'), 'schema.sql');
+
+  const migrationsDir = path.join(__dirname, 'migrations');
+  if (existsSync(migrationsDir)) {
+    const migrations = readdirSync(migrationsDir)
+      .filter((name) => name.endsWith('.sql'))
+      .sort();
+
+    for (const migration of migrations) {
+      await runSqlFile(path.join(migrationsDir, migration), 'migration ' + migration);
+    }
+  }
 
   if (shouldSeed) {
-    const seedSql = readFileSync(path.join(__dirname, 'seed.sql'), 'utf8');
-    console.log('Applying seed.sql...');
-    await pool.query(seedSql);
-    console.log('Seed data applied successfully.');
+    await runSqlFile(path.join(__dirname, 'seed.sql'), 'seed.sql');
   }
 
   await pool.end();

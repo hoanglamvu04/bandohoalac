@@ -5,7 +5,9 @@ import { verifyToken } from '../utils/jwt.js';
 async function resolveAuthenticatedUser(token) {
   const payload = verifyToken(token);
   const { rows } = await pool.query(
-    `SELECT id, email, role, account_status
+    `SELECT id, email, role, account_status,
+            ctv_level, ctv_trust_score, ctv_reviews_count,
+            ctv_confirmed_count, ctv_overturned_count
      FROM users
      WHERE id = $1`,
     [payload.id]
@@ -23,7 +25,12 @@ async function resolveAuthenticatedUser(token) {
   return {
     id: user.id,
     email: user.email,
-    role: user.role
+    role: user.role,
+    ctvLevel: Number(user.ctv_level || 1),
+    ctvTrustScore: Number(user.ctv_trust_score || 0),
+    ctvReviewsCount: Number(user.ctv_reviews_count || 0),
+    ctvConfirmedCount: Number(user.ctv_confirmed_count || 0),
+    ctvOverturnedCount: Number(user.ctv_overturned_count || 0)
   };
 }
 
@@ -69,6 +76,17 @@ export function authorize(...allowedRoles) {
       return next(new AppError('You do not have permission to perform this action.', 403));
     }
 
+    return next();
+  };
+}
+
+export function requireCtvLevel(minimumLevel = 1) {
+  return function requireCtvLevelMiddleware(req, _res, next) {
+    if (!req.user) return next(new AppError('Authentication required.', 401));
+    if (req.user.role === 'ADMIN' || req.user.role === 'MODERATOR') return next();
+    if (req.user.role !== 'CTV' || Number(req.user.ctvLevel || 1) < Number(minimumLevel)) {
+      return next(new AppError('Tác vụ này yêu cầu CTV cấp ' + minimumLevel + ' hoặc cao hơn.', 403));
+    }
     return next();
   };
 }

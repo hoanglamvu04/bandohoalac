@@ -36,6 +36,11 @@ export function toPublicUser(user) {
     trustScore: user.trust_score,
     approvedCount: user.approved_count,
     rejectedCount: user.rejected_count,
+    ctvLevel: Number(user.ctv_level || 1),
+    ctvTrustScore: Number(user.ctv_trust_score || 0),
+    ctvReviewsCount: Number(user.ctv_reviews_count || 0),
+    ctvConfirmedCount: Number(user.ctv_confirmed_count || 0),
+    ctvOverturnedCount: Number(user.ctv_overturned_count || 0),
     createdAt: user.created_at
   };
 }
@@ -70,7 +75,6 @@ export async function getRecentActivity(userId, limit = 10, client = pool) {
   );
   return rows;
 }
-
 
 export async function getPartnerAccessSummary(userId, client = pool) {
   const { rows } = await client.query(

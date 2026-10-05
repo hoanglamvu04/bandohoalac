@@ -7,6 +7,7 @@ import {
   Code2,
   Database,
   Flag,
+  Gauge,
   LayoutDashboard,
   MapPinned,
   Megaphone,
@@ -14,6 +15,7 @@ import {
   PencilRuler,
   ShieldCheck,
   Sparkles,
+  UserCheck,
   UserCog,
   Users
 } from 'lucide-react';
@@ -21,29 +23,42 @@ import { Link } from 'react-router-dom';
 import { getAdminContributions } from '../../services/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 
-const moderatorModules = [
+const baseModules = [
   {
     to: '/admin/contributions',
     title: 'Duyệt đóng góp',
-    description: 'Kiểm tra địa điểm, ảnh và chỉnh sửa từ cộng đồng.',
+    description: 'Chấm điểm chất lượng và xử lý đóng góp cộng đồng.',
     icon: ClipboardList,
     tone: 'gold',
     key: 'contributions'
   },
   {
+    to: '/admin/data-quality',
+    title: 'Data Trust',
+    description: 'Spam, dữ liệu cũ/thiếu, lịch sử thay đổi và độ tin cậy CTV.',
+    icon: Gauge,
+    tone: 'green'
+  }
+];
+
+const ctvLevel2Modules = [
+  {
     to: '/admin/places',
     title: 'Quản lý địa điểm',
-    description: 'Thêm, sửa, ẩn, quản lý ảnh và trạng thái địa điểm.',
+    description: 'Sửa thông tin, tọa độ, ảnh và trạng thái dữ liệu địa điểm.',
     icon: MapPinned,
     tone: 'blue'
   },
   {
     to: '/admin/place-imports',
-    title: 'Nhập dữ liệu bản đồ',
-    description: 'Duyệt địa điểm quét từ Overture, chống trùng và nhập hàng loạt.',
+    title: 'Duyệt dữ liệu mới',
+    description: 'Kiểm tra và duyệt từng địa điểm từ nguồn import.',
     icon: Database,
     tone: 'cyan'
-  },
+  }
+];
+
+const moderatorModules = [
   {
     to: '/admin/map-editor',
     title: 'Biên tập lớp bản đồ',
@@ -55,9 +70,16 @@ const moderatorModules = [
 
 const adminModules = [
   {
+    to: '/admin/ctv',
+    title: 'CTV kiểm duyệt',
+    description: 'Cấp quyền CTV, quản lý cấp 1/2 và trust score.',
+    icon: UserCheck,
+    tone: 'green'
+  },
+  {
     to: '/admin/users',
     title: 'Người dùng',
-    description: 'Quản lý tài khoản, vai trò và điểm Explorer.',
+    description: 'Quản lý tài khoản, vai trò và điểm thành viên.',
     icon: UserCog,
     tone: 'violet'
   },
@@ -70,8 +92,8 @@ const adminModules = [
   },
   {
     to: '/admin/missions',
-    title: 'Nhiệm vụ Explorer',
-    description: 'Tạo chiến dịch và nhiệm vụ cộng đồng theo từng giai đoạn.',
+    title: 'Nhiệm vụ cộng đồng',
+    description: 'Tạo chiến dịch và nhiệm vụ theo từng giai đoạn.',
     icon: Flag,
     tone: 'purple'
   },
@@ -99,7 +121,7 @@ const adminModules = [
   {
     to: '/admin/developer-api',
     title: 'API & Tích hợp',
-    description: 'Quản lý Public API, website kết nối, API key, endpoint và tài liệu.',
+    description: 'Quản lý Public API, website kết nối, API key và endpoint.',
     icon: Code2,
     tone: 'green'
   }
@@ -108,13 +130,9 @@ const adminModules = [
 function ModuleCard({ item, pendingCount }) {
   const Icon = item.icon;
   const hasPending = item.key === 'contributions' && Number(pendingCount) > 0;
-
   return (
     <Link className={'admin-control-module tone-' + item.tone} to={item.to}>
-      <span className="admin-control-module-icon">
-        <Icon size={21} />
-      </span>
-
+      <span className="admin-control-module-icon"><Icon size={21} /></span>
       <span className="admin-control-module-copy">
         <span className="admin-control-module-title">
           <b>{item.title}</b>
@@ -122,16 +140,13 @@ function ModuleCard({ item, pendingCount }) {
         </span>
         <small>{item.description}</small>
       </span>
-
-      <span className="admin-control-module-arrow">
-        <ArrowRight size={17} />
-      </span>
+      <span className="admin-control-module-arrow"><ArrowRight size={17} /></span>
     </Link>
   );
 }
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
+  const { user, ctvLevel } = useAuth();
   const [pendingCount, setPendingCount] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -147,96 +162,56 @@ export default function AdminDashboard() {
     return value.split(/\s+/)[0] || 'Admin';
   }, [user?.name]);
 
-  const modules = user?.role === 'ADMIN'
-    ? [...moderatorModules, ...adminModules]
-    : moderatorModules;
+  const modules = useMemo(() => {
+    if (user?.role === 'ADMIN') {
+      return [...baseModules, ...ctvLevel2Modules, ...moderatorModules, ...adminModules];
+    }
+    if (user?.role === 'MODERATOR') {
+      return [...baseModules, ...ctvLevel2Modules, ...moderatorModules];
+    }
+    if (user?.role === 'CTV' && ctvLevel >= 2) {
+      return [...baseModules, ...ctvLevel2Modules];
+    }
+    return baseModules;
+  }, [user?.role, ctvLevel]);
+
+  const roleLabel = user?.role === 'CTV'
+    ? 'CTV cấp ' + ctvLevel + ' · Trust ' + Number(user?.ctvTrustScore || 0)
+    : user?.role || 'MODERATOR';
 
   return (
     <main className="admin-page admin-control-center page-container">
       <section className="admin-control-hero">
         <div className="admin-control-hero-copy">
-          <span className="admin-control-kicker">
-            <Sparkles size={14} />
-            HOLA MAPS CONTROL CENTER
-          </span>
-
+          <span className="admin-control-kicker"><Sparkles size={14} /> HOLA MAPS CONTROL CENTER</span>
           <h1>Xin chào, {firstName}.</h1>
-          <p>
-            Quản lý dữ liệu bản đồ, cộng đồng và các cấu hình vận hành của Hola Maps
-            trong một không gian thống nhất.
-          </p>
-
+          <p>Quản lý dữ liệu bản đồ, cộng đồng và chất lượng dữ liệu Hola Maps theo đúng quyền của tài khoản.</p>
           <div className="admin-control-hero-meta">
-            <span><ShieldCheck size={15} /> {user?.role || 'MODERATOR'}</span>
+            <span><ShieldCheck size={15} /> {roleLabel}</span>
             <span><Database size={15} /> Dữ liệu cộng đồng</span>
           </div>
         </div>
 
         <div className="admin-control-focus-card">
-          <span className="admin-control-focus-icon">
-            <ClipboardList size={23} />
-          </span>
-          <div>
-            <small>VIỆC CẦN XỬ LÝ</small>
-            <strong>{loading ? '…' : pendingCount ?? '—'}</strong>
-            <span>đóng góp đang chờ duyệt</span>
-          </div>
-          <Link to="/admin/contributions" aria-label="Mở danh sách chờ duyệt">
-            <ArrowRight size={18} />
-          </Link>
+          <span className="admin-control-focus-icon"><ClipboardList size={23} /></span>
+          <div><small>VIỆC CẦN XỬ LÝ</small><strong>{loading ? '…' : pendingCount ?? '—'}</strong><span>đóng góp đang chờ duyệt</span></div>
+          <Link to="/admin/contributions" aria-label="Mở danh sách chờ duyệt"><ArrowRight size={18} /></Link>
         </div>
       </section>
 
       <section className="admin-control-overview">
-        <article>
-          <span className="admin-overview-icon gold"><ClipboardList size={19} /></span>
-          <div>
-            <small>Hàng đợi kiểm duyệt</small>
-            <b>{loading ? '...' : pendingCount ?? '—'}</b>
-          </div>
-          <em>{Number(pendingCount) > 0 ? 'Cần xử lý' : 'Đã sạch'}</em>
-        </article>
-
-        <article>
-          <span className="admin-overview-icon blue"><ShieldCheck size={19} /></span>
-          <div>
-            <small>Quyền truy cập</small>
-            <b>{user?.role || '—'}</b>
-          </div>
-          <em>Đang hoạt động</em>
-        </article>
-
-        <article>
-          <span className="admin-overview-icon green"><Users size={19} /></span>
-          <div>
-            <small>Nguồn dữ liệu</small>
-            <b>Community</b>
-          </div>
-          <em>CTV & User</em>
-        </article>
+        <article><span className="admin-overview-icon gold"><ClipboardList size={19} /></span><div><small>Hàng đợi kiểm duyệt</small><b>{loading ? '...' : pendingCount ?? '—'}</b></div><em>{Number(pendingCount) > 0 ? 'Cần xử lý' : 'Đã sạch'}</em></article>
+        <article><span className="admin-overview-icon blue"><ShieldCheck size={19} /></span><div><small>Quyền truy cập</small><b>{roleLabel}</b></div><em>Đang hoạt động</em></article>
+        <article><span className="admin-overview-icon green"><Users size={19} /></span><div><small>Nguồn dữ liệu</small><b>Community</b></div><em>CTV & User</em></article>
       </section>
 
       <section className="admin-control-workspace">
         <div className="admin-control-section-head">
-          <div>
-            <span className="eyebrow">QUẢN TRỊ HỆ THỐNG</span>
-            <h2>Công cụ quản lý</h2>
-            <p>Chọn một khu vực để bắt đầu quản trị.</p>
-          </div>
-          <span className="admin-control-module-count">
-            <LayoutDashboard size={15} />
-            {modules.length} module
-          </span>
+          <div><span className="eyebrow">KHÔNG GIAN VẬN HÀNH</span><h2>Công cụ được cấp quyền</h2><p>Chỉ hiển thị module tài khoản này được phép thao tác.</p></div>
+          <span className="admin-control-module-count"><LayoutDashboard size={15} /> {modules.length} module</span>
         </div>
-
         <div className="admin-control-module-grid">
-          {modules.map((item) => (
-            <ModuleCard
-              item={item}
-              pendingCount={pendingCount}
-              key={item.to}
-            />
-          ))}
+          {modules.map((item) => <ModuleCard item={item} pendingCount={pendingCount} key={item.to} />)}
         </div>
       </section>
     </main>

@@ -23,7 +23,7 @@ export const getContribution = asyncHandler(async (req, res) => {
 export const approve = asyncHandler(async (req, res) => {
   const contribution = await approveContribution(
     Number(req.params.id),
-    req.user.id,
+    req.user,
     req.body || {}
   );
   await writeAuditLog({
@@ -32,9 +32,12 @@ export const approve = asyncHandler(async (req, res) => {
     entityType: 'CONTRIBUTION',
     entityId: contribution.id,
     metadata: {
+      reviewerRole: req.user.role,
+      reviewerCtvLevel: req.user.ctvLevel || null,
       userId: contribution.userId,
       type: contribution.type,
       placeId: contribution.placeId,
+      riskScore: contribution.riskScore,
       pointsAwarded: contribution.moderation?.pointsAwarded ?? 0,
       maxPoints: contribution.moderation?.maxPoints ?? 20,
       scoreBreakdown: contribution.moderation?.scoreBreakdown || null,
@@ -46,13 +49,24 @@ export const approve = asyncHandler(async (req, res) => {
 });
 
 export const reject = asyncHandler(async (req, res) => {
-  const contribution = await rejectContribution(Number(req.params.id), req.user.id, req.body.reason);
+  const contribution = await rejectContribution(
+    Number(req.params.id),
+    req.user,
+    req.body.reason
+  );
   await writeAuditLog({
     actorUserId: req.user.id,
     action: 'CONTRIBUTION_REJECTED',
     entityType: 'CONTRIBUTION',
     entityId: contribution.id,
-    metadata: { userId: contribution.userId, type: contribution.type, reason: req.body.reason || null },
+    metadata: {
+      reviewerRole: req.user.role,
+      reviewerCtvLevel: req.user.ctvLevel || null,
+      userId: contribution.userId,
+      type: contribution.type,
+      riskScore: contribution.riskScore,
+      reason: req.body.reason || null
+    },
     ...auditContextFromRequest(req)
   });
   res.json(contribution);

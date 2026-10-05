@@ -38,11 +38,13 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
-  const isModerator = user?.role === 'MODERATOR' || user?.role === 'ADMIN';
+  const isModerator = ['CTV', 'MODERATOR', 'ADMIN'].includes(user?.role);
+  const isCtv = user?.role === 'CTV';
+  const ctvLevel = Number(user?.ctvLevel || 1);
 
   const value = useMemo(
-    () => ({ user, loading, login, register, logout, isModerator, setUser }),
-    [user, loading, login, register, logout, isModerator]
+    () => ({ user, loading, login, register, logout, isModerator, isCtv, ctvLevel, setUser }),
+    [user, loading, login, register, logout, isModerator, isCtv, ctvLevel]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

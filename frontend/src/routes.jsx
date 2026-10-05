@@ -13,6 +13,8 @@ const Login = lazy(() => import('./pages/Login.jsx'));
 const Register = lazy(() => import('./pages/Register.jsx'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
 const AdminContributions = lazy(() => import('./pages/admin/AdminContributions.jsx'));
+const AdminDataTrust = lazy(() => import('./pages/admin/AdminDataTrust.jsx'));
+const AdminCtvManagement = lazy(() => import('./pages/admin/AdminCtvManagement.jsx'));
 const MapEditor = lazy(() => import('./pages/admin/MapEditor.jsx'));
 const AdminPlaces = lazy(() => import('./pages/admin/AdminPlaces.jsx'));
 const AdminPlaceImports = lazy(() => import('./pages/admin/AdminPlaceImports.jsx'));
@@ -82,6 +84,8 @@ function RouteError() {
   );
 }
 
+const STAFF_ROLES = ['CTV', 'MODERATOR', 'ADMIN'];
+
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -102,11 +106,13 @@ export const router = createBrowserRouter([
       { path: 'login', element: withSuspense(Login) },
       { path: 'register', element: withSuspense(Register) },
       { path: 'developers', element: withSuspense(DeveloperDocs) },
-      { path: 'admin', element: withRole(AdminDashboard, ['MODERATOR', 'ADMIN']) },
-      { path: 'admin/contributions', element: withRole(AdminContributions, ['MODERATOR', 'ADMIN']) },
-      { path: 'admin/places', element: withRole(AdminPlaces, ['MODERATOR', 'ADMIN']) },
-      { path: 'admin/place-imports', element: withRole(AdminPlaceImports, ['MODERATOR', 'ADMIN']) },
+      { path: 'admin', element: withRole(AdminDashboard, STAFF_ROLES) },
+      { path: 'admin/contributions', element: withRole(AdminContributions, STAFF_ROLES) },
+      { path: 'admin/data-quality', element: withRole(AdminDataTrust, STAFF_ROLES) },
+      { path: 'admin/places', element: withRole(AdminPlaces, STAFF_ROLES) },
+      { path: 'admin/place-imports', element: withRole(AdminPlaceImports, STAFF_ROLES) },
       { path: 'admin/map-editor', element: withRole(MapEditor, ['MODERATOR', 'ADMIN']) },
+      { path: 'admin/ctv', element: withRole(AdminCtvManagement, ['ADMIN']) },
       { path: 'admin/ads', element: withRole(AdminAdvertisements, ['ADMIN']) },
       { path: 'admin/users', element: withRole(AdminUsers, ['ADMIN']) },
       { path: 'admin/partners', element: withRole(AdminPartnersRewards, ['ADMIN']) },
