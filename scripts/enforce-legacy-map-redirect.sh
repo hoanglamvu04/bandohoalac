@@ -3,6 +3,7 @@ set -euo pipefail
 
 NEW_DOMAIN="${NEW_DOMAIN:-maps.dothihoalac.vn}"
 OLD_DOMAIN="${OLD_DOMAIN:-map.dothihoalac.vn}"
+HTTP_REDIRECT_CONFIG="/etc/nginx/conf.d/hola-maps-legacy-http-redirect.conf"
 
 log() { printf '[map-301] %s\n' "$*"; }
 warn() { printf '[map-301] WARN: %s\n' "$*" >&2; }
@@ -20,15 +21,17 @@ if ! getent ahostsv4 "$NEW_DOMAIN" >/dev/null 2>&1; then
   exit 2
 fi
 
-# HTTP and HTTPS can live in different Nginx files. Process every enabled
-# config containing the legacy hostname instead of stopping at the first one.
+# HTTPS and application traffic may live in one or more enabled files. Process
+# every existing config containing the old hostname, but exclude the generated
+# HTTP-only redirect file below.
 mapfile -t ACTIVE_CONFIGS < <(
   grep -RIl --include='*' -E "server_name[^;]*${OLD_DOMAIN//./\\.}" \
-    /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null || true
+    /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null \
+    | grep -vF "$HTTP_REDIRECT_CONFIG" || true
 )
 
 if [ "${#ACTIVE_CONFIGS[@]}" -eq 0 ]; then
-  warn "Could not find any enabled Nginx config containing $OLD_DOMAIN."
+  warn "Could not find any enabled application config containing $OLD_DOMAIN."
   exit 1
 fi
 
@@ -53,10 +56,8 @@ for config in "${REAL_CONFIGS[@]}"; do
   BACKUPS+=("$backup")
   log "Backed up Nginx config to $backup"
 
-  # Keep the application vhost intact. Add a host-specific server-level return
-  # rule after every server_name that accepts the old hostname. $request_uri
-  # preserves the complete path and query string. Strip generated rules first
-  # so reruns are idempotent.
+  # Preserve the application vhost and redirect only requests whose Host is the
+  # old HTTPS hostname. $request_uri keeps the full path and query string.
   tmp_file="$(mktemp)"
   awk -v old="$OLD_DOMAIN" -v new="$NEW_DOMAIN" '
     /# HOLA_MAPS_LEGACY_301/ { next }
@@ -72,11 +73,34 @@ for config in "${REAL_CONFIGS[@]}"; do
   mv "$tmp_file" "$config"
 done
 
+# The VPS also has a generic HTTP -> HTTPS redirect which keeps $host. Add an
+# explicit port-80 vhost for the legacy hostname so HTTP requests jump directly
+# to the canonical maps hostname in one 301 hop.
+HTTP_REDIRECT_BACKUP=""
+if [ -e "$HTTP_REDIRECT_CONFIG" ]; then
+  HTTP_REDIRECT_BACKUP="${HTTP_REDIRECT_CONFIG}.before-map-301-${STAMP}"
+  cp -a "$HTTP_REDIRECT_CONFIG" "$HTTP_REDIRECT_BACKUP"
+fi
+
+cat > "$HTTP_REDIRECT_CONFIG" <<EOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $OLD_DOMAIN;
+    return 301 https://$NEW_DOMAIN\$request_uri;
+}
+EOF
+
 if ! nginx -t; then
   warn "nginx -t failed; restoring all backups."
   for i in "${!REAL_CONFIGS[@]}"; do
     cp -a "${BACKUPS[$i]}" "${REAL_CONFIGS[$i]}"
   done
+  if [ -n "$HTTP_REDIRECT_BACKUP" ]; then
+    cp -a "$HTTP_REDIRECT_BACKUP" "$HTTP_REDIRECT_CONFIG"
+  else
+    rm -f "$HTTP_REDIRECT_CONFIG"
+  fi
   nginx -t
   exit 1
 fi
