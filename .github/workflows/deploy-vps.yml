@@ -60,6 +60,16 @@ jobs:
               echo "Canonical maps domain migration already completed"
             fi
 
+            echo "==> Legacy map.dothihoalac.vn 301 redirect"
+            REDIRECT_MARKER="$APP_DIR/.map-domain-301-v1"
+            if [ ! -f "$REDIRECT_MARKER" ]; then
+              bash scripts/enforce-legacy-map-redirect.sh
+              touch "$REDIRECT_MARKER"
+              echo "Legacy domain now redirects permanently to maps.dothihoalac.vn"
+            else
+              echo "Legacy domain 301 redirect already configured"
+            fi
+
             echo "==> Ensure image/search runtime tools"
             if command -v apt-get >/dev/null 2>&1; then
               if [ "$(id -u)" -eq 0 ]; then
