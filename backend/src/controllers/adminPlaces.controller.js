@@ -16,6 +16,10 @@ import {
   deleteStoredAssets,
   storeUploadedFiles
 } from '../services/storage.service.js';
+import {
+  capturePlaceSnapshot,
+  recordPlaceRevision
+} from '../services/placeRevision.service.js';
 
 function mapAdminFields(body, categoryId) {
   const fields = {};
@@ -35,7 +39,6 @@ function mapAdminFields(body, categoryId) {
       fields[column] = body[input] || null;
     }
   }
-
   if (categoryId !== undefined) fields.category_id = categoryId;
   return fields;
 }
@@ -43,7 +46,6 @@ function mapAdminFields(body, categoryId) {
 async function resolveCategoryId(categorySlug) {
   if (categorySlug === undefined) return undefined;
   if (!categorySlug) return null;
-
   const category = await findCategoryBySlug(categorySlug);
   if (!category) throw new AppError('Category not found.', 400);
   return category.id;
@@ -71,7 +73,6 @@ export const getPlaceAdmin = asyncHandler(async (req, res) => {
 
 export const createPlaceAdmin = asyncHandler(async (req, res) => {
   const categoryId = await resolveCategoryId(req.body.categorySlug);
-
   const placeId = await createPlace({
     name: req.body.name,
     description: req.body.description,
@@ -84,8 +85,18 @@ export const createPlaceAdmin = asyncHandler(async (req, res) => {
     priceLevel: req.body.priceLevel,
     openingHours: req.body.openingHours,
     status: req.body.status || 'PUBLISHED',
-    source: 'ADMIN',
+    source: req.user.role === 'CTV' ? 'CTV' : 'ADMIN',
     createdBy: req.user.id
+  });
+
+  const snapshot = await capturePlaceSnapshot(placeId);
+  await recordPlaceRevision({
+    placeId,
+    action: 'CREATE',
+    beforeSnapshot: null,
+    afterSnapshot: snapshot,
+    actorUserId: req.user.id,
+    reason: 'Tạo địa điểm từ trang quản trị'
   });
 
   const place = await getPlaceById(placeId);
@@ -94,16 +105,25 @@ export const createPlaceAdmin = asyncHandler(async (req, res) => {
 
 export const updatePlaceAdmin = asyncHandler(async (req, res) => {
   const placeId = Number(req.params.id);
-  const existing = await getPlaceById(placeId);
-  if (!existing) throw new AppError('Place not found.', 404);
+  const before = await capturePlaceSnapshot(placeId);
+  if (!before) throw new AppError('Place not found.', 404);
 
   const categoryId = await resolveCategoryId(req.body.categorySlug);
   const fields = mapAdminFields(req.body, categoryId);
   await updatePlaceFields(placeId, fields);
-
   if (req.body.lat !== undefined && req.body.lng !== undefined) {
     await updatePlaceLocation(placeId, Number(req.body.lat), Number(req.body.lng));
   }
+
+  const after = await capturePlaceSnapshot(placeId);
+  await recordPlaceRevision({
+    placeId,
+    action: 'UPDATE',
+    beforeSnapshot: before,
+    afterSnapshot: after,
+    actorUserId: req.user.id,
+    reason: 'Cập nhật địa điểm từ trang quản trị'
+  });
 
   const place = await getPlaceById(placeId);
   res.json(place);
@@ -111,17 +131,25 @@ export const updatePlaceAdmin = asyncHandler(async (req, res) => {
 
 export const archivePlaceAdmin = asyncHandler(async (req, res) => {
   const placeId = Number(req.params.id);
-  const existing = await getPlaceById(placeId);
-  if (!existing) throw new AppError('Place not found.', 404);
-
+  const before = await capturePlaceSnapshot(placeId);
+  if (!before) throw new AppError('Place not found.', 404);
   await updatePlaceFields(placeId, { status: 'ARCHIVED' });
+  const after = await capturePlaceSnapshot(placeId);
+  await recordPlaceRevision({
+    placeId,
+    action: 'ARCHIVE',
+    beforeSnapshot: before,
+    afterSnapshot: after,
+    actorUserId: req.user.id,
+    reason: 'Ẩn địa điểm khỏi Hola Maps'
+  });
   res.json({ ok: true, id: placeId, status: 'ARCHIVED' });
 });
 
 export const uploadPlaceImagesAdmin = asyncHandler(async (req, res) => {
   const placeId = Number(req.params.id);
-  const place = await getPlaceById(placeId);
-  if (!place) throw new AppError('Place not found.', 404);
+  const before = await capturePlaceSnapshot(placeId);
+  if (!before) throw new AppError('Place not found.', 404);
 
   const assets = await storeUploadedFiles(req.files || [], {
     scope: 'places',
@@ -130,6 +158,15 @@ export const uploadPlaceImagesAdmin = asyncHandler(async (req, res) => {
 
   try {
     await addPlaceImageAssets(placeId, assets, req.user.id);
+    const after = await capturePlaceSnapshot(placeId);
+    await recordPlaceRevision({
+      placeId,
+      action: 'IMAGE_ADD',
+      beforeSnapshot: before,
+      afterSnapshot: after,
+      actorUserId: req.user.id,
+      reason: 'Thêm ' + assets.length + ' ảnh địa điểm'
+    });
     const images = await getAdminPlaceImages(placeId);
     res.status(201).json({ items: images });
   } catch (error) {
@@ -141,7 +178,17 @@ export const uploadPlaceImagesAdmin = asyncHandler(async (req, res) => {
 export const makeCoverAdmin = asyncHandler(async (req, res) => {
   const placeId = Number(req.params.id);
   const imageId = Number(req.params.imageId);
+  const before = await capturePlaceSnapshot(placeId);
   await setPlaceImageCover(placeId, imageId);
+  const after = await capturePlaceSnapshot(placeId);
+  await recordPlaceRevision({
+    placeId,
+    action: 'IMAGE_COVER',
+    beforeSnapshot: before,
+    afterSnapshot: after,
+    actorUserId: req.user.id,
+    reason: 'Đổi ảnh đại diện #' + imageId
+  });
   const images = await getAdminPlaceImages(placeId);
   res.json({ items: images });
 });
@@ -149,12 +196,18 @@ export const makeCoverAdmin = asyncHandler(async (req, res) => {
 export const deletePlaceImageAdmin = asyncHandler(async (req, res) => {
   const placeId = Number(req.params.id);
   const imageId = Number(req.params.imageId);
+  const before = await capturePlaceSnapshot(placeId);
   const asset = await removePlaceImage(placeId, imageId);
-
-  if (asset.provider && asset.publicId) {
-    await deleteStoredAssets([asset]);
-  }
-
+  if (asset.provider && asset.publicId) await deleteStoredAssets([asset]);
+  const after = await capturePlaceSnapshot(placeId);
+  await recordPlaceRevision({
+    placeId,
+    action: 'IMAGE_DELETE',
+    beforeSnapshot: before,
+    afterSnapshot: after,
+    actorUserId: req.user.id,
+    reason: 'Xóa ảnh #' + imageId
+  });
   const images = await getAdminPlaceImages(placeId);
   res.json({ items: images });
 });
