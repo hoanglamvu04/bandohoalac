@@ -38,6 +38,7 @@ import './admin-place-imports.css';
 import './developer-api.css';
 import './reputation-v2.css';
 import './reputation-v21.css';
+import './reputation-v22.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
