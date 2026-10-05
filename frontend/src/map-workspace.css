@@ -3951,3 +3951,64 @@ body.map-route-active{
   .hm-place-row{grid-template-columns:56px minmax(0,1fr) auto;min-height:72px;gap:9px}
   .hm-place-thumb{width:56px;height:56px;border-radius:14px}
 }
+
+
+/* =========================================================
+   MAP DISCOVERY UI V3
+   Consumer-grade place cards, trust badges and detail card.
+   ========================================================= */
+.hm-place-row{position:relative;min-height:82px;gap:12px;padding:9px 10px;border-radius:15px;transition:background .16s ease,transform .16s ease,box-shadow .16s ease}
+.hm-place-row:hover,.hm-place-row.hovered{background:#f4f8f6;transform:translateY(-1px);box-shadow:0 7px 18px rgba(18,65,53,.07)}
+.hm-place-row.active{background:#edf6f2;box-shadow:inset 0 0 0 1px rgba(31,111,88,.16),0 8px 20px rgba(18,65,53,.08)}
+.hm-place-copy{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+.hm-place-topline{width:100%;display:flex;align-items:center;gap:5px;min-width:0}
+.hm-place-topline>small{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6f837c;font-size:9px;font-weight:900;letter-spacing:.075em;text-transform:uppercase}
+.hm-place-verified-mini,.hm-place-partner-mini{display:inline-flex;align-items:center;gap:3px;padding:3px 5px;border-radius:999px;font-size:8px;font-style:normal;font-weight:900;white-space:nowrap}
+.hm-place-verified-mini{color:#146347;background:#e3f4eb}
+.hm-place-partner-mini{color:#7a5c13;background:#fff3cb}
+.hm-place-copy>b{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#143d33;font-size:14px;line-height:1.28}
+.hm-place-inline-meta{display:flex;align-items:center;gap:5px;min-height:18px;overflow:hidden;white-space:nowrap}
+.hm-place-inline-meta i{display:inline-flex;align-items:center;gap:3px;margin:0;font-size:9px;font-style:normal;font-weight:850;color:#71827c}
+.hm-place-inline-meta i:not(:first-child)::before{content:'·';margin-right:2px;color:#a3b0ab}
+.hm-place-inline-meta .rating{color:#986900}.hm-place-inline-meta .new-place{color:#50736a}.hm-place-inline-meta .open{color:#138452}.hm-place-inline-meta .closed{color:#b64a4a}.hm-place-inline-meta .distance{color:#496a61}
+.hm-place-copy>em{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#86958f;font-size:10px;font-style:normal}
+.hm-place-rating{display:none}
+
+.hm-place-inspector.discovery-v3{padding:0;overflow:hidden;border:1px solid rgba(211,226,219,.92);border-radius:22px;background:#fff;box-shadow:0 24px 62px rgba(12,47,39,.18)}
+.hm-place-inspector.discovery-v3 .hm-inspector-close{top:10px;right:10px;z-index:8;width:34px;height:34px;border:1px solid rgba(255,255,255,.55);background:rgba(16,53,44,.72);color:#fff;backdrop-filter:blur(10px);box-shadow:0 5px 14px rgba(0,0,0,.16)}
+.hm-inspector-hero{position:relative;min-height:118px;background:linear-gradient(145deg,#e8f2ed,#d8ebe3)}
+.hm-place-inspector.discovery-v3 .hm-inspector-gallery{margin:0}
+.hm-place-inspector.discovery-v3 .hm-inspector-gallery-main{height:190px;border-radius:0;overflow:hidden;background:#dde9e4}
+.hm-place-inspector.discovery-v3 .hm-inspector-gallery-main>img{width:100%;height:100%;object-fit:cover}
+.hm-place-inspector.discovery-v3 .hm-gallery-count{display:inline-flex;align-items:center;gap:5px;padding:6px 8px;border-radius:999px;background:rgba(16,53,44,.72);color:#fff;font-size:10px;font-weight:900;backdrop-filter:blur(8px)}
+.hm-inspector-fallback{height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:#174d41;background:linear-gradient(145deg,#eef7f3,#daeae3)}
+.hm-inspector-fallback>span{width:70px;height:70px;display:grid;place-items:center;border:1px solid rgba(23,77,65,.12);border-radius:22px;background:rgba(255,255,255,.74);box-shadow:0 10px 24px rgba(18,65,53,.08)}
+.hm-inspector-fallback small{font-size:10px;font-weight:850;color:#687d76}
+.hm-inspector-fallback.cafe{color:#915514;background:linear-gradient(145deg,#fbf1df,#f3e0c2)}
+.hm-inspector-fallback.food{color:#d54d2b;background:linear-gradient(145deg,#fff0e9,#f9daca)}
+.hm-inspector-fallback.tourism,.hm-inspector-fallback.transport{color:#187b9f;background:linear-gradient(145deg,#e9f7fb,#d4edf4)}
+.hm-inspector-fallback.experience,.hm-inspector-fallback.stay{color:#6748b5;background:linear-gradient(145deg,#f0ebfb,#e1d8f6)}
+.hm-inspector-fallback.health{color:#c74545;background:linear-gradient(145deg,#fff0f0,#f8dddd)}
+.hm-inspector-hero-badges{position:absolute;left:12px;right:50px;bottom:10px;z-index:5;display:flex;gap:6px;flex-wrap:wrap}
+.hm-inspector-hero-badges>span{display:inline-flex;align-items:center;gap:5px;min-height:27px;padding:0 9px;border-radius:999px;font-size:9px;font-weight:900;backdrop-filter:blur(8px);box-shadow:0 4px 12px rgba(0,0,0,.10)}
+.hm-inspector-hero-badges .category{color:#173f35;background:rgba(255,255,255,.90)}
+.hm-inspector-hero-badges .verified{color:#fff;background:rgba(20,105,73,.91)}
+.hm-inspector-hero-badges .partner{color:#654800;background:rgba(255,239,180,.94)}
+.hm-inspector-body{padding:16px 17px 17px}
+.hm-inspector-heading h2{margin:0;color:#123a30;font-size:21px;line-height:1.15;letter-spacing:-.025em}
+.hm-inspector-heading p{display:flex;align-items:center;gap:5px;margin:7px 0 0;color:#72857e;font-size:11px;line-height:1.45}
+.hm-inspector-trust{display:flex;align-items:flex-start;gap:9px;margin-top:12px;padding:10px 11px;border:1px solid #e2ebe7;border-radius:12px;background:#f7faf8;color:#547168}
+.hm-inspector-trust>svg{margin-top:1px;flex:0 0 auto}.hm-inspector-trust b,.hm-inspector-trust small{display:block}.hm-inspector-trust b{font-size:10px}.hm-inspector-trust small{margin-top:2px;color:#81918c;font-size:9px;line-height:1.4}
+.hm-inspector-trust.verified{border-color:#cde7da;background:#edf8f2;color:#146847}.hm-inspector-trust.fresh{border-color:#d7e8e1;background:#f0f8f4;color:#316c59}.hm-inspector-trust.stale{border-color:#eedfc9;background:#fff9ee;color:#89682d}
+.hm-place-inspector.discovery-v3 .discovery-stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:11px}
+.hm-place-inspector.discovery-v3 .discovery-stats>span{min-width:0;padding:9px 7px;border:1px solid #e8efec;border-radius:11px;background:#fafcfb;text-align:left}
+.hm-place-inspector.discovery-v3 .discovery-stats b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#244f43;font-size:12px}.hm-place-inspector.discovery-v3 .discovery-stats .rating-value{color:#8b6707}.hm-place-inspector.discovery-v3 .discovery-stats small{margin-top:3px;color:#8a9893;font-size:8px}
+.hm-place-inspector.discovery-v3 .hm-inspector-open{margin-top:10px;border-radius:11px}
+.hm-inspector-description{display:-webkit-box;overflow:hidden;margin:11px 0 0;color:#62766f;font-size:10px;line-height:1.55;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.hm-place-inspector.discovery-v3 .discovery-actions{display:grid;grid-template-columns:1.18fr .82fr 1fr;gap:7px;margin-top:13px}
+.hm-place-inspector.discovery-v3 .discovery-actions>*{min-height:40px;display:flex;align-items:center;justify-content:center;gap:6px;margin:0;border:0;border-radius:11px;text-decoration:none;font:inherit;font-size:10px;font-weight:900;cursor:pointer}
+.hm-place-inspector.discovery-v3 .discovery-actions .primary{color:#fff;background:#175848;box-shadow:0 8px 18px rgba(23,88,72,.17)}
+.hm-place-inspector.discovery-v3 .discovery-actions .save{color:#315f53;background:#edf4f1}.hm-place-inspector.discovery-v3 .discovery-actions .save.active{color:#a04444;background:#fff0ef}.hm-place-inspector.discovery-v3 .discovery-actions .save:disabled{opacity:.6;cursor:wait}
+.hm-place-inspector.discovery-v3 .discovery-actions .details{color:#315f53;background:#f2f6f4}
+
+@media(max-width:760px){.hm-place-row{min-height:74px;padding:8px}.hm-place-copy>b{font-size:13px}.hm-place-topline>small{max-width:108px}.hm-place-verified-mini,.hm-place-partner-mini{display:none}.hm-place-inline-meta{gap:4px}.hm-place-inspector.discovery-v3{left:10px;right:10px;width:auto;max-height:calc(var(--app-visual-height,100dvh) - var(--app-safe-top,0px) - 94px);border-radius:20px}.hm-place-inspector.discovery-v3 .hm-inspector-gallery-main{height:160px}.hm-inspector-fallback{height:132px}.hm-inspector-body{padding:14px}.hm-inspector-heading h2{font-size:19px}.hm-place-inspector.discovery-v3 .discovery-actions{grid-template-columns:1fr 1fr 1fr}.hm-place-inspector.discovery-v3 .discovery-actions>*{min-height:38px;font-size:9px}}

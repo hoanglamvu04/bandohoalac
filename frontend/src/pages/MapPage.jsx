@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  BadgeCheck,
   Building2,
   CalendarDays,
   Camera,
@@ -15,6 +16,7 @@ import {
   GraduationCap,
   HeartPulse,
   House,
+  Heart,
   ExternalLink,
   Landmark,
   Layers,
@@ -28,6 +30,8 @@ import {
   Satellite,
   ShoppingBag,
   SlidersHorizontal,
+  Sparkles,
+  Star,
   TriangleAlert,
   UtensilsCrossed,
   Waves,
@@ -39,6 +43,7 @@ import MapView from '../components/MapView.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import {
+  addFavorite,
   confirmRoadStatus,
   createContribution,
   getCategories,
@@ -46,8 +51,10 @@ import {
   getMapLayers,
   getNearbyPlaces,
   getPlace,
+  getPlaceMe,
   getPlaces,
-  getPlacesInBounds
+  getPlacesInBounds,
+  removeFavorite
 } from '../services/api.js';
 import { LOCAL_BASEMAP_OPTIONS as BASEMAP_OPTIONS } from '../localBasemap.js';
 import { getBestBrowserLocation } from '../utils/geolocation.js';
@@ -279,6 +286,61 @@ function formatDuration(seconds) {
   return hours + ' giờ' + (rest ? ' ' + rest + ' phút' : '');
 }
 
+function formatPlaceAge(value) {
+  if (!value) return '';
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return '';
+  const days = Math.max(0, Math.floor((Date.now() - timestamp) / 86400000));
+  if (days === 0) return 'hôm nay';
+  if (days === 1) return 'hôm qua';
+  if (days < 30) return days + ' ngày trước';
+  const months = Math.floor(days / 30);
+  if (months < 12) return months + ' tháng trước';
+  const years = Math.floor(months / 12);
+  return years + ' năm trước';
+}
+
+function getPlaceFreshness(place) {
+  const verifiedAt = place?.lastVerifiedAt;
+  const fallbackAt = place?.updatedAt || place?.createdAt;
+  const date = verifiedAt || fallbackAt;
+  const timestamp = date ? new Date(date).getTime() : NaN;
+  const days = Number.isFinite(timestamp)
+    ? Math.max(0, Math.floor((Date.now() - timestamp) / 86400000))
+    : null;
+
+  if (verifiedAt) {
+    return {
+      verified: true,
+      tone: days !== null && days <= 60 ? 'verified' : 'verified-old',
+      label: 'Đã xác minh' + (date ? ' · ' + formatPlaceAge(date) : ''),
+      shortLabel: 'Đã xác minh'
+    };
+  }
+
+  if (days === null) {
+    return { verified: false, tone: 'unknown', label: 'Dữ liệu cộng đồng', shortLabel: 'Cộng đồng' };
+  }
+
+  if (days <= 30) {
+    return { verified: false, tone: 'fresh', label: 'Mới cập nhật · ' + formatPlaceAge(date), shortLabel: 'Mới cập nhật' };
+  }
+  if (days <= 180) {
+    return { verified: false, tone: 'recent', label: 'Cập nhật ' + formatPlaceAge(date), shortLabel: 'Đã cập nhật' };
+  }
+  return { verified: false, tone: 'stale', label: 'Có thể cần cập nhật · ' + formatPlaceAge(date), shortLabel: 'Cần cập nhật' };
+}
+
+function placeDistanceLabel(place, placeScope) {
+  if (Number.isFinite(Number(place?.distanceFromUser))) {
+    return formatDistance(place.distanceFromUser);
+  }
+  if (placeScope === 'nearby' && Number.isFinite(Number(place?.distance))) {
+    return formatDistance(place.distance);
+  }
+  return '';
+}
+
 export default function MapPage() {
   const { isModerator, user } = useAuth();
   const { showToast } = useToast();
@@ -310,6 +372,8 @@ export default function MapPage() {
   const [placeScopeLoading, setPlaceScopeLoading] = useState(false);
   const [nearbyRadius, setNearbyRadius] = useState(0);
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const [favorite, setFavorite] = useState(false);
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportType, setReportType] = useState('REPORT_FLOOD');
   const [reportSeverity, setReportSeverity] = useState('MEDIUM');
@@ -727,6 +791,26 @@ export default function MapPage() {
   }, [selectedId]);
 
   useEffect(() => {
+    if (!user || !selectedId) {
+      setFavorite(false);
+      return undefined;
+    }
+
+    let active = true;
+    getPlaceMe(selectedId)
+      .then((data) => {
+        if (active) setFavorite(Boolean(data?.favorite));
+      })
+      .catch(() => {
+        if (active) setFavorite(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedId, user?.id]);
+
+  useEffect(() => {
     if (!selectedId || !leftOpen) return undefined;
 
     const timer = window.requestAnimationFrame(() => {
@@ -775,6 +859,29 @@ export default function MapPage() {
 
     if (delta < 0) showNextImage();
     else showPreviousImage();
+  }
+
+  async function toggleSelectedFavorite() {
+    if (!selectedPlace) return;
+    if (!user) {
+      showToast('Đăng nhập để lưu địa điểm.', 'info');
+      return;
+    }
+    if (favoriteBusy) return;
+
+    setFavoriteBusy(true);
+    try {
+      const data = favorite
+        ? await removeFavorite(selectedPlace.id)
+        : await addFavorite(selectedPlace.id);
+      const nextFavorite = Boolean(data?.favorite);
+      setFavorite(nextFavorite);
+      showToast(nextFavorite ? 'Đã lưu địa điểm.' : 'Đã bỏ lưu địa điểm.', 'success');
+    } catch (error) {
+      showToast(error.message || 'Không cập nhật được địa điểm đã lưu.', 'error');
+    } finally {
+      setFavoriteBusy(false);
+    }
   }
 
   function resetToViewportPlaces() {
@@ -1714,26 +1821,35 @@ export default function MapPage() {
                   )}
                 </span>
                 <span className="hm-place-copy">
-                  <small>{place.category || 'Địa điểm'}</small>
+                  <span className="hm-place-topline">
+                    <small>{place.category || 'Địa điểm'}</small>
+                    {place.lastVerifiedAt && (
+                      <i className="hm-place-verified-mini"><BadgeCheck size={11} /> Đã xác minh</i>
+                    )}
+                    {place.isPartner && (
+                      <i className="hm-place-partner-mini"><Sparkles size={10} /> Đối tác</i>
+                    )}
+                  </span>
                   <b>{place.name}</b>
-                  <em>
-                    {Number.isFinite(Number(place.distanceFromUser))
-                      ? formatDistance(place.distanceFromUser) + ' · '
-                      : placeScope === 'nearby' && Number.isFinite(Number(place.distance))
-                        ? formatDistance(place.distance) + ' · '
-                        : ''}
-                    {place.address || 'Hòa Lạc, Hà Nội'}
-                  </em>
-                  {place.openingHours && (() => {
-                    const status = formatOpenStatus(place.openingHours);
-                    return (
-                      <span className={status.known ? (status.open ? 'hm-open-status open' : 'hm-open-status closed') : 'hm-open-status unknown'}>
-                        {status.label} · {place.openingHours}
-                      </span>
-                    );
-                  })()}
+                  <span className="hm-place-inline-meta">
+                    <i className={Number(place.rating || 0) > 0 ? 'rating' : 'new-place'}>
+                      <Star size={11} fill={Number(place.rating || 0) > 0 ? 'currentColor' : 'none'} />
+                      {Number(place.rating || 0) > 0 ? Number(place.rating).toFixed(1) : 'Mới'}
+                    </i>
+                    {place.openingHours && (() => {
+                      const status = formatOpenStatus(place.openingHours);
+                      return (
+                        <i className={status.known ? (status.open ? 'open' : 'closed') : 'unknown'}>
+                          {status.label}
+                        </i>
+                      );
+                    })()}
+                    {placeDistanceLabel(place, placeScope) && (
+                      <i className="distance">{placeDistanceLabel(place, placeScope)}</i>
+                    )}
+                  </span>
+                  <em>{place.address || 'Hòa Lạc, Hà Nội'}</em>
                 </span>
-                <span className="hm-place-rating">★ {Number(place.rating || 0).toFixed(1)}</span>
               </button>
             ))}
 
@@ -1847,106 +1963,129 @@ export default function MapPage() {
         </section>
       </aside>
 
-      {selectedPlace && !routeDestination && (
-        <section className={selectedImages.length ? 'hm-place-inspector has-gallery' : 'hm-place-inspector'}>
-          <button
-            className="hm-inspector-close"
-            type="button"
-            onClick={() => {
-              setSelectedId(null);
-              syncDiscoveryParams({ place: null });
-            }}
-          >
-            <X size={16} />
-          </button>
+      {selectedPlace && !routeDestination && (() => {
+        const freshness = getPlaceFreshness(selectedPlace);
+        const openStatus = selectedPlace.openingHours
+          ? formatOpenStatus(selectedPlace.openingHours)
+          : null;
+        const selectedDistance = placeDistanceLabel(selectedPlace, placeScope);
+        const rating = Number(selectedPlace.rating || 0);
+        const hasRating = rating > 0;
 
-          {selectedImages.length > 0 && (
-            <div className="hm-inspector-gallery">
-              <div
-                className="hm-inspector-gallery-main"
-                onTouchStart={startGallerySwipe}
-                onTouchEnd={endGallerySwipe}
-              >
-                <img
-                  src={selectedImages[galleryIndex]}
-                  alt={selectedPlace.name + ' · ảnh ' + (galleryIndex + 1)}
-                />
+        return (
+          <section className={selectedImages.length ? 'hm-place-inspector discovery-v3 has-gallery' : 'hm-place-inspector discovery-v3'}>
+            <button
+              className="hm-inspector-close"
+              type="button"
+              onClick={() => {
+                setSelectedId(null);
+                syncDiscoveryParams({ place: null });
+              }}
+              aria-label="Đóng địa điểm"
+            >
+              <X size={17} />
+            </button>
 
-                {selectedImages.length > 1 && (
-                  <>
-                    <button
-                      className="hm-gallery-arrow prev"
-                      type="button"
-                      onClick={showPreviousImage}
-                      aria-label="Ảnh trước"
-                    >
-                      <ChevronLeft size={18} />
-                    </button>
-                    <button
-                      className="hm-gallery-arrow next"
-                      type="button"
-                      onClick={showNextImage}
-                      aria-label="Ảnh tiếp theo"
-                    >
-                      <ChevronRight size={18} />
-                    </button>
-                    <span className="hm-gallery-count">
-                      {galleryIndex + 1}/{selectedImages.length}
-                    </span>
-                  </>
-                )}
-              </div>
-
-              {selectedImages.length > 1 && (
-                <div className="hm-inspector-thumbs">
-                  {selectedImages.map((image, index) => (
-                    <button
-                      key={image}
-                      type="button"
-                      className={index === galleryIndex ? 'active' : ''}
-                      onClick={() => setGalleryIndex(index)}
-                      aria-label={'Xem ảnh ' + (index + 1)}
-                    >
-                      <img src={image} alt="" />
-                    </button>
-                  ))}
+            <div className="hm-inspector-hero">
+              {selectedImages.length > 0 ? (
+                <div className="hm-inspector-gallery">
+                  <div
+                    className="hm-inspector-gallery-main"
+                    onTouchStart={startGallerySwipe}
+                    onTouchEnd={endGallerySwipe}
+                  >
+                    <img
+                      src={selectedImages[galleryIndex]}
+                      alt={selectedPlace.name + ' · ảnh ' + (galleryIndex + 1)}
+                    />
+                    {selectedImages.length > 1 && (
+                      <>
+                        <button className="hm-gallery-arrow prev" type="button" onClick={showPreviousImage} aria-label="Ảnh trước">
+                          <ChevronLeft size={18} />
+                        </button>
+                        <button className="hm-gallery-arrow next" type="button" onClick={showNextImage} aria-label="Ảnh tiếp theo">
+                          <ChevronRight size={18} />
+                        </button>
+                        <span className="hm-gallery-count"><Camera size={13} /> {galleryIndex + 1}/{selectedImages.length}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className={'hm-inspector-fallback ' + getPlaceCategoryVisual(selectedPlace).tone}>
+                  <span><PlaceCategoryIcon place={selectedPlace} size={42} /></span>
+                  <small>Chưa có ảnh · {selectedPlace.category || 'Địa điểm'}</small>
                 </div>
               )}
-            </div>
-          )}
 
-          <div className="hm-inspector-kicker">
-            <MapPin size={14} /> {selectedPlace.category || 'ĐỊA ĐIỂM'}
-          </div>
-          <h2>{selectedPlace.name}</h2>
-          <p>{selectedPlace.address || 'Hòa Lạc, Hà Nội'}</p>
-
-          <div className="hm-inspector-stats">
-            <span><b>★ {Number(selectedPlace.rating || 0).toFixed(1)}</b><small>Đánh giá</small></span>
-            <span><b>{selectedPlace.priceLevel || '—'}</b><small>Mức giá</small></span>
-          </div>
-
-          {selectedPlace.openingHours && (() => {
-            const status = formatOpenStatus(selectedPlace.openingHours);
-            return (
-              <div className={status.open ? 'hm-inspector-open open' : status.known ? 'hm-inspector-open closed' : 'hm-inspector-open'}>
-                <Clock3 size={14} />
-                <b>{status.label}</b>
-                <span>{selectedPlace.openingHours}</span>
+              <div className="hm-inspector-hero-badges">
+                <span className="category"><PlaceCategoryIcon place={selectedPlace} size={13} /> {selectedPlace.category || 'Địa điểm'}</span>
+                {freshness.verified && <span className="verified"><BadgeCheck size={13} /> Đã xác minh</span>}
+                {selectedPlace.isPartner && <span className="partner"><Sparkles size={12} /> Đối tác</span>}
               </div>
-            );
-          })()}
+            </div>
 
-          <div className="hm-inspector-actions">
-            <button type="button" onClick={() => startDirections(selectedPlace)}>
-              <Navigation size={16} /> Chỉ đường
-            </button>
-            <Link to={'/place/' + selectedPlace.id}>
-              Chi tiết
-            </Link>
-          </div>
-        </section>
-      )}
+            <div className="hm-inspector-body">
+              <div className="hm-inspector-heading">
+                <h2>{selectedPlace.name}</h2>
+                <p><MapPin size={14} /> {selectedPlace.address || 'Hòa Lạc, Hà Nội'}</p>
+              </div>
+
+              <div className={'hm-inspector-trust ' + freshness.tone}>
+                {freshness.verified ? <BadgeCheck size={15} /> : <Clock3 size={15} />}
+                <div>
+                  <b>{freshness.label}</b>
+                  <small>{freshness.verified ? 'Thông tin đã được Hola Maps kiểm tra' : 'Dữ liệu có thể được cộng đồng tiếp tục cập nhật'}</small>
+                </div>
+              </div>
+
+              <div className="hm-inspector-stats discovery-stats">
+                <span>
+                  <b className={hasRating ? 'rating-value' : ''}>{hasRating ? '★ ' + rating.toFixed(1) : 'Mới'}</b>
+                  <small>{Number(selectedPlace.reviews || 0)} đánh giá</small>
+                </span>
+                <span>
+                  <b>{selectedDistance || selectedPlace.priceLevel || '—'}</b>
+                  <small>{selectedDistance ? 'Khoảng cách' : 'Mức giá'}</small>
+                </span>
+                <span>
+                  <b>{selectedImages.length || 0}</b>
+                  <small>Ảnh địa điểm</small>
+                </span>
+              </div>
+
+              {openStatus && (
+                <div className={openStatus.known ? (openStatus.open ? 'hm-inspector-open open' : 'hm-inspector-open closed') : 'hm-inspector-open'}>
+                  <Clock3 size={14} />
+                  <b>{openStatus.label}</b>
+                  <span>{selectedPlace.openingHours}</span>
+                </div>
+              )}
+
+              {selectedPlace.description && (
+                <p className="hm-inspector-description">{selectedPlace.description}</p>
+              )}
+
+              <div className="hm-inspector-actions discovery-actions">
+                <button className="primary" type="button" onClick={() => startDirections(selectedPlace)}>
+                  <Navigation size={16} /> Chỉ đường
+                </button>
+                <button
+                  className={favorite ? 'save active' : 'save'}
+                  type="button"
+                  onClick={toggleSelectedFavorite}
+                  disabled={favoriteBusy}
+                >
+                  <Heart size={16} fill={favorite ? 'currentColor' : 'none'} /> {favorite ? 'Đã lưu' : 'Lưu'}
+                </button>
+                <Link className="details" to={'/place/' + selectedPlace.id}>
+                  Chi tiết <ChevronRight size={15} />
+                </Link>
+              </div>
+            </div>
+          </section>
+        );
+      })()}
 
       {routeDestination && (
         <aside className="hm-route-panel">
