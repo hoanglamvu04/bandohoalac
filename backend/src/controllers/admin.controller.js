@@ -21,13 +21,25 @@ export const getContribution = asyncHandler(async (req, res) => {
 });
 
 export const approve = asyncHandler(async (req, res) => {
-  const contribution = await approveContribution(Number(req.params.id), req.user.id);
+  const contribution = await approveContribution(
+    Number(req.params.id),
+    req.user.id,
+    req.body || {}
+  );
   await writeAuditLog({
     actorUserId: req.user.id,
     action: 'CONTRIBUTION_APPROVED',
     entityType: 'CONTRIBUTION',
     entityId: contribution.id,
-    metadata: { userId: contribution.userId, type: contribution.type, placeId: contribution.placeId },
+    metadata: {
+      userId: contribution.userId,
+      type: contribution.type,
+      placeId: contribution.placeId,
+      pointsAwarded: contribution.moderation?.pointsAwarded ?? 0,
+      maxPoints: contribution.moderation?.maxPoints ?? 20,
+      scoreBreakdown: contribution.moderation?.scoreBreakdown || null,
+      scoreNote: contribution.moderation?.scoreNote || null
+    },
     ...auditContextFromRequest(req)
   });
   res.json(contribution);
