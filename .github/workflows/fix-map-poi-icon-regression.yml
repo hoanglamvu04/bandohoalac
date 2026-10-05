@@ -1,0 +1,68 @@
+name: Fix map POI icon regression
+
+on:
+  push:
+    branches:
+      - fix/map-poi-icons
+    paths:
+      - .github/workflows/fix-map-poi-icon-regression.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Restore stable POI icon sizing
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('frontend/src/components/MapView.jsx')
+          text = path.read_text()
+          old = """        'icon-size': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          12.5, ['case',
+            ['boolean', ['feature-state', 'selected'], false], 0.80,
+            ['boolean', ['feature-state', 'hovered'], false], 0.70,
+            0.62
+          ],
+          14, ['case',
+            ['boolean', ['feature-state', 'selected'], false], 0.92,
+            ['boolean', ['feature-state', 'hovered'], false], 0.82,
+            0.72
+          ],
+          17, ['case',
+            ['boolean', ['feature-state', 'selected'], false], 1.08,
+            ['boolean', ['feature-state', 'hovered'], false], 0.98,
+            0.88
+          ]
+        ],"""
+          new = """        'icon-size': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          12.5, 0.62,
+          14, 0.72,
+          17, 0.88
+        ],"""
+          if old not in text:
+              raise SystemExit('POI icon-size regression block not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+
+      - name: Commit fix to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/src/components/MapView.jsx
+          git commit -m "Fix map POI marker icons"
+          git push origin HEAD:main
