@@ -2,12 +2,36 @@ import {
   BadgeCheck,
   Camera,
   ChevronRight,
+  Coins,
   Crown,
   LogOut,
   MapPin,
-  Sparkles,
+  ShieldCheck,
   Star
 } from 'lucide-react';
+
+function formatRequirement(item) {
+  if (!item) return '';
+  if (item.key === 'approvalRate') {
+    return `${item.current}% / ${item.target}% được duyệt`;
+  }
+  if (item.key === 'accountAgeDays') {
+    return `${item.current}/${item.target} ngày hoạt động`;
+  }
+  if (item.key === 'score') {
+    return `${item.current}/${item.target} uy tín`;
+  }
+  if (item.key === 'approvedCount') {
+    return `${item.current}/${item.target} đóng góp được duyệt`;
+  }
+  if (item.key === 'qualityPoints') {
+    return `${item.current}/${item.target} điểm chất lượng`;
+  }
+  if (item.key === 'trustScore') {
+    return `${item.current}/${item.target} trust`;
+  }
+  return `${item.current}/${item.target} ${item.label}`;
+}
 
 export default function ExplorerProfile({
   user,
@@ -22,19 +46,25 @@ export default function ExplorerProfile({
     .join('')
     .toUpperCase();
 
-  const rawLevelLabel = user?.explorerLevel?.name;
+  const reputation = user?.reputation || user?.explorerLevel || null;
+  const rawLevelLabel = reputation?.name;
   const localizedLevelLabels = {
-    'Trusted Explorer': 'Thành viên tin cậy',
-    Explorer: 'Thành viên tích cực',
-    'New Explorer': 'Thành viên mới'
+    'Trusted Explorer': 'Người đóng góp tin cậy',
+    Explorer: 'Người khám phá',
+    'New Explorer': 'Thành viên mới',
+    'Local Explorer': 'Người đóng góp',
+    'Hòa Lạc Expert': 'Chuyên gia địa phương',
+    'Hòa Lạc Insider': 'Chuyên gia địa phương'
   };
   const levelLabel = localizedLevelLabels[rawLevelLabel]
     || rawLevelLabel
-    || (user?.trustScore >= 80
-      ? 'Thành viên tin cậy'
-      : user?.trustScore >= 40
-        ? 'Thành viên tích cực'
-        : 'Thành viên mới');
+    || 'Thành viên mới';
+  const reputationScore = Number(reputation?.score || 0);
+  const reputationProgress = Math.min(Math.max(Number(reputation?.progress || 0), 0), 1);
+  const nextLevel = reputation?.nextLevel || null;
+  const blockers = Array.isArray(reputation?.blockers)
+    ? reputation.blockers.slice(0, 3)
+    : [];
 
   return (
     <section className="explorer-card explorer-card-light">
@@ -59,13 +89,18 @@ export default function ExplorerProfile({
           </div>
         </div>
 
-        <div className="explorer-score explorer-score-light">
-          <span className="explorer-score-orb">
-            <Sparkles size={28} />
+        <div className="explorer-score explorer-score-light reputation-v2-score">
+          <span className="explorer-score-orb reputation-orb">
+            <ShieldCheck size={29} />
           </span>
-          <div>
-            <strong>{(user?.points ?? 0).toLocaleString('vi-VN')}</strong>
-            <span>điểm</span>
+          <div className="reputation-score-copy">
+            <span className="reputation-score-main">
+              <strong>{reputationScore}</strong>
+              <span>/100 uy tín</span>
+            </span>
+            <span className="reputation-reward-points">
+              <Coins size={13} /> {(user?.points ?? 0).toLocaleString('vi-VN')} điểm thưởng
+            </span>
           </div>
           <ChevronRight size={18} />
         </div>
@@ -82,6 +117,33 @@ export default function ExplorerProfile({
             <span>Đăng xuất</span>
           </button>
         )}
+      </div>
+
+      <div className="explorer-reputation-strip">
+        <div className="explorer-reputation-heading">
+          <span>
+            <ShieldCheck size={15} />
+            <b>Reputation v2</b>
+          </span>
+          <em>
+            {nextLevel ? `Tiến tới ${nextLevel.name}` : 'Bạn đã đạt cấp cao nhất'}
+          </em>
+        </div>
+        <div className="explorer-reputation-track" aria-label="Tiến độ cấp thành viên">
+          <span style={{ width: `${Math.round(reputationProgress * 100)}%` }} />
+        </div>
+        <div className="explorer-reputation-foot">
+          <span>{Math.round(reputationProgress * 100)}% tiến độ</span>
+          {blockers.length > 0 ? (
+            <div className="explorer-reputation-blockers">
+              {blockers.map((item) => (
+                <span key={item.key}>{formatRequirement(item)}</span>
+              ))}
+            </div>
+          ) : (
+            <span className="explorer-reputation-ready">Đã đủ mọi điều kiện cấp hiện tại</span>
+          )}
+        </div>
       </div>
 
       <div className="explorer-stats explorer-stats-light">
@@ -111,7 +173,7 @@ export default function ExplorerProfile({
                 ? Math.round(stats.approvalRate * 100) + '%'
                 : '—'}
             </b>
-            <span>Duyệt chính xác</span>
+            <span>Tỷ lệ được duyệt</span>
           </span>
           <Star className="explorer-stat-muted" size={16} />
         </div>
