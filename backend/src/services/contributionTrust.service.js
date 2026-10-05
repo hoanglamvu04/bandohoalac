@@ -9,6 +9,12 @@ const HIGH_IMPACT_TYPES = new Set([
   'REPORT_FLOOD'
 ]);
 
+const ROAD_STATUS_TYPES = new Set([
+  'REPORT_FLOOD',
+  'REPORT_ROAD_CLOSURE',
+  'REPORT_ALERT'
+]);
+
 function normalizeText(value) {
   return String(value || '')
     .normalize('NFD')
@@ -70,7 +76,7 @@ export async function evaluateContributionRisk({ userId, type, placeId, payload,
        FROM contributions
        WHERE user_id = $1
          AND fingerprint = $2
-         AND created_at >= NOW() - INTERVAL '7 days'
+         AND created_at >= NOW() - INTERVAL '24 hours'
        ORDER BY created_at DESC
        LIMIT 1`,
       [userId, fingerprint]
@@ -90,9 +96,32 @@ export async function evaluateContributionRisk({ userId, type, placeId, payload,
   const flags = [];
   let score = 0;
 
-  if (ownDuplicateResult.rows[0]) {
-    flags.push({ code: 'EXACT_DUPLICATE', weight: 85, detail: 'Nội dung trùng với đóng góp trước của cùng tài khoản.' });
-    score += 85;
+  const duplicate = ownDuplicateResult.rows[0];
+  if (duplicate) {
+    const duplicateAgeMs = Date.now() - new Date(duplicate.created_at).getTime();
+    const duplicateWindowMs = ROAD_STATUS_TYPES.has(type)
+      ? 60 * 60 * 1000
+      : 24 * 60 * 60 * 1000;
+
+    if (duplicateAgeMs <= duplicateWindowMs) {
+      if (type === 'ADD_PHOTO') {
+        flags.push({
+          code: 'REPEATED_PHOTO_SUBMISSION',
+          weight: 20,
+          detail: 'Đã gửi ảnh cho địa điểm này gần đây; cần kiểm tra nội dung ảnh trước khi duyệt.'
+        });
+        score += 20;
+      } else {
+        flags.push({
+          code: 'EXACT_DUPLICATE',
+          weight: 85,
+          detail: ROAD_STATUS_TYPES.has(type)
+            ? 'Báo cáo tình trạng tương tự đã được gửi trong vòng 1 giờ.'
+            : 'Nội dung trùng với đóng góp của cùng tài khoản trong 24 giờ.'
+        });
+        score += 85;
+      }
+    }
   }
 
   if (Number(recent.ten_minute_count || 0) >= 5) {
