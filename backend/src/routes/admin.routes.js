@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getContributions, getContribution, approve, reject } from '../controllers/admin.controller.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate, authorize, requireCtvLevel } from '../middleware/auth.js';
 import { validateBody } from '../validators/validate.js';
 import { rejectContributionSchema } from '../validators/admin.validators.js';
 import {
@@ -74,13 +74,8 @@ import {
   createMissionSchema,
   updateMissionSchema
 } from '../validators/mission.validators.js';
-import {
-  listClaimsAdmin,
-  reviewClaimAdmin
-} from '../controllers/placeClaims.controller.js';
-import {
-  reviewPlaceClaimSchema
-} from '../validators/placeClaim.validators.js';
+import { listClaimsAdmin, reviewClaimAdmin } from '../controllers/placeClaims.controller.js';
+import { reviewPlaceClaimSchema } from '../validators/placeClaim.validators.js';
 import { listAuditLogsAdmin } from '../controllers/audit.controller.js';
 import {
   deleteBrandAssetAdmin,
@@ -119,194 +114,100 @@ import {
   startOverturePlaceScanAdmin,
   updatePlaceImportAdmin
 } from '../controllers/adminPlaceImports.controller.js';
+import {
+  auditCtvModerationAdmin,
+  getDataQualityAdmin,
+  listPlaceRevisionsAdmin,
+  rollbackPlaceRevisionAdmin,
+  verifyPlaceQualityAdmin
+} from '../controllers/adminDataTrust.controller.js';
 
 const router = Router();
+const ctvStaff = authorize('CTV', 'MODERATOR', 'ADMIN');
+const dataStaff = authorize('MODERATOR', 'ADMIN');
+const adminOnly = authorize('ADMIN');
 
-router.use(authenticate, authorize('MODERATOR', 'ADMIN'));
+router.use(authenticate);
 
-router.get('/contributions', getContributions);
-router.get('/contributions/:id', getContribution);
-router.post('/contributions/:id/approve', approve);
-router.post('/contributions/:id/reject', validateBody(rejectContributionSchema), reject);
+router.get('/contributions', ctvStaff, getContributions);
+router.get('/contributions/:id', ctvStaff, getContribution);
+router.post('/contributions/:id/approve', ctvStaff, approve);
+router.post('/contributions/:id/reject', ctvStaff, validateBody(rejectContributionSchema), reject);
+router.post('/contributions/:id/ctv-audit', adminOnly, auditCtvModerationAdmin);
 
-router.get('/place-imports', listPlaceImportsAdmin);
-router.get('/place-imports/runs', listPlaceImportRunsAdmin);
-router.post(
-  '/place-imports/scan',
-  authorize('ADMIN'),
-  startOverturePlaceScanAdmin
-);
-router.get('/place-imports/stats', getPlaceImportStatsAdmin);
-router.patch('/place-imports/:id', updatePlaceImportAdmin);
-router.post('/place-imports/:id/approve', approvePlaceImportAdmin);
-router.post('/place-imports/:id/reject', rejectPlaceImportAdmin);
-router.post(
-  '/place-imports/approve-high-confidence',
-  authorize('ADMIN'),
-  approveHighConfidencePlaceImportsAdmin
-);
+router.get('/data-quality', ctvStaff, getDataQualityAdmin);
+router.get('/places/:id/revisions', ctvStaff, listPlaceRevisionsAdmin);
+router.post('/places/:id/verify-quality', ctvStaff, requireCtvLevel(2), verifyPlaceQualityAdmin);
+router.post('/places/:id/revisions/:revisionId/rollback', dataStaff, rollbackPlaceRevisionAdmin);
 
-router.get('/places', listPlacesAdmin);
-router.post('/places', validateBody(adminCreatePlaceSchema), createPlaceAdmin);
-router.get('/places/:id', getPlaceAdmin);
-router.patch('/places/:id', validateBody(adminUpdatePlaceSchema), updatePlaceAdmin);
-router.delete('/places/:id', archivePlaceAdmin);
-router.post('/places/:id/images', uploadPhotos, uploadPlaceImagesAdmin);
-router.post('/places/:id/images/:imageId/cover', makeCoverAdmin);
-router.delete('/places/:id/images/:imageId', deletePlaceImageAdmin);
+router.get('/place-imports', ctvStaff, requireCtvLevel(2), listPlaceImportsAdmin);
+router.get('/place-imports/runs', ctvStaff, requireCtvLevel(2), listPlaceImportRunsAdmin);
+router.get('/place-imports/stats', ctvStaff, requireCtvLevel(2), getPlaceImportStatsAdmin);
+router.patch('/place-imports/:id', ctvStaff, requireCtvLevel(2), updatePlaceImportAdmin);
+router.post('/place-imports/:id/approve', ctvStaff, requireCtvLevel(2), approvePlaceImportAdmin);
+router.post('/place-imports/:id/reject', ctvStaff, requireCtvLevel(2), rejectPlaceImportAdmin);
+router.post('/place-imports/scan', adminOnly, startOverturePlaceScanAdmin);
+router.post('/place-imports/approve-high-confidence', adminOnly, approveHighConfidencePlaceImportsAdmin);
 
-router.get('/ads', authorize('ADMIN'), listAdvertisementsAdmin);
-router.post(
-  '/ads',
-  authorize('ADMIN'),
-  validateBody(adminCreateAdvertisementSchema),
-  createAdvertisementAdmin
-);
-router.patch(
-  '/ads/:id',
-  authorize('ADMIN'),
-  validateBody(adminUpdateAdvertisementSchema),
-  updateAdvertisementAdmin
-);
-router.delete('/ads/:id', authorize('ADMIN'), archiveAdvertisementAdmin);
-router.post(
-  '/ads/:id/image',
-  authorize('ADMIN'),
-  uploadSingleImage,
-  uploadAdvertisementImageAdmin
-);
+router.get('/places', ctvStaff, listPlacesAdmin);
+router.get('/places/:id', ctvStaff, getPlaceAdmin);
+router.post('/places', ctvStaff, requireCtvLevel(2), validateBody(adminCreatePlaceSchema), createPlaceAdmin);
+router.patch('/places/:id', ctvStaff, requireCtvLevel(2), validateBody(adminUpdatePlaceSchema), updatePlaceAdmin);
+router.post('/places/:id/images', ctvStaff, requireCtvLevel(2), uploadPhotos, uploadPlaceImagesAdmin);
+router.post('/places/:id/images/:imageId/cover', ctvStaff, requireCtvLevel(2), makeCoverAdmin);
+router.delete('/places/:id', dataStaff, archivePlaceAdmin);
+router.delete('/places/:id/images/:imageId', dataStaff, deletePlaceImageAdmin);
 
-router.get('/users', authorize('ADMIN'), listUsersAdmin);
-router.get('/users/:id', authorize('ADMIN'), getUserAdmin);
-router.patch(
-  '/users/:id',
-  authorize('ADMIN'),
-  validateBody(adminUpdateUserSchema),
-  updateUserAdmin
-);
-router.post(
-  '/users/:id/wallet-adjustments',
-  authorize('ADMIN'),
-  validateBody(adminAdjustWalletSchema),
-  adjustUserWalletAdmin
-);
+router.get('/ads', adminOnly, listAdvertisementsAdmin);
+router.post('/ads', adminOnly, validateBody(adminCreateAdvertisementSchema), createAdvertisementAdmin);
+router.patch('/ads/:id', adminOnly, validateBody(adminUpdateAdvertisementSchema), updateAdvertisementAdmin);
+router.delete('/ads/:id', adminOnly, archiveAdvertisementAdmin);
+router.post('/ads/:id/image', adminOnly, uploadSingleImage, uploadAdvertisementImageAdmin);
 
-router.post(
-  '/users/:id/partner-access',
-  authorize('ADMIN'),
-  validateBody(adminAssignPartnerAccessSchema),
-  assignPartnerAccessAdmin
-);
+router.get('/users', adminOnly, listUsersAdmin);
+router.get('/users/:id', adminOnly, getUserAdmin);
+router.patch('/users/:id', adminOnly, validateBody(adminUpdateUserSchema), updateUserAdmin);
+router.post('/users/:id/wallet-adjustments', adminOnly, validateBody(adminAdjustWalletSchema), adjustUserWalletAdmin);
+router.post('/users/:id/partner-access', adminOnly, validateBody(adminAssignPartnerAccessSchema), assignPartnerAccessAdmin);
+router.patch('/users/:id/partner-access/:membershipId', adminOnly, validateBody(adminUpdatePartnerAccessSchema), updatePartnerAccessAdmin);
 
-router.patch(
-  '/users/:id/partner-access/:membershipId',
-  authorize('ADMIN'),
-  validateBody(adminUpdatePartnerAccessSchema),
-  updatePartnerAccessAdmin
-);
+router.get('/partners', adminOnly, listPartnersAdminController);
+router.post('/partners', adminOnly, validateBody(adminCreatePartnerSchema), createPartnerAdminController);
+router.patch('/partners/:id', adminOnly, validateBody(adminUpdatePartnerSchema), updatePartnerAdminController);
 
-router.get('/partners', authorize('ADMIN'), listPartnersAdminController);
-router.post(
-  '/partners',
-  authorize('ADMIN'),
-  validateBody(adminCreatePartnerSchema),
-  createPartnerAdminController
-);
-router.patch(
-  '/partners/:id',
-  authorize('ADMIN'),
-  validateBody(adminUpdatePartnerSchema),
-  updatePartnerAdminController
-);
+router.get('/vouchers', adminOnly, listVoucherCampaignsAdminController);
+router.post('/vouchers', adminOnly, validateBody(adminCreateVoucherSchema), createVoucherCampaignAdminController);
+router.patch('/vouchers/:id', adminOnly, validateBody(adminUpdateVoucherSchema), updateVoucherCampaignAdminController);
+router.get('/voucher-redemptions', adminOnly, listVoucherRedemptionsAdminController);
+router.post('/voucher-redemptions/:id/redeem', adminOnly, markVoucherRedeemedAdminController);
 
-router.get('/vouchers', authorize('ADMIN'), listVoucherCampaignsAdminController);
-router.post(
-  '/vouchers',
-  authorize('ADMIN'),
-  validateBody(adminCreateVoucherSchema),
-  createVoucherCampaignAdminController
-);
-router.patch(
-  '/vouchers/:id',
-  authorize('ADMIN'),
-  validateBody(adminUpdateVoucherSchema),
-  updateVoucherCampaignAdminController
-);
+router.get('/settlements', adminOnly, listPartnerSettlementsAdmin);
+router.post('/settlements', adminOnly, validateBody(adminCreateSettlementSchema), createPartnerSettlementAdmin);
+router.post('/settlements/:id/paid', adminOnly, markPartnerSettlementPaidAdmin);
 
-router.get('/voucher-redemptions', authorize('ADMIN'), listVoucherRedemptionsAdminController);
-router.post(
-  '/voucher-redemptions/:id/redeem',
-  authorize('ADMIN'),
-  markVoucherRedeemedAdminController
-);
+router.get('/place-claims', adminOnly, listClaimsAdmin);
+router.post('/place-claims/:id/review', adminOnly, validateBody(reviewPlaceClaimSchema), reviewClaimAdmin);
 
-router.get('/settlements', authorize('ADMIN'), listPartnerSettlementsAdmin);
-router.post(
-  '/settlements',
-  authorize('ADMIN'),
-  validateBody(adminCreateSettlementSchema),
-  createPartnerSettlementAdmin
-);
-router.post(
-  '/settlements/:id/paid',
-  authorize('ADMIN'),
-  markPartnerSettlementPaidAdmin
-);
+router.get('/missions', adminOnly, listMissionsAdminController);
+router.post('/missions', adminOnly, validateBody(createMissionSchema), createMissionAdminController);
+router.patch('/missions/:id', adminOnly, validateBody(updateMissionSchema), updateMissionAdminController);
 
-router.get('/place-claims', authorize('ADMIN'), listClaimsAdmin);
-router.post(
-  '/place-claims/:id/review',
-  authorize('ADMIN'),
-  validateBody(reviewPlaceClaimSchema),
-  reviewClaimAdmin
-);
+router.get('/audit', adminOnly, listAuditLogsAdmin);
+router.get('/brand', adminOnly, getBrandAdmin);
+router.patch('/brand', adminOnly, validateBody(adminUpdateBrandSettingsSchema), updateBrandAdmin);
+router.post('/brand/assets', adminOnly, uploadSingleImage, uploadBrandAssetAdmin);
+router.delete('/brand/assets/:id', adminOnly, deleteBrandAssetAdmin);
 
-router.get('/missions', authorize('ADMIN'), listMissionsAdminController);
-router.post(
-  '/missions',
-  authorize('ADMIN'),
-  validateBody(createMissionSchema),
-  createMissionAdminController
-);
-router.patch(
-  '/missions/:id',
-  authorize('ADMIN'),
-  validateBody(updateMissionSchema),
-  updateMissionAdminController
-);
-
-router.get('/audit', authorize('ADMIN'), listAuditLogsAdmin);
-
-router.get('/brand', authorize('ADMIN'), getBrandAdmin);
-router.patch(
-  '/brand',
-  authorize('ADMIN'),
-  validateBody(adminUpdateBrandSettingsSchema),
-  updateBrandAdmin
-);
-router.post(
-  '/brand/assets',
-  authorize('ADMIN'),
-  uploadSingleImage,
-  uploadBrandAssetAdmin
-);
-router.delete(
-  '/brand/assets/:id',
-  authorize('ADMIN'),
-  deleteBrandAssetAdmin
-);
-
-
-router.get('/developer-api/overview', authorize('ADMIN'), getDeveloperApiOverviewAdmin);
-router.patch('/developer-api/settings', authorize('ADMIN'), validateBody(updateDeveloperApiSettingsSchema), updateDeveloperApiSettingsAdmin);
-router.get('/developer-api/clients', authorize('ADMIN'), listDeveloperApiClientsAdmin);
-router.post('/developer-api/clients', authorize('ADMIN'), validateBody(createDeveloperApiClientSchema), createDeveloperApiClientAdmin);
-router.patch('/developer-api/clients/:id', authorize('ADMIN'), validateBody(updateDeveloperApiClientSchema), updateDeveloperApiClientAdmin);
-router.get('/developer-api/keys', authorize('ADMIN'), listDeveloperApiKeysAdmin);
-router.post('/developer-api/keys', authorize('ADMIN'), validateBody(createDeveloperApiKeySchema), createDeveloperApiKeyAdmin);
-router.post('/developer-api/keys/:id/revoke', authorize('ADMIN'), revokeDeveloperApiKeyAdmin);
-router.get('/developer-api/endpoints', authorize('ADMIN'), listDeveloperApiEndpointsAdmin);
-router.patch('/developer-api/endpoints/:key', authorize('ADMIN'), validateBody(updateDeveloperApiEndpointSchema), updateDeveloperApiEndpointAdmin);
-router.get('/developer-api/logs', authorize('ADMIN'), listDeveloperApiLogsAdmin);
+router.get('/developer-api/overview', adminOnly, getDeveloperApiOverviewAdmin);
+router.patch('/developer-api/settings', adminOnly, validateBody(updateDeveloperApiSettingsSchema), updateDeveloperApiSettingsAdmin);
+router.get('/developer-api/clients', adminOnly, listDeveloperApiClientsAdmin);
+router.post('/developer-api/clients', adminOnly, validateBody(createDeveloperApiClientSchema), createDeveloperApiClientAdmin);
+router.patch('/developer-api/clients/:id', adminOnly, validateBody(updateDeveloperApiClientSchema), updateDeveloperApiClientAdmin);
+router.get('/developer-api/keys', adminOnly, listDeveloperApiKeysAdmin);
+router.post('/developer-api/keys', adminOnly, validateBody(createDeveloperApiKeySchema), createDeveloperApiKeyAdmin);
+router.post('/developer-api/keys/:id/revoke', adminOnly, revokeDeveloperApiKeyAdmin);
+router.get('/developer-api/endpoints', adminOnly, listDeveloperApiEndpointsAdmin);
+router.patch('/developer-api/endpoints/:key', adminOnly, validateBody(updateDeveloperApiEndpointSchema), updateDeveloperApiEndpointAdmin);
+router.get('/developer-api/logs', adminOnly, listDeveloperApiLogsAdmin);
 
 export default router;
