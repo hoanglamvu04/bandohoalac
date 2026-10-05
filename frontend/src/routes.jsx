@@ -20,6 +20,7 @@ const AdminPlaces = lazy(() => import('./pages/admin/AdminPlaces.jsx'));
 const AdminPlaceImports = lazy(() => import('./pages/admin/AdminPlaceImports.jsx'));
 const AdminAdvertisements = lazy(() => import('./pages/admin/AdminAdvertisements.jsx'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers.jsx'));
+const AdminReputation = lazy(() => import('./pages/admin/AdminReputation.jsx'));
 const AdminPartnersRewards = lazy(() => import('./pages/admin/AdminPartnersRewards.jsx'));
 const RewardsPage = lazy(() => import('./pages/RewardsPage.jsx'));
 const MissionsPage = lazy(() => import('./pages/MissionsPage.jsx'));
@@ -116,6 +117,7 @@ export const router = createBrowserRouter([
       { path: 'admin/ctv', element: withRole(AdminCtvManagement, ['ADMIN']) },
       { path: 'admin/ads', element: withRole(AdminAdvertisements, ['ADMIN']) },
       { path: 'admin/users', element: withRole(AdminUsers, ['ADMIN']) },
+      { path: 'admin/reputation', element: withRole(AdminReputation, ['ADMIN']) },
       { path: 'admin/partners', element: withRole(AdminPartnersRewards, ['ADMIN']) },
       { path: 'admin/missions', element: withRole(AdminMissions, ['ADMIN']) },
       { path: 'admin/audit', element: withRole(AdminAudit, ['ADMIN']) },

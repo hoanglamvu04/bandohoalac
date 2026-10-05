@@ -1,4 +1,8 @@
 import { CONTRIBUTION_MAX_POINTS } from './contributionScoring.service.js';
+import {
+  getUserReputation,
+  recordReputationEvent
+} from './reputation.service.js';
 
 const TRUST_GAIN_ON_APPROVE = 2;
 const TRUST_LOSS_ON_REJECT = 5;
@@ -16,6 +20,7 @@ export async function awardPointsForApproval({
   type,
   amount
 }, client) {
+  const reputationBefore = await getUserReputation(userId, client);
   const awarded = normalizeAwardAmount(amount);
 
   if (awarded > 0) {
@@ -37,10 +42,26 @@ export async function awardPointsForApproval({
     [awarded, TRUST_GAIN_ON_APPROVE, TRUST_MAX, userId]
   );
 
+  const reputationAfter = await getUserReputation(userId, client);
+  await recordReputationEvent({
+    userId,
+    contributionId,
+    eventType: 'CONTRIBUTION_APPROVED',
+    before: reputationBefore,
+    after: reputationAfter,
+    metadata: {
+      contributionType: type,
+      qualityPointsAwarded: awarded,
+      trustDelta: TRUST_GAIN_ON_APPROVE
+    }
+  }, client);
+
   return awarded;
 }
 
 export async function penalizeRejection(userId, client) {
+  const reputationBefore = await getUserReputation(userId, client);
+
   await client.query(
     `UPDATE users
      SET rejected_count = rejected_count + 1,
@@ -49,4 +70,15 @@ export async function penalizeRejection(userId, client) {
      WHERE id = $3`,
     [TRUST_MIN, TRUST_LOSS_ON_REJECT, userId]
   );
+
+  const reputationAfter = await getUserReputation(userId, client);
+  await recordReputationEvent({
+    userId,
+    eventType: 'CONTRIBUTION_REJECTED',
+    before: reputationBefore,
+    after: reputationAfter,
+    metadata: {
+      trustDelta: -TRUST_LOSS_ON_REJECT
+    }
+  }, client);
 }

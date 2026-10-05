@@ -1,5 +1,6 @@
 import { pool, withTransaction } from '../database/pool.js';
 import { AppError } from '../utils/AppError.js';
+import { getReputationInspector } from './reputation.service.js';
 
 function mapUser(row) {
   if (!row) return null;
@@ -112,8 +113,14 @@ export async function getAdminUser(id, client = pool) {
   const { rows } = await client.query(USER_SELECT + ' WHERE u.id = $1', [id]);
   const item = mapUser(rows[0]);
   if (!item) return null;
-  item.partnerMemberships = await listAdminUserPartnerMemberships(id, client);
-  item.partnerMembershipCount = item.partnerMemberships.filter((membership) => membership.status === 'ACTIVE').length;
+
+  const [partnerMemberships, reputationInspector] = await Promise.all([
+    listAdminUserPartnerMemberships(id, client),
+    getReputationInspector(id, client)
+  ]);
+  item.partnerMemberships = partnerMemberships;
+  item.partnerMembershipCount = partnerMemberships.filter((membership) => membership.status === 'ACTIVE').length;
+  item.reputationInspector = reputationInspector;
   return item;
 }
 

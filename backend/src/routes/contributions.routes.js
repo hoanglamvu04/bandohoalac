@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { create, listMine } from '../controllers/contributions.controller.js';
+import { create, getMyReputation, listMine } from '../controllers/contributions.controller.js';
 import { confirm as confirmRoadStatus } from '../controllers/roadStatus.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { contributionRateLimiter } from '../middleware/rateLimit.js';
@@ -20,6 +20,8 @@ router.post(
   validateBody(createContributionSchema),
   create
 );
+
+router.get('/reputation/me', authenticate, getMyReputation);
 
 router.post(
   '/:id/status-confirmation',

@@ -47,6 +47,49 @@ export const REPUTATION_LEVELS = [
   }
 ];
 
+const REPUTATION_PERMISSIONS = {
+  NEW_MEMBER: {
+    moderationPriority: 0,
+    priorityLabel: 'Tiêu chuẩn',
+    advancedSuggestions: false,
+    sensitiveCorrections: false,
+    expeditedReview: false,
+    selfApproval: false
+  },
+  EXPLORER: {
+    moderationPriority: 1,
+    priorityLabel: 'Tiêu chuẩn+',
+    advancedSuggestions: false,
+    sensitiveCorrections: false,
+    expeditedReview: false,
+    selfApproval: false
+  },
+  CONTRIBUTOR: {
+    moderationPriority: 2,
+    priorityLabel: 'Ưu tiên',
+    advancedSuggestions: true,
+    sensitiveCorrections: false,
+    expeditedReview: false,
+    selfApproval: false
+  },
+  TRUSTED_CONTRIBUTOR: {
+    moderationPriority: 3,
+    priorityLabel: 'Ưu tiên cao',
+    advancedSuggestions: true,
+    sensitiveCorrections: true,
+    expeditedReview: true,
+    selfApproval: false
+  },
+  LOCAL_EXPERT: {
+    moderationPriority: 4,
+    priorityLabel: 'Chuyên gia',
+    advancedSuggestions: true,
+    sensitiveCorrections: true,
+    expeditedReview: true,
+    selfApproval: false
+  }
+};
+
 function clamp(value, min = 0, max = 100) {
   return Math.min(Math.max(Number(value) || 0, min), max);
 }
@@ -131,6 +174,15 @@ function requirementRows(level, metrics, score) {
   }));
 }
 
+export function getReputationPermissions(reputationOrCode) {
+  const code = typeof reputationOrCode === 'string'
+    ? reputationOrCode
+    : reputationOrCode?.code;
+  return {
+    ...(REPUTATION_PERMISSIONS[code] || REPUTATION_PERMISSIONS.NEW_MEMBER)
+  };
+}
+
 export function calculateReputation(input = {}, now = new Date()) {
   const approvedCount = Math.max(Number(input.approvedCount) || 0, 0);
   const rejectedCount = Math.max(Number(input.rejectedCount) || 0, 0);
@@ -181,13 +233,14 @@ export function calculateReputation(input = {}, now = new Date()) {
     : 1;
 
   return {
-    version: 2,
+    version: '2.1',
     code: current.code,
     name: current.name,
     score,
     progress,
     components,
     metrics,
+    permissions: getReputationPermissions(current.code),
     nextLevel: next ? {
       code: next.code,
       name: next.name,
@@ -212,6 +265,7 @@ export async function getUserReputation(userId, client = pool) {
          WHERE pt.user_id = u.id
            AND pt.contribution_id IS NOT NULL
            AND pt.amount > 0
+           AND pt.reason LIKE '%_QUALITY_APPROVED'
        ), 0)::int AS quality_points
      FROM users u
      WHERE u.id = $1`,
@@ -237,4 +291,139 @@ export function reputationFromRow(row) {
     trustScore: row.trust_score,
     createdAt: row.created_at
   });
+}
+
+function mapReputationEvent(row) {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    contributionId: row.contribution_id == null ? null : String(row.contribution_id),
+    type: row.event_type,
+    scoreBefore: Number(row.score_before || 0),
+    scoreAfter: Number(row.score_after || 0),
+    delta: Number(row.score_delta || 0),
+    metadata: row.metadata || {},
+    createdAt: row.created_at
+  };
+}
+
+export async function getReputationHistory(userId, { limit = 20 } = {}, client = pool) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+  const { rows } = await client.query(
+    `SELECT id, user_id, contribution_id, event_type,
+            score_before, score_after, score_delta, metadata, created_at
+     FROM reputation_events
+     WHERE user_id = $1
+     ORDER BY created_at DESC, id DESC
+     LIMIT $2`,
+    [userId, safeLimit]
+  );
+  return rows.map(mapReputationEvent);
+}
+
+export async function recordReputationEvent({
+  userId,
+  contributionId = null,
+  eventType,
+  before,
+  after,
+  metadata = {}
+}, client = pool) {
+  if (!before || !after) return null;
+
+  const scoreBefore = Number(before.score || 0);
+  const scoreAfter = Number(after.score || 0);
+  const eventMetadata = {
+    ...metadata,
+    levelBefore: { code: before.code, name: before.name },
+    levelAfter: { code: after.code, name: after.name },
+    componentsBefore: before.components,
+    componentsAfter: after.components
+  };
+
+  const { rows } = await client.query(
+    `INSERT INTO reputation_events (
+       user_id, contribution_id, event_type,
+       score_before, score_after, score_delta, metadata
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+     RETURNING id, user_id, contribution_id, event_type,
+               score_before, score_after, score_delta, metadata, created_at`,
+    [
+      userId,
+      contributionId,
+      eventType,
+      scoreBefore,
+      scoreAfter,
+      scoreAfter - scoreBefore,
+      JSON.stringify(eventMetadata)
+    ]
+  );
+
+  return mapReputationEvent(rows[0]);
+}
+
+export async function getReputationSignals(userId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       COUNT(*) FILTER (WHERE c.created_at >= NOW() - interval '24 hours')::int AS submissions_24h,
+       COUNT(*) FILTER (WHERE c.created_at >= NOW() - interval '7 days')::int AS submissions_7d,
+       COUNT(*) FILTER (
+         WHERE c.status = 'APPROVED' AND c.reviewed_at >= NOW() - interval '30 days'
+       )::int AS approved_30d,
+       COUNT(*) FILTER (
+         WHERE c.status = 'REJECTED' AND c.reviewed_at >= NOW() - interval '30 days'
+       )::int AS rejected_30d,
+       COALESCE((
+         SELECT COUNT(*)::int
+         FROM (
+           SELECT fingerprint
+           FROM contributions
+           WHERE user_id = $1
+             AND fingerprint IS NOT NULL
+             AND created_at >= NOW() - interval '7 days'
+           GROUP BY fingerprint
+           HAVING COUNT(*) >= 3
+         ) duplicate_groups
+       ), 0)::int AS duplicate_clusters_7d
+     FROM contributions c
+     WHERE c.user_id = $1`,
+    [userId]
+  );
+
+  const row = rows[0] || {};
+  const approved30d = Number(row.approved_30d || 0);
+  const rejected30d = Number(row.rejected_30d || 0);
+  const reviewed30d = approved30d + rejected30d;
+  const rejectionRate30d = reviewed30d > 0 ? round(rejected30d / reviewed30d, 4) : null;
+  const signals = {
+    submissions24h: Number(row.submissions_24h || 0),
+    submissions7d: Number(row.submissions_7d || 0),
+    approved30d,
+    rejected30d,
+    reviewed30d,
+    rejectionRate30d,
+    duplicateClusters7d: Number(row.duplicate_clusters_7d || 0)
+  };
+
+  const flags = [];
+  if (signals.submissions24h >= 20) flags.push('HIGH_VOLUME_24H');
+  if (signals.duplicateClusters7d >= 2) flags.push('REPEATED_FINGERPRINTS');
+  if (reviewed30d >= 5 && rejectionRate30d >= 0.4) flags.push('HIGH_REJECTION_RATE');
+
+  return {
+    ...signals,
+    flags,
+    riskBand: flags.length >= 2 ? 'HIGH' : flags.length === 1 ? 'MEDIUM' : 'LOW'
+  };
+}
+
+export async function getReputationInspector(userId, client = pool) {
+  const [reputation, history, signals] = await Promise.all([
+    getUserReputation(userId, client),
+    getReputationHistory(userId, { limit: 30 }, client),
+    getReputationSignals(userId, client)
+  ]);
+
+  if (!reputation) return null;
+  return { reputation, history, signals };
 }
