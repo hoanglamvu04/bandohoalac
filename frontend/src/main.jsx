@@ -36,6 +36,7 @@ import './partner-scanner.css';
 import './admin-readability.css';
 import './admin-place-imports.css';
 import './developer-api.css';
+import './reputation-v2.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
@@ -46,6 +47,5 @@ createRoot(document.getElementById('root')).render(
     </BrandProvider>
   </ToastProvider>
 );
-
 
 registerHolaPwa();
