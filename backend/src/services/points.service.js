@@ -1,30 +1,28 @@
-export const POINTS_BY_TYPE = {
-  CREATE_PLACE: 20,
-  ADD_PHOTO: 3,
-  UPDATE_PLACE: 5,
-  FIX_LOCATION: 10,
-  UPDATE_HOURS: 5,
-  UPDATE_PRICE: 5,
-  REPORT_CLOSED: 2,
-  REPORT_WRONG_INFO: 2,
-  REPORT_FLOOD: 4,
-  REPORT_ROAD_CLOSURE: 4,
-  REPORT_ALERT: 3
-};
+import { CONTRIBUTION_MAX_POINTS } from './contributionScoring.service.js';
 
 const TRUST_GAIN_ON_APPROVE = 2;
 const TRUST_LOSS_ON_REJECT = 5;
 const TRUST_MIN = 0;
 const TRUST_MAX = 100;
 
-export async function awardPointsForApproval({ userId, contributionId, type }, client) {
-  const amount = POINTS_BY_TYPE[type] || 0;
+function normalizeAwardAmount(value) {
+  const amount = Math.round(Number(value) || 0);
+  return Math.min(CONTRIBUTION_MAX_POINTS, Math.max(0, amount));
+}
 
-  if (amount > 0) {
+export async function awardPointsForApproval({
+  userId,
+  contributionId,
+  type,
+  amount
+}, client) {
+  const awarded = normalizeAwardAmount(amount);
+
+  if (awarded > 0) {
     await client.query(
       `INSERT INTO points_transactions (user_id, contribution_id, amount, reason)
        VALUES ($1, $2, $3, $4)`,
-      [userId, contributionId, amount, `${type}_APPROVED`]
+      [userId, contributionId, awarded, `${type}_QUALITY_APPROVED`]
     );
   }
 
@@ -36,10 +34,10 @@ export async function awardPointsForApproval({ userId, contributionId, type }, c
          trust_score = LEAST($3, trust_score + $2),
          updated_at = NOW()
      WHERE id = $4`,
-    [amount, TRUST_GAIN_ON_APPROVE, TRUST_MAX, userId]
+    [awarded, TRUST_GAIN_ON_APPROVE, TRUST_MAX, userId]
   );
 
-  return amount;
+  return awarded;
 }
 
 export async function penalizeRejection(userId, client) {
