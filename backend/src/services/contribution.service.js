@@ -33,6 +33,7 @@ function mapRow(row) {
     type: row.type,
     status: row.status,
     payload: row.payload,
+    moderation: row.payload?.moderation || null,
     rejectReason: row.reject_reason,
     reviewedBy: row.reviewed_by,
     reviewedAt: row.reviewed_at,
@@ -86,13 +87,32 @@ export async function listContributions({ status, limit = 50, offset = 0 } = {})
   return rows.map(mapRow);
 }
 
-export async function markContributionReviewed(id, { status, reviewedBy, rejectReason, placeId }, client) {
+export async function markContributionReviewed(
+  id,
+  { status, reviewedBy, rejectReason, placeId, moderation },
+  client
+) {
   await client.query(
     `UPDATE contributions
-     SET status = $1, reviewed_by = $2, reviewed_at = NOW(), reject_reason = $3,
-         place_id = COALESCE($4, place_id), updated_at = NOW()
-     WHERE id = $5`,
-    [status, reviewedBy, rejectReason || null, placeId || null, id]
+     SET status = $1,
+         reviewed_by = $2,
+         reviewed_at = NOW(),
+         reject_reason = $3,
+         place_id = COALESCE($4, place_id),
+         payload = CASE
+           WHEN $5::jsonb IS NULL THEN payload
+           ELSE jsonb_set(COALESCE(payload, '{}'::jsonb), '{moderation}', $5::jsonb, TRUE)
+         END,
+         updated_at = NOW()
+     WHERE id = $6`,
+    [
+      status,
+      reviewedBy,
+      rejectReason || null,
+      placeId || null,
+      moderation ? JSON.stringify(moderation) : null,
+      id
+    ]
   );
 }
 
