@@ -9,11 +9,15 @@ import {
   getPartnerAccessSummary,
   toPublicUser
 } from '../services/user.service.js';
+import { getUserReputation } from '../services/reputation.service.js';
 
 async function toAuthenticatedUser(user) {
-  const partnerAccess = await getPartnerAccessSummary(user.id);
+  const [partnerAccess, reputation] = await Promise.all([
+    getPartnerAccessSummary(user.id),
+    getUserReputation(user.id)
+  ]);
   return {
-    ...toPublicUser(user),
+    ...toPublicUser(user, reputation),
     partnerAccess
   };
 }
