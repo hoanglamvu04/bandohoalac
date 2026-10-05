@@ -94,6 +94,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: withSuspense(HomePage) },
       { path: 'map', element: withSuspense(MapPage) },
+      { path: 'embed', element: withSuspense(MapPage) },
       { path: 'place/:id', element: withSuspense(PlaceDetail) },
       { path: 'contribute', element: withSuspense(Contribute) },
       { path: 'profile', element: withRole(ProfilePage) },
