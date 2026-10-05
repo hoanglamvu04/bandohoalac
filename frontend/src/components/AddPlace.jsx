@@ -176,7 +176,6 @@ export default function AddPlace() {
 
       setLocation(nextLocation);
       setNeedsManualConfirm(false);
-
       if (Number(candidate.accuracy) > 120) {
         setStatus({
           type: 'info',
@@ -286,7 +285,7 @@ export default function AddPlace() {
 
       setStatus({
         type: 'success',
-        message: 'Đã gửi đóng góp. Bạn sẽ nhận +20 điểm khi được duyệt.'
+        message: 'Đã gửi đóng góp. Nếu được duyệt, bạn có thể nhận tối đa +20 điểm; số điểm thực nhận do Admin chấm theo chất lượng.'
       });
       showToast('Đóng góp đã được gửi để chờ duyệt!', 'success');
 
@@ -335,7 +334,7 @@ export default function AddPlace() {
           <h2>Thêm địa điểm mới</h2>
           <p>Chia sẻ một địa điểm bạn vừa trải nghiệm tại Hòa Lạc.</p>
         </div>
-        <span className="reward-pill">+20 điểm</span>
+        <span className="reward-pill">Tối đa +20 điểm</span>
       </div>
 
       <div className="form-section">
@@ -539,7 +538,7 @@ export default function AddPlace() {
           <Camera size={19} />
           <div>
             <b>3. Ảnh thực tế</b>
-            <small>Tối đa 8 ảnh. Ảnh rõ và đúng địa điểm sẽ được ưu tiên.</small>
+            <small>Tối đa 8 ảnh. Ảnh rõ, mới và thể hiện đúng không gian sẽ giúp đóng góp được chấm điểm cao hơn.</small>
           </div>
         </div>
 
