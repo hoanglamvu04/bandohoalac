@@ -1,0 +1,38 @@
+name: Apply map category icons v2
+
+on:
+  push:
+    branches:
+      - feature/map-category-icons-v2
+    paths:
+      - .github/workflows/apply-map-category-icons-v2.yml
+      - scripts/apply-map-category-icons-v2.mjs
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: feature/map-category-icons-v2
+          fetch-depth: 0
+
+      - name: Apply category icon patch
+        run: node scripts/apply-map-category-icons-v2.mjs
+
+      - name: Commit generated source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/src/pages/MapPage.jsx frontend/src/components/MapView.jsx frontend/src/map-workspace.css
+          if git diff --cached --quiet; then
+            echo "No source changes produced"
+            exit 0
+          fi
+          git commit -m "Upgrade map category icon system"
+          git push origin HEAD:feature/map-category-icons-v2
