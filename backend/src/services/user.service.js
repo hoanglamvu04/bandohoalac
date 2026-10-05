@@ -1,4 +1,3 @@
-import { getExplorerLevel } from './explorerLevel.service.js';
 import { pool } from '../database/pool.js';
 
 export async function findUserByEmail(email, client = pool) {
@@ -21,7 +20,7 @@ export async function createUser({ name, email, passwordHash, role = 'USER' }, c
   return rows[0];
 }
 
-export function toPublicUser(user) {
+export function toPublicUser(user, reputation = null) {
   if (!user) return null;
   return {
     id: user.id,
@@ -32,7 +31,10 @@ export function toPublicUser(user) {
     bio: user.bio,
     points: Number(user.points_total || 0),
     pointsBalance: Number(user.points_balance || 0),
-    explorerLevel: getExplorerLevel(user.points_total),
+    reputation,
+    // Keep explorerLevel for older frontend surfaces while switching its meaning
+    // from reward points to Reputation v2.
+    explorerLevel: reputation,
     trustScore: user.trust_score,
     approvedCount: user.approved_count,
     rejectedCount: user.rejected_count,
