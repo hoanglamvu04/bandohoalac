@@ -1,4 +1,4 @@
-import { pool } from '../database/pool.js';
+import { pool, withTransaction } from '../database/pool.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -90,6 +90,8 @@ const REPUTATION_PERMISSIONS = {
   }
 };
 
+const PRIORITY_LABELS = ['Tiêu chuẩn', 'Tiêu chuẩn+', 'Ưu tiên', 'Ưu tiên cao', 'Chuyên gia'];
+
 function clamp(value, min = 0, max = 100) {
   return Math.min(Math.max(Number(value) || 0, min), max);
 }
@@ -103,6 +105,17 @@ function accountAgeDays(createdAt, now = new Date()) {
   const created = createdAt ? new Date(createdAt) : null;
   if (!created || Number.isNaN(created.getTime())) return 0;
   return Math.max(0, Math.floor((now.getTime() - created.getTime()) / DAY_MS));
+}
+
+function daysSince(value, now = new Date()) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return null;
+  return Math.max(0, Math.floor((now.getTime() - date.getTime()) / DAY_MS));
+}
+
+function levelIndex(code) {
+  const index = REPUTATION_LEVELS.findIndex((level) => level.code === code);
+  return index >= 0 ? index : 0;
 }
 
 function meetsLevel(level, metrics, score) {
@@ -174,12 +187,68 @@ function requirementRows(level, metrics, score) {
   }));
 }
 
-export function getReputationPermissions(reputationOrCode) {
+function calculateFreshness({ reviewedCount, lastReviewedAt }, now = new Date()) {
+  const daysSinceLastReview = daysSince(lastReviewedAt, now);
+  if (!reviewedCount || daysSinceLastReview == null) {
+    return { state: 'BUILDING', daysSinceLastReview, penalty: 0 };
+  }
+  if (daysSinceLastReview <= 90) {
+    return { state: 'ACTIVE', daysSinceLastReview, penalty: 0 };
+  }
+  if (daysSinceLastReview <= 180) {
+    return { state: 'COOLING', daysSinceLastReview, penalty: 2 };
+  }
+  if (daysSinceLastReview <= 365) {
+    return { state: 'STALE', daysSinceLastReview, penalty: 5 };
+  }
+  return { state: 'DORMANT', daysSinceLastReview, penalty: 8 };
+}
+
+function calculateConfidence({ reviewedCount, approvalRate, trustScore, lastReviewedAt }, now = new Date()) {
+  const daysSinceLastReview = daysSince(lastReviewedAt, now);
+  const components = {
+    sample: round(Math.min(reviewedCount / 30, 1) * 45, 1),
+    consistency: round((approvalRate || 0) * 20, 1),
+    trust: round((trustScore / 100) * 20, 1),
+    recency: daysSinceLastReview == null
+      ? 0
+      : round(Math.max(0, 1 - Math.min(daysSinceLastReview / 365, 1)) * 15, 1)
+  };
+  const score = Math.round(
+    components.sample + components.consistency + components.trust + components.recency
+  );
+  return {
+    score: clamp(score),
+    band: score >= 70 ? 'HIGH' : score >= 40 ? 'MEDIUM' : 'LOW',
+    components
+  };
+}
+
+export function getReputationPermissions(reputationOrCode, options = {}) {
   const code = typeof reputationOrCode === 'string'
     ? reputationOrCode
     : reputationOrCode?.code;
+  const confidence = options.confidence == null ? 100 : clamp(options.confidence);
+  const ceilingCode = options.permissionCeiling || null;
+  const effectiveIndex = ceilingCode
+    ? Math.min(levelIndex(code), levelIndex(ceilingCode))
+    : levelIndex(code);
+  const permissionCode = REPUTATION_LEVELS[effectiveIndex]?.code || 'NEW_MEMBER';
+  const base = REPUTATION_PERMISSIONS[permissionCode] || REPUTATION_PERMISSIONS.NEW_MEMBER;
+  const confidencePriorityCap = confidence >= 75 ? 4 : confidence >= 60 ? 3 : confidence >= 40 ? 2 : 1;
+  const moderationPriority = Math.min(base.moderationPriority, confidencePriorityCap);
+
   return {
-    ...(REPUTATION_PERMISSIONS[code] || REPUTATION_PERMISSIONS.NEW_MEMBER)
+    ...base,
+    permissionCode,
+    moderationPriority,
+    priorityLabel: PRIORITY_LABELS[moderationPriority] || 'Tiêu chuẩn',
+    advancedSuggestions: base.advancedSuggestions && confidence >= 40,
+    sensitiveCorrections: base.sensitiveCorrections && confidence >= 70,
+    expeditedReview: base.expeditedReview && confidence >= 60,
+    selfApproval: false,
+    confidenceGated: confidence < 75 && moderationPriority < base.moderationPriority,
+    ceilingApplied: Boolean(ceilingCode && levelIndex(ceilingCode) < levelIndex(code))
   };
 }
 
@@ -193,6 +262,17 @@ export function calculateReputation(input = {}, now = new Date()) {
     ? Math.max(Number(input.accountAgeDays) || 0, 0)
     : accountAgeDays(input.createdAt, now);
   const approvalRate = reviewedCount > 0 ? approvedCount / reviewedCount : null;
+  const freshness = calculateFreshness({
+    reviewedCount,
+    lastReviewedAt: input.lastReviewedAt
+  }, now);
+  const confidence = calculateConfidence({
+    reviewedCount,
+    approvalRate,
+    trustScore,
+    lastReviewedAt: input.lastReviewedAt
+  }, now);
+  const scoreAdjustment = Math.round(clamp(input.scoreAdjustment, -15, 15));
 
   const components = {
     quality: round(Math.min(qualityPoints / 600, 1) * 35, 1),
@@ -202,13 +282,14 @@ export function calculateReputation(input = {}, now = new Date()) {
     tenure: round(Math.min(ageDays / 180, 1) * 5, 1)
   };
 
-  const score = Math.min(100, Math.round(
+  const baseScore = Math.min(100, Math.round(
     components.quality +
     components.approval +
     components.trust +
     components.helpfulness +
     components.tenure
   ));
+  const score = clamp(baseScore - freshness.penalty + scoreAdjustment);
 
   const metrics = {
     qualityPoints,
@@ -217,7 +298,8 @@ export function calculateReputation(input = {}, now = new Date()) {
     reviewedCount,
     approvalRate: approvalRate == null ? null : round(approvalRate, 4),
     trustScore,
-    accountAgeDays: ageDays
+    accountAgeDays: ageDays,
+    lastReviewedAt: input.lastReviewedAt || null
   };
 
   let current = REPUTATION_LEVELS[0];
@@ -225,22 +307,44 @@ export function calculateReputation(input = {}, now = new Date()) {
     if (meetsLevel(level, metrics, score)) current = level;
   }
 
-  const currentIndex = REPUTATION_LEVELS.findIndex((level) => level.code === current.code);
+  const currentIndex = levelIndex(current.code);
   const next = REPUTATION_LEVELS[currentIndex + 1] || null;
   const requirements = requirementRows(next, metrics, score);
   const progress = next && requirements.length
     ? round(requirements.reduce((sum, item) => sum + item.progress, 0) / requirements.length, 4)
     : 1;
+  const permissions = getReputationPermissions(current.code, {
+    confidence: confidence.score,
+    permissionCeiling: input.permissionCeiling || null
+  });
+  const bufferToFloor = Math.max(0, score - Number(current.minScore || 0));
+  const stabilityReasons = [];
+  if (freshness.penalty > 0) stabilityReasons.push('INACTIVITY_DECAY');
+  if (currentIndex >= 3 && confidence.score < 60) stabilityReasons.push('LOW_CONFIDENCE_FOR_PRIVILEGES');
+  if (currentIndex > 0 && bufferToFloor <= 5) stabilityReasons.push('NEAR_LEVEL_FLOOR');
+  if (scoreAdjustment < 0) stabilityReasons.push('ADMIN_ADJUSTMENT');
 
   return {
-    version: '2.1',
+    version: '2.2',
     code: current.code,
     name: current.name,
     score,
+    baseScore,
     progress,
     components,
     metrics,
-    permissions: getReputationPermissions(current.code),
+    confidence,
+    freshness,
+    adjustments: {
+      freshnessPenalty: freshness.penalty,
+      manual: scoreAdjustment
+    },
+    stability: {
+      atRisk: stabilityReasons.length > 0,
+      bufferToFloor,
+      reasons: stabilityReasons
+    },
+    permissions,
     nextLevel: next ? {
       code: next.code,
       name: next.name,
@@ -248,6 +352,29 @@ export function calculateReputation(input = {}, now = new Date()) {
     } : null,
     requirements,
     blockers: requirements.filter((item) => !item.met)
+  };
+}
+
+export async function getReputationControl(userId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT user_id, score_adjustment, permission_ceiling, reason,
+            expires_at, updated_by, created_at, updated_at
+     FROM reputation_controls
+     WHERE user_id = $1
+       AND (expires_at IS NULL OR expires_at > NOW())`,
+    [userId]
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    userId: String(row.user_id),
+    scoreAdjustment: Number(row.score_adjustment || 0),
+    permissionCeiling: row.permission_ceiling || null,
+    reason: row.reason,
+    expiresAt: row.expires_at,
+    updatedBy: row.updated_by == null ? null : String(row.updated_by),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   };
 }
 
@@ -266,8 +393,19 @@ export async function getUserReputation(userId, client = pool) {
            AND pt.contribution_id IS NOT NULL
            AND pt.amount > 0
            AND pt.reason LIKE '%_QUALITY_APPROVED'
-       ), 0)::int AS quality_points
+       ), 0)::int AS quality_points,
+       (
+         SELECT MAX(c.reviewed_at)
+         FROM contributions c
+         WHERE c.user_id = u.id
+           AND c.status IN ('APPROVED', 'REJECTED')
+       ) AS last_reviewed_at,
+       COALESCE(rc.score_adjustment, 0)::int AS score_adjustment,
+       rc.permission_ceiling
      FROM users u
+     LEFT JOIN reputation_controls rc
+       ON rc.user_id = u.id
+      AND (rc.expires_at IS NULL OR rc.expires_at > NOW())
      WHERE u.id = $1`,
     [userId]
   );
@@ -279,7 +417,10 @@ export async function getUserReputation(userId, client = pool) {
     approvedCount: row.approved_count,
     rejectedCount: row.rejected_count,
     trustScore: row.trust_score,
-    createdAt: row.created_at
+    createdAt: row.created_at,
+    lastReviewedAt: row.last_reviewed_at,
+    scoreAdjustment: row.score_adjustment,
+    permissionCeiling: row.permission_ceiling
   });
 }
 
@@ -289,7 +430,10 @@ export function reputationFromRow(row) {
     approvedCount: row.approved_count,
     rejectedCount: row.rejected_count,
     trustScore: row.trust_score,
-    createdAt: row.created_at
+    createdAt: row.created_at,
+    lastReviewedAt: row.last_reviewed_at,
+    scoreAdjustment: row.score_adjustment,
+    permissionCeiling: row.permission_ceiling
   });
 }
 
@@ -337,6 +481,8 @@ export async function recordReputationEvent({
     ...metadata,
     levelBefore: { code: before.code, name: before.name },
     levelAfter: { code: after.code, name: after.name },
+    confidenceBefore: before.confidence || null,
+    confidenceAfter: after.confidence || null,
     componentsBefore: before.components,
     componentsAfter: after.components
   };
@@ -360,6 +506,67 @@ export async function recordReputationEvent({
   );
 
   return mapReputationEvent(rows[0]);
+}
+
+export async function updateReputationControl({
+  userId,
+  adminId,
+  scoreAdjustment,
+  permissionCeiling,
+  reason,
+  expiresAt = null,
+  clear = false
+}) {
+  return withTransaction(async (client) => {
+    const before = await getUserReputation(userId, client);
+    if (!before) return null;
+
+    if (clear) {
+      await client.query('DELETE FROM reputation_controls WHERE user_id = $1', [userId]);
+    } else {
+      await client.query(
+        `INSERT INTO reputation_controls (
+           user_id, score_adjustment, permission_ceiling, reason, expires_at, updated_by
+         ) VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (user_id)
+         DO UPDATE SET
+           score_adjustment = EXCLUDED.score_adjustment,
+           permission_ceiling = EXCLUDED.permission_ceiling,
+           reason = EXCLUDED.reason,
+           expires_at = EXCLUDED.expires_at,
+           updated_by = EXCLUDED.updated_by,
+           updated_at = NOW()`,
+        [
+          userId,
+          Math.round(clamp(scoreAdjustment, -15, 15)),
+          permissionCeiling || null,
+          reason,
+          expiresAt || null,
+          adminId
+        ]
+      );
+    }
+
+    const after = await getUserReputation(userId, client);
+    const control = await getReputationControl(userId, client);
+    await recordReputationEvent({
+      userId,
+      eventType: clear ? 'ADMIN_REPUTATION_CONTROL_CLEARED' : 'ADMIN_REPUTATION_CONTROL',
+      before,
+      after,
+      metadata: {
+        adminId,
+        reason,
+        control: control ? {
+          scoreAdjustment: control.scoreAdjustment,
+          permissionCeiling: control.permissionCeiling,
+          expiresAt: control.expiresAt
+        } : null
+      }
+    }, client);
+
+    return { reputation: after, control };
+  });
 }
 
 export async function getReputationSignals(userId, client = pool) {
@@ -418,12 +625,13 @@ export async function getReputationSignals(userId, client = pool) {
 }
 
 export async function getReputationInspector(userId, client = pool) {
-  const [reputation, history, signals] = await Promise.all([
+  const [reputation, history, signals, control] = await Promise.all([
     getUserReputation(userId, client),
     getReputationHistory(userId, { limit: 30 }, client),
-    getReputationSignals(userId, client)
+    getReputationSignals(userId, client),
+    getReputationControl(userId, client)
   ]);
 
   if (!reputation) return null;
-  return { reputation, history, signals };
+  return { reputation, history, signals, control };
 }
