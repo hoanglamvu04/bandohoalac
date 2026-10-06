@@ -3,8 +3,6 @@ import {
   BadgeCheck,
   Bell,
   Building2,
-  Check,
-  ChevronDown,
   Download,
   LogOut,
   MapPinned,
@@ -17,7 +15,6 @@ import {
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useBrand } from '../context/BrandContext.jsx';
-import { REGION_PRESETS } from '../mapConfig.js';
 import {
   getNotifications,
   markAllNotificationsRead,
@@ -42,7 +39,6 @@ export default function Navbar() {
   const { brand } = useBrand();
   const navigate = useNavigate();
   const location = useLocation();
-  const [regionOpen, setRegionOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [mobileAccountOpen, setMobileAccountOpen] = useState(false);
   const [homeSearch, setHomeSearch] = useState('');
@@ -56,7 +52,6 @@ export default function Navbar() {
       window.navigator?.standalone === true
     )
   );
-  const regionRef = useRef(null);
   const notificationRef = useRef(null);
   const mobileAccountRef = useRef(null);
 
@@ -66,9 +61,6 @@ export default function Navbar() {
   const partnerTarget = isPartnerStaffOnly ? '/partner/scanner' : '/partner';
 
   const isHome = location.pathname === '/';
-  const params = new URLSearchParams(location.search);
-  const regionId = params.get('region') || 'all';
-  const activeRegion = REGION_PRESETS.find((item) => item.id === regionId) || REGION_PRESETS[0];
 
   const handleLogout = () => {
     setNotificationsOpen(false);
@@ -143,9 +135,6 @@ export default function Navbar() {
 
   useEffect(() => {
     function onPointerDown(event) {
-      if (regionRef.current && !regionRef.current.contains(event.target)) {
-        setRegionOpen(false);
-      }
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setNotificationsOpen(false);
       }
@@ -166,13 +155,6 @@ export default function Navbar() {
     event.preventDefault();
     const needle = homeSearch.trim();
     navigate('/map' + (needle ? '?q=' + encodeURIComponent(needle) : ''));
-  }
-
-  function chooseRegion(region) {
-    setRegionOpen(false);
-    const next = new URLSearchParams(location.pathname === '/map' ? location.search : '');
-    next.set('region', region.id);
-    navigate('/map?' + next.toString());
   }
 
   async function openNotification(item) {
@@ -285,36 +267,6 @@ export default function Navbar() {
       </nav>
 
       <div className="nav-actions premium-nav-actions">
-        <div className="nav-region-control" ref={regionRef}>
-          <button
-            className="location-pill"
-            type="button"
-            onClick={() => setRegionOpen((value) => !value)}
-            aria-expanded={regionOpen}
-          >
-            <MapPinned size={15}/>
-            {activeRegion.label}
-            <ChevronDown size={14}/>
-          </button>
-
-          {regionOpen && (
-            <div className="nav-region-menu">
-              <span>Khám phá khu vực</span>
-              {REGION_PRESETS.map((region) => (
-                <button
-                  key={region.id}
-                  type="button"
-                  className={region.id === activeRegion.id ? 'active' : ''}
-                  onClick={() => chooseRegion(region)}
-                >
-                  <span>{region.label}</span>
-                  {region.id === activeRegion.id && <Check size={14} />}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
         <Link className="nav-cta" to="/contribute"><Plus size={17}/>Đóng góp</Link>
 
         {!installed && installPrompt && (
