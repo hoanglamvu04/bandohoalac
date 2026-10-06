@@ -29,7 +29,11 @@ export function minimumCommunityVoters(contributionType) {
   return HIGH_IMPACT_TYPES.has(contributionType) ? 4 : 3;
 }
 
-export function calculateVerifierWeight({ reputation, expertise } = {}) {
+export function calculateVerifierWeight({
+  reputation,
+  expertise,
+  verificationStats
+} = {}) {
   let weight = REPUTATION_WEIGHTS[reputation?.code] ?? 0.5;
   const confidence = Number(reputation?.confidence?.score || 0);
 
@@ -38,6 +42,15 @@ export function calculateVerifierWeight({ reputation, expertise } = {}) {
 
   if (confidence < 40) weight -= 0.15;
   else if (confidence >= 70) weight += 0.1;
+
+  const reviewed = Number(verificationStats?.reviewedCount || 0);
+  const accuracy = verificationStats?.accuracy == null
+    ? null
+    : Number(verificationStats.accuracy);
+  if (reviewed >= 5 && accuracy != null) {
+    if (accuracy >= 0.8) weight += 0.1;
+    else if (accuracy < 0.5) weight -= 0.25;
+  }
 
   return round(Math.max(0.5, Math.min(1.75, weight)), 2);
 }
@@ -157,6 +170,33 @@ function mapState(row, contributionType = null) {
     agreementRatio: row.agreement_ratio == null ? null : Number(row.agreement_ratio),
     confidence: Number(row.confidence || 0),
     updatedAt: row.updated_at || null
+  };
+}
+
+export async function getVerifierReliability(userId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT
+       COUNT(*)::int AS reviewed_count,
+       COUNT(*) FILTER (
+         WHERE (cv.verdict = 'CONFIRM' AND c.status = 'APPROVED')
+            OR (cv.verdict = 'DISPUTE' AND c.status = 'REJECTED')
+       )::int AS correct_count,
+       MAX(c.reviewed_at) AS last_resolved_at
+     FROM community_verifications cv
+     JOIN contributions c ON c.id = cv.contribution_id
+     WHERE cv.user_id = $1
+       AND cv.verdict IN ('CONFIRM', 'DISPUTE')
+       AND c.status IN ('APPROVED', 'REJECTED')`,
+    [userId]
+  );
+  const row = rows[0] || {};
+  const reviewedCount = Number(row.reviewed_count || 0);
+  const correctCount = Number(row.correct_count || 0);
+  return {
+    reviewedCount,
+    correctCount,
+    accuracy: reviewedCount > 0 ? round(correctCount / reviewedCount, 4) : null,
+    lastResolvedAt: row.last_resolved_at || null
   };
 }
 
@@ -281,7 +321,8 @@ export async function submitCommunityVerification({
     const reputation = await getUserReputation(userId, client);
     if (!reputation) throw new AppError('User not found.', 404);
     const expertise = await getDomainExpertise(userId, contribution.type, client);
-    const weight = calculateVerifierWeight({ reputation, expertise });
+    const verificationStats = await getVerifierReliability(userId, client);
+    const weight = calculateVerifierWeight({ reputation, expertise, verificationStats });
 
     const voteResult = await client.query(
       `INSERT INTO community_verifications (
@@ -318,6 +359,7 @@ export async function submitCommunityVerification({
     const consensus = await recalculateState(contributionId, contribution.type, client);
     return {
       vote: mapVote(voteResult.rows[0]),
+      verifierReliability: verificationStats,
       consensus
     };
   });
