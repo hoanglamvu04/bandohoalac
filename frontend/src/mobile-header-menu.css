@@ -21,19 +21,50 @@
     flex:0 0 auto;
   }
 
-  .reference-navbar .mobile-account-button{
+  /* Notification: neutral white button with a black icon. */
+  .reference-navbar .nav-notification-button,
+  .reference-navbar.home-navbar .nav-notification-button{
+    color:#111827!important;
+    background:#ffffff!important;
+    border:1px solid #e5e7eb!important;
+    box-shadow:0 5px 14px rgba(15,23,42,.06)!important;
+  }
+
+  .reference-navbar .nav-notification-button svg,
+  .reference-navbar.home-navbar .nav-notification-button svg{
+    color:#111827!important;
+    stroke:#111827!important;
+  }
+
+  .reference-navbar .nav-notification-button:hover,
+  .reference-navbar.home-navbar .nav-notification-button:hover{
+    color:#111827!important;
+    background:#f8fafc!important;
+  }
+
+  /* Menu: dark brand green outside, pure white hamburger inside. */
+  .reference-navbar .mobile-account-button,
+  .reference-navbar.home-navbar .mobile-account-button{
     width:38px;
     height:38px;
     display:grid!important;
     place-items:center;
     overflow:hidden;
     padding:0;
-    border:1px solid #dce7f2;
+    border:1px solid rgba(6,78,59,.18)!important;
     border-radius:12px;
-    color:#173c5e;
-    background:#fff;
-    box-shadow:0 5px 14px rgba(28,67,105,.07);
+    color:#ffffff!important;
+    background:linear-gradient(145deg,#12664f,#084737)!important;
+    box-shadow:0 6px 15px rgba(6,74,56,.14)!important;
     cursor:pointer;
+  }
+
+  .reference-navbar .mobile-account-button:hover,
+  .reference-navbar .mobile-account-button[aria-expanded="true"],
+  .reference-navbar.home-navbar .mobile-account-button:hover,
+  .reference-navbar.home-navbar .mobile-account-button[aria-expanded="true"]{
+    color:#ffffff!important;
+    background:linear-gradient(145deg,#0f5a46,#063d30)!important;
   }
 
   /* Logged-in avatar letter becomes a compact hamburger icon. */
@@ -45,10 +76,7 @@
     color:transparent!important;
     font-size:0!important;
     line-height:0!important;
-    background:
-      linear-gradient(currentColor,currentColor) 0 0/18px 2px no-repeat,
-      linear-gradient(currentColor,currentColor) 0 6px/18px 2px no-repeat,
-      linear-gradient(currentColor,currentColor) 0 12px/18px 2px no-repeat;
+    background:none!important;
   }
 
   .reference-navbar .mobile-account-button>span::before{
@@ -57,9 +85,9 @@
     width:18px;
     height:14px;
     background:
-      linear-gradient(#173c5e,#173c5e) 0 0/18px 2px no-repeat,
-      linear-gradient(#173c5e,#173c5e) 0 6px/18px 2px no-repeat,
-      linear-gradient(#173c5e,#173c5e) 0 12px/18px 2px no-repeat;
+      linear-gradient(#ffffff,#ffffff) 0 0/18px 2px no-repeat,
+      linear-gradient(#ffffff,#ffffff) 0 6px/18px 2px no-repeat,
+      linear-gradient(#ffffff,#ffffff) 0 12px/18px 2px no-repeat;
   }
 
   .reference-navbar .mobile-account-menu{
