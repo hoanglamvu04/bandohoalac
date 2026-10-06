@@ -196,7 +196,7 @@ export default function ExplorerProfile({
         <div className="explorer-reputation-heading">
           <span>
             <ShieldCheck size={15} />
-            <b>Reputation v2.3</b>
+            <b>Reputation v{reputation?.version || '2.4'}</b>
           </span>
           <em>
             {nextLevel ? `Tiến tới ${nextLevel.name}` : 'Bạn đã đạt cấp cao nhất'}
