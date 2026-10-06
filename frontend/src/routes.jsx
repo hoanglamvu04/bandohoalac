@@ -9,6 +9,7 @@ const PlaceDetail = lazy(() => import('./pages/PlaceDetail.jsx'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard.jsx'));
 const Contribute = lazy(() => import('./pages/Contribute.jsx'));
+const CommunityVerification = lazy(() => import('./pages/CommunityVerification.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
 const Register = lazy(() => import('./pages/Register.jsx'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
@@ -98,6 +99,7 @@ export const router = createBrowserRouter([
       { path: 'embed', element: withSuspense(MapPage) },
       { path: 'place/:id', element: withSuspense(PlaceDetail) },
       { path: 'contribute', element: withSuspense(Contribute) },
+      { path: 'verify', element: withRole(CommunityVerification) },
       { path: 'profile', element: withRole(ProfilePage) },
       { path: 'leaderboard', element: withSuspense(Leaderboard) },
       { path: 'rewards', element: withSuspense(RewardsPage) },

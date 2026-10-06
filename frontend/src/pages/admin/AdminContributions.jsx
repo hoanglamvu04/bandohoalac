@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Award, Camera, Check, Clock3, MapPin, ShieldCheck, X } from 'lucide-react';
+import { Award, Camera, Check, Clock3, MapPin, ShieldCheck, Users, X } from 'lucide-react';
 import {
   client, getAdminContributions, rejectContribution
 } from '../../services/api.js';
@@ -18,6 +18,13 @@ const TYPE_LABELS = {
   REPORT_FLOOD: 'Báo ngập',
   REPORT_ROAD_CLOSURE: 'Báo đường cấm',
   REPORT_ALERT: 'Cảnh báo khu vực'
+};
+
+const COMMUNITY_STATE_LABELS = {
+  COLLECTING: 'Đang thu thập',
+  CONFIRMED: 'Cộng đồng đồng thuận',
+  DISPUTED: 'Có tranh chấp',
+  SPLIT: 'Ý kiến chia đôi'
 };
 
 const SCORE_CRITERIA = [
@@ -207,7 +214,7 @@ export default function AdminContributions() {
           <ShieldCheck size={20} />
           <div>
             <b>20 điểm là trần, không phải mức mặc định.</b>
-            <span>Hãy xem địa điểm, độ chính xác, độ mới, ảnh/không gian và độ đầy đủ trước khi duyệt. Thưởng nhiệm vụ (nếu có) được tính riêng.</span>
+            <span>Hãy xem địa điểm, độ chính xác, độ mới, ảnh/không gian, độ đầy đủ và tín hiệu Community Verification trước khi duyệt. Đồng thuận cộng đồng không tự xuất bản dữ liệu.</span>
           </div>
         </div>
       )}
@@ -226,6 +233,10 @@ export default function AdminContributions() {
           const total = draftTotal(draft);
           const isComplete = draftComplete(draft);
           const moderation = item.moderation || item.payload?.moderation;
+          const community = item.communityVerification || {};
+          const communityVotes = Number(community.confirmCount || 0)
+            + Number(community.disputeCount || 0)
+            + Number(community.unsureCount || 0);
 
           return (
             <article className="contribution-card quality-contribution-card" key={item.id}>
@@ -267,6 +278,29 @@ export default function AdminContributions() {
                   {photos.map((url) => <img key={url} src={url} alt="Ảnh đóng góp" />)}
                   <span className="result-note"><Camera size={14} /> {photos.length} ảnh</span>
                 </div>
+              )}
+
+              {(status === 'PENDING' || communityVotes > 0) && (
+                <section className={'admin-community-consensus state-' + String(community.state || 'COLLECTING').toLowerCase()}>
+                  <div>
+                    <span><Users size={15} /> COMMUNITY VERIFICATION V2.4</span>
+                    <b>{COMMUNITY_STATE_LABELS[community.state] || COMMUNITY_STATE_LABELS.COLLECTING}</b>
+                    <small>Lane: {item.reviewLane || 'STANDARD_REVIEW'} · Confidence {Number(community.confidence || 0)}/100</small>
+                  </div>
+                  <div className="admin-community-consensus-stats">
+                    <span><b>{Number(community.confirmCount || 0)}</b><small>xác nhận</small></span>
+                    <span><b>{Number(community.disputeCount || 0)}</b><small>phản đối</small></span>
+                    <span><b>{Number(community.unsureCount || 0)}</b><small>chưa chắc</small></span>
+                    <span><b>{Number(item.contributorReputation?.communityPriorityBoost || 0) > 0 ? '+1' : '0'}</b><small>priority boost</small></span>
+                  </div>
+                  <p>
+                    {community.state === 'CONFIRMED'
+                      ? 'Cộng đồng đã đạt đồng thuận. Đây chỉ là tín hiệu ưu tiên; quyết định cuối vẫn thuộc người kiểm duyệt.'
+                      : ['DISPUTED', 'SPLIT'].includes(community.state)
+                        ? 'Có ý kiến trái chiều. Hãy kiểm tra kỹ bằng chứng trước khi duyệt hoặc từ chối.'
+                        : `Cần tối thiểu ${Number(community.requiredVoters || 3)} người độc lập để hình thành đồng thuận.`}
+                  </p>
+                </section>
               )}
 
               {status === 'PENDING' && (

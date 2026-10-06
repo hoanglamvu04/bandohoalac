@@ -1,0 +1,434 @@
+.community-verification-page{
+  padding-top:28px;
+  padding-bottom:72px;
+}
+
+.community-verification-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 190px;
+  gap:24px;
+  align-items:end;
+  padding:28px;
+  border:1px solid #dce8e3;
+  border-radius:24px;
+  background:linear-gradient(145deg,#f9fcfb,#eef6f2);
+}
+
+.community-verification-hero h1{
+  margin:8px 0 10px;
+  color:#153e34;
+  font-size:clamp(30px,4vw,48px);
+  line-height:1.06;
+}
+
+.community-verification-hero p{
+  max-width:760px;
+  margin:0;
+  color:#60746d;
+  font-size:15px;
+  line-height:1.7;
+}
+
+.community-verification-hero-stat{
+  display:grid;
+  justify-items:center;
+  gap:5px;
+  padding:20px 16px;
+  border:1px solid #d7e8e0;
+  border-radius:18px;
+  background:#fff;
+  color:#2f6657;
+  text-align:center;
+}
+
+.community-verification-hero-stat strong{
+  font-size:38px;
+  line-height:1;
+}
+
+.community-verification-hero-stat span{
+  color:#7b8c86;
+  font-size:11px;
+  font-weight:800;
+}
+
+.community-verification-policy{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+  margin:14px 0 22px;
+  padding:14px 16px;
+  border:1px solid #dfe9e5;
+  border-radius:16px;
+  background:#fff;
+  color:#315d51;
+}
+
+.community-verification-policy>div{
+  display:grid;
+  gap:3px;
+}
+
+.community-verification-policy b{
+  font-size:13px;
+}
+
+.community-verification-policy span{
+  color:#71827c;
+  font-size:11px;
+  line-height:1.5;
+}
+
+.community-verification-policy button{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:36px;
+  padding:0 12px;
+  border:1px solid #d7e4df;
+  border-radius:10px;
+  background:#f8fbfa;
+  color:#315f52;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.community-verification-list{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:16px;
+}
+
+.community-verification-card{
+  min-width:0;
+  padding:18px;
+  border:1px solid #dfe8e4;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 10px 28px rgba(30,70,58,.05);
+}
+
+.community-verification-card-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.community-verification-card-head>span{
+  display:inline-flex;
+  padding:5px 8px;
+  border-radius:999px;
+  background:#edf6f2;
+  color:#2e6757;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.03em;
+}
+
+.community-verification-card-head small{
+  color:#9aa7a2;
+  font-size:9px;
+}
+
+.community-verification-card h2{
+  margin:11px 0 5px;
+  color:#173f35;
+  font-size:20px;
+}
+
+.community-verification-author,
+.community-verification-description{
+  margin:0 0 8px;
+  color:#667a73;
+  font-size:12px;
+  line-height:1.6;
+}
+
+.community-verification-meta{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:7px 0;
+  color:#5e746c;
+  font-size:11px;
+}
+
+.community-verification-report{
+  display:flex;
+  gap:8px;
+  margin:10px 0;
+  padding:10px 11px;
+  border:1px solid #eadfca;
+  border-radius:11px;
+  background:#fffaf2;
+  color:#745d36;
+  font-size:11px;
+  line-height:1.5;
+}
+
+.community-verification-photos{
+  display:flex;
+  gap:7px;
+  align-items:center;
+  margin:11px 0;
+  overflow:auto;
+}
+
+.community-verification-photos img{
+  width:68px;
+  height:58px;
+  flex:0 0 auto;
+  border-radius:9px;
+  object-fit:cover;
+}
+
+.community-verification-photos>span{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  color:#82918c;
+  font-size:10px;
+  white-space:nowrap;
+}
+
+.community-consensus-meter{
+  margin-top:12px;
+  padding:12px;
+  border:1px solid #e1e9e6;
+  border-radius:13px;
+  background:#f9fbfa;
+}
+
+.community-consensus-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.community-consensus-head>span{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:#3d655a;
+  font-size:11px;
+}
+
+.community-consensus-head em{
+  color:#85948f;
+  font-size:9px;
+  font-style:normal;
+  font-weight:800;
+}
+
+.community-consensus-meter>p{
+  margin:6px 0 9px;
+  color:#7a8984;
+  font-size:9px;
+  line-height:1.5;
+}
+
+.community-consensus-track{
+  height:7px;
+  overflow:hidden;
+  border-radius:999px;
+  background:#e7eeeb;
+}
+
+.community-consensus-track span{
+  display:block;
+  height:100%;
+  border-radius:inherit;
+  background:#4c8775;
+}
+
+.community-consensus-counts{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:9px;
+  color:#758680;
+  font-size:9px;
+}
+
+.community-consensus-counts span{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+}
+
+.community-consensus-counts .confirm{color:#39735f}
+.community-consensus-counts .dispute{color:#a35c58}
+.community-consensus-counts small{margin-left:auto;color:#9aa6a2}
+
+.community-consensus-meter.state-confirmed{
+  border-color:#cfe4da;
+  background:#f3faf7;
+}
+
+.community-consensus-meter.state-disputed,
+.community-consensus-meter.state-split{
+  border-color:#ecd9d7;
+  background:#fff7f6;
+}
+
+.community-my-vote{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-top:9px;
+  padding:8px 10px;
+  border-radius:10px;
+  background:#f3f7f5;
+  color:#5b7169;
+  font-size:10px;
+}
+
+.community-my-vote.confirm{background:#eef8f3;color:#34705c}
+.community-my-vote.dispute{background:#fff0ef;color:#9b514c}
+.community-my-vote.unsure{background:#f5f4ef;color:#756f5d}
+
+.community-verification-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:7px;
+  margin-top:12px;
+}
+
+.community-verification-actions button{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  min-height:40px;
+  padding:0 9px;
+  border-radius:10px;
+  border:1px solid #dce6e2;
+  background:#fff;
+  font-size:10px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.community-verification-actions .confirm{color:#39725f}
+.community-verification-actions .dispute{color:#9d5852}
+.community-verification-actions .unsure{color:#746e5d}
+.community-verification-actions button.active{box-shadow:inset 0 0 0 1px currentColor}
+.community-verification-actions button:disabled{opacity:.55;cursor:not-allowed}
+
+.community-dispute-box{
+  margin-top:12px;
+  padding:11px;
+  border:1px solid #ead7d5;
+  border-radius:12px;
+  background:#fff8f7;
+}
+
+.community-dispute-box label{
+  display:grid;
+  gap:6px;
+  color:#774d49;
+  font-size:10px;
+  font-weight:900;
+}
+
+.community-dispute-box textarea{
+  width:100%;
+  resize:vertical;
+  padding:10px;
+  border:1px solid #dfcfcc;
+  border-radius:9px;
+  background:#fff;
+  color:#34443f;
+  font:inherit;
+  font-weight:500;
+}
+
+.community-dispute-box>div{
+  display:flex;
+  justify-content:flex-end;
+  gap:7px;
+  margin-top:8px;
+}
+
+.community-dispute-box button{
+  min-height:34px;
+  padding:0 11px;
+  border-radius:9px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.community-dispute-box .secondary{
+  border:1px solid #dfe6e3;
+  background:#fff;
+  color:#65746f;
+}
+
+.community-dispute-box .danger{
+  border:1px solid #b96760;
+  background:#a95751;
+  color:#fff;
+}
+
+.community-verification-empty{
+  display:grid;
+  justify-items:center;
+  gap:7px;
+  padding:52px 20px;
+  border:1px dashed #cfddd7;
+  border-radius:18px;
+  color:#4e7469;
+  text-align:center;
+}
+
+.community-verification-empty span{
+  color:#899891;
+  font-size:11px;
+}
+
+@media(max-width:860px){
+  .community-verification-page{
+    padding-top:14px;
+    padding-bottom:calc(78px + var(--app-safe-bottom,0px));
+  }
+  .community-verification-hero{
+    grid-template-columns:1fr;
+    padding:20px;
+  }
+  .community-verification-hero-stat{
+    grid-template-columns:auto auto 1fr;
+    justify-items:start;
+    text-align:left;
+  }
+  .community-verification-hero-stat strong{font-size:28px}
+  .community-verification-policy{
+    grid-template-columns:auto 1fr;
+  }
+  .community-verification-policy button{
+    grid-column:1/-1;
+    justify-content:center;
+  }
+  .community-verification-list{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:560px){
+  .community-verification-hero h1{font-size:30px}
+  .community-verification-card{padding:14px}
+  .community-verification-card-head{align-items:flex-start}
+  .community-verification-actions{
+    grid-template-columns:1fr;
+  }
+  .community-verification-actions button{
+    justify-content:flex-start;
+    padding:0 12px;
+  }
+  .community-consensus-counts small{
+    width:100%;
+    margin-left:0;
+  }
+}

@@ -40,6 +40,8 @@ import './reputation-v2.css';
 import './reputation-v21.css';
 import './reputation-v22.css';
 import './reputation-v23.css';
+import './community-verification.css';
+import './community-verification-admin.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>

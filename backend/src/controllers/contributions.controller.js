@@ -19,6 +19,44 @@ import {
   getDomainExpertise,
   getUserExpertise
 } from '../services/expertise.service.js';
+import {
+  listCommunityVerificationQueue,
+  submitCommunityVerification
+} from '../services/communityVerification.service.js';
+
+function publicVerificationPayload(payload = {}) {
+  const place = payload?.place && typeof payload.place === 'object'
+    ? {
+        name: payload.place.name || undefined,
+        categorySlug: payload.place.categorySlug || undefined,
+        address: payload.place.address || undefined,
+        description: payload.place.description || undefined,
+        price: payload.place.price || undefined,
+        openingHours: payload.place.openingHours || undefined,
+        phone: payload.place.phone || undefined,
+        website: payload.place.website || undefined
+      }
+    : undefined;
+  const location = payload?.location && typeof payload.location === 'object'
+    ? {
+        lat: payload.location.lat,
+        lng: payload.location.lng
+      }
+    : undefined;
+  const directPhotos = Array.isArray(payload?.photos) ? payload.photos.filter(Boolean) : [];
+  const assetPhotos = Array.isArray(payload?.photoAssets)
+    ? payload.photoAssets.map((asset) => asset?.url || asset?.secureUrl).filter(Boolean)
+    : [];
+
+  return {
+    ...(place ? { place } : {}),
+    ...(location ? { location } : {}),
+    ...(payload?.reason ? { reason: payload.reason } : {}),
+    ...(payload?.severity ? { severity: payload.severity } : {}),
+    ...(payload?.expiresAt ? { expiresAt: payload.expiresAt } : {}),
+    photos: directPhotos.length ? directPhotos : assetPhotos
+  };
+}
 
 export const create = asyncHandler(async (req, res) => {
   const { type, placeId, location, place, reason, severity, expiresHours } = req.body;
@@ -125,9 +163,51 @@ export const getMyReputation = asyncHandler(async (req, res) => {
   res.json({
     reputation: {
       ...reputation,
-      version: '2.3',
+      version: '2.4',
       history,
-      expertise
+      expertise,
+      communityVerification: {
+        policy: 'HUMAN_REVIEW_REQUIRED',
+        selfVerification: false,
+        autoPublish: false
+      }
     }
+  });
+});
+
+export const verificationQueue = asyncHandler(async (req, res) => {
+  const items = await listCommunityVerificationQueue(req.user.id, {
+    limit: req.query.limit,
+    offset: req.query.offset
+  });
+  res.json({
+    version: '2.4',
+    policy: {
+      selfVerification: false,
+      autoPublish: false,
+      highRiskCommunityVerification: false
+    },
+    items: items.map((item) => ({
+      ...item,
+      payload: publicVerificationPayload(item.payload)
+    }))
+  });
+});
+
+export const verify = asyncHandler(async (req, res) => {
+  const result = await submitCommunityVerification({
+    contributionId: req.params.id,
+    userId: req.user.id,
+    verdict: req.body.verdict,
+    reason: req.body.reason
+  });
+  res.json({
+    version: '2.4',
+    message: result.consensus.state === 'CONFIRMED'
+      ? 'Cộng đồng đã đạt đồng thuận xác nhận. Đóng góp vẫn cần người kiểm duyệt duyệt cuối.'
+      : result.consensus.state === 'DISPUTED' || result.consensus.state === 'SPLIT'
+        ? 'Đóng góp đang có ý kiến trái chiều và sẽ được ưu tiên kiểm tra thủ công.'
+        : 'Đã ghi nhận phiếu xác minh của bạn.',
+    ...result
   });
 });

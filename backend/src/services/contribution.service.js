@@ -34,6 +34,17 @@ const LIST_SELECT = `
     rex.rejected_count AS domain_expertise_rejected_count,
     rex.quality_points AS domain_expertise_quality_points,
     rex.last_reviewed_at AS domain_expertise_last_reviewed_at,
+    cvs.state AS community_state,
+    cvs.required_voters AS community_required_voters,
+    cvs.confirm_count AS community_confirm_count,
+    cvs.dispute_count AS community_dispute_count,
+    cvs.unsure_count AS community_unsure_count,
+    cvs.confirm_weight AS community_confirm_weight,
+    cvs.dispute_weight AS community_dispute_weight,
+    cvs.unsure_weight AS community_unsure_weight,
+    cvs.agreement_ratio AS community_agreement_ratio,
+    cvs.confidence AS community_confidence,
+    cvs.updated_at AS community_updated_at,
     p.name AS place_name,
     rv.name AS reviewer_name, rv.role AS reviewer_role,
     rv.ctv_level AS reviewer_ctv_level, rv.ctv_trust_score AS reviewer_ctv_trust_score,
@@ -64,10 +75,27 @@ const LIST_SELECT = `
      WHEN ct.type IN ('REPORT_FLOOD', 'REPORT_ROAD_CLOSURE', 'REPORT_ALERT') THEN 'ROAD_SAFETY'
      ELSE 'GENERAL'
    END
+  LEFT JOIN community_verification_states cvs ON cvs.contribution_id = ct.id
   LEFT JOIN places p ON p.id = ct.place_id
   LEFT JOIN users rv ON rv.id = ct.reviewed_by
   LEFT JOIN ctv_moderation_audits cma ON cma.contribution_id = ct.id
 `;
+
+function mapCommunityVerification(row) {
+  return {
+    state: row.community_state || 'COLLECTING',
+    requiredVoters: Number(row.community_required_voters || 0),
+    confirmCount: Number(row.community_confirm_count || 0),
+    disputeCount: Number(row.community_dispute_count || 0),
+    unsureCount: Number(row.community_unsure_count || 0),
+    confirmWeight: Number(row.community_confirm_weight || 0),
+    disputeWeight: Number(row.community_dispute_weight || 0),
+    unsureWeight: Number(row.community_unsure_weight || 0),
+    agreementRatio: row.community_agreement_ratio == null ? null : Number(row.community_agreement_ratio),
+    confidence: Number(row.community_confidence || 0),
+    updatedAt: row.community_updated_at || null
+  };
+}
 
 function mapRow(row) {
   if (!row) return null;
@@ -94,9 +122,15 @@ function mapRow(row) {
       }
     : null;
   const domainBoost = expertisePriorityBoost({ expertise: domainExpertise, reputation: contributorReputation });
+  const communityVerification = mapCommunityVerification(row);
+  const communityBoost = communityVerification.state === 'CONFIRMED'
+    && communityVerification.confidence >= 70
+    ? 1
+    : 0;
   const basePriority = Number(contributorReputation?.permissions?.moderationPriority || 0);
-  const priority = Math.min(4, basePriority + domainBoost);
+  const priority = Math.min(4, basePriority + domainBoost + communityBoost);
   const riskScore = Number(row.risk_score || 0);
+  const isCommunityDispute = ['DISPUTED', 'SPLIT'].includes(communityVerification.state);
 
   return {
     id: row.id,
@@ -104,7 +138,7 @@ function mapRow(row) {
     userName: row.user_name,
     userEmail: row.user_email,
     contributorReputation: {
-      version: domainBoost > 0 ? '2.3' : contributorReputation.version,
+      version: communityBoost > 0 ? '2.4' : domainBoost > 0 ? '2.3' : contributorReputation.version,
       code: contributorReputation.code,
       name: contributorReputation.name,
       score: contributorReputation.score,
@@ -117,15 +151,21 @@ function mapRow(row) {
         tier: domainExpertise.tier
       } : null,
       expertisePriorityBoost: domainBoost,
+      communityPriorityBoost: communityBoost,
       effectiveModerationPriority: priority
     },
+    communityVerification,
     reviewLane: riskScore >= 70
       ? 'RISK_REVIEW'
-      : priority >= 3
-        ? 'FAST_TRACK_REVIEW'
-        : priority >= 2
-          ? 'PRIORITY_REVIEW'
-          : 'STANDARD_REVIEW',
+      : isCommunityDispute
+        ? 'COMMUNITY_DISPUTE_REVIEW'
+        : communityVerification.state === 'CONFIRMED'
+          ? 'COMMUNITY_CONFIRMED_REVIEW'
+          : priority >= 3
+            ? 'FAST_TRACK_REVIEW'
+            : priority >= 2
+              ? 'PRIORITY_REVIEW'
+              : 'STANDARD_REVIEW',
     placeId: row.place_id,
     placeName: row.place_name,
     type: row.type,
@@ -157,9 +197,19 @@ function comparePendingContributions(a, b) {
   const bCriticalRisk = Number(b.riskScore || 0) >= 70 ? 1 : 0;
   if (aCriticalRisk !== bCriticalRisk) return bCriticalRisk - aCriticalRisk;
 
+  const aDispute = ['DISPUTED', 'SPLIT'].includes(a.communityVerification?.state) ? 1 : 0;
+  const bDispute = ['DISPUTED', 'SPLIT'].includes(b.communityVerification?.state) ? 1 : 0;
+  if (aDispute !== bDispute) return bDispute - aDispute;
+
   const aPriority = Number(a.contributorReputation?.effectiveModerationPriority || 0);
   const bPriority = Number(b.contributorReputation?.effectiveModerationPriority || 0);
   if (aPriority !== bPriority) return bPriority - aPriority;
+
+  const aCommunityConfidence = Number(a.communityVerification?.confidence || 0);
+  const bCommunityConfidence = Number(b.communityVerification?.confidence || 0);
+  if (aCommunityConfidence !== bCommunityConfidence) {
+    return bCommunityConfidence - aCommunityConfidence;
+  }
 
   if (Number(a.riskScore || 0) !== Number(b.riskScore || 0)) {
     return Number(b.riskScore || 0) - Number(a.riskScore || 0);

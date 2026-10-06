@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  BadgeCheck,
   Bell,
   Building2,
   Check,
@@ -266,12 +267,17 @@ export default function Navbar() {
             <Icon size={16}/>{label}
           </NavLink>
         ))}
+        {user && (
+          <NavLink className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'} to="/verify">
+            <BadgeCheck size={16}/>Xác minh
+          </NavLink>
+        )}
         {user?.partnerAccess?.hasAccess && (
           <NavLink className="nav-link" to={partnerTarget}>
             <Building2 size={16}/>{isPartnerStaffOnly ? 'Scanner' : 'Partner'}
           </NavLink>
         )}
-                {isModerator && (
+        {isModerator && (
           <NavLink className="nav-link" to="/admin">
             <ShieldCheck size={16}/>Admin
           </NavLink>
@@ -409,6 +415,10 @@ export default function Navbar() {
               <Link to="/profile" onClick={() => setMobileAccountOpen(false)}>
                 <UserRound size={16} />
                 Trang cá nhân
+              </Link>
+              <Link to="/verify" onClick={() => setMobileAccountOpen(false)}>
+                <BadgeCheck size={16} />
+                Xác minh cộng đồng
               </Link>
               {user?.partnerAccess?.hasAccess && (
                 <Link to={partnerTarget} onClick={() => setMobileAccountOpen(false)}>
