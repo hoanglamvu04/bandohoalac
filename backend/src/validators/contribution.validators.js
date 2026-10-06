@@ -64,3 +64,16 @@ export const createContributionSchema = z.object({
     });
   }
 });
+
+export const communityVerificationSchema = z.object({
+  verdict: z.enum(['CONFIRM', 'DISPUTE', 'UNSURE']),
+  reason: z.string().trim().max(500).optional()
+}).superRefine((data, ctx) => {
+  if (data.verdict === 'DISPUTE' && !data.reason?.trim()) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Vui lòng nêu lý do khi phản đối đóng góp.',
+      path: ['reason']
+    });
+  }
+});
