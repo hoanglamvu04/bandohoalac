@@ -14,6 +14,11 @@ import {
   getReputationHistory,
   getUserReputation
 } from '../services/reputation.service.js';
+import {
+  expertisePriorityBoost,
+  getDomainExpertise,
+  getUserExpertise
+} from '../services/expertise.service.js';
 
 export const create = asyncHandler(async (req, res) => {
   const { type, placeId, location, place, reason, severity, expiresHours } = req.body;
@@ -72,14 +77,28 @@ export const create = asyncHandler(async (req, res) => {
       fingerprint
     });
 
-    const reputation = await getUserReputation(req.user.id);
+    const [reputation, domainExpertise] = await Promise.all([
+      getUserReputation(req.user.id),
+      getDomainExpertise(req.user.id, type)
+    ]);
+    const domainBoost = expertisePriorityBoost({ expertise: domainExpertise, reputation });
+    const basePriority = Number(reputation?.permissions?.moderationPriority || 0);
+    const effectivePriority = Math.min(4, basePriority + domainBoost);
+    const priorityLabels = ['Tiêu chuẩn', 'Tiêu chuẩn+', 'Ưu tiên', 'Ưu tiên cao', 'Chuyên gia'];
 
     res.status(201).json({
       id: contributionId,
       status: 'PENDING',
       riskBand: risk.band,
-      reviewPriority: reputation?.permissions?.priorityLabel || 'Tiêu chuẩn',
-      expeditedReview: Boolean(reputation?.permissions?.expeditedReview),
+      reviewPriority: priorityLabels[effectivePriority] || reputation?.permissions?.priorityLabel || 'Tiêu chuẩn',
+      expertisePriorityBoost: domainBoost,
+      domainExpertise: domainExpertise ? {
+        key: domainExpertise.expertiseKey,
+        label: domainExpertise.label,
+        score: domainExpertise.score,
+        tier: domainExpertise.tier
+      } : null,
+      expeditedReview: Boolean(reputation?.permissions?.expeditedReview || domainBoost > 0),
       message: isRoadStatus
         ? 'Đã ghi nhận tình trạng. Báo cáo cộng đồng sẽ tự hết hạn nếu không còn hiệu lực.'
         : 'Đóng góp đã được ghi nhận và đang chờ duyệt.'
@@ -96,11 +115,19 @@ export const listMine = asyncHandler(async (req, res) => {
 });
 
 export const getMyReputation = asyncHandler(async (req, res) => {
-  const [reputation, history] = await Promise.all([
+  const [reputation, history, expertise] = await Promise.all([
     getUserReputation(req.user.id),
-    getReputationHistory(req.user.id, { limit: 8 })
+    getReputationHistory(req.user.id, { limit: 8 }),
+    getUserExpertise(req.user.id)
   ]);
 
   if (!reputation) throw new AppError('User not found.', 404);
-  res.json({ reputation: { ...reputation, history } });
+  res.json({
+    reputation: {
+      ...reputation,
+      version: '2.3',
+      history,
+      expertise
+    }
+  });
 });

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   AlertTriangle,
+  Award,
   BadgeCheck,
   Camera,
   ChevronRight,
@@ -10,6 +11,7 @@ import {
   History,
   LogOut,
   MapPin,
+  MapPinned,
   ShieldCheck,
   Sparkles,
   Star
@@ -75,6 +77,12 @@ function freshnessLabel(state) {
   return labels[state] || 'Đang theo dõi';
 }
 
+function expertiseTierLabel(tier) {
+  if (tier === 'EXPERT') return 'Chuyên gia';
+  if (tier === 'SPECIALIST') return 'Chuyên môn';
+  return 'Đang xây dựng';
+}
+
 export default function ExplorerProfile({
   user,
   stats,
@@ -126,6 +134,10 @@ export default function ExplorerProfile({
   const confidence = reputation?.confidence || null;
   const freshness = reputation?.freshness || null;
   const stability = reputation?.stability || null;
+  const expertise = reputation?.expertise || null;
+  const expertiseBadges = Array.isArray(expertise?.badges) ? expertise.badges.slice(0, 4) : [];
+  const primaryArea = expertise?.primaryArea || null;
+  const primaryDomain = expertise?.primaryDomain || null;
 
   return (
     <section className="explorer-card explorer-card-light">
@@ -184,7 +196,7 @@ export default function ExplorerProfile({
         <div className="explorer-reputation-heading">
           <span>
             <ShieldCheck size={15} />
-            <b>Reputation v2.2</b>
+            <b>Reputation v2.3</b>
           </span>
           <em>
             {nextLevel ? `Tiến tới ${nextLevel.name}` : 'Bạn đã đạt cấp cao nhất'}
@@ -203,6 +215,40 @@ export default function ExplorerProfile({
             <span className="risk"><AlertTriangle size={12} /> Cấp hiện tại cần được duy trì</span>
           )}
         </div>
+
+        {(primaryArea || primaryDomain || expertiseBadges.length > 0) && (
+          <div className="explorer-expertise-v23">
+            <div className="explorer-expertise-v23-head">
+              <span><Award size={14} /><b>Chuyên môn đã chứng minh</b></span>
+              <em>{Number(expertise?.expertCount || 0)} expert · {Number(expertise?.specialistCount || 0)} specialist</em>
+            </div>
+            <div className="explorer-expertise-v23-grid">
+              {primaryArea && (
+                <article>
+                  <MapPinned size={15} />
+                  <span><small>KHU VỰC MẠNH NHẤT</small><b>{primaryArea.label}</b></span>
+                  <em>{primaryArea.score}/100 · {expertiseTierLabel(primaryArea.tier)}</em>
+                </article>
+              )}
+              {primaryDomain && (
+                <article>
+                  <Sparkles size={15} />
+                  <span><small>CHUYÊN MÔN MẠNH NHẤT</small><b>{primaryDomain.label}</b></span>
+                  <em>{primaryDomain.score}/100 · {expertiseTierLabel(primaryDomain.tier)}</em>
+                </article>
+              )}
+            </div>
+            {expertiseBadges.length > 0 && (
+              <div className="explorer-expertise-badges">
+                {expertiseBadges.map((badge) => (
+                  <span className={badge.tier === 'EXPERT' ? 'expert' : 'specialist'} key={badge.code}>
+                    <Award size={12} /> {badge.title}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="explorer-reputation-track" aria-label="Tiến độ cấp thành viên">
           <span style={{ width: `${Math.round(reputationProgress * 100)}%` }} />

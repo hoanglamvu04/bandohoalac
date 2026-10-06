@@ -1,5 +1,6 @@
 import { pool } from '../database/pool.js';
 import { reputationFromRow } from './reputation.service.js';
+import { calculateExpertise, expertisePriorityBoost } from './expertise.service.js';
 
 const LIST_SELECT = `
   SELECT
@@ -19,6 +20,20 @@ const LIST_SELECT = `
         AND pt.amount > 0
         AND pt.reason LIKE '%_QUALITY_APPROVED'
     ), 0)::int AS user_quality_points,
+    (
+      SELECT MAX(rc.reviewed_at)
+      FROM contributions rc
+      WHERE rc.user_id = u.id
+        AND rc.status IN ('APPROVED', 'REJECTED')
+    ) AS user_last_reviewed_at,
+    COALESCE(rctl.score_adjustment, 0)::int AS user_score_adjustment,
+    rctl.permission_ceiling AS user_permission_ceiling,
+    rex.expertise_key AS domain_expertise_key,
+    rex.label AS domain_expertise_label,
+    rex.approved_count AS domain_expertise_approved_count,
+    rex.rejected_count AS domain_expertise_rejected_count,
+    rex.quality_points AS domain_expertise_quality_points,
+    rex.last_reviewed_at AS domain_expertise_last_reviewed_at,
     p.name AS place_name,
     rv.name AS reviewer_name, rv.role AS reviewer_role,
     rv.ctv_level AS reviewer_ctv_level, rv.ctv_trust_score AS reviewer_ctv_trust_score,
@@ -35,6 +50,20 @@ const LIST_SELECT = `
     ) AS resolved_confirmations
   FROM contributions ct
   JOIN users u ON u.id = ct.user_id
+  LEFT JOIN reputation_controls rctl
+    ON rctl.user_id = u.id
+   AND (rctl.expires_at IS NULL OR rctl.expires_at > NOW())
+  LEFT JOIN reputation_expertise rex
+    ON rex.user_id = u.id
+   AND rex.dimension = 'DOMAIN'
+   AND rex.expertise_key = CASE
+     WHEN ct.type IN ('CREATE_PLACE', 'UPDATE_PLACE', 'REPORT_CLOSED', 'REPORT_WRONG_INFO') THEN 'PLACE_DATA'
+     WHEN ct.type = 'ADD_PHOTO' THEN 'MEDIA'
+     WHEN ct.type = 'FIX_LOCATION' THEN 'LOCATION'
+     WHEN ct.type IN ('UPDATE_HOURS', 'UPDATE_PRICE') THEN 'LOCAL_INFO'
+     WHEN ct.type IN ('REPORT_FLOOD', 'REPORT_ROAD_CLOSURE', 'REPORT_ALERT') THEN 'ROAD_SAFETY'
+     ELSE 'GENERAL'
+   END
   LEFT JOIN places p ON p.id = ct.place_id
   LEFT JOIN users rv ON rv.id = ct.reviewed_by
   LEFT JOIN ctv_moderation_audits cma ON cma.contribution_id = ct.id
@@ -47,9 +76,26 @@ function mapRow(row) {
     approved_count: row.user_approved_count,
     rejected_count: row.user_rejected_count,
     trust_score: row.user_trust_score,
-    created_at: row.user_created_at
+    created_at: row.user_created_at,
+    last_reviewed_at: row.user_last_reviewed_at,
+    score_adjustment: row.user_score_adjustment,
+    permission_ceiling: row.user_permission_ceiling
   });
-  const priority = Number(contributorReputation?.permissions?.moderationPriority || 0);
+  const domainExpertise = row.domain_expertise_key
+    ? {
+        expertiseKey: row.domain_expertise_key,
+        label: row.domain_expertise_label,
+        ...calculateExpertise({
+          approvedCount: row.domain_expertise_approved_count,
+          rejectedCount: row.domain_expertise_rejected_count,
+          qualityPoints: row.domain_expertise_quality_points,
+          lastReviewedAt: row.domain_expertise_last_reviewed_at
+        })
+      }
+    : null;
+  const domainBoost = expertisePriorityBoost({ expertise: domainExpertise, reputation: contributorReputation });
+  const basePriority = Number(contributorReputation?.permissions?.moderationPriority || 0);
+  const priority = Math.min(4, basePriority + domainBoost);
   const riskScore = Number(row.risk_score || 0);
 
   return {
@@ -58,11 +104,20 @@ function mapRow(row) {
     userName: row.user_name,
     userEmail: row.user_email,
     contributorReputation: {
-      version: contributorReputation.version,
+      version: domainBoost > 0 ? '2.3' : contributorReputation.version,
       code: contributorReputation.code,
       name: contributorReputation.name,
       score: contributorReputation.score,
-      permissions: contributorReputation.permissions
+      confidence: contributorReputation.confidence,
+      permissions: contributorReputation.permissions,
+      domainExpertise: domainExpertise ? {
+        key: domainExpertise.expertiseKey,
+        label: domainExpertise.label,
+        score: domainExpertise.score,
+        tier: domainExpertise.tier
+      } : null,
+      expertisePriorityBoost: domainBoost,
+      effectiveModerationPriority: priority
     },
     reviewLane: riskScore >= 70
       ? 'RISK_REVIEW'
@@ -102,8 +157,8 @@ function comparePendingContributions(a, b) {
   const bCriticalRisk = Number(b.riskScore || 0) >= 70 ? 1 : 0;
   if (aCriticalRisk !== bCriticalRisk) return bCriticalRisk - aCriticalRisk;
 
-  const aPriority = Number(a.contributorReputation?.permissions?.moderationPriority || 0);
-  const bPriority = Number(b.contributorReputation?.permissions?.moderationPriority || 0);
+  const aPriority = Number(a.contributorReputation?.effectiveModerationPriority || 0);
+  const bPriority = Number(b.contributorReputation?.effectiveModerationPriority || 0);
   if (aPriority !== bPriority) return bPriority - aPriority;
 
   if (Number(a.riskScore || 0) !== Number(b.riskScore || 0)) {

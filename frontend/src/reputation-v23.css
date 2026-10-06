@@ -1,0 +1,239 @@
+/* Reputation v2.3 — local expertise and earned badges */
+.profile-white-dashboard .explorer-expertise-v23{
+  margin-top:11px;
+  padding:11px 12px;
+  border:1px solid #dfe9e5;
+  border-radius:14px;
+  background:linear-gradient(180deg,#fbfdfc,#f6faf8);
+}
+
+.profile-white-dashboard .explorer-expertise-v23-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+
+.profile-white-dashboard .explorer-expertise-v23-head>span{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:#285f51;
+  font-size:10px;
+}
+
+.profile-white-dashboard .explorer-expertise-v23-head>em{
+  color:#80918b;
+  font-size:8px;
+  font-style:normal;
+  font-weight:800;
+}
+
+.profile-white-dashboard .explorer-expertise-v23-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;
+}
+
+.profile-white-dashboard .explorer-expertise-v23-grid article{
+  display:grid;
+  grid-template-columns:24px minmax(0,1fr) auto;
+  align-items:center;
+  gap:7px;
+  padding:8px 9px;
+  border:1px solid #e4ece8;
+  border-radius:11px;
+  color:#2b6354;
+  background:#fff;
+}
+
+.profile-white-dashboard .explorer-expertise-v23-grid article>svg{
+  width:24px;
+  height:24px;
+  padding:5px;
+  border-radius:8px;
+  background:#edf7f2;
+}
+
+.profile-white-dashboard .explorer-expertise-v23-grid article>span{
+  min-width:0;
+  display:grid;
+  gap:1px;
+}
+
+.profile-white-dashboard .explorer-expertise-v23-grid small{
+  color:#8a9994;
+  font-size:7px;
+  font-weight:900;
+}
+
+.profile-white-dashboard .explorer-expertise-v23-grid b{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#264f45;
+  font-size:10px;
+}
+
+.profile-white-dashboard .explorer-expertise-v23-grid em{
+  color:#6d8079;
+  font-size:8px;
+  font-style:normal;
+  font-weight:800;
+  white-space:nowrap;
+}
+
+.profile-white-dashboard .explorer-expertise-badges{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:8px;
+}
+
+.profile-white-dashboard .explorer-expertise-badges span{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:5px 7px;
+  border-radius:999px;
+  font-size:8px;
+  font-weight:900;
+}
+
+.profile-white-dashboard .explorer-expertise-badges .expert{
+  color:#6c5015;
+  background:#fff3cf;
+  border:1px solid #f1dda1;
+}
+
+.profile-white-dashboard .explorer-expertise-badges .specialist{
+  color:#23614f;
+  background:#eaf6f1;
+  border:1px solid #d3e9df;
+}
+
+.reputation-expertise-admin{
+  margin-top:10px;
+}
+
+.reputation-expertise-admin>.reputation-card-title>em{
+  margin-left:auto;
+  color:#52776b;
+  font-size:9px;
+  font-style:normal;
+  font-weight:900;
+}
+
+.reputation-expertise-admin-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:7px;
+  margin-top:12px;
+}
+
+.reputation-expertise-admin-grid>div{
+  display:grid;
+  grid-template-columns:25px minmax(0,1fr);
+  gap:7px;
+  align-items:center;
+  padding:9px;
+  border:1px solid #e3ebe7;
+  border-radius:11px;
+  color:#2a6253;
+  background:#f9fcfa;
+}
+
+.reputation-expertise-admin-grid>div>svg{
+  width:25px;
+  height:25px;
+  padding:5px;
+  border-radius:8px;
+  background:#e9f5ef;
+}
+
+.reputation-expertise-admin-grid>div>span{
+  min-width:0;
+  display:grid;
+  gap:1px;
+}
+
+.reputation-expertise-admin-grid small{
+  color:#879791;
+  font-size:7px;
+  font-weight:900;
+}
+
+.reputation-expertise-admin-grid b{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#284f45;
+  font-size:10px;
+}
+
+.reputation-expertise-admin-grid em{
+  grid-column:2;
+  color:#6f817b;
+  font-size:8px;
+  font-style:normal;
+  font-weight:800;
+}
+
+.reputation-expertise-admin-badges{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:9px;
+}
+
+.reputation-expertise-admin-badges span{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:5px 8px;
+  border-radius:999px;
+  font-size:8px;
+  font-weight:900;
+}
+
+.reputation-expertise-admin-badges .expert{
+  color:#725617;
+  background:#fff2c9;
+  border:1px solid #efdaa0;
+}
+
+.reputation-expertise-admin-badges .specialist{
+  color:#23604e;
+  background:#e9f6f0;
+  border:1px solid #d3e8df;
+}
+
+@media(max-width:900px){
+  .reputation-expertise-admin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(max-width:760px){
+  .profile-white-dashboard .explorer-expertise-v23-head{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:3px;
+  }
+  .profile-white-dashboard .explorer-expertise-v23-grid{
+    grid-template-columns:1fr;
+  }
+  .profile-white-dashboard .explorer-expertise-v23-grid article{
+    grid-template-columns:24px minmax(0,1fr);
+  }
+  .profile-white-dashboard .explorer-expertise-v23-grid article>em{
+    grid-column:2;
+  }
+  .reputation-expertise-admin>.reputation-card-title{
+    flex-wrap:wrap;
+  }
+  .reputation-expertise-admin>.reputation-card-title>em{
+    width:100%;
+    margin-left:25px;
+  }
+  .reputation-expertise-admin-grid{grid-template-columns:1fr}
+}
