@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
+  Award,
   CheckCircle2,
   Clock,
   Gauge,
   History,
+  MapPinned,
   RotateCcw,
   Save,
   Search,
@@ -74,6 +76,12 @@ function freshnessLabel(state) {
   return labels[state] || state || '—';
 }
 
+function expertiseTierLabel(tier) {
+  if (tier === 'EXPERT') return 'Chuyên gia';
+  if (tier === 'SPECIALIST') return 'Chuyên môn';
+  return 'Đang xây dựng';
+}
+
 function toControlForm(control) {
   if (!control) return EMPTY_CONTROL;
   return {
@@ -135,11 +143,17 @@ export default function AdminReputation() {
   const signals = inspector?.signals || null;
   const history = Array.isArray(inspector?.history) ? inspector.history : [];
   const control = inspector?.control || null;
+  const expertise = inspector?.expertise || null;
   const permissions = reputation?.permissions || {};
   const components = reputation?.components || {};
   const confidence = reputation?.confidence || {};
   const freshness = reputation?.freshness || {};
   const stability = reputation?.stability || {};
+  const expertiseBadges = Array.isArray(expertise?.badges) ? expertise.badges.slice(0, 8) : [];
+  const topExpertise = [
+    ...(Array.isArray(expertise?.areas) ? expertise.areas.slice(0, 3) : []),
+    ...(Array.isArray(expertise?.domains) ? expertise.domains.slice(0, 3) : [])
+  ];
 
   async function saveControl(event) {
     event.preventDefault();
@@ -196,13 +210,13 @@ export default function AdminReputation() {
     <main className="admin-page reputation-inspector-page page-container">
       <section className="section-heading reputation-inspector-heading">
         <div>
-          <span className="eyebrow">REPUTATION V2.2</span>
+          <span className="eyebrow">REPUTATION V2.3</span>
           <h2>Reputation Inspector</h2>
-          <p>Score + Confidence + Freshness, quyền theo cấp, anti-farm và kiểm soát thủ công có audit.</p>
+          <p>Score + Confidence + Freshness + Expertise theo khu vực/lĩnh vực, anti-farm và kiểm soát thủ công có audit.</p>
         </div>
         <div className="reputation-policy-note">
           <ShieldCheck size={18} />
-          <span><b>Không tự duyệt</b><small>Confidence chỉ mở quyền mềm khi dữ liệu đủ chắc chắn.</small></span>
+          <span><b>Không tự duyệt</b><small>Expertise chỉ tăng ưu tiên đúng lĩnh vực khi Reputation và Confidence đủ mạnh.</small></span>
         </div>
       </section>
 
@@ -274,6 +288,38 @@ export default function AdminReputation() {
                 <div className="reputation-stability-reasons">
                   {stability.reasons.map((reason) => <span key={reason}>{stabilityLabel(reason)}</span>)}
                 </div>
+              )}
+
+              {expertise && (
+                <article className="reputation-inspector-card reputation-expertise-admin">
+                  <div className="reputation-card-title">
+                    <Award size={17} />
+                    <div><b>Expertise v2.3</b><small>Chuyên môn được suy ra từ đóng góp đã review, không phải tự khai</small></div>
+                    <em>{Number(expertise.expertCount || 0)} expert · {Number(expertise.specialistCount || 0)} specialist</em>
+                  </div>
+                  {topExpertise.length > 0 ? (
+                    <div className="reputation-expertise-admin-grid">
+                      {topExpertise.map((item) => (
+                        <div key={`${item.dimension}:${item.expertiseKey}`}>
+                          {item.dimension === 'AREA' ? <MapPinned size={14} /> : <Sparkles size={14} />}
+                          <span><small>{item.dimension === 'AREA' ? 'KHU VỰC' : 'LĨNH VỰC'}</small><b>{item.label}</b></span>
+                          <em>{item.score}/100 · {expertiseTierLabel(item.tier)}</em>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="reputation-history-empty">Chưa đủ dữ liệu review để xây dựng chuyên môn.</div>
+                  )}
+                  {expertiseBadges.length > 0 && (
+                    <div className="reputation-expertise-admin-badges">
+                      {expertiseBadges.map((badge) => (
+                        <span className={badge.tier === 'EXPERT' ? 'expert' : 'specialist'} key={badge.code}>
+                          <Award size={12} /> {badge.title}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </article>
               )}
 
               <div className="reputation-component-grid">
