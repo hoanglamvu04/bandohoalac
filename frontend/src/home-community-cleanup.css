@@ -1,0 +1,15 @@
+/* Home community section cleanup: remove the decorative route artwork and reclaim its space. */
+.reference-community-card .reference-route-art{
+  display:none!important;
+}
+
+.reference-community-copy>p{
+  width:100%!important;
+  max-width:640px;
+}
+
+@media(max-width:680px){
+  .reference-community-copy{
+    padding:20px 17px!important;
+  }
+}
