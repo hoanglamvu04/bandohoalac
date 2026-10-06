@@ -24,6 +24,40 @@ import {
   submitCommunityVerification
 } from '../services/communityVerification.service.js';
 
+function publicVerificationPayload(payload = {}) {
+  const place = payload?.place && typeof payload.place === 'object'
+    ? {
+        name: payload.place.name || undefined,
+        categorySlug: payload.place.categorySlug || undefined,
+        address: payload.place.address || undefined,
+        description: payload.place.description || undefined,
+        price: payload.place.price || undefined,
+        openingHours: payload.place.openingHours || undefined,
+        phone: payload.place.phone || undefined,
+        website: payload.place.website || undefined
+      }
+    : undefined;
+  const location = payload?.location && typeof payload.location === 'object'
+    ? {
+        lat: payload.location.lat,
+        lng: payload.location.lng
+      }
+    : undefined;
+  const directPhotos = Array.isArray(payload?.photos) ? payload.photos.filter(Boolean) : [];
+  const assetPhotos = Array.isArray(payload?.photoAssets)
+    ? payload.photoAssets.map((asset) => asset?.url || asset?.secureUrl).filter(Boolean)
+    : [];
+
+  return {
+    ...(place ? { place } : {}),
+    ...(location ? { location } : {}),
+    ...(payload?.reason ? { reason: payload.reason } : {}),
+    ...(payload?.severity ? { severity: payload.severity } : {}),
+    ...(payload?.expiresAt ? { expiresAt: payload.expiresAt } : {}),
+    photos: directPhotos.length ? directPhotos : assetPhotos
+  };
+}
+
 export const create = asyncHandler(async (req, res) => {
   const { type, placeId, location, place, reason, severity, expiresHours } = req.body;
   const isRoadStatus = isRoadStatusContributionType(type);
@@ -153,7 +187,10 @@ export const verificationQueue = asyncHandler(async (req, res) => {
       autoPublish: false,
       highRiskCommunityVerification: false
     },
-    items
+    items: items.map((item) => ({
+      ...item,
+      payload: publicVerificationPayload(item.payload)
+    }))
   });
 });
 
