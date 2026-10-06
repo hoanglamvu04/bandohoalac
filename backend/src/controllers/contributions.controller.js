@@ -19,6 +19,10 @@ import {
   getDomainExpertise,
   getUserExpertise
 } from '../services/expertise.service.js';
+import {
+  listCommunityVerificationQueue,
+  submitCommunityVerification
+} from '../services/communityVerification.service.js';
 
 export const create = asyncHandler(async (req, res) => {
   const { type, placeId, location, place, reason, severity, expiresHours } = req.body;
@@ -125,9 +129,48 @@ export const getMyReputation = asyncHandler(async (req, res) => {
   res.json({
     reputation: {
       ...reputation,
-      version: '2.3',
+      version: '2.4',
       history,
-      expertise
+      expertise,
+      communityVerification: {
+        policy: 'HUMAN_REVIEW_REQUIRED',
+        selfVerification: false,
+        autoPublish: false
+      }
     }
+  });
+});
+
+export const verificationQueue = asyncHandler(async (req, res) => {
+  const items = await listCommunityVerificationQueue(req.user.id, {
+    limit: req.query.limit,
+    offset: req.query.offset
+  });
+  res.json({
+    version: '2.4',
+    policy: {
+      selfVerification: false,
+      autoPublish: false,
+      highRiskCommunityVerification: false
+    },
+    items
+  });
+});
+
+export const verify = asyncHandler(async (req, res) => {
+  const result = await submitCommunityVerification({
+    contributionId: req.params.id,
+    userId: req.user.id,
+    verdict: req.body.verdict,
+    reason: req.body.reason
+  });
+  res.json({
+    version: '2.4',
+    message: result.consensus.state === 'CONFIRMED'
+      ? 'Cộng đồng đã đạt đồng thuận xác nhận. Đóng góp vẫn cần người kiểm duyệt duyệt cuối.'
+      : result.consensus.state === 'DISPUTED' || result.consensus.state === 'SPLIT'
+        ? 'Đóng góp đang có ý kiến trái chiều và sẽ được ưu tiên kiểm tra thủ công.'
+        : 'Đã ghi nhận phiếu xác minh của bạn.',
+    ...result
   });
 });
