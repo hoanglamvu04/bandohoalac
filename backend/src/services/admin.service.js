@@ -13,6 +13,7 @@ import { findUserById } from './user.service.js';
 import { deleteStoredAssets } from './storage.service.js';
 import { createNotification } from './notification.service.js';
 import { applyMissionBonusesForContribution } from './mission.service.js';
+import { refreshUserExpertise } from './expertise.service.js';
 import {
   isRoadStatusContributionType,
   roadStatusDisplayName,
@@ -221,8 +222,16 @@ export async function approveContribution(contributionId, reviewer, review = {})
       0
     );
 
+    const expertiseUpdate = await refreshUserExpertise(contribution.user_id, client);
+    const unlockedBadges = Array.isArray(expertiseUpdate?.unlockedBadges)
+      ? expertiseUpdate.unlockedBadges
+      : [];
+
     let notificationMessage = `Đóng góp của bạn đã được duyệt: +${points}/${score.maxPoints} điểm chất lượng.`;
     if (missionBonus > 0) notificationMessage += ` Thưởng nhiệm vụ: +${missionBonus} điểm.`;
+    if (unlockedBadges.length > 0) {
+      notificationMessage += ` Mở huy hiệu: ${unlockedBadges.slice(0, 2).map((item) => item.title).join(', ')}.`;
+    }
 
     await createNotification({
       userId: contribution.user_id,
@@ -232,7 +241,8 @@ export async function approveContribution(contributionId, reviewer, review = {})
       data: {
         contributionId, placeId, points, maxPoints: score.maxPoints,
         scoreBreakdown: score.breakdown, scoreNote, missionBonus,
-        missionAwards, contributionType: contribution.type
+        missionAwards, contributionType: contribution.type,
+        expertiseBadgesUnlocked: unlockedBadges
       }
     }, client);
 
@@ -255,6 +265,7 @@ export async function rejectContribution(contributionId, reviewer, reason) {
     }, client);
     await recordCtvReview(reviewer.id, client);
     await penalizeRejection(contribution.user_id, client);
+    await refreshUserExpertise(contribution.user_id, client);
 
     await createNotification({
       userId: contribution.user_id,
