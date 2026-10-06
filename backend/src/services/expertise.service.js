@@ -25,13 +25,15 @@ const DOMAIN_DEFINITIONS = {
   }
 };
 
+// Specific communes must be checked before broader district/area names.
+// Example: "Yên Xuân, Thạch Thất" should count for Yên Xuân, not Thạch Thất.
 const AREA_DEFINITIONS = [
   { key: 'HOA_LAC', label: 'Hòa Lạc', aliases: ['hoa lac'] },
   { key: 'HA_BANG', label: 'Hạ Bằng', aliases: ['ha bang'] },
-  { key: 'THACH_THAT', label: 'Thạch Thất', aliases: ['thach that'] },
   { key: 'TAY_PHUONG', label: 'Tây Phương', aliases: ['tay phuong'] },
   { key: 'YEN_XUAN', label: 'Yên Xuân', aliases: ['yen xuan'] },
   { key: 'PHU_CAT', label: 'Phú Cát', aliases: ['phu cat'] },
+  { key: 'THACH_THAT', label: 'Thạch Thất', aliases: ['thach that'] },
   { key: 'BA_VI', label: 'Ba Vì', aliases: ['ba vi'] },
   { key: 'QUOC_OAI', label: 'Quốc Oai', aliases: ['quoc oai'] }
 ];
