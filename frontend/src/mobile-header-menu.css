@@ -1,0 +1,166 @@
+/* Mobile header account menu: keep navigation available on every route. */
+@media(max-width:760px){
+  .reference-navbar .premium-nav-actions{
+    display:flex!important;
+    flex:0 0 auto;
+    align-items:center;
+    gap:6px;
+    margin-left:auto;
+  }
+
+  .reference-navbar:not(.home-navbar) .nav-cta,
+  .reference-navbar:not(.home-navbar) .nav-install,
+  .reference-navbar:not(.home-navbar) .desktop-account-control,
+  .reference-navbar:not(.home-navbar) .nav-notification-control{
+    display:none!important;
+  }
+
+  .reference-navbar .mobile-account-control{
+    position:relative;
+    display:block!important;
+    flex:0 0 auto;
+  }
+
+  .reference-navbar .mobile-account-button{
+    width:38px;
+    height:38px;
+    display:grid!important;
+    place-items:center;
+    overflow:hidden;
+    padding:0;
+    border:1px solid #dce7f2;
+    border-radius:12px;
+    color:#173c5e;
+    background:#fff;
+    box-shadow:0 5px 14px rgba(28,67,105,.07);
+    cursor:pointer;
+  }
+
+  /* Logged-in avatar letter becomes a compact hamburger icon. */
+  .reference-navbar .mobile-account-button>span{
+    width:18px;
+    height:14px;
+    display:block;
+    overflow:hidden;
+    color:transparent!important;
+    font-size:0!important;
+    line-height:0!important;
+    background:
+      linear-gradient(currentColor,currentColor) 0 0/18px 2px no-repeat,
+      linear-gradient(currentColor,currentColor) 0 6px/18px 2px no-repeat,
+      linear-gradient(currentColor,currentColor) 0 12px/18px 2px no-repeat;
+  }
+
+  .reference-navbar .mobile-account-button>span::before{
+    content:"";
+    display:block;
+    width:18px;
+    height:14px;
+    background:
+      linear-gradient(#173c5e,#173c5e) 0 0/18px 2px no-repeat,
+      linear-gradient(#173c5e,#173c5e) 0 6px/18px 2px no-repeat,
+      linear-gradient(#173c5e,#173c5e) 0 12px/18px 2px no-repeat;
+  }
+
+  .reference-navbar .mobile-account-menu{
+    position:absolute;
+    z-index:130;
+    top:calc(100% + 12px);
+    right:0;
+    width:min(260px,calc(100vw - 24px));
+    overflow:hidden;
+    padding:8px;
+    border:1px solid #dfe9e4;
+    border-radius:18px;
+    background:rgba(255,255,255,.99);
+    box-shadow:0 18px 44px rgba(20,52,43,.18);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+  }
+
+  .reference-navbar .mobile-account-summary{
+    display:grid;
+    grid-template-columns:38px minmax(0,1fr);
+    gap:9px;
+    align-items:center;
+    margin-bottom:5px;
+    padding:8px;
+    border-radius:13px;
+    background:#f5f9f7;
+  }
+
+  .reference-navbar .mobile-account-avatar{
+    width:38px;
+    height:38px;
+    display:grid;
+    place-items:center;
+    border-radius:12px;
+    color:#fff;
+    background:linear-gradient(145deg,#147558,#074738);
+    font-size:12px;
+    font-weight:950;
+  }
+
+  .reference-navbar .mobile-account-summary>div{
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+
+  .reference-navbar .mobile-account-summary b,
+  .reference-navbar .mobile-account-summary small{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .reference-navbar .mobile-account-summary b{
+    color:#15362d;
+    font-size:11px;
+  }
+
+  .reference-navbar .mobile-account-summary small{
+    color:#80918b;
+    font-size:8px;
+  }
+
+  .reference-navbar .mobile-account-menu>a,
+  .reference-navbar .mobile-account-menu>button{
+    width:100%;
+    min-height:39px;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    padding:0 10px;
+    border:0;
+    border-radius:11px;
+    color:#294b42;
+    background:transparent;
+    text-decoration:none;
+    text-align:left;
+    font-size:10px;
+    font-weight:850;
+    cursor:pointer;
+  }
+
+  .reference-navbar .mobile-account-menu>a:hover,
+  .reference-navbar .mobile-account-menu>button:hover{
+    background:#f2f7f5;
+  }
+
+  .reference-navbar .mobile-account-menu>button{
+    margin-top:3px;
+    color:#a54535;
+    border-top:1px solid #edf1ef;
+    border-radius:0 0 11px 11px;
+  }
+}
+
+@media(max-width:390px){
+  .reference-navbar .mobile-account-button{
+    width:36px;
+    height:36px;
+    border-radius:11px;
+  }
+}
