@@ -44,6 +44,7 @@ import './community-verification.css';
 import './community-verification-admin.css';
 import './mobile-header-menu.css';
 import './home-community-cleanup.css';
+import './community-location-polish.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
