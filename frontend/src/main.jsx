@@ -43,6 +43,7 @@ import './reputation-v23.css';
 import './community-verification.css';
 import './community-verification-admin.css';
 import './mobile-header-menu.css';
+import './home-community-cleanup.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
