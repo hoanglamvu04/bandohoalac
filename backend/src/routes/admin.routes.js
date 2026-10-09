@@ -117,6 +117,14 @@ import {
   updatePlaceImportAdmin
 } from '../controllers/adminPlaceImports.controller.js';
 import {
+  approvePhotoCandidateAdmin,
+  getPhotoScannerStatsAdmin,
+  listPhotoCandidatesAdmin,
+  listPhotoScanRunsAdmin,
+  rejectPhotoCandidateAdmin,
+  startPhotoScanAdmin
+} from '../controllers/adminPhotoScanner.controller.js';
+import {
   auditCtvModerationAdmin,
   getDataQualityAdmin,
   listPlaceRevisionsAdmin,
@@ -150,6 +158,13 @@ router.post('/place-imports/:id/approve', ctvStaff, requireCtvLevel(2), approveP
 router.post('/place-imports/:id/reject', ctvStaff, requireCtvLevel(2), rejectPlaceImportAdmin);
 router.post('/place-imports/scan', adminOnly, startOverturePlaceScanAdmin);
 router.post('/place-imports/approve-high-confidence', adminOnly, approveHighConfidencePlaceImportsAdmin);
+
+router.get('/photo-scanner', ctvStaff, requireCtvLevel(2), listPhotoCandidatesAdmin);
+router.get('/photo-scanner/runs', ctvStaff, requireCtvLevel(2), listPhotoScanRunsAdmin);
+router.get('/photo-scanner/stats', ctvStaff, requireCtvLevel(2), getPhotoScannerStatsAdmin);
+router.post('/photo-scanner/scan', adminOnly, startPhotoScanAdmin);
+router.post('/photo-scanner/:id/approve', ctvStaff, requireCtvLevel(2), approvePhotoCandidateAdmin);
+router.post('/photo-scanner/:id/reject', ctvStaff, requireCtvLevel(2), rejectPhotoCandidateAdmin);
 
 router.get('/places', ctvStaff, listPlacesAdmin);
 router.get('/places/:id', ctvStaff, getPlaceAdmin);
