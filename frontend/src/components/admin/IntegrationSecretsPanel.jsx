@@ -27,6 +27,22 @@ function sourceLabel(source) {
   return 'Chưa cấu hình';
 }
 
+function secretLabel(provider) {
+  return provider === 'HALO_HOLA' ? 'Shared secret' : 'API key mới';
+}
+
+function secretPlaceholder(item) {
+  if (item.configured) return 'Dán secret mới để thay thế cấu hình hiện tại';
+  if (item.provider === 'HALO_HOLA') return 'Dán shared secret dùng chung với HALO HOLA';
+  return 'Dán Foursquare Service API Key';
+}
+
+function savedMessage(item) {
+  return item.provider === 'HALO_HOLA'
+    ? 'Đã lưu shared secret. HALO HOLA có thể đồng bộ bài ảnh ngay.'
+    : 'Đã kiểm tra và lưu API key. Photo Scanner dùng key mới ngay.';
+}
+
 export default function IntegrationSecretsPanel() {
   const { showToast } = useToast();
   const [items, setItems] = useState([]);
@@ -75,7 +91,7 @@ export default function IntegrationSecretsPanel() {
   async function saveProvider(item) {
     const secret = String(drafts[item.provider] || '').trim();
     if (!secret) {
-      showToast('Hãy dán API key mới trước khi lưu.', 'error');
+      showToast('Hãy dán secret mới trước khi lưu.', 'error');
       return;
     }
 
@@ -87,14 +103,14 @@ export default function IntegrationSecretsPanel() {
         ...current,
         [item.provider]: {
           ok: true,
-          message: 'Key đã được kiểm tra và lưu mã hóa.',
+          message: 'Secret đã được kiểm tra và lưu mã hóa.',
           source: 'ADMIN_DB'
         }
       }));
       setItems((current) => current.map((entry) =>
         entry.provider === item.provider ? data.item : entry
       ));
-      showToast('Đã kiểm tra và lưu API key. Photo Scanner dùng key mới ngay.', 'success');
+      showToast(savedMessage(item), 'success');
     } catch (error) {
       showToast(error.message, 'error');
     } finally {
@@ -103,7 +119,7 @@ export default function IntegrationSecretsPanel() {
   }
 
   async function removeProvider(item) {
-    if (!window.confirm('Xóa API key ' + item.label + ' đã lưu trong Admin?')) return;
+    if (!window.confirm('Xóa secret ' + item.label + ' đã lưu trong Admin?')) return;
     setBusy('delete-' + item.provider);
     try {
       const data = await deleteAdminIntegration(item.provider);
@@ -113,8 +129,8 @@ export default function IntegrationSecretsPanel() {
       setResults((current) => ({ ...current, [item.provider]: null }));
       showToast(
         data.item?.source === 'ENV_LEGACY'
-          ? 'Đã xóa key Admin. Hệ thống đang quay về key trong VPS .env.'
-          : 'Đã xóa API key khỏi cấu hình tích hợp.',
+          ? 'Đã xóa secret Admin. Hệ thống đang quay về cấu hình trong VPS .env.'
+          : 'Đã xóa secret khỏi cấu hình tích hợp.',
         'success'
       );
     } catch (error) {
@@ -134,10 +150,10 @@ export default function IntegrationSecretsPanel() {
         <div className="integration-security-icon"><ShieldCheck size={22} /></div>
         <div>
           <small>INTEGRATION SECRETS V1</small>
-          <h2>Khóa API nguồn dữ liệu ngoài</h2>
+          <h2>Khóa API & secret tích hợp</h2>
           <p>
-            Key được gửi qua HTTPS tới backend, mã hóa AES-256-GCM trước khi lưu trong PostgreSQL trên VPS.
-            Sau khi lưu, frontend chỉ nhận chuỗi đã che và không thể đọc lại key đầy đủ.
+            Secret được gửi qua HTTPS tới backend, mã hóa AES-256-GCM trước khi lưu trong PostgreSQL trên VPS.
+            Sau khi lưu, frontend chỉ nhận chuỗi đã che và không thể đọc lại giá trị đầy đủ.
           </p>
         </div>
         <span><b>{configuredCount}</b> nguồn đã cấu hình</span>
@@ -146,7 +162,7 @@ export default function IntegrationSecretsPanel() {
       <div className="integration-trust-strip">
         <span><CheckCircle2 size={14} /> Có hiệu lực ngay · không restart PM2</span>
         <span><ShieldCheck size={14} /> Không ghi secret vào Audit Log</span>
-        <span><KeyRound size={14} /> Photo Scanner đọc key động mỗi lần chạy</span>
+        <span><KeyRound size={14} /> Backend đọc secret động khi tích hợp gọi API</span>
       </div>
 
       <div className="integration-provider-list">
@@ -178,7 +194,7 @@ export default function IntegrationSecretsPanel() {
                   <p>{item.description}</p>
                 </div>
                 <div className="integration-provider-source">
-                  <small>NGUỒN KEY</small>
+                  <small>NGUỒN SECRET</small>
                   <b>{sourceLabel(item.source)}</b>
                   {item.masked && <code>{item.masked}</code>}
                 </div>
@@ -186,7 +202,7 @@ export default function IntegrationSecretsPanel() {
 
               <div className="integration-secret-entry">
                 <label>
-                  API key mới
+                  {secretLabel(item.provider)}
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -195,7 +211,7 @@ export default function IntegrationSecretsPanel() {
                       ...current,
                       [item.provider]: event.target.value
                     }))}
-                    placeholder={item.configured ? 'Dán key mới để thay thế key hiện tại' : 'Dán Foursquare Service API Key'}
+                    placeholder={secretPlaceholder(item)}
                   />
                 </label>
                 <button
@@ -204,7 +220,7 @@ export default function IntegrationSecretsPanel() {
                   onClick={() => testProvider(item)}
                   disabled={testing || saving || deleting || (!draft && !item.configured)}
                 >
-                  <PlugZap size={15} /> {testing ? 'Đang kiểm tra…' : 'Kiểm tra kết nối'}
+                  <PlugZap size={15} /> {testing ? 'Đang kiểm tra…' : 'Kiểm tra'}
                 </button>
                 <button
                   type="button"
@@ -222,14 +238,14 @@ export default function IntegrationSecretsPanel() {
                     <>
                       {testState.ok ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
                       <span>
-                        <b>{testState.ok ? 'Kết nối tốt' : 'Cần kiểm tra'}</b>
+                        <b>{testState.ok ? 'Sẵn sàng' : 'Cần kiểm tra'}</b>
                         <small>{testState.message || 'Không có thông tin.'}</small>
                       </span>
                     </>
                   ) : (
                     <>
                       <PlugZap size={15} />
-                      <span><b>Chưa kiểm tra</b><small>Dán key rồi kiểm tra trước khi lưu.</small></span>
+                      <span><b>Chưa kiểm tra</b><small>Dán secret rồi kiểm tra trước khi lưu.</small></span>
                     </>
                   )}
                 </div>
@@ -246,7 +262,7 @@ export default function IntegrationSecretsPanel() {
                     onClick={() => removeProvider(item)}
                     disabled={deleting || saving || testing}
                   >
-                    <Trash2 size={14} /> {deleting ? 'Đang xóa…' : 'Xóa key Admin'}
+                    <Trash2 size={14} /> {deleting ? 'Đang xóa…' : 'Xóa secret Admin'}
                   </button>
                 )}
               </div>
