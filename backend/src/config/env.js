@@ -33,6 +33,7 @@ export const env = {
   routingTimeoutMs: Number(process.env.ROUTING_TIMEOUT_MS) || 10000,
   overtureCliPath: (process.env.OVERTURE_CLI_PATH || '').trim(),
   foursquareApiKey: (process.env.FOURSQUARE_API_KEY || '').trim(),
+  haloHolaSharedSecret: (process.env.HALO_HOLA_SHARED_SECRET || '').trim(),
   photoScanRequestTimeoutMs: Math.max(Number(process.env.PHOTO_SCAN_REQUEST_TIMEOUT_MS) || 9000, 2000),
   photoScanWikimediaRadiusM: Math.min(Math.max(Number(process.env.PHOTO_SCAN_WIKIMEDIA_RADIUS_M) || 350, 50), 1000),
   photoScanCandidatesPerProvider: Math.min(Math.max(Number(process.env.PHOTO_SCAN_CANDIDATES_PER_PROVIDER) || 8, 1), 20),

@@ -18,6 +18,12 @@ const PROVIDERS = Object.freeze({
     label: 'Foursquare Places',
     description: 'Bổ sung ảnh storefront, exterior và ảnh địa điểm cho Photo Scanner.',
     envFallback: () => env.foursquareApiKey || ''
+  },
+  HALO_HOLA: {
+    key: 'HALO_HOLA',
+    label: 'HALO HOLA',
+    description: 'Shared secret để HALO HOLA đồng bộ bài ảnh, vị trí và gallery vào Hola Maps.',
+    envFallback: () => env.haloHolaSharedSecret || ''
   }
 });
 
@@ -54,7 +60,7 @@ export function maskIntegrationSecret(secret) {
 export function encryptIntegrationSecret(secret, provider = 'FOURSQUARE') {
   const key = normalizeProvider(provider);
   const value = String(secret || '').trim();
-  if (!value) throw new AppError('API key không được để trống.', 400);
+  if (!value) throw new AppError('Secret không được để trống.', 400);
 
   const iv = randomBytes(12);
   const cipher = createCipheriv(ALGORITHM, encryptionKey(), iv);
@@ -240,6 +246,24 @@ async function testFoursquare(secret) {
   }
 }
 
+function testHaloHola(secret) {
+  const value = String(secret || '').trim();
+  if (value.length < 24) {
+    return {
+      ok: false,
+      statusCode: null,
+      latencyMs: 0,
+      message: 'Shared secret HALO HOLA nên có ít nhất 24 ký tự.'
+    };
+  }
+  return {
+    ok: true,
+    statusCode: null,
+    latencyMs: 0,
+    message: 'Shared secret HALO HOLA hợp lệ và sẵn sàng đồng bộ.'
+  };
+}
+
 export async function testIntegrationSecret(provider, { secret } = {}) {
   const key = normalizeProvider(provider);
   let value = String(secret || '').trim();
@@ -258,13 +282,15 @@ export async function testIntegrationSecret(provider, { secret } = {}) {
       source: null,
       statusCode: null,
       latencyMs: null,
-      message: 'Chưa có API key để kiểm tra.'
+      message: 'Chưa có secret để kiểm tra.'
     };
   }
 
   let result;
   if (key === 'FOURSQUARE') {
     result = await testFoursquare(value);
+  } else if (key === 'HALO_HOLA') {
+    result = testHaloHola(value);
   } else {
     result = { ok: false, message: 'Nguồn tích hợp chưa có trình kiểm tra.' };
   }
@@ -291,13 +317,14 @@ export async function testIntegrationSecret(provider, { secret } = {}) {
 export async function saveIntegrationSecret(provider, secret, userId) {
   const key = normalizeProvider(provider);
   const value = String(secret || '').trim();
-  if (value.length < 8) {
-    throw new AppError('API key quá ngắn hoặc không hợp lệ.', 400);
+  const minLength = key === 'HALO_HOLA' ? 24 : 8;
+  if (value.length < minLength) {
+    throw new AppError('Secret quá ngắn hoặc không hợp lệ.', 400);
   }
 
   const test = await testIntegrationSecret(key, { secret: value });
   if (!test.ok) {
-    throw new AppError(test.message || 'Không xác minh được API key.', 400, {
+    throw new AppError(test.message || 'Không xác minh được secret.', 400, {
       provider: key,
       test: {
         ok: false,

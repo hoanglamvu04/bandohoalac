@@ -30,6 +30,7 @@ import placeClaimsRoutes from './routes/placeClaims.routes.js';
 import partnerPortalRoutes from './routes/partnerPortal.routes.js';
 import brandRoutes from './routes/brand.routes.js';
 import publicIntegrationRoutes from './routes/publicIntegration.routes.js';
+import haloHolaRoutes from './routes/haloHola.routes.js';
 
 export function createApp() {
   const app = express();
@@ -63,6 +64,8 @@ export function createApp() {
   app.use('/api/public/v1', developerApiGateway);
   app.use('/api/places/bounds', mapReadRateLimiter);
   app.use('/api/map-layers', mapReadRateLimiter);
+  app.use('/api/halo/v1/spots', mapReadRateLimiter);
+  app.use('/api/halo/v1/places', mapReadRateLimiter);
 
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, service: 'hola-maps-api', env: env.nodeEnv });
@@ -85,6 +88,7 @@ export function createApp() {
   app.use('/api/place-claims', placeClaimsRoutes);
   app.use('/api/partner', partnerPortalRoutes);
   app.use('/api/brand', brandRoutes);
+  app.use('/api/halo/v1', haloHolaRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

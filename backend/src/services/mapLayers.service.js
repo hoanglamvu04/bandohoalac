@@ -2,10 +2,11 @@ import { pool } from '../database/pool.js';
 import { SERVICE_AREA_GEOJSON_STRING } from '../config/mapCoverage.js';
 import { AppError } from '../utils/AppError.js';
 import { listCommunityRoadStatusFeatures } from './roadStatus.service.js';
+import { listHaloSpotFeatures } from './haloHola.service.js';
 
 const ALLOWED_LAYERS = new Set([
   'ROAD', 'TERRAIN', 'WATER', 'BUILDING', 'LANDMARK',
-  'FLOOD', 'ROAD_CLOSURE', 'ALERT', 'PLANNING', 'EVENT'
+  'FLOOD', 'ROAD_CLOSURE', 'ALERT', 'PLANNING', 'EVENT', 'HALO'
 ]);
 
 function normalizeTypes(types = []) {
@@ -61,6 +62,7 @@ async function assertGeometryInsideCoverage(geometry) {
 
 export async function listMapFeatures({ types = [], west, south, east, north } = {}) {
   const normalized = normalizeTypes(types);
+  const canonicalTypes = normalized.filter((type) => type !== 'HALO');
   const params = [SERVICE_AREA_GEOJSON_STRING];
   const where = [
     "mf.status = 'ACTIVE'",
@@ -70,8 +72,13 @@ export async function listMapFeatures({ types = [], west, south, east, north } =
   ];
 
   if (normalized.length) {
-    params.push(normalized);
-    where.push('mf.layer_type = ANY($' + params.length + '::text[])');
+    if (canonicalTypes.length) {
+      params.push(canonicalTypes);
+      where.push('mf.layer_type = ANY($' + params.length + '::text[])');
+    } else {
+      // HALO is sourced from halo_spots, not map_features.
+      where.push('FALSE');
+    }
   }
 
   if ([west, south, east, north].every(Number.isFinite)) {
@@ -100,22 +107,27 @@ export async function listMapFeatures({ types = [], west, south, east, north } =
     'LIMIT 1200'
   ].join('\n');
 
-  const [{ rows }, communityStatusFeatures] = await Promise.all([
+  const wantsHalo = !normalized.length || normalized.includes('HALO');
+  const [{ rows }, communityStatusFeatures, haloFeatures] = await Promise.all([
     pool.query(sql, params),
     listCommunityRoadStatusFeatures({
-      types: normalized,
+      types: canonicalTypes,
       west,
       south,
       east,
       north
-    })
+    }),
+    wantsHalo
+      ? listHaloSpotFeatures({ west, south, east, north })
+      : Promise.resolve([])
   ]);
 
   return {
     type: 'FeatureCollection',
     features: [
       ...rows.filter((row) => row.geometry).map(rowToFeature),
-      ...communityStatusFeatures
+      ...communityStatusFeatures,
+      ...haloFeatures
     ]
   };
 }
