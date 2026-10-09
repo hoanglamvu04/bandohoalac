@@ -47,6 +47,7 @@ import './home-community-cleanup.css';
 import './community-location-polish.css';
 import './photo-scanner.css';
 import './integration-secrets.css';
+import './halo-hola-map.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
