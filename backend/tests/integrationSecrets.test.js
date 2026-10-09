@@ -18,9 +18,15 @@ test('integration secret encryption round-trips without exposing plaintext', () 
   assert.equal(decryptIntegrationSecret(encrypted, 'FOURSQUARE'), secret);
 });
 
-test('integration secret ciphertext is bound to its provider AAD', () => {
+test('integration secret authentication rejects tampered ciphertext', () => {
   const encrypted = encryptIntegrationSecret('another-demo-secret-12345', 'FOURSQUARE');
-  assert.throws(() => decryptIntegrationSecret(encrypted, 'UNKNOWN'));
+  const bytes = Buffer.from(encrypted.ciphertext, 'base64');
+  bytes[0] ^= 1;
+
+  assert.throws(() => decryptIntegrationSecret({
+    ...encrypted,
+    ciphertext: bytes.toString('base64')
+  }, 'FOURSQUARE'));
 });
 
 test('integration secret mask only exposes the final four characters', () => {
