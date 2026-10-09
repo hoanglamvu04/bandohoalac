@@ -19,6 +19,7 @@ const AdminCtvManagement = lazy(() => import('./pages/admin/AdminCtvManagement.j
 const MapEditor = lazy(() => import('./pages/admin/MapEditor.jsx'));
 const AdminPlaces = lazy(() => import('./pages/admin/AdminPlaces.jsx'));
 const AdminPlaceImports = lazy(() => import('./pages/admin/AdminPlaceImports.jsx'));
+const AdminPhotoScanner = lazy(() => import('./pages/admin/AdminPhotoScanner.jsx'));
 const AdminAdvertisements = lazy(() => import('./pages/admin/AdminAdvertisements.jsx'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers.jsx'));
 const AdminReputation = lazy(() => import('./pages/admin/AdminReputation.jsx'));
@@ -115,6 +116,7 @@ export const router = createBrowserRouter([
       { path: 'admin/data-quality', element: withRole(AdminDataTrust, STAFF_ROLES) },
       { path: 'admin/places', element: withRole(AdminPlaces, STAFF_ROLES) },
       { path: 'admin/place-imports', element: withRole(AdminPlaceImports, STAFF_ROLES) },
+      { path: 'admin/photo-scanner', element: withRole(AdminPhotoScanner, STAFF_ROLES) },
       { path: 'admin/map-editor', element: withRole(MapEditor, ['MODERATOR', 'ADMIN']) },
       { path: 'admin/ctv', element: withRole(AdminCtvManagement, ['ADMIN']) },
       { path: 'admin/ads', element: withRole(AdminAdvertisements, ['ADMIN']) },
