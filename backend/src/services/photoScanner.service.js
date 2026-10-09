@@ -1,6 +1,7 @@
 import { pool, withTransaction } from '../database/pool.js';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/AppError.js';
+import { resolveIntegrationSecret } from './integrationSecrets.service.js';
 
 const STALE_RUN_HOURS = 2;
 const WIKIMEDIA_API = 'https://commons.wikimedia.org/w/api.php';
@@ -245,10 +246,10 @@ function foursquareCoords(item) {
   return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
 }
 
-async function scanFoursquare(place) {
-  if (!env.foursquareApiKey) return [];
+async function scanFoursquare(place, apiKey) {
+  if (!apiKey) return [];
   const headers = {
-    Authorization: 'Bearer ' + env.foursquareApiKey,
+    Authorization: 'Bearer ' + apiKey,
     'X-Places-Api-Version': FOURSQUARE_VERSION
   };
   const params = new URLSearchParams({
@@ -418,7 +419,7 @@ async function updateRun(id, fields) {
   );
 }
 
-async function executeScan(runId, scope, limit, providers) {
+async function executeScan(runId, scope, limit, providers, providerSecrets = {}) {
   let scannedPlaces = 0;
   let candidateCount = 0;
   let skipped = 0;
@@ -432,8 +433,8 @@ async function executeScan(runId, scope, limit, providers) {
         if (providers.includes('WIKIMEDIA')) {
           found.push(...await scanWikimedia(place));
         }
-        if (providers.includes('FOURSQUARE') && env.foursquareApiKey) {
-          found.push(...await scanFoursquare(place));
+        if (providers.includes('FOURSQUARE') && providerSecrets.foursquareApiKey) {
+          found.push(...await scanFoursquare(place, providerSecrets.foursquareApiKey));
         }
       } catch (error) {
         console.warn('[Hola Maps] photo provider failed for place', place.id, error?.message || error);
@@ -462,8 +463,9 @@ export async function startPhotoScan({ startedBy, scope = 'MISSING_IMAGES', limi
   await expireStaleRuns();
   const normalizedScope = scope === 'ALL' ? 'ALL' : 'MISSING_IMAGES';
   const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), 200);
+  const foursquare = await resolveIntegrationSecret('FOURSQUARE');
   const providers = ['WIKIMEDIA'];
-  if (env.foursquareApiKey) providers.push('FOURSQUARE');
+  if (foursquare.secret) providers.push('FOURSQUARE');
 
   const active = await pool.query(
     `SELECT * FROM place_photo_scan_runs
@@ -487,7 +489,9 @@ export async function startPhotoScan({ startedBy, scope = 'MISSING_IMAGES', limi
   }
 
   setImmediate(() => {
-    executeScan(row.id, normalizedScope, safeLimit, providers).catch((error) => {
+    executeScan(row.id, normalizedScope, safeLimit, providers, {
+      foursquareApiKey: foursquare.secret || null
+    }).catch((error) => {
       console.error('[Hola Maps] background photo scan failed:', error);
     });
   });
@@ -534,10 +538,13 @@ export async function listPhotoCandidates({ status = 'PENDING', source, q, limit
 }
 
 export async function getPhotoScannerStats() {
-  const { rows } = await pool.query(
-    `SELECT status, source, COUNT(*)::int AS count
-     FROM place_photo_candidates GROUP BY status, source`
-  );
+  const [{ rows }, foursquare] = await Promise.all([
+    pool.query(
+      `SELECT status, source, COUNT(*)::int AS count
+       FROM place_photo_candidates GROUP BY status, source`
+    ),
+    resolveIntegrationSecret('FOURSQUARE')
+  ]);
   const status = { PENDING: 0, APPROVED: 0, REJECTED: 0, STALE: 0 };
   const source = { WIKIMEDIA: 0, FOURSQUARE: 0, GOOGLE: 0 };
   for (const row of rows) {
@@ -549,7 +556,11 @@ export async function getPhotoScannerStats() {
     source,
     providers: {
       WIKIMEDIA: { enabled: true, mode: 'REMOTE_WITH_LICENSE' },
-      FOURSQUARE: { enabled: Boolean(env.foursquareApiKey), mode: 'REMOTE_REFERENCE' },
+      FOURSQUARE: {
+        enabled: Boolean(foursquare.secret),
+        mode: 'REMOTE_REFERENCE',
+        configurationSource: foursquare.source
+      },
       GOOGLE: { enabled: false, mode: 'TRANSIENT_ONLY', reason: 'Không lưu photo name/URL dài hạn trong Photo Scanner V1.' }
     }
   };
