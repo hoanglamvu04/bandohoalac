@@ -6,7 +6,7 @@ import {
   listPhotoScanRuns,
   rejectPhotoCandidate,
   startPhotoScan
-} from '../services/photoScannerV2.service.js';
+} from '../services/photoScannerV3.service.js';
 import {
   auditContextFromRequest,
   writeAuditLog
