@@ -26,11 +26,13 @@ import {
   updateAdminDeveloperApiSettings
 } from '../../services/api.js';
 import { useToast } from '../../context/ToastContext.jsx';
+import IntegrationSecretsPanel from '../../components/admin/IntegrationSecretsPanel.jsx';
 
 const TABS = [
   ['overview', 'Tổng quan'],
   ['clients', 'Website kết nối'],
   ['keys', 'API Keys'],
+  ['integrations', 'Nguồn ngoài'],
   ['endpoints', 'Endpoint'],
   ['logs', 'Nhật ký'],
   ['docs', 'Tài liệu']
@@ -238,7 +240,7 @@ export default function AdminDeveloperApi() {
         <div>
           <span className="eyebrow">HOLA MAPS PLATFORM</span>
           <h1>API & Tích hợp</h1>
-          <p>Quản lý Public API, website kết nối, key, endpoint, quota và tài liệu trong một nơi.</p>
+          <p>Quản lý Public API, website kết nối, key, endpoint, quota và nguồn dữ liệu ngoài trong một nơi.</p>
         </div>
         <div className={settings.enabled ? 'devapi-health online' : 'devapi-health offline'}>
           <span />
@@ -386,6 +388,8 @@ export default function AdminDeveloperApi() {
               </div>
             </section>
           )}
+
+          {tab === 'integrations' && <IntegrationSecretsPanel />}
 
           {tab === 'endpoints' && (
             <section className="devapi-section">

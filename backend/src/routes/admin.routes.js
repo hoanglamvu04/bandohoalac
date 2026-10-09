@@ -125,6 +125,12 @@ import {
   startPhotoScanAdmin
 } from '../controllers/adminPhotoScanner.controller.js';
 import {
+  deleteIntegrationAdmin,
+  listIntegrationsAdmin,
+  saveIntegrationAdmin,
+  testIntegrationAdmin
+} from '../controllers/adminIntegrations.controller.js';
+import {
   auditCtvModerationAdmin,
   getDataQualityAdmin,
   listPlaceRevisionsAdmin,
@@ -215,6 +221,11 @@ router.get('/brand', adminOnly, getBrandAdmin);
 router.patch('/brand', adminOnly, validateBody(adminUpdateBrandSettingsSchema), updateBrandAdmin);
 router.post('/brand/assets', adminOnly, uploadSingleImage, uploadBrandAssetAdmin);
 router.delete('/brand/assets/:id', adminOnly, deleteBrandAssetAdmin);
+
+router.get('/integrations', adminOnly, listIntegrationsAdmin);
+router.post('/integrations/:provider/test', adminOnly, testIntegrationAdmin);
+router.put('/integrations/:provider', adminOnly, saveIntegrationAdmin);
+router.delete('/integrations/:provider', adminOnly, deleteIntegrationAdmin);
 
 router.get('/developer-api/overview', adminOnly, getDeveloperApiOverviewAdmin);
 router.patch('/developer-api/settings', adminOnly, validateBody(updateDeveloperApiSettingsSchema), updateDeveloperApiSettingsAdmin);
