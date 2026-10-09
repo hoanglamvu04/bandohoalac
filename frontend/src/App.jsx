@@ -6,7 +6,8 @@ import Footer from './components/Footer.jsx';
 
 export default function App() {
   const location = useLocation();
-  const isEmbedRoute = location.pathname === '/embed';
+  const isPickerRoute = location.pathname === '/picker' || location.pathname === '/embed/picker';
+  const isEmbedRoute = location.pathname === '/embed' || isPickerRoute;
   const isMapRoute = location.pathname === '/map' || isEmbedRoute;
   const isProfileRoute = location.pathname === '/profile';
   const isPartnerScannerRoute = location.pathname === '/partner/scanner';
@@ -14,11 +15,13 @@ export default function App() {
   useEffect(() => {
     document.body.classList.toggle('map-route-active', isMapRoute);
     document.body.classList.toggle('map-embed-active', isEmbedRoute);
+    document.body.classList.toggle('map-picker-active', isPickerRoute);
     return () => {
       document.body.classList.remove('map-route-active');
       document.body.classList.remove('map-embed-active');
+      document.body.classList.remove('map-picker-active');
     };
-  }, [isMapRoute, isEmbedRoute]);
+  }, [isMapRoute, isEmbedRoute, isPickerRoute]);
 
   useLayoutEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
@@ -119,6 +122,7 @@ export default function App() {
       'app-shell',
       isMapRoute ? 'map-app-shell' : '',
       isEmbedRoute ? 'map-embed-shell' : '',
+      isPickerRoute ? 'map-picker-shell' : '',
       isProfileRoute ? 'profile-app-shell' : '',
       isPartnerScannerRoute ? 'partner-scanner-app-shell' : ''
     ].filter(Boolean).join(' ')}>
@@ -128,6 +132,7 @@ export default function App() {
         'app-main',
         isMapRoute ? 'map-app-main' : '',
         isEmbedRoute ? 'map-embed-main' : '',
+        isPickerRoute ? 'map-picker-main' : '',
         isPartnerScannerRoute ? 'partner-scanner-app-main' : ''
       ].filter(Boolean).join(' ')}>
         <Outlet />
