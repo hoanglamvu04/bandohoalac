@@ -8,7 +8,8 @@ export default function App() {
   const location = useLocation();
   const isPickerRoute = location.pathname === '/picker' || location.pathname === '/embed/picker';
   const isEmbedRoute = location.pathname === '/embed' || isPickerRoute;
-  const isMapRoute = location.pathname === '/map' || isEmbedRoute;
+  const isHaloRoute = location.pathname === '/halo';
+  const isMapRoute = location.pathname === '/map' || isHaloRoute || isEmbedRoute;
   const isProfileRoute = location.pathname === '/profile';
   const isPartnerScannerRoute = location.pathname === '/partner/scanner';
 
@@ -16,12 +17,14 @@ export default function App() {
     document.body.classList.toggle('map-route-active', isMapRoute);
     document.body.classList.toggle('map-embed-active', isEmbedRoute);
     document.body.classList.toggle('map-picker-active', isPickerRoute);
+    document.body.classList.toggle('halo-map-active', isHaloRoute);
     return () => {
       document.body.classList.remove('map-route-active');
       document.body.classList.remove('map-embed-active');
       document.body.classList.remove('map-picker-active');
+      document.body.classList.remove('halo-map-active');
     };
-  }, [isMapRoute, isEmbedRoute, isPickerRoute]);
+  }, [isMapRoute, isEmbedRoute, isPickerRoute, isHaloRoute]);
 
   useLayoutEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
@@ -123,6 +126,7 @@ export default function App() {
       isMapRoute ? 'map-app-shell' : '',
       isEmbedRoute ? 'map-embed-shell' : '',
       isPickerRoute ? 'map-picker-shell' : '',
+      isHaloRoute ? 'halo-map-shell' : '',
       isProfileRoute ? 'profile-app-shell' : '',
       isPartnerScannerRoute ? 'partner-scanner-app-shell' : ''
     ].filter(Boolean).join(' ')}>
@@ -133,6 +137,7 @@ export default function App() {
         isMapRoute ? 'map-app-main' : '',
         isEmbedRoute ? 'map-embed-main' : '',
         isPickerRoute ? 'map-picker-main' : '',
+        isHaloRoute ? 'halo-map-main' : '',
         isPartnerScannerRoute ? 'partner-scanner-app-main' : ''
       ].filter(Boolean).join(' ')}>
         <Outlet />
