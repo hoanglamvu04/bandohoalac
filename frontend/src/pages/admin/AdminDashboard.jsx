@@ -8,6 +8,7 @@ import {
   Database,
   Flag,
   Gauge,
+  Images,
   LayoutDashboard,
   MapPinned,
   Megaphone,
@@ -55,6 +56,13 @@ const ctvLevel2Modules = [
     description: 'Kiểm tra và duyệt từng địa điểm từ nguồn import.',
     icon: Database,
     tone: 'cyan'
+  },
+  {
+    to: '/admin/photo-scanner',
+    title: 'Photo Scanner',
+    description: 'Quét, đối chiếu nguồn và duyệt ảnh gắn vào địa điểm.',
+    icon: Images,
+    tone: 'green'
   }
 ];
 
