@@ -6,6 +6,7 @@ import {
   deleteHaloPost,
   getHaloMediaForPlace,
   getHaloSpot,
+  listHaloSpotFeatures,
   upsertHaloPost
 } from '../services/haloHola.service.js';
 
@@ -43,6 +44,16 @@ export const syncHaloPost = asyncHandler(async (req, res) => {
 export const removeHaloPost = asyncHandler(async (req, res) => {
   await assertHaloIntegration(req);
   res.json(await deleteHaloPost(req.params.externalPostId));
+});
+
+export const listHaloSpots = asyncHandler(async (req, res) => {
+  const features = await listHaloSpotFeatures({
+    west: req.query.west,
+    south: req.query.south,
+    east: req.query.east,
+    north: req.query.north
+  });
+  res.json({ type: 'FeatureCollection', features });
 });
 
 export const readHaloSpot = asyncHandler(async (req, res) => {
