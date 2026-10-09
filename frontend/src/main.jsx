@@ -46,6 +46,7 @@ import './mobile-header-menu.css';
 import './home-community-cleanup.css';
 import './community-location-polish.css';
 import './photo-scanner.css';
+import './integration-secrets.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
