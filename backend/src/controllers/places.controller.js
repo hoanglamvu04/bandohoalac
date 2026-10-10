@@ -6,8 +6,16 @@ import {
 import { smartListPlaces } from '../services/smartPlaceSearch.service.js';
 
 export const getPlaces = asyncHandler(async (req, res) => {
-  const { q, category, minRating, limit, offset } = req.query;
-  const result = await smartListPlaces({ q, category, minRating, limit, offset });
+  const { q, category, minRating, limit, offset, lat, lng } = req.query;
+  const result = await smartListPlaces({
+    q,
+    category,
+    minRating,
+    limit,
+    offset,
+    lat: lat === undefined ? undefined : Number(lat),
+    lng: lng === undefined ? undefined : Number(lng)
+  });
   res.json(result);
 });
 
