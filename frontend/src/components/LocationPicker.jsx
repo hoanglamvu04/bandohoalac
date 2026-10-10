@@ -121,9 +121,6 @@ export default function LocationPicker({ lat, lng, onChange }) {
           lng: initialCenter[0]
         };
 
-        // If the parent supplied no valid location (or the historical 0,0 bug),
-        // immediately normalize the picker state to the Hòa Lạc default so the
-        // coordinate badge and the actual map center never disagree.
         if (!requestedInside) {
           onChangeRef.current?.({
             lat: initialCenter[1],
@@ -204,7 +201,8 @@ export default function LocationPicker({ lat, lng, onChange }) {
       syncingRef.current = true;
       map.easeTo({
         center: [nextLng, nextLat],
-        duration: 300,
+        zoom: Math.max(map.getZoom(), 16.2),
+        duration: 420,
         essential: true
       });
     }
