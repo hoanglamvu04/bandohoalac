@@ -1,0 +1,9 @@
+/* Mobile map stacking hotfix.
+   The discovery bottom sheet is an active surface and must render above the
+   floating theme / quick-filter controls, while the unified search remains
+   above it (search uses z-index: 1080). */
+@media (max-width: 760px) {
+  body.map-route-active .hm-left-panel.open {
+    z-index: 1000 !important;
+  }
+}
