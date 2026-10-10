@@ -33,6 +33,7 @@ export default function LocationPickerPage() {
   const initialLng = finite(searchParams.get('lng'), DEFAULT_LOCATION.lng);
   const initialLabel = searchParams.get('label') || '';
   const requestedOrigin = searchParams.get('origin') || '';
+  const embedded = typeof window !== 'undefined' && window.parent !== window;
 
   const [location, setLocation] = useState({ lat: initialLat, lng: initialLng });
   const [label, setLabel] = useState(initialLabel);
@@ -173,13 +174,13 @@ export default function LocationPickerPage() {
   };
 
   return (
-    <main className="hm-picker-page">
+    <main className={embedded ? 'hm-picker-page is-embedded' : 'hm-picker-page'}>
       <section className="hm-picker-shell">
         <header className="hm-picker-head">
           <div>
             <span>HOLA MAPS</span>
-            <h1>Chọn địa điểm tác phẩm</h1>
-            <p>Tìm địa điểm có sẵn, dùng vị trí hiện tại hoặc kéo bản đồ để ghim đúng điểm bạn chụp.</p>
+            <h1>{embedded ? 'Chọn vị trí' : 'Chọn địa điểm tác phẩm'}</h1>
+            <p>{embedded ? 'Tìm địa điểm hoặc kéo bản đồ để ghim đúng nơi bạn chụp.' : 'Tìm địa điểm có sẵn, dùng vị trí hiện tại hoặc kéo bản đồ để ghim đúng điểm bạn chụp.'}</p>
           </div>
           <div className="hm-picker-coords">
             <MapPin size={16} />
@@ -203,7 +204,7 @@ export default function LocationPickerPage() {
           </div>
           <button className="hm-picker-locate" type="button" onClick={locateMe} disabled={locating}>
             {locating ? <Loader2 className="spin" size={17} /> : <Crosshair size={17} />}
-            Vị trí hiện tại
+            <span>Vị trí hiện tại</span>
           </button>
 
           {results.length > 0 ? (
@@ -224,12 +225,12 @@ export default function LocationPickerPage() {
 
         <footer className="hm-picker-footer">
           <div>
-            <small>Địa điểm đã chọn</small>
+            <small>Vị trí sẽ gắn vào bài</small>
             <strong>{label || 'Vị trí ghim trên HOLA Maps'}</strong>
-            {address ? <span>{address}</span> : null}
+            {address ? <span>{address}</span> : <span>{Number(location.lat).toFixed(5)}, {Number(location.lng).toFixed(5)}</span>}
           </div>
           <button type="button" onClick={confirm}>
-            <Check size={18} /> {sent ? 'Đã gửi về HALO HOLA' : 'Dùng vị trí này'}
+            <Check size={18} /> {sent ? 'Đã chọn vị trí' : 'Chọn vị trí này'}
           </button>
         </footer>
       </section>
