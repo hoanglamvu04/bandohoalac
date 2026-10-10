@@ -20,15 +20,21 @@ const CATEGORY_ALIASES = [
 const LANDMARK_ALIASES = [
   {
     aliases: ['fpt', 'fpt hoa lac', 'dai hoc fpt', 'truong dai hoc fpt', 'fpt university'],
-    queries: ['FPT', 'Đại học FPT', 'Trường Đại học FPT', 'FPT University']
+    queries: ['Trường Đại học FPT', 'Đại học FPT', 'FPT University', 'FPT'],
+    preferredCategory: 'truong-hoc',
+    preferredNameTerms: ['dai hoc fpt', 'fpt university']
   },
   {
     aliases: ['dhqg', 'dhqg ha noi', 'dai hoc quoc gia', 'dai hoc quoc gia ha noi', 'vnu'],
-    queries: ['Đại học Quốc gia Hà Nội', 'ĐHQG Hà Nội', 'VNU']
+    queries: ['Đại học Quốc gia Hà Nội', 'ĐHQG Hà Nội', 'VNU'],
+    preferredCategory: 'truong-hoc',
+    preferredNameTerms: ['dai hoc quoc gia', 'dhqg', 'vnu']
   },
   {
     aliases: ['cnc', 'cnc hoa lac', 'khu cnc', 'khu cong nghe cao', 'khu cong nghe cao hoa lac'],
-    queries: ['Khu Công nghệ cao Hòa Lạc', 'CNC Hòa Lạc']
+    queries: ['Khu Công nghệ cao Hòa Lạc', 'CNC Hòa Lạc'],
+    preferredCategory: null,
+    preferredNameTerms: ['khu cong nghe cao', 'cnc hoa lac']
   }
 ];
 
@@ -43,7 +49,7 @@ const PROXIMITY_PATTERNS = [
   /\s+tai\s+/i
 ];
 
-function fold(value) {
+export function foldSearchText(value) {
   return String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -55,7 +61,7 @@ function fold(value) {
 }
 
 function inferCategory(query) {
-  const haystack = fold(query);
+  const haystack = foldSearchText(query);
   for (const item of CATEGORY_ALIASES) {
     if (item.aliases.some((alias) => haystack.includes(alias))) return item.slug;
   }
@@ -83,26 +89,86 @@ function normalizeLimit(value, fallback = 50) {
   return Math.min(Math.max(Number(value) || fallback, 1), 100);
 }
 
-function anchorCandidates(anchorQuery) {
-  const folded = fold(anchorQuery);
-  const candidates = [String(anchorQuery || '').trim()];
+function landmarkDefinition(anchorQuery) {
+  const folded = foldSearchText(anchorQuery);
+  return LANDMARK_ALIASES.find((item) =>
+    item.aliases.some((alias) => folded === alias || folded.includes(alias))
+  ) || null;
+}
 
-  for (const item of LANDMARK_ALIASES) {
-    if (item.aliases.some((alias) => folded === alias || folded.includes(alias))) {
-      candidates.push(...item.queries);
-    }
+export function anchorCandidates(anchorQuery) {
+  const definition = landmarkDefinition(anchorQuery);
+  const raw = String(anchorQuery || '').trim();
+
+  if (!definition) {
+    return [{ query: raw, preferredCategory: null, preferredNameTerms: [] }].filter((item) => item.query);
   }
 
-  return Array.from(new Set(candidates.filter(Boolean)));
+  const candidates = definition.queries.map((query) => ({
+    query,
+    preferredCategory: definition.preferredCategory,
+    preferredNameTerms: definition.preferredNameTerms
+  }));
+
+  if (raw && !candidates.some((item) => foldSearchText(item.query) === foldSearchText(raw))) {
+    candidates.push({
+      query: raw,
+      preferredCategory: definition.preferredCategory,
+      preferredNameTerms: definition.preferredNameTerms
+    });
+  }
+
+  return candidates;
+}
+
+function anchorScore(item, candidate) {
+  const name = foldSearchText(item?.name);
+  const query = foldSearchText(candidate.query);
+  const category = item?.categorySlug || '';
+  let score = 0;
+
+  if (name === query) score += 100;
+  else if (name.includes(query) || query.includes(name)) score += 55;
+
+  if (candidate.preferredCategory && category === candidate.preferredCategory) score += 40;
+
+  for (const term of candidate.preferredNameTerms || []) {
+    if (name.includes(term)) score += 50;
+  }
+
+  // Avoid using a shop/bank carrying the FPT/VNU keyword as the geographic anchor.
+  if (/\b(shop|store|bank|atm|livebank|polytechnic)\b/.test(name)) score -= 45;
+
+  score += Math.min(Number(item?.reviews) || 0, 20) * 0.1;
+  return score;
+}
+
+export function selectBestAnchorMatch(items, candidate) {
+  return (Array.isArray(items) ? items : [])
+    .filter((item) => Number.isFinite(Number(item?.lat)) && Number.isFinite(Number(item?.lng)))
+    .map((item) => ({ item, score: anchorScore(item, candidate) }))
+    .sort((a, b) => b.score - a.score)[0]?.item || null;
 }
 
 async function resolveAnchor(anchorQuery) {
   for (const candidate of anchorCandidates(anchorQuery)) {
-    const matches = await listPlaces({ q: candidate, limit: 8, offset: 0 });
-    const anchor = matches.find((item) =>
-      Number.isFinite(Number(item?.lat)) && Number.isFinite(Number(item?.lng))
-    );
-    if (anchor) return { anchor, resolvedQuery: candidate };
+    let matches = [];
+
+    if (candidate.preferredCategory) {
+      matches = await listPlaces({
+        q: candidate.query,
+        category: candidate.preferredCategory,
+        limit: 12,
+        offset: 0
+      });
+    }
+
+    if (!matches.length) {
+      matches = await listPlaces({ q: candidate.query, limit: 12, offset: 0 });
+    }
+
+    const anchor = selectBestAnchorMatch(matches, candidate);
+    if (anchor) return { anchor, resolvedQuery: candidate.query };
   }
 
   return { anchor: null, resolvedQuery: null };
@@ -110,14 +176,14 @@ async function resolveAnchor(anchorQuery) {
 
 /**
  * Smart search keeps the normal fuzzy text search as the default, then adds a
- * small local-intent parser for queries such as:
+ * local-intent parser for queries such as:
  *   - "quán cafe gần FPT"
  *   - "trường mầm non ở Hạ Bằng"
  *   - "đất quanh Đại học Quốc gia"
  *
- * The anchor is resolved against Hola Maps' own places first. Common local
- * aliases such as FPT / ĐHQG / CNC are expanded to their longer place names so
- * users do not need to type the exact database label.
+ * Known Hòa Lạc landmarks are resolved using canonical names/category first.
+ * This prevents keyword-bearing shops, banks or stale legacy records from
+ * becoming the geographic anchor for a nearby query.
  */
 export async function smartListPlaces({ q, category, minRating, limit = 50, offset = 0 } = {}) {
   const rawQuery = String(q || '').trim();
