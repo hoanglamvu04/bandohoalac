@@ -52,6 +52,7 @@ import './halo-hola-map.css';
 import './discovery-v1.css';
 import './map-power-v3.css';
 import './mobile-map-clean.css';
+import './mobile-map-overlap-fix.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
