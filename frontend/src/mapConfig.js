@@ -1,43 +1,43 @@
 const env = import.meta.env;
 
-export const DEFAULT_CENTER = [105.515, 21.015];
-export const DEFAULT_ZOOM = 13.15;
-export const MIN_ZOOM = 12.25;
+export const DEFAULT_CENTER = [105.515, 21.025];
+export const DEFAULT_ZOOM = 12.45;
+export const MIN_ZOOM = 11.7;
 export const MAX_ZOOM = 18;
 
 /**
  * Product service coverage for Hola Maps.
  *
  * This is intentionally a product coverage polygon, not a legal/official
- * administrative-boundary dataset. It keeps the app focused on the new
- * Thạch Thất / Hòa Lạc service cluster requested for the product:
- * Hòa Lạc, Hạ Bằng, Thạch Thất, Tây Phương, Yên Xuân, Phú Cát plus only
- * the nearby parts of Ba Vì and Quốc Oai.
+ * administrative-boundary dataset. The Hòa Lạc / new Thạch Thất core stays
+ * central, while the service belt is expanded by roughly 2-3 commune widths
+ * in every direction so the map no longer feels cut off at the old edge.
  *
  * When an authoritative commune-boundary GeoJSON is available, replace only
  * SERVICE_AREA_RING; every map/API filter continues to work unchanged.
  */
 export const SERVICE_AREA_RING = [
-  [105.335, 21.145],
-  [105.325, 21.080],
-  [105.345, 21.030],
-  [105.370, 20.985],
-  [105.405, 20.950],
-  [105.440, 20.930],
-  [105.475, 20.905],
-  [105.515, 20.888],
-  [105.565, 20.885],
-  [105.610, 20.900],
-  [105.640, 20.935],
-  [105.660, 20.975],
-  [105.665, 21.015],
-  [105.650, 21.055],
-  [105.640, 21.095],
-  [105.590, 21.110],
-  [105.520, 21.122],
-  [105.455, 21.118],
-  [105.390, 21.145],
-  [105.335, 21.145]
+  [105.275, 21.235],
+  [105.250, 21.175],
+  [105.250, 21.095],
+  [105.265, 21.015],
+  [105.295, 20.945],
+  [105.340, 20.885],
+  [105.405, 20.845],
+  [105.495, 20.825],
+  [105.595, 20.830],
+  [105.685, 20.855],
+  [105.750, 20.905],
+  [105.785, 20.970],
+  [105.790, 21.050],
+  [105.775, 21.125],
+  [105.745, 21.195],
+  [105.675, 21.225],
+  [105.585, 21.240],
+  [105.485, 21.245],
+  [105.380, 21.245],
+  [105.305, 21.245],
+  [105.275, 21.235]
 ];
 
 export const CORE_SERVICE_AREAS = [
@@ -50,14 +50,18 @@ export const CORE_SERVICE_AREAS = [
 ];
 
 export const EXTENDED_SERVICE_AREAS = [
-  'Một phần Ba Vì',
-  'Một phần Quốc Oai'
+  'Vành đai phía Bắc Hòa Lạc',
+  'Vành đai phía Nam Hòa Lạc',
+  'Vành đai phía Đông Hòa Lạc',
+  'Vành đai phía Tây Hòa Lạc',
+  'Khu vực lân cận Ba Vì',
+  'Khu vực lân cận Quốc Oai'
 ];
 
 // Product camera presets for discovery. These are navigation presets, not
 // legal administrative boundary definitions.
 export const REGION_PRESETS = [
-  { id: 'all', label: 'Toàn vùng', center: DEFAULT_CENTER, zoom: 12.7 },
+  { id: 'all', label: 'Toàn vùng', center: DEFAULT_CENTER, zoom: 11.95 },
   { id: 'hoa-lac', label: 'Hòa Lạc', center: [105.515, 21.015], zoom: 14.0 },
   { id: 'ha-bang', label: 'Hạ Bằng', center: [105.558, 21.055], zoom: 14.2 },
   { id: 'thach-that', label: 'Thạch Thất', center: [105.585, 21.030], zoom: 13.9 },
@@ -67,16 +71,15 @@ export const REGION_PRESETS = [
 ];
 
 /**
- * Tight camera fence with a small visual buffer around the actual service
- * polygon. This replaces the old Hanoi-scale 105.24..105.80 / 20.84..21.27
- * rectangle, so remote tiles are no longer requested far away from Hòa Lạc.
+ * Camera fence with a visual/tile buffer around the expanded service polygon.
+ * The product still stays focused on Hòa Lạc instead of exposing all Hanoi.
  */
 export const MAP_COVERAGE_BOUNDS = [
-  [105.30, 20.86],
-  [105.69, 21.16]
+  [105.21, 20.79],
+  [105.83, 21.29]
 ];
 
-export const SERVICE_AREA_BOUNDS = [105.325, 20.885, 105.665, 21.145];
+export const SERVICE_AREA_BOUNDS = [105.250, 20.825, 105.790, 21.245];
 
 export function isInsideMapCoverageBounds(lng, lat) {
   const x = Number(lng);
@@ -158,8 +161,8 @@ export function isInsideServiceCoverage(lng, lat) {
   return pointInRing(x, y, SERVICE_AREA_RING);
 }
 
-// Kept for legacy raster-style helpers. A single tight source is cheaper than
-// the previous nine overlapping rectangle sources.
+// Kept for legacy raster-style helpers. A single focused source is cheaper
+// than loading Hanoi-scale overlapping rectangle sources.
 export const SERVICE_AREAS = [
   {
     id: 'hola-service-area',
