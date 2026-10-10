@@ -53,6 +53,20 @@ export default function LocationPicker({ lat, lng, onChange }) {
     if (!containerRef.current || mapRef.current) return undefined;
 
     let cancelled = false;
+    let resizeObserver = null;
+    let resizeHandler = null;
+    let mapInstance = null;
+    const resizeTimers = [];
+
+    const clearResizeHooks = () => {
+      resizeObserver?.disconnect();
+      resizeTimers.forEach((timer) => window.clearTimeout(timer));
+      if (resizeHandler) {
+        window.removeEventListener('resize', resizeHandler);
+        window.removeEventListener('orientationchange', resizeHandler);
+        window.visualViewport?.removeEventListener('resize', resizeHandler);
+      }
+    };
 
     (async () => {
       try {
@@ -101,12 +115,43 @@ export default function LocationPicker({ lat, lng, onChange }) {
           attributionControl: false
         });
 
+        mapInstance = map;
+        mapRef.current = map;
+
+        const resizeMap = () => {
+          if (cancelled || !mapRef.current) return;
+          window.requestAnimationFrame(() => {
+            if (!cancelled && mapRef.current) mapRef.current.resize();
+          });
+        };
+        resizeHandler = resizeMap;
+
+        // iOS browsers often report a smaller iframe/map size on the first
+        // paint, then expand it after the browser chrome and 100dvh settle.
+        // Observe the actual element and resize MapLibre whenever that happens.
+        if (typeof ResizeObserver !== 'undefined') {
+          resizeObserver = new ResizeObserver(resizeMap);
+          resizeObserver.observe(containerRef.current);
+          if (containerRef.current.parentElement) {
+            resizeObserver.observe(containerRef.current.parentElement);
+          }
+        }
+        window.addEventListener('resize', resizeMap, { passive: true });
+        window.addEventListener('orientationchange', resizeMap, { passive: true });
+        window.visualViewport?.addEventListener('resize', resizeMap, { passive: true });
+
+        [0, 80, 180, 360, 700, 1200].forEach((delay) => {
+          resizeTimers.push(window.setTimeout(resizeMap, delay));
+        });
+
         map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
         map.touchZoomRotate.disableRotation();
 
         map.on('load', () => {
           setMapError('');
-          requestAnimationFrame(() => map.resize());
+          resizeMap();
+          resizeTimers.push(window.setTimeout(resizeMap, 120));
+          resizeTimers.push(window.setTimeout(resizeMap, 420));
         });
 
         map.on('error', (event) => {
@@ -164,8 +209,6 @@ export default function LocationPicker({ lat, lng, onChange }) {
           setWarning('');
           onChangeRef.current?.({ lat: next.lat, lng: next.lng });
         });
-
-        mapRef.current = map;
       } catch (error) {
         if (!cancelled) {
           console.error('Hola Maps picker failed to initialize:', error);
@@ -176,8 +219,9 @@ export default function LocationPicker({ lat, lng, onChange }) {
 
     return () => {
       cancelled = true;
-      mapRef.current?.remove();
-      mapRef.current = null;
+      clearResizeHooks();
+      mapInstance?.remove();
+      if (mapRef.current === mapInstance) mapRef.current = null;
       protocolRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
