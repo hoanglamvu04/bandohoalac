@@ -1,0 +1,126 @@
+.map-experience-v2 { position: relative; min-height: 100%; }
+
+/* Replace the legacy free-text search field with the unified V2 search. */
+.map-experience-v2 .hm-map-topbar .hm-map-search {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.hm-search-v2-wrap {
+  position: fixed;
+  z-index: 1080;
+  top: calc(var(--app-safe-top, 72px) + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(620px, calc(100vw - 180px));
+}
+
+.hm-search-v2 {
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  border-radius: 16px;
+  border: 1px solid rgba(16,47,41,.12);
+  background: rgba(255,255,255,.98);
+  padding: 0 13px;
+  box-shadow: 0 12px 34px rgba(16,47,41,.16);
+  color: #173f35;
+  backdrop-filter: blur(16px);
+}
+
+.hm-search-v2.active { border-color: rgba(36,79,67,.32); box-shadow: 0 18px 44px rgba(16,47,41,.2); }
+.hm-search-v2 input { width: 100%; border: 0; outline: 0; background: transparent; font: inherit; color: #17362f; min-width: 0; }
+.hm-search-v2 input::placeholder { color: #87978f; }
+.hm-search-v2 > button { border: 0; background: transparent; color: #65766e; display: grid; place-items: center; cursor: pointer; }
+.hm-search-v2-loading { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #dce6e1; border-top-color: #245144; animation: hmSpin .8s linear infinite; }
+@keyframes hmSpin { to { transform: rotate(360deg); } }
+
+.hm-search-v2-dropdown {
+  margin-top: 7px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(16,47,41,.11);
+  background: rgba(255,255,255,.99);
+  box-shadow: 0 24px 60px rgba(16,47,41,.2);
+}
+.hm-search-v2-context { display: flex; gap: 8px; align-items: center; padding: 10px 13px; background: #f3f7f5; color: #5e7168; font-size: 12px; border-bottom: 1px solid #e5ece8; }
+.hm-search-v2-result { width: 100%; border: 0; border-bottom: 1px solid #edf1ef; background: #fff; min-height: 62px; padding: 9px 12px; display: grid; grid-template-columns: 38px minmax(0,1fr) auto; gap: 10px; align-items: center; text-align: left; cursor: pointer; color: #17362f; }
+.hm-search-v2-result:last-child { border-bottom: 0; }
+.hm-search-v2-result:hover { background: #f7faf8; }
+.hm-search-v2-icon { width: 36px; height: 36px; border-radius: 12px; background: #edf5f1; color: #245144; display: grid; place-items: center; }
+.hm-search-v2-copy { min-width: 0; display: grid; gap: 3px; }
+.hm-search-v2-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.hm-search-v2-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #788980; font-size: 12px; }
+.hm-search-v2-result > b { color: #6d7e76; font-size: 11px; font-weight: 800; }
+.hm-search-v2-empty { min-height: 74px; padding: 15px; display: flex; justify-content: center; align-items: center; gap: 8px; color: #718179; font-size: 13px; }
+
+/* Push the thematic dock below unified search to avoid overlap. */
+.map-experience-v2 .theme-layer-dock { top: calc(var(--app-safe-top, 72px) + 74px); }
+
+.hm-pin-hint {
+  position: fixed;
+  z-index: 900;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  background: rgba(20,55,47,.9);
+  color: white;
+  border-radius: 999px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(10,30,25,.2);
+}
+
+.hm-free-pin-marker {
+  width: 34px;
+  height: 34px;
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 8px;
+  transform: rotate(-45deg);
+  background: #1f5a4a;
+  box-shadow: 0 7px 18px rgba(14,44,36,.3);
+  padding: 0;
+}
+.hm-free-pin-marker span { display: block; width: 9px; height: 9px; border-radius: 50%; background: #fff; margin: 9px auto; }
+
+.hm-pin-card {
+  position: fixed;
+  z-index: 1090;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  width: min(430px, calc(100vw - 24px));
+  border: 1px solid rgba(16,47,41,.12);
+  border-radius: 18px;
+  background: rgba(255,255,255,.98);
+  box-shadow: 0 20px 54px rgba(16,47,41,.22);
+  padding: 13px;
+}
+.hm-pin-card-head { display: grid; grid-template-columns: 38px 1fr auto; gap: 10px; align-items: center; }
+.hm-pin-card-icon { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: #eaf3ef; color: #245144; }
+.hm-pin-card-head > div { min-width: 0; display: grid; gap: 2px; }
+.hm-pin-card-head strong { font-size: 14px; }
+.hm-pin-card-head small { color: #788980; }
+.hm-pin-card-head > button { border: 0; background: transparent; color: #76867e; cursor: pointer; }
+.hm-pin-coordinates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 11px 0; }
+.hm-pin-coordinates span { background: #f4f7f5; border-radius: 10px; padding: 8px 10px; text-align: center; font: 700 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; color: #3d5b52; }
+.hm-pin-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.hm-pin-actions button, .hm-pin-actions a { min-height: 38px; border-radius: 10px; border: 1px solid #dce6e1; background: #fff; color: #244f43; display: flex; justify-content: center; align-items: center; gap: 6px; text-decoration: none; font-weight: 800; font-size: 12px; cursor: pointer; }
+.hm-pin-actions a { background: #244f43; color: #fff; border-color: #244f43; }
+
+@media (max-width: 760px) {
+  .hm-search-v2-wrap { top: calc(var(--app-safe-top, 58px) + 7px); width: calc(100vw - 18px); }
+  .hm-search-v2 { min-height: 46px; border-radius: 14px; }
+  .map-experience-v2 .theme-layer-dock { top: calc(var(--app-safe-top, 58px) + 61px); width: calc(100vw - 18px); }
+  .hm-pin-hint { bottom: 78px; max-width: calc(100vw - 24px); white-space: nowrap; }
+  .hm-pin-card { bottom: 72px; }
+  .hm-pin-actions { grid-template-columns: 1fr 1fr; }
+  .hm-pin-actions a { grid-column: 1 / -1; }
+}
