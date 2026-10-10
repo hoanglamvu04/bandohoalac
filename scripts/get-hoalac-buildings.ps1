@@ -1,6 +1,6 @@
 param(
   [string]$Release = "",
-  [string]$BBox = "105.21,20.79,105.83,21.29",
+  [string]$BBox = "105.28,20.86,105.71,21.18",
   [int]$MinZoom = 14,
   [int]$MaxZoom = 17
 )
@@ -44,7 +44,8 @@ Write-Host ""
 Write-Host "Hola Maps supplemental buildings"
 Write-Host "Source:   Overture official Buildings PMTiles"
 Write-Host "Release:  $ResolvedRelease"
-Write-Host "Coverage: $BBox"
+Write-Host "Coverage: nine target communes only + small technical buffer"
+Write-Host "BBox:     $BBox"
 Write-Host "Zoom:     $MinZoom-$MaxZoom"
 Write-Host "Output:   $OutputFile"
 Write-Host ""

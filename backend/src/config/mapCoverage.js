@@ -1,53 +1,47 @@
 /**
  * Product service coverage for Hola Maps.
  *
- * The Hòa Lạc / new Thạch Thất core remains central, while the product
- * coverage is expanded by roughly 2-3 commune widths in every direction.
- * This is a product-coverage boundary, not a legal cadastral boundary.
+ * Active product area is limited to the nine communes currently served by the
+ * project: Yên Xuân, Hòa Lạc, Yên Bài, Đoài Phương, Thạch Thất, Hạ Bằng,
+ * Tây Phương, Kiều Phú and Phú Cát.
+ *
+ * This is a tight product-coverage boundary, not a legal cadastral boundary.
  */
 export const SERVICE_AREA_RING = [
-  [105.275, 21.235],
-  [105.250, 21.175],
-  [105.250, 21.095],
-  [105.265, 21.015],
-  [105.295, 20.945],
-  [105.340, 20.885],
-  [105.405, 20.845],
-  [105.495, 20.825],
-  [105.595, 20.830],
-  [105.685, 20.855],
-  [105.750, 20.905],
-  [105.785, 20.970],
-  [105.790, 21.050],
-  [105.775, 21.125],
-  [105.745, 21.195],
-  [105.675, 21.225],
-  [105.585, 21.240],
-  [105.485, 21.245],
-  [105.380, 21.245],
-  [105.305, 21.245],
-  [105.275, 21.235]
+  [105.335, 21.145],
+  [105.310, 21.100],
+  [105.310, 21.035],
+  [105.325, 20.975],
+  [105.365, 20.920],
+  [105.430, 20.890],
+  [105.515, 20.890],
+  [105.600, 20.900],
+  [105.660, 20.930],
+  [105.685, 20.985],
+  [105.680, 21.055],
+  [105.655, 21.115],
+  [105.600, 21.145],
+  [105.520, 21.155],
+  [105.430, 21.155],
+  [105.360, 21.150],
+  [105.335, 21.145]
 ];
 
-export const SERVICE_AREA_BOUNDS = [105.250, 20.825, 105.790, 21.245];
+export const SERVICE_AREA_BOUNDS = [105.310, 20.890, 105.685, 21.155];
 
 export const CORE_SERVICE_AREAS = [
-  'Hòa Lạc',
-  'Hạ Bằng',
-  'Thạch Thất',
-  'Tây Phương',
   'Yên Xuân',
+  'Hòa Lạc',
+  'Yên Bài',
+  'Đoài Phương',
+  'Thạch Thất',
+  'Hạ Bằng',
+  'Tây Phương',
+  'Kiều Phú',
   'Phú Cát'
 ];
 
-export const EXTENDED_SERVICE_AREAS = [
-  'Vành đai phía Bắc Hòa Lạc',
-  'Vành đai phía Nam Hòa Lạc',
-  'Vành đai phía Đông Hòa Lạc',
-  'Vành đai phía Tây Hòa Lạc',
-  'Khu vực lân cận Ba Vì',
-  'Khu vực lân cận Quốc Oai'
-];
+export const EXTENDED_SERVICE_AREAS = [];
 
 export const SERVICE_AREA_GEOMETRY = {
   type: 'Polygon',
