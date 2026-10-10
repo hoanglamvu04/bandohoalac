@@ -9,8 +9,16 @@ import '../location-picker-embed.css';
 const DEFAULT_LOCATION = { lat: 21.005, lng: 105.525 };
 
 function finite(value, fallback) {
+  if (value === null || value === undefined || String(value).trim() === '') return fallback;
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
+}
+
+function validLocation(lat, lng) {
+  const y = Number(lat);
+  const x = Number(lng);
+  return Number.isFinite(y) && Number.isFinite(x) &&
+    y >= -90 && y <= 90 && x >= -180 && x <= 180;
 }
 
 function normalizeItems(payload) {
@@ -63,13 +71,17 @@ export default function LocationPickerPage() {
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setSearching(true);
+      setError('');
       try {
         const payload = await getPlaces({ q: term, limit: 8 }, { signal: controller.signal });
         setResults(normalizeItems(payload));
       } catch (nextError) {
-        if (nextError?.name !== 'AbortError') setError(nextError.message || 'Không tìm được địa điểm.');
+        if (nextError?.name !== 'AbortError') {
+          setResults([]);
+          setError(nextError.message || 'Không tìm được địa điểm từ HOLA Maps.');
+        }
       } finally {
-        setSearching(false);
+        if (!controller.signal.aborted) setSearching(false);
       }
     }, 280);
 
@@ -82,7 +94,10 @@ export default function LocationPickerPage() {
   const pickPlace = (place) => {
     const lat = Number(place?.lat);
     const lng = Number(place?.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (!validLocation(lat, lng)) {
+      setError('Địa điểm này chưa có tọa độ hợp lệ trên HOLA Maps.');
+      return;
+    }
     setLocation({ lat, lng });
     setLabel(place.name || place.address || 'Địa điểm trên HOLA Maps');
     setAddress(place.address || '');
@@ -99,6 +114,9 @@ export default function LocationPickerPage() {
     setError('');
     try {
       const current = await getBestBrowserLocation({ timeout: 10000, targetAccuracy: 50 });
+      if (!validLocation(current?.lat, current?.lng)) {
+        throw new Error('Thiết bị trả về tọa độ không hợp lệ.');
+      }
       setLocation({ lat: current.lat, lng: current.lng });
       setLabel('Vị trí hiện tại');
       setAddress('');
@@ -115,7 +133,8 @@ export default function LocationPickerPage() {
   };
 
   const updatePinnedLocation = (next) => {
-    setLocation(next);
+    if (!validLocation(next?.lat, next?.lng)) return;
+    setLocation({ lat: Number(next.lat), lng: Number(next.lng) });
     if (source !== 'hola_place' && source !== 'current_location') {
       setLabel(label || 'Vị trí ghim trên HOLA Maps');
     }
@@ -129,6 +148,11 @@ export default function LocationPickerPage() {
   };
 
   const confirm = () => {
+    if (!validLocation(location.lat, location.lng)) {
+      setError('Vị trí chưa hợp lệ. Vui lòng chọn lại trên HOLA Maps.');
+      return;
+    }
+
     const payload = {
       lat: Number(location.lat),
       lng: Number(location.lng),
