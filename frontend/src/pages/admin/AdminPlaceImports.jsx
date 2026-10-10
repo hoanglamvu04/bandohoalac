@@ -3,6 +3,7 @@ import {
   Check,
   Database,
   ExternalLink,
+  Landmark,
   MapPin,
   RefreshCw,
   Search,
@@ -52,6 +53,11 @@ function formatRunTime(value) {
   }
 }
 
+function foundationPublishCount(run) {
+  const match = String(run?.logExcerpt || '').match(/FOUNDATION_PUBLISHED:\s*(\d+)/i);
+  return match ? Number(match[1]) : 0;
+}
+
 export default function AdminPlaceImports() {
   const { showToast } = useToast();
   const { user } = useAuth();
@@ -65,6 +71,7 @@ export default function AdminPlaceImports() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [runs, setRuns] = useState([]);
   const [scanBusy, setScanBusy] = useState(false);
+  const [foundationBusy, setFoundationBusy] = useState(false);
 
   const categoryMap = useMemo(
     () => new Map(categories.map((category) => [category.slug, category.name])),
@@ -173,24 +180,52 @@ export default function AdminPlaceImports() {
     }
   }
 
+  function prependRun(data) {
+    if (!data?.run) return;
+    setRuns((current) => [
+      data.run,
+      ...current.filter((item) => item.id !== data.run.id)
+    ].slice(0, 8));
+  }
+
   async function startScan() {
-    if (!canScan || scanBusy || hasActiveRun) return;
+    if (!canScan || scanBusy || foundationBusy || hasActiveRun) return;
 
     setScanBusy(true);
     try {
-      const data = await startAdminOverturePlaceScan({ minConfidence: 0.55 });
-      if (data?.run) {
-        setRuns((current) => [
-          data.run,
-          ...current.filter((item) => item.id !== data.run.id)
-        ].slice(0, 8));
-      }
-      showToast('Đã bắt đầu quét Overture ở chế độ nền.', 'success');
+      const data = await startAdminOverturePlaceScan({
+        minConfidence: 0.55,
+        mode: 'STAGING'
+      });
+      prependRun(data);
+      showToast('Đã bắt đầu quét Overture vào hàng chờ.', 'success');
     } catch (error) {
       showToast(error.message, 'error');
       await loadRuns();
     } finally {
       setScanBusy(false);
+    }
+  }
+
+  async function startFoundationScan() {
+    if (!canScan || scanBusy || foundationBusy || hasActiveRun) return;
+    if (!window.confirm(
+      'Quét POI nền sẽ tự public các mốc và dịch vụ đủ độ tin cậy sau khi chống trùng. Các điểm chưa chắc chắn vẫn ở hàng chờ. Tiếp tục?'
+    )) return;
+
+    setFoundationBusy(true);
+    try {
+      const data = await startAdminOverturePlaceScan({
+        minConfidence: 0.72,
+        mode: 'FOUNDATION'
+      });
+      prependRun(data);
+      showToast('Đã bắt đầu quét POI nền cho tìm kiếm quanh địa điểm.', 'success');
+    } catch (error) {
+      showToast(error.message, 'error');
+      await loadRuns();
+    } finally {
+      setFoundationBusy(false);
     }
   }
 
@@ -255,8 +290,7 @@ export default function AdminPlaceImports() {
         <div>
           <b>Quét dữ liệu Overture trực tiếp</b>
           <span>
-            Backend tự tải dữ liệu trong vùng Hòa Lạc, chống trùng và đưa vào staging.
-            Không public địa điểm khi chưa được duyệt.
+            Chế độ thường chỉ đưa dữ liệu vào staging để duyệt thủ công.
           </span>
           <small>
             {lastRun
@@ -268,11 +302,33 @@ export default function AdminPlaceImports() {
           type="button"
           className={hasActiveRun ? 'admin-import-scan-button running' : 'admin-import-scan-button'}
           onClick={startScan}
-          disabled={!canScan || scanBusy || hasActiveRun}
-          title={canScan ? 'Quét Overture Places' : 'Chỉ ADMIN được chạy quét dữ liệu'}
+          disabled={!canScan || scanBusy || foundationBusy || hasActiveRun}
+          title={canScan ? 'Quét Overture Places vào hàng chờ' : 'Chỉ ADMIN được chạy quét dữ liệu'}
         >
           <RefreshCw size={17} />
-          {hasActiveRun ? 'Đang quét…' : scanBusy ? 'Đang khởi tạo…' : 'Quét Overture'}
+          {hasActiveRun ? 'Đang quét…' : scanBusy ? 'Đang khởi tạo…' : 'Quét hàng chờ'}
+        </button>
+      </section>
+
+      <section className="admin-import-runbook admin-import-scan-card foundation-scan-card">
+        <Landmark size={22} />
+        <div>
+          <b>Quét POI nền cho Smart Search</b>
+          <span>
+            Ưu tiên trường học, y tế, cơ quan, giao thông, địa danh; sau đó cafe, ăn uống, lưu trú và tiện ích.
+            Điểm đủ confidence được tự public sau khi chống trùng, điểm mơ hồ vẫn chờ duyệt.
+          </span>
+          <small>Giúp các câu như “cafe gần FPT”, “trường quanh ĐHQG” có mốc và POI thật để tìm.</small>
+        </div>
+        <button
+          type="button"
+          className={hasActiveRun ? 'admin-import-scan-button running' : 'admin-import-scan-button foundation'}
+          onClick={startFoundationScan}
+          disabled={!canScan || scanBusy || foundationBusy || hasActiveRun}
+          title={canScan ? 'Quét và bổ sung POI nền có kiểm soát' : 'Chỉ ADMIN được chạy quét dữ liệu'}
+        >
+          <Landmark size={17} />
+          {hasActiveRun ? 'Đang quét…' : foundationBusy ? 'Đang khởi tạo…' : 'Quét POI nền'}
         </button>
       </section>
 
@@ -300,33 +356,43 @@ export default function AdminPlaceImports() {
 
         <div className="admin-import-run-list">
           {!runs.length && <span className="admin-import-no-runs">Chưa có lần quét nào.</span>}
-          {runs.map((run) => (
-            <article className={'run-' + String(run.status || '').toLowerCase()} key={run.id}>
-              <div className="admin-import-run-status">
-                <i />
-                <span>
-                  <b>{runStatusLabel(run.status)}</b>
-                  <small>#{run.id} · {formatRunTime(run.createdAt)}</small>
-                </span>
-              </div>
+          {runs.map((run) => {
+            const published = foundationPublishCount(run);
+            return (
+              <article className={'run-' + String(run.status || '').toLowerCase()} key={run.id}>
+                <div className="admin-import-run-status">
+                  <i />
+                  <span>
+                    <b>{runStatusLabel(run.status)}</b>
+                    <small>
+                      #{run.id} · {formatRunTime(run.createdAt)}
+                      {run.scanMode === 'FOUNDATION' ? ' · POI nền' : ''}
+                    </small>
+                  </span>
+                </div>
 
-              <div className="admin-import-run-metrics">
-                <span><b>{run.received || 0}</b><small>Nhận</small></span>
-                <span><b>{run.new || 0}</b><small>Mới</small></span>
-                <span><b>{run.review || 0}</b><small>Xem lại</small></span>
-                <span><b>{run.duplicates || 0}</b><small>Trùng</small></span>
-                <span><b>{run.skipped || 0}</b><small>Bỏ qua</small></span>
-              </div>
+                <div className="admin-import-run-metrics">
+                  <span><b>{run.received || 0}</b><small>Nhận</small></span>
+                  <span><b>{run.new || 0}</b><small>Mới</small></span>
+                  <span><b>{run.review || 0}</b><small>Xem lại</small></span>
+                  <span><b>{run.duplicates || 0}</b><small>Trùng</small></span>
+                  <span><b>{published || 0}</b><small>Auto public</small></span>
+                </div>
 
-              <div className="admin-import-run-note">
-                {run.status === 'FAILED'
-                  ? <span>{run.errorMessage || 'Lần quét gặp lỗi.'}</span>
-                  : run.status === 'SUCCESS'
-                    ? <span>Hoàn tất với confidence ≥ {percent(run.minConfidence)}</span>
-                    : <span>Đang xử lý dữ liệu nền…</span>}
-              </div>
-            </article>
-          ))}
+                <div className="admin-import-run-note">
+                  {run.status === 'FAILED'
+                    ? <span>{run.errorMessage || 'Lần quét gặp lỗi.'}</span>
+                    : run.status === 'SUCCESS'
+                      ? <span>
+                          {run.scanMode === 'FOUNDATION'
+                            ? 'POI nền hoàn tất · đã tự public ' + published + ' điểm đủ chuẩn'
+                            : 'Hoàn tất với confidence ≥ ' + percent(run.minConfidence)}
+                        </span>
+                      : <span>Đang xử lý dữ liệu nền…</span>}
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
 
