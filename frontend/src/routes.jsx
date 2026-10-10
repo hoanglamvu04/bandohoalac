@@ -4,10 +4,11 @@ import App from './App.jsx';
 import RequireRole from './components/RequireRole.jsx';
 
 const HomePage = lazy(() => import('./pages/HomePage.jsx'));
-const MapPage = lazy(() => import('./pages/MapPage.jsx'));
+const MapPage = lazy(() => import('./pages/MapDiscoveryPage.jsx'));
+const RawMapPage = lazy(() => import('./pages/MapPage.jsx'));
 const HaloHolaMapPage = lazy(() => import('./pages/HaloHolaMapPage.jsx'));
 const LocationPickerPage = lazy(() => import('./pages/LocationPickerPage.jsx'));
-const PlaceDetail = lazy(() => import('./pages/PlaceDetail.jsx'));
+const PlaceDetail = lazy(() => import('./pages/PlaceDetailV2.jsx'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard.jsx'));
 const Contribute = lazy(() => import('./pages/Contribute.jsx'));
@@ -100,7 +101,7 @@ export const router = createBrowserRouter([
       { index: true, element: withSuspense(HomePage) },
       { path: 'map', element: withSuspense(MapPage) },
       { path: 'halo', element: withSuspense(HaloHolaMapPage) },
-      { path: 'embed', element: withSuspense(MapPage) },
+      { path: 'embed', element: withSuspense(RawMapPage) },
       { path: 'picker', element: withSuspense(LocationPickerPage) },
       { path: 'embed/picker', element: withSuspense(LocationPickerPage) },
       { path: 'place/:id', element: withSuspense(PlaceDetail) },
