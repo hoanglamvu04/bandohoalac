@@ -1,37 +1,35 @@
 /**
  * Product service coverage for Hola Maps.
  *
- * This polygon is deliberately smaller than the old Hanoi-scale rectangles.
- * It represents the product coverage requested for Hòa Lạc / new Thạch Thất:
- * Hòa Lạc, Hạ Bằng, Thạch Thất, Tây Phương, Yên Xuân, Phú Cát and only the
- * nearby parts of Ba Vì + Quốc Oai.
- *
- * It is a product-coverage boundary, not a legal cadastral boundary.
+ * The Hòa Lạc / new Thạch Thất core remains central, while the product
+ * coverage is expanded by roughly 2-3 commune widths in every direction.
+ * This is a product-coverage boundary, not a legal cadastral boundary.
  */
 export const SERVICE_AREA_RING = [
-  [105.335, 21.145],
-  [105.325, 21.080],
-  [105.345, 21.030],
-  [105.370, 20.985],
-  [105.405, 20.950],
-  [105.440, 20.930],
-  [105.475, 20.905],
-  [105.515, 20.888],
-  [105.565, 20.885],
-  [105.610, 20.900],
-  [105.640, 20.935],
-  [105.660, 20.975],
-  [105.665, 21.015],
-  [105.650, 21.055],
-  [105.640, 21.095],
-  [105.590, 21.110],
-  [105.520, 21.122],
-  [105.455, 21.118],
-  [105.390, 21.145],
-  [105.335, 21.145]
+  [105.275, 21.235],
+  [105.250, 21.175],
+  [105.250, 21.095],
+  [105.265, 21.015],
+  [105.295, 20.945],
+  [105.340, 20.885],
+  [105.405, 20.845],
+  [105.495, 20.825],
+  [105.595, 20.830],
+  [105.685, 20.855],
+  [105.750, 20.905],
+  [105.785, 20.970],
+  [105.790, 21.050],
+  [105.775, 21.125],
+  [105.745, 21.195],
+  [105.675, 21.225],
+  [105.585, 21.240],
+  [105.485, 21.245],
+  [105.380, 21.245],
+  [105.305, 21.245],
+  [105.275, 21.235]
 ];
 
-export const SERVICE_AREA_BOUNDS = [105.325, 20.885, 105.665, 21.145];
+export const SERVICE_AREA_BOUNDS = [105.250, 20.825, 105.790, 21.245];
 
 export const CORE_SERVICE_AREAS = [
   'Hòa Lạc',
@@ -43,8 +41,12 @@ export const CORE_SERVICE_AREAS = [
 ];
 
 export const EXTENDED_SERVICE_AREAS = [
-  'Một phần Ba Vì',
-  'Một phần Quốc Oai'
+  'Vành đai phía Bắc Hòa Lạc',
+  'Vành đai phía Nam Hòa Lạc',
+  'Vành đai phía Đông Hòa Lạc',
+  'Vành đai phía Tây Hòa Lạc',
+  'Khu vực lân cận Ba Vì',
+  'Khu vực lân cận Quốc Oai'
 ];
 
 export const SERVICE_AREA_GEOMETRY = {
