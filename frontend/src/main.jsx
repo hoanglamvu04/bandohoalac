@@ -4,6 +4,7 @@ import { router } from './routes.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
 import { BrandProvider } from './context/BrandContext.jsx';
+import MapPowerOverlay from './components/MapPowerOverlay.jsx';
 import { registerHolaPwa } from './pwa.js';
 import './style.css';
 import './premium.css';
@@ -49,12 +50,14 @@ import './photo-scanner.css';
 import './integration-secrets.css';
 import './halo-hola-map.css';
 import './discovery-v1.css';
+import './map-power-v3.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
     <BrandProvider>
       <AuthProvider>
         <RouterProvider router={router} />
+        <MapPowerOverlay />
       </AuthProvider>
     </BrandProvider>
   </ToastProvider>
