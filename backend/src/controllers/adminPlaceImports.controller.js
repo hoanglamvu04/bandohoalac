@@ -109,27 +109,31 @@ export const approveHighConfidencePlaceImportsAdmin = asyncHandler(async (req, r
   res.json(result);
 });
 
-
 export const listPlaceImportRunsAdmin = asyncHandler(async (req, res) => {
   const items = await listPlaceImportRuns({ limit: req.query.limit });
   res.json({ items });
 });
 
 export const startOverturePlaceScanAdmin = asyncHandler(async (req, res) => {
+  const requestedMode = String(req.body?.mode || 'STAGING').trim().toUpperCase();
   const run = await startOverturePlaceScan({
     startedBy: req.user.id,
-    minConfidence: req.body?.minConfidence ?? 0.55
+    minConfidence: req.body?.minConfidence ?? (requestedMode === 'FOUNDATION' ? 0.72 : 0.55),
+    mode: requestedMode
   });
 
   await writeAuditLog({
     actorUserId: req.user.id,
-    action: 'PLACE_IMPORT_SCAN_START',
+    action: requestedMode === 'FOUNDATION'
+      ? 'FOUNDATION_POI_SCAN_START'
+      : 'PLACE_IMPORT_SCAN_START',
     entityType: 'PLACE_IMPORT_RUN',
     entityId: run.id,
     metadata: {
       source: run.source,
       bbox: run.bbox,
-      minConfidence: run.minConfidence
+      minConfidence: run.minConfidence,
+      mode: run.scanMode
     },
     ...auditContextFromRequest(req)
   });
