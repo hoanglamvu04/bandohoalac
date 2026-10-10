@@ -10,7 +10,7 @@ import {
   X
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { getPlaces } from '../services/api.js';
+import { getNearbyPlaces, getPlaces } from '../services/api.js';
 import { getBestBrowserLocation } from '../utils/geolocation.js';
 import { focusHolaMapPoint } from '../mapInteractionBridge.js';
 
@@ -20,6 +20,8 @@ function fold(value) {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[đĐ]/g, 'd')
+    .replace(/[^a-z0-9\s.-]/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -28,9 +30,31 @@ function requiresUserLocation(query) {
   return value.includes('gan toi') || value.includes('quanh toi') || value.includes('vi tri cua toi');
 }
 
+function inferNearbyCategory(query) {
+  const value = fold(query);
+  if (/(cafe|coffee|ca phe)/.test(value)) return 'cafe';
+  if (/(nha hang|quan an|an uong|do an)/.test(value)) return 'an-uong';
+  if (/(truong|dai hoc|hoc vien|mam non)/.test(value)) return 'truong-hoc';
+  if (/(benh vien|phong kham|y te|nha thuoc)/.test(value)) return 'y-te';
+  if (/(sieu thi|cua hang|tap hoa)/.test(value)) return 'sieu-thi';
+  if (/(ngan hang|atm)/.test(value)) return 'ngan-hang-atm';
+  if (/(homestay|luu tru|khach san)/.test(value)) return 'homestay';
+  if (/(du lich|tham quan|check in)/.test(value)) return 'khu-du-lich';
+  if (/(cay xang|tram xang|tram sac)/.test(value)) return 'nhien-lieu-sac';
+  return undefined;
+}
+
+function isRoad(item) {
+  return item?.searchEntityType === 'ROAD' || item?.mapLayerType === 'ROAD' || item?.resultType === 'road';
+}
+
+function isLandmark(item) {
+  return item?.searchEntityType === 'LANDMARK' || item?.mapLayerType === 'LANDMARK' || item?.resultType === 'landmark';
+}
+
 function iconFor(item) {
-  if (item?.searchEntityType === 'ROAD') return Route;
-  if (item?.searchEntityType === 'LANDMARK') return Landmark;
+  if (isRoad(item)) return Route;
+  if (isLandmark(item)) return Landmark;
   const category = fold(item?.category + ' ' + item?.categorySlug + ' ' + item?.name);
   if (category.includes('dai hoc') || category.includes('truong') || category.includes('university')) {
     return GraduationCap;
@@ -39,9 +63,33 @@ function iconFor(item) {
 }
 
 function resultType(item) {
-  if (item?.searchEntityType === 'ROAD') return 'Tuyến đường';
-  if (item?.searchEntityType === 'LANDMARK') return 'Địa danh';
+  if (isRoad(item)) return 'Tuyến đường';
+  if (isLandmark(item)) return 'Địa danh';
   return item?.category || 'Địa điểm';
+}
+
+async function nearbySearch(query, location) {
+  const category = inferNearbyCategory(query);
+  let items = [];
+  let radius = 2500;
+
+  for (const candidateRadius of [2500, 5000, 12000]) {
+    radius = candidateRadius;
+    const data = await getNearbyPlaces(location.lat, location.lng, radius, { category });
+    items = Array.isArray(data?.items) ? data.items : [];
+    if (items.length >= 5 || candidateRadius === 12000) break;
+  }
+
+  return {
+    items,
+    meta: {
+      mode: 'near-anchor',
+      anchorMode: 'user-location',
+      anchor: { name: 'Vị trí của tôi', lat: location.lat, lng: location.lng },
+      radius,
+      interpretedCategory: category || null
+    }
+  };
 }
 
 export default function MapSearchV2() {
@@ -73,23 +121,14 @@ export default function MapSearchV2() {
       setError('');
 
       try {
-        let location = null;
-        if (requiresUserLocation(needle)) {
-          try {
-            location = await getBestBrowserLocation({ timeout: 9000, targetAccuracy: 80 });
-          } catch (locationError) {
-            if (requestId === requestRef.current) {
-              setError(locationError?.message || 'Hãy bật vị trí để tìm kiếm gần bạn.');
-            }
-          }
-        }
+        let data;
 
-        const data = await getPlaces({
-          q: needle,
-          limit: 40,
-          lat: location?.lat,
-          lng: location?.lng
-        }, { signal: controller.signal });
+        if (requiresUserLocation(needle)) {
+          const location = await getBestBrowserLocation({ timeout: 9000, targetAccuracy: 80 });
+          data = await nearbySearch(needle, location);
+        } else {
+          data = await getPlaces({ q: needle, limit: 40 }, { signal: controller.signal });
+        }
 
         if (requestId !== requestRef.current) return;
         setResults(Array.isArray(data?.items) ? data.items : []);
@@ -99,6 +138,7 @@ export default function MapSearchV2() {
         if (searchError?.name !== 'AbortError' && requestId === requestRef.current) {
           setResults([]);
           setMeta(null);
+          setOpen(true);
           setError(searchError?.message || 'Không tìm kiếm được lúc này.');
         }
       } finally {
@@ -125,8 +165,8 @@ export default function MapSearchV2() {
     if (!item) return;
     setOpen(false);
 
-    if (item.searchEntityType === 'ROAD' || item.searchEntityType === 'LANDMARK') {
-      focusHolaMapPoint({ lat: item.lat, lng: item.lng, zoom: item.searchEntityType === 'ROAD' ? 16.4 : 16 });
+    if (isRoad(item) || isLandmark(item)) {
+      focusHolaMapPoint({ lat: item.lat, lng: item.lng, zoom: isRoad(item) ? 16.4 : 16 });
       window.dispatchEvent(new CustomEvent('hola-map-pin', {
         detail: {
           lat: Number(item.lat),
@@ -153,7 +193,7 @@ export default function MapSearchV2() {
           value={query}
           onFocus={() => query.trim().length >= 2 && setOpen(true)}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Tìm địa điểm, tên đường, cafe gần FPT, gần tôi..."
+          placeholder="Tìm địa điểm, tên đường, cafe gần FPT, cafe gần tôi..."
           aria-label="Tìm kiếm Hola Maps"
         />
         {loading && <span className="hm-search-v2-loading" />}
@@ -169,7 +209,7 @@ export default function MapSearchV2() {
               <Navigation size={14} />
               <span>
                 Đang tìm quanh <strong>{meta.anchor.name}</strong>
-                {meta.radius ? ' · ' + Math.round(meta.radius / 1000) + ' km' : ''}
+                {meta.radius ? ' · ' + (meta.radius >= 1000 ? (meta.radius / 1000).toFixed(meta.radius % 1000 ? 1 : 0) + ' km' : meta.radius + ' m') : ''}
               </span>
             </div>
           )}
@@ -192,7 +232,7 @@ export default function MapSearchV2() {
                   <strong>{item.name}</strong>
                   <small>{resultType(item)}{item.address ? ' · ' + item.address : ''}</small>
                 </span>
-                {Number.isFinite(Number(item.distance)) && <b>{Math.max(1, Math.round(Number(item.distance)))} m</b>}
+                {Number.isFinite(Number(item.distance)) && <b>{Number(item.distance) >= 1000 ? (Number(item.distance) / 1000).toFixed(1) + ' km' : Math.max(1, Math.round(Number(item.distance))) + ' m'}</b>}
               </button>
             );
           })}
