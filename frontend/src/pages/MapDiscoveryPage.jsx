@@ -35,7 +35,7 @@ const THEMES = [
 
 export default function MapDiscoveryPage() {
   const [params, setParams] = useSearchParams();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const category = params.get('category') || 'all';
   const active = useMemo(
     () => THEMES.find((theme) => theme.category === category) || THEMES[0],
@@ -49,6 +49,10 @@ export default function MapDiscoveryPage() {
     next.delete('place');
     next.delete('q');
     setParams(next, { replace: true });
+
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches) {
+      setOpen(false);
+    }
   }
 
   return (
@@ -60,7 +64,7 @@ export default function MapDiscoveryPage() {
       <aside className={open ? 'theme-layer-dock open' : 'theme-layer-dock'} aria-label="Chuyên đề Hòa Lạc">
         <button className="theme-layer-toggle" type="button" onClick={() => setOpen((value) => !value)}>
           {open ? <X size={17} /> : <Layers3 size={18} />}
-          <span>{open ? 'Đóng chuyên đề' : active.label}</span>
+          <span>{open ? 'Đóng' : category === 'all' ? 'Chuyên đề' : active.label}</span>
         </button>
 
         {open && (
