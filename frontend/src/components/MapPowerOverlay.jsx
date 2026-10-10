@@ -14,7 +14,6 @@ import {
   Sparkles,
   Star,
   Store,
-  Users,
   X
 } from 'lucide-react';
 import { getPlace } from '../services/api.js';
@@ -76,7 +75,6 @@ export default function MapPowerOverlay() {
   const [place, setPlace] = useState(null);
   const [placeLoading, setPlaceLoading] = useState(false);
   const [haloOpen, setHaloOpen] = useState(false);
-  const [haloLoading, setHaloLoading] = useState(false);
   const [haloItems, setHaloItems] = useState([]);
   const [dismissedPlaceId, setDismissedPlaceId] = useState('');
 
@@ -119,16 +117,13 @@ export default function MapPowerOverlay() {
     if (!onMap) return undefined;
     let active = true;
     const controller = new AbortController();
-    setHaloLoading(true);
+
     getHaloSpots({}, { signal: controller.signal })
       .then((data) => {
         if (active) setHaloItems(haloItemsFromGeoJson(data));
       })
       .catch((error) => {
         if (active && error?.name !== 'AbortError') setHaloItems([]);
-      })
-      .finally(() => {
-        if (active) setHaloLoading(false);
       });
 
     return () => {
@@ -145,29 +140,29 @@ export default function MapPowerOverlay() {
 
   return (
     <div className="hm-power-overlay" aria-live="polite">
-      <section className={haloOpen ? 'hm-halo-live open' : 'hm-halo-live'}>
-        <button
-          type="button"
-          className="hm-halo-live-trigger"
-          onClick={() => setHaloOpen((value) => !value)}
-          aria-expanded={haloOpen}
-        >
-          <span className="hm-halo-live-dot" />
-          <span><b>HALO Live</b><small>{haloLoading ? 'Đang tải…' : haloItems.length + ' điểm cộng đồng'}</small></span>
-          {haloOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-        </button>
+      {haloItems.length > 0 && (
+        <section className={haloOpen ? 'hm-halo-live open' : 'hm-halo-live'}>
+          <button
+            type="button"
+            className="hm-halo-live-trigger"
+            onClick={() => setHaloOpen((value) => !value)}
+            aria-expanded={haloOpen}
+          >
+            <span className="hm-halo-live-dot" />
+            <span><b>HALO Live</b><small>{haloItems.length} điểm cộng đồng</small></span>
+            {haloOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+          </button>
 
-        {haloOpen && (
-          <div className="hm-halo-live-panel">
-            <div className="hm-halo-live-head">
-              <div>
-                <span><Sparkles size={14} /> CỘNG ĐỒNG SỐNG</span>
-                <strong>Ảnh & check-in HALO HOLA</strong>
+          {haloOpen && (
+            <div className="hm-halo-live-panel">
+              <div className="hm-halo-live-head">
+                <div>
+                  <span><Sparkles size={14} /> CỘNG ĐỒNG SỐNG</span>
+                  <strong>Ảnh & check-in HALO HOLA</strong>
+                </div>
+                <a href="/halo">Mở bản đồ HALO <ExternalLink size={13} /></a>
               </div>
-              <a href="/halo">Mở bản đồ HALO <ExternalLink size={13} /></a>
-            </div>
 
-            {haloItems.length ? (
               <div className="hm-halo-live-grid">
                 {haloItems.slice(0, 6).map((item) => (
                   <a href={'/halo?spot=' + encodeURIComponent(item.id)} key={item.id} className="hm-halo-live-item">
@@ -182,15 +177,10 @@ export default function MapPowerOverlay() {
                   </a>
                 ))}
               </div>
-            ) : (
-              <div className="hm-halo-live-empty">
-                <Users size={20} />
-                <span>Chưa có check-in HALO trong dữ liệu hiện tại.</span>
-              </div>
-            )}
-          </div>
-        )}
-      </section>
+            </div>
+          )}
+        </section>
+      )}
 
       {(place || placeLoading) && selectedPlaceId !== dismissedPlaceId && (
         <aside className="hm-map-preview-card">
