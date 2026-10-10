@@ -1,9 +1,11 @@
+import { pool } from '../database/pool.js';
+import { SERVICE_AREA_GEOJSON_STRING } from '../config/mapCoverage.js';
 import { getNearbyPlaces, listPlaces } from './place.service.js';
 
 const CATEGORY_ALIASES = [
   { slug: 'cafe', aliases: ['cafe', 'coffee', 'ca phe', 'quan ca phe'] },
   { slug: 'an-uong', aliases: ['nha hang', 'quan an', 'an uong', 'do an', 'mon an'] },
-  { slug: 'truong-hoc', aliases: ['truong', 'truong hoc', 'mam non', 'tieu hoc', 'thpt', 'dai hoc', 'hoc vien'] },
+  { slug: 'truong-hoc', aliases: ['truong', 'truong hoc', 'mam non', 'tieu hoc', 'thpt', 'dai hoc', 'hoc vien', 'university', 'college'] },
   { slug: 'y-te', aliases: ['benh vien', 'phong kham', 'y te', 'bac si', 'nha thuoc'] },
   { slug: 'sieu-thi', aliases: ['sieu thi', 'cua hang', 'tap hoa', 'shopping'] },
   { slug: 'ngan-hang-atm', aliases: ['ngan hang', 'atm'] },
@@ -48,6 +50,9 @@ const PROXIMITY_PATTERNS = [
   /\s+o\s+/i,
   /\s+tai\s+/i
 ];
+
+const MAP_SEARCH_LAYERS = ['ROAD', 'LANDMARK'];
+const NEARBY_RADII = [2500, 5000, 12000];
 
 export function foldSearchText(value) {
   return String(value || '')
@@ -128,6 +133,7 @@ function anchorScore(item, candidate) {
   let score = 0;
 
   if (name === query) score += 100;
+  else if (name.startsWith(query) || query.startsWith(name)) score += 70;
   else if (name.includes(query) || query.includes(name)) score += 55;
 
   if (candidate.preferredCategory && category === candidate.preferredCategory) score += 40;
@@ -135,6 +141,8 @@ function anchorScore(item, candidate) {
   for (const term of candidate.preferredNameTerms || []) {
     if (name.includes(term)) score += 50;
   }
+
+  if (item?.resultType === 'road' && /^(duong|dt|ql|quoc lo|tinh lo)/.test(query)) score += 25;
 
   // Avoid using a shop/bank carrying the FPT/VNU keyword as the geographic anchor.
   if (/\b(shop|store|bank|atm|livebank|polytechnic)\b/.test(name)) score -= 45;
@@ -148,6 +156,68 @@ export function selectBestAnchorMatch(items, candidate) {
     .filter((item) => Number.isFinite(Number(item?.lat)) && Number.isFinite(Number(item?.lng)))
     .map((item) => ({ item, score: anchorScore(item, candidate) }))
     .sort((a, b) => b.score - a.score)[0]?.item || null;
+}
+
+function mapFeatureRowToSearchItem(row) {
+  const layerType = String(row.layer_type || '').toUpperCase();
+  return {
+    id: 'map:' + row.id,
+    sourceId: row.id,
+    resultType: layerType === 'ROAD' ? 'road' : 'landmark',
+    name: row.name,
+    category: layerType === 'ROAD' ? 'Đường' : 'Địa danh',
+    categorySlug: layerType === 'ROAD' ? 'duong' : 'dia-danh',
+    address: row.properties?.address || row.properties?.locality || 'Hòa Lạc, Hà Nội',
+    description: row.properties?.description || '',
+    lat: Number(row.lat),
+    lng: Number(row.lng),
+    rating: 0,
+    reviews: 0,
+    mapLayerType: layerType,
+    properties: row.properties || {}
+  };
+}
+
+export async function searchMapFeaturesByName(query, limit = 20) {
+  const needle = foldSearchText(query);
+  if (!needle || needle.length < 2) return [];
+
+  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 40);
+  const sql = [
+    'WITH service_area AS (',
+    '  SELECT ST_SetSRID(ST_GeomFromGeoJSON($1), 4326) AS geom',
+    '), candidates AS (',
+    '  SELECT',
+    '    mf.id, mf.layer_type, mf.name, mf.properties,',
+    '    ST_PointOnSurface(ST_Intersection(mf.geometry, service_area.geom)) AS point_geom,',
+    '    CASE',
+    '      WHEN lower(public.hola_unaccent(COALESCE(mf.name, \'\'))) = $2 THEN 0',
+    '      WHEN lower(public.hola_unaccent(COALESCE(mf.name, \'\'))) LIKE $2 || \'%\' THEN 1',
+    '      ELSE 2',
+    '    END AS rank',
+    '  FROM map_features mf',
+    '  CROSS JOIN service_area',
+    "  WHERE mf.status = 'ACTIVE'",
+    "    AND mf.layer_type = ANY($3::text[])",
+    '    AND ST_Intersects(mf.geometry, service_area.geom)',
+    '    AND lower(public.hola_unaccent(COALESCE(mf.name, \'\'))) LIKE \'%\' || $2 || \'%\'',
+    ')',
+    'SELECT id, layer_type, name, properties,',
+    '  ST_Y(point_geom) AS lat, ST_X(point_geom) AS lng',
+    'FROM candidates',
+    'WHERE point_geom IS NOT NULL',
+    'ORDER BY rank, name',
+    'LIMIT $4'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    SERVICE_AREA_GEOJSON_STRING,
+    needle,
+    MAP_SEARCH_LAYERS,
+    safeLimit
+  ]);
+
+  return rows.map(mapFeatureRowToSearchItem);
 }
 
 async function resolveAnchor(anchorQuery) {
@@ -167,34 +237,74 @@ async function resolveAnchor(anchorQuery) {
       matches = await listPlaces({ q: candidate.query, limit: 12, offset: 0 });
     }
 
-    const anchor = selectBestAnchorMatch(matches, candidate);
+    const mapMatches = await searchMapFeaturesByName(candidate.query, 12);
+    const anchor = selectBestAnchorMatch([...matches, ...mapMatches], candidate);
     if (anchor) return { anchor, resolvedQuery: candidate.query };
   }
 
   return { anchor: null, resolvedQuery: null };
 }
 
+async function nearbyWithAdaptiveRadius({ lat, lng, category, minRating }) {
+  let lastItems = [];
+  for (const radius of NEARBY_RADII) {
+    const items = await getNearbyPlaces({
+      lat,
+      lng,
+      radius,
+      category: category || undefined,
+      minRating
+    });
+    lastItems = items;
+    if (items.length >= 5 || radius === NEARBY_RADII[NEARBY_RADII.length - 1]) {
+      return { items, radius };
+    }
+  }
+  return { items: lastItems, radius: NEARBY_RADII[NEARBY_RADII.length - 1] };
+}
+
+function dedupeSearchItems(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = item?.resultType
+      ? item.resultType + ':' + foldSearchText(item.name)
+      : 'place:' + String(item?.id || '');
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 /**
- * Smart search keeps the normal fuzzy text search as the default, then adds a
- * local-intent parser for queries such as:
- *   - "quán cafe gần FPT"
- *   - "trường mầm non ở Hạ Bằng"
- *   - "đất quanh Đại học Quốc gia"
+ * Unified local search for Hola Maps.
  *
- * Known Hòa Lạc landmarks are resolved using canonical names/category first.
- * This prevents keyword-bearing shops, banks or stale legacy records from
- * becoming the geographic anchor for a nearby query.
+ * - POIs come from places.
+ * - Road and landmark names come from map_features.
+ * - Nearby queries may use either a POI or a road/landmark as anchor.
  */
 export async function smartListPlaces({ q, category, minRating, limit = 50, offset = 0 } = {}) {
   const rawQuery = String(q || '').trim();
   const explicitCategory = category && category !== 'all' ? category : null;
   const parsed = splitProximityQuery(rawQuery);
+  const safeLimit = normalizeLimit(limit);
+  const safeOffset = Math.max(Number(offset) || 0, 0);
 
   if (!parsed) {
-    const items = await listPlaces({ q: rawQuery, category, minRating, limit, offset });
+    const [placeItems, mapItems] = await Promise.all([
+      listPlaces({ q: rawQuery, category, minRating, limit: safeLimit, offset: 0 }),
+      explicitCategory ? Promise.resolve([]) : searchMapFeaturesByName(rawQuery, 24)
+    ]);
+
+    const items = dedupeSearchItems([...placeItems, ...mapItems])
+      .slice(safeOffset, safeOffset + safeLimit);
+
     return {
       items,
-      meta: { mode: 'text', interpretedCategory: explicitCategory }
+      meta: {
+        mode: 'unified-text',
+        interpretedCategory: explicitCategory,
+        includesMapFeatures: mapItems.length > 0
+      }
     };
   }
 
@@ -202,9 +312,12 @@ export async function smartListPlaces({ q, category, minRating, limit = 50, offs
   const { anchor, resolvedQuery } = await resolveAnchor(parsed.anchor);
 
   if (!anchor) {
-    const items = await listPlaces({ q: rawQuery, category, minRating, limit, offset });
+    const [placeItems, mapItems] = await Promise.all([
+      listPlaces({ q: rawQuery, category, minRating, limit: safeLimit, offset: 0 }),
+      explicitCategory ? Promise.resolve([]) : searchMapFeaturesByName(rawQuery, 20)
+    ]);
     return {
-      items,
+      items: dedupeSearchItems([...placeItems, ...mapItems]).slice(safeOffset, safeOffset + safeLimit),
       meta: {
         mode: 'text-fallback',
         interpretedCategory,
@@ -214,17 +327,14 @@ export async function smartListPlaces({ q, category, minRating, limit = 50, offs
     };
   }
 
-  const nearby = await getNearbyPlaces({
+  const nearbyResult = await nearbyWithAdaptiveRadius({
     lat: anchor.lat,
     lng: anchor.lng,
-    radius: 12000,
-    category: interpretedCategory || undefined,
+    category: interpretedCategory,
     minRating
   });
 
-  const safeLimit = normalizeLimit(limit);
-  const safeOffset = Math.max(Number(offset) || 0, 0);
-  const items = nearby.slice(safeOffset, safeOffset + safeLimit);
+  const items = nearbyResult.items.slice(safeOffset, safeOffset + safeLimit);
 
   return {
     items,
@@ -237,10 +347,11 @@ export async function smartListPlaces({ q, category, minRating, limit = 50, offs
       anchor: {
         id: anchor.id,
         name: anchor.name,
+        resultType: anchor.resultType || 'place',
         lat: anchor.lat,
         lng: anchor.lng
       },
-      radius: 12000
+      radius: nearbyResult.radius
     }
   };
 }
