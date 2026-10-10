@@ -1,12 +1,14 @@
 /* Mobile map layout v4
-   Keep discovery controls in one stable row under search and make the
-   place-results area scroll independently inside the bottom sheet. */
+   One clean mobile stack:
+   header -> search -> Chuyen de / Gan toi / Bo loc -> result sheet.
+   The result sheet never slides underneath the floating controls. */
 @media (max-width: 760px) {
   body.map-route-active {
     --hm-mobile-actions-top: calc(var(--app-safe-top, 64px) + 64px);
   }
 
-  /* Chuyên đề and quick filters share the exact same viewport coordinate. */
+  /* Search is already handled by MapSearchV2 at the top. Keep the action row
+     directly below it and ABOVE the result sheet. */
   body.map-route-active .theme-layer-dock {
     position: fixed !important;
     top: var(--hm-mobile-actions-top) !important;
@@ -14,7 +16,7 @@
     right: auto !important;
     width: auto !important;
     transform: none !important;
-    z-index: 946 !important;
+    z-index: 1040 !important;
   }
 
   body.map-route-active .theme-layer-dock:not(.open) .theme-layer-toggle {
@@ -35,7 +37,7 @@
     display: flex !important;
     align-items: center !important;
     gap: 7px !important;
-    z-index: 946 !important;
+    z-index: 1040 !important;
   }
 
   body.map-route-active .hm-map-topbar > * {
@@ -60,6 +62,7 @@
     display: none !important;
   }
 
+  /* Mobile keeps only the two quick actions requested beside Chuyen de. */
   body.map-route-active .hm-discovery-filters .hm-quick-filter:first-child,
   body.map-route-active .hm-discovery-filters .hm-filter-menu {
     display: flex !important;
@@ -75,9 +78,10 @@
     white-space: nowrap !important;
   }
 
-  /* Filter opens below the shared action row instead of covering it. */
+  /* Menus open below the action row and above the sheet. */
   body.map-route-active .hm-filter-popover {
     position: fixed !important;
+    z-index: 1060 !important;
     top: calc(var(--hm-mobile-actions-top) + 46px) !important;
     left: 10px !important;
     right: 10px !important;
@@ -87,9 +91,14 @@
     overscroll-behavior: contain;
   }
 
-  /* The sheet itself no longer scrolls. Header/scope/layers stay stable and
-     only the place list moves, so floating search/theme controls never appear
-     to slide over list content while swiping. */
+  body.map-route-active .theme-layer-dock.open {
+    z-index: 1060 !important;
+  }
+
+  /* IMPORTANT: .hm-workspace is already shorter than 100dvh because the app
+     header and bottom nav are outside it. Older sheet-full rules used 100dvh
+     again, making the sheet climb behind search/header. Size it from the
+     workspace itself instead. 108px top clearance = search + action row. */
   body.map-route-active .hm-left-panel {
     display: flex !important;
     flex-direction: column !important;
@@ -97,15 +106,53 @@
     overscroll-behavior: contain;
   }
 
-  body.map-route-active .hm-panel-heading,
-  body.map-route-active .hm-layer-section {
-    flex: 0 0 auto !important;
+  body.map-route-active .hm-left-panel.open.sheet-half {
+    height: min(48%, 500px) !important;
+    min-height: 280px !important;
+    max-height: calc(100% - 190px) !important;
+  }
+
+  body.map-route-active .hm-left-panel.open.sheet-full {
+    height: calc(100% - 190px) !important;
+    min-height: 330px !important;
+    max-height: calc(100% - 190px) !important;
+  }
+
+  /* Remove the duplicated 'Ban do Hoa Lac' title on mobile, but retain its
+     close button as a small floating affordance inside the sheet. */
+  body.map-route-active .hm-panel-heading {
+    position: absolute !important;
+    z-index: 6 !important;
+    top: 25px !important;
+    right: 8px !important;
+    width: auto !important;
+    min-height: 0 !important;
+    display: block !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    pointer-events: none;
+  }
+
+  body.map-route-active .hm-panel-heading > div {
+    display: none !important;
+  }
+
+  body.map-route-active .hm-panel-heading > button {
+    display: grid !important;
+    pointer-events: auto;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 10px !important;
+    background: #edf2ef !important;
+    box-shadow: 0 4px 12px rgba(16,47,41,.08);
   }
 
   body.map-route-active .hm-place-results {
     min-height: 0 !important;
     flex: 1 1 auto !important;
     overflow: hidden !important;
+    padding-top: 8px !important;
   }
 
   body.map-route-active .hm-place-list {
@@ -122,6 +169,36 @@
   body.map-route-active .hm-place-scope-bar,
   body.map-route-active .hm-section-title {
     flex: 0 0 auto;
+  }
+
+  /* Data layers are a real footer of the sheet, never an overlay over places. */
+  body.map-route-active .hm-layer-section {
+    position: relative !important;
+    z-index: 3 !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    border-top: 1px solid rgba(16,47,41,.08) !important;
+    border-bottom: 0 !important;
+    background: rgba(252,253,250,.99) !important;
+    box-shadow: 0 -8px 20px rgba(16,47,41,.05);
+  }
+
+  body.map-route-active .hm-layer-section.expanded {
+    max-height: min(38dvh, 310px) !important;
+    overflow-y: auto !important;
+  }
+}
+
+@media (max-width: 420px) {
+  body.map-route-active .hm-left-panel.open.sheet-half {
+    min-height: 260px !important;
+    max-height: calc(100% - 184px) !important;
+  }
+
+  body.map-route-active .hm-left-panel.open.sheet-full {
+    height: calc(100% - 184px) !important;
+    min-height: 300px !important;
+    max-height: calc(100% - 184px) !important;
   }
 }
 
