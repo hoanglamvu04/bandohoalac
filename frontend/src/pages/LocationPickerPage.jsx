@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Crosshair, Loader2, MapPin, Search, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import LocationPicker from '../components/LocationPicker.jsx';
 import { getPlaces } from '../services/api.js';
 import { getBestBrowserLocation } from '../utils/geolocation.js';
+import { reverseGeocodeLocation } from '../utils/reverseGeocoding.js';
 import '../location-picker-embed.css';
 
 const DEFAULT_LOCATION = { lat: 21.005, lng: 105.525 };
+const QUICK_SEARCHES = ['Quán cafe', 'Đường 420', 'FPT', 'Hạ Bằng'];
 
 function finite(value, fallback) {
   if (value === null || value === undefined || String(value).trim() === '') return fallback;
@@ -27,6 +29,10 @@ function normalizeItems(payload) {
   return [];
 }
 
+function resultMeta(place) {
+  return place.address || place.category || place.categorySlug || 'Địa điểm tại Hòa Lạc';
+}
+
 export default function LocationPickerPage() {
   const [searchParams] = useSearchParams();
   const initialLat = finite(searchParams.get('lat'), DEFAULT_LOCATION.lat);
@@ -34,6 +40,7 @@ export default function LocationPickerPage() {
   const initialLabel = searchParams.get('label') || '';
   const requestedOrigin = searchParams.get('origin') || '';
   const embedded = typeof window !== 'undefined' && window.parent !== window;
+  const reverseRequestRef = useRef(0);
 
   const [location, setLocation] = useState({ lat: initialLat, lng: initialLng });
   const [label, setLabel] = useState(initialLabel);
@@ -45,6 +52,7 @@ export default function LocationPickerPage() {
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [resolvingAddress, setResolvingAddress] = useState(false);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
 
@@ -74,7 +82,7 @@ export default function LocationPickerPage() {
       setSearching(true);
       setError('');
       try {
-        const payload = await getPlaces({ q: term, limit: 8 }, { signal: controller.signal });
+        const payload = await getPlaces({ q: term, limit: 10 }, { signal: controller.signal });
         setResults(normalizeItems(payload));
       } catch (nextError) {
         if (nextError?.name !== 'AbortError') {
@@ -84,13 +92,27 @@ export default function LocationPickerPage() {
       } finally {
         if (!controller.signal.aborted) setSearching(false);
       }
-    }, 280);
+    }, 240);
 
     return () => {
       window.clearTimeout(timer);
       controller.abort();
     };
   }, [query]);
+
+  const resolvePinnedAddress = async (lat, lng, fallbackLabel = 'Vị trí đã ghim') => {
+    const requestId = ++reverseRequestRef.current;
+    setResolvingAddress(true);
+    try {
+      const resolved = await reverseGeocodeLocation(lat, lng);
+      if (requestId !== reverseRequestRef.current) return;
+      const nextAddress = resolved?.label || '';
+      setAddress(nextAddress);
+      setLabel(resolved?.shortLabel || nextAddress || fallbackLabel);
+    } finally {
+      if (requestId === reverseRequestRef.current) setResolvingAddress(false);
+    }
+  };
 
   const pickPlace = (place) => {
     const lat = Number(place?.lat);
@@ -99,6 +121,7 @@ export default function LocationPickerPage() {
       setError('Địa điểm này chưa có tọa độ hợp lệ trên HOLA Maps.');
       return;
     }
+    reverseRequestRef.current += 1;
     setLocation({ lat, lng });
     setLabel(place.name || place.address || 'Địa điểm trên HOLA Maps');
     setAddress(place.address || '');
@@ -118,7 +141,8 @@ export default function LocationPickerPage() {
       if (!validLocation(current?.lat, current?.lng)) {
         throw new Error('Thiết bị trả về tọa độ không hợp lệ.');
       }
-      setLocation({ lat: current.lat, lng: current.lng });
+      const next = { lat: Number(current.lat), lng: Number(current.lng) };
+      setLocation(next);
       setLabel('Vị trí hiện tại');
       setAddress('');
       setPlaceId('');
@@ -126,6 +150,7 @@ export default function LocationPickerPage() {
       setSource('current_location');
       setQuery('');
       setResults([]);
+      await resolvePinnedAddress(next.lat, next.lng, 'Vị trí hiện tại');
     } catch (nextError) {
       setError(nextError.message || 'Không thể lấy vị trí hiện tại.');
     } finally {
@@ -135,17 +160,21 @@ export default function LocationPickerPage() {
 
   const updatePinnedLocation = (next) => {
     if (!validLocation(next?.lat, next?.lng)) return;
-    setLocation({ lat: Number(next.lat), lng: Number(next.lng) });
-    if (source !== 'hola_place' && source !== 'current_location') {
-      setLabel(label || 'Vị trí ghim trên HOLA Maps');
-    }
-    if (source === 'hola_place') {
-      setLabel('Vị trí ghim trên HOLA Maps');
-      setAddress('');
-      setPlaceId('');
-      setPlaceSlug('');
-    }
+    const lat = Number(next.lat);
+    const lng = Number(next.lng);
+    setLocation({ lat, lng });
+
+    if (next.initial) return;
+
+    setPlaceId('');
+    setPlaceSlug('');
     setSource('hola_picker');
+    setAddress('');
+    setLabel('Vị trí đã ghim');
+    setQuery('');
+    setResults([]);
+    setError('');
+    resolvePinnedAddress(lat, lng, 'Vị trí đã ghim');
   };
 
   const confirm = () => {
@@ -157,7 +186,7 @@ export default function LocationPickerPage() {
     const payload = {
       lat: Number(location.lat),
       lng: Number(location.lng),
-      label: label || 'Vị trí ghim trên HOLA Maps',
+      label: label || 'Vị trí đã ghim',
       address,
       placeId,
       placeSlug,
@@ -173,64 +202,94 @@ export default function LocationPickerPage() {
     }
   };
 
+  const hasQuery = query.trim().length >= 2;
+  const selectionTitle = label || 'Vị trí đã ghim';
+  const selectionSubtitle = address || `${Number(location.lat).toFixed(5)}, ${Number(location.lng).toFixed(5)}`;
+
   return (
     <main className={embedded ? 'hm-picker-page is-embedded' : 'hm-picker-page'}>
       <section className="hm-picker-shell">
-        <header className="hm-picker-head">
-          <div>
-            <span>HOLA MAPS</span>
-            <h1>{embedded ? 'Chọn vị trí' : 'Chọn địa điểm tác phẩm'}</h1>
-            <p>{embedded ? 'Tìm địa điểm hoặc kéo bản đồ để ghim đúng nơi bạn chụp.' : 'Tìm địa điểm có sẵn, dùng vị trí hiện tại hoặc kéo bản đồ để ghim đúng điểm bạn chụp.'}</p>
-          </div>
-          <div className="hm-picker-coords">
-            <MapPin size={16} />
-            <span>{Number(location.lat).toFixed(6)}, {Number(location.lng).toFixed(6)}</span>
-          </div>
-        </header>
-
-        <div className="hm-picker-search-wrap">
-          <div className="hm-picker-search">
-            <Search size={18} />
-            <input
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setError('');
-              }}
-              placeholder="Tìm địa điểm trên HOLA Maps..."
-            />
-            {query ? <button type="button" onClick={() => { setQuery(''); setResults([]); }} aria-label="Xóa tìm kiếm"><X size={16} /></button> : null}
-            {searching ? <Loader2 className="spin" size={17} /> : null}
-          </div>
-          <button className="hm-picker-locate" type="button" onClick={locateMe} disabled={locating}>
-            {locating ? <Loader2 className="spin" size={17} /> : <Crosshair size={17} />}
-            <span>Vị trí hiện tại</span>
-          </button>
-
-          {results.length > 0 ? (
-            <div className="hm-picker-results">
-              {results.map((place) => (
-                <button key={place.id} type="button" onClick={() => pickPlace(place)}>
-                  <MapPin size={16} />
-                  <span><b>{place.name}</b><small>{place.address || place.category || 'Hòa Lạc'}</small></span>
-                </button>
-              ))}
+        {!embedded ? (
+          <header className="hm-picker-head">
+            <div>
+              <span>HOLA MAPS</span>
+              <h1>Chọn địa điểm tác phẩm</h1>
+              <p>Tìm địa điểm, tên đường hoặc kéo bản đồ đến đúng nơi bạn thực hiện tác phẩm.</p>
             </div>
-          ) : null}
+            <div className="hm-picker-coords"><MapPin size={16} />{Number(location.lat).toFixed(6)}, {Number(location.lng).toFixed(6)}</div>
+          </header>
+        ) : null}
+
+        <div className="hm-picker-map-area">
+          <LocationPicker lat={location.lat} lng={location.lng} onChange={updatePinnedLocation} />
+
+          <div className="hm-picker-search-wrap">
+            <div className="hm-picker-search-row">
+              <div className="hm-picker-search">
+                <Search size={19} />
+                <input
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    setError('');
+                  }}
+                  placeholder="Tìm địa điểm, tên đường, quán cafe..."
+                  autoFocus={embedded}
+                  autoComplete="off"
+                />
+                {query ? <button type="button" onClick={() => { setQuery(''); setResults([]); }} aria-label="Xóa tìm kiếm"><X size={17} /></button> : null}
+                {searching ? <Loader2 className="spin" size={17} /> : null}
+              </div>
+              <button className="hm-picker-locate" type="button" onClick={locateMe} disabled={locating} title="Dùng vị trí hiện tại">
+                {locating ? <Loader2 className="spin" size={18} /> : <Crosshair size={18} />}
+                <span>Vị trí của tôi</span>
+              </button>
+            </div>
+
+            {!hasQuery && !embedded ? (
+              <div className="hm-picker-quick">
+                <small>Thử tìm nhanh</small>
+                {QUICK_SEARCHES.map((item) => <button type="button" key={item} onClick={() => setQuery(item)}>{item}</button>)}
+              </div>
+            ) : null}
+
+            {hasQuery && !searching && results.length === 0 ? (
+              <div className="hm-picker-empty">Không thấy kết quả phù hợp. Bạn vẫn có thể kéo bản đồ và ghim thủ công.</div>
+            ) : null}
+
+            {results.length > 0 ? (
+              <div className="hm-picker-results">
+                <div className="hm-picker-results-head"><b>Kết quả trên HOLA Maps</b><span>{results.length} địa điểm</span></div>
+                {results.map((place) => (
+                  <button key={place.id || place.slug || `${place.lat}-${place.lng}`} type="button" onClick={() => pickPlace(place)}>
+                    <span className="hm-picker-result-icon"><MapPin size={17} /></span>
+                    <span className="hm-picker-result-copy">
+                      <b>{place.name || 'Địa điểm HOLA Maps'}</b>
+                      <small>{resultMeta(place)}</small>
+                    </span>
+                    {place.category ? <em>{place.category}</em> : null}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="hm-picker-map-tip">Kéo bản đồ để ghim chính xác vị trí</div>
+          {error ? <div className="hm-picker-error">{error}</div> : null}
         </div>
 
-        {error ? <div className="hm-picker-error">{error}</div> : null}
-
-        <LocationPicker lat={location.lat} lng={location.lng} onChange={updatePinnedLocation} />
-
         <footer className="hm-picker-footer">
-          <div>
-            <small>Vị trí sẽ gắn vào bài</small>
-            <strong>{label || 'Vị trí ghim trên HOLA Maps'}</strong>
-            {address ? <span>{address}</span> : <span>{Number(location.lat).toFixed(5)}, {Number(location.lng).toFixed(5)}</span>}
+          <div className="hm-picker-selection">
+            <span className="hm-picker-selection-pin"><MapPin size={18} /></span>
+            <div>
+              <small>{placeId ? 'Địa điểm HOLA Maps' : source === 'current_location' ? 'Vị trí hiện tại' : 'Vị trí đang chọn'}</small>
+              <strong>{resolvingAddress ? 'Đang xác định địa chỉ…' : selectionTitle}</strong>
+              <span>{selectionSubtitle}</span>
+            </div>
           </div>
-          <button type="button" onClick={confirm}>
-            <Check size={18} /> {sent ? 'Đã chọn vị trí' : 'Chọn vị trí này'}
+          <button type="button" onClick={confirm} disabled={resolvingAddress}>
+            {resolvingAddress ? <Loader2 className="spin" size={18} /> : <Check size={18} />}
+            {sent ? 'Đã chọn vị trí' : 'Chọn vị trí này'}
           </button>
         </footer>
       </section>
