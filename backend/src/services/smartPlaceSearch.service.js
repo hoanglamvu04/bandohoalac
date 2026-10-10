@@ -17,6 +17,21 @@ const CATEGORY_ALIASES = [
   { slug: 'bat-dong-san', aliases: ['bat dong san', 'nha dat', 'dat', 'dat nen', 'du an'] }
 ];
 
+const LANDMARK_ALIASES = [
+  {
+    aliases: ['fpt', 'fpt hoa lac', 'dai hoc fpt', 'truong dai hoc fpt', 'fpt university'],
+    queries: ['FPT', 'Đại học FPT', 'Trường Đại học FPT', 'FPT University']
+  },
+  {
+    aliases: ['dhqg', 'dhqg ha noi', 'dai hoc quoc gia', 'dai hoc quoc gia ha noi', 'vnu'],
+    queries: ['Đại học Quốc gia Hà Nội', 'ĐHQG Hà Nội', 'VNU']
+  },
+  {
+    aliases: ['cnc', 'cnc hoa lac', 'khu cnc', 'khu cong nghe cao', 'khu cong nghe cao hoa lac'],
+    queries: ['Khu Công nghệ cao Hòa Lạc', 'CNC Hòa Lạc']
+  }
+];
+
 const PROXIMITY_PATTERNS = [
   /\s+gần\s+/i,
   /\s+quanh\s+/i,
@@ -68,6 +83,31 @@ function normalizeLimit(value, fallback = 50) {
   return Math.min(Math.max(Number(value) || fallback, 1), 100);
 }
 
+function anchorCandidates(anchorQuery) {
+  const folded = fold(anchorQuery);
+  const candidates = [String(anchorQuery || '').trim()];
+
+  for (const item of LANDMARK_ALIASES) {
+    if (item.aliases.some((alias) => folded === alias || folded.includes(alias))) {
+      candidates.push(...item.queries);
+    }
+  }
+
+  return Array.from(new Set(candidates.filter(Boolean)));
+}
+
+async function resolveAnchor(anchorQuery) {
+  for (const candidate of anchorCandidates(anchorQuery)) {
+    const matches = await listPlaces({ q: candidate, limit: 8, offset: 0 });
+    const anchor = matches.find((item) =>
+      Number.isFinite(Number(item?.lat)) && Number.isFinite(Number(item?.lng))
+    );
+    if (anchor) return { anchor, resolvedQuery: candidate };
+  }
+
+  return { anchor: null, resolvedQuery: null };
+}
+
 /**
  * Smart search keeps the normal fuzzy text search as the default, then adds a
  * small local-intent parser for queries such as:
@@ -75,8 +115,9 @@ function normalizeLimit(value, fallback = 50) {
  *   - "trường mầm non ở Hạ Bằng"
  *   - "đất quanh Đại học Quốc gia"
  *
- * The anchor is resolved against Hola Maps' own places first. This keeps the
- * feature deterministic and local instead of depending on an external geocoder.
+ * The anchor is resolved against Hola Maps' own places first. Common local
+ * aliases such as FPT / ĐHQG / CNC are expanded to their longer place names so
+ * users do not need to type the exact database label.
  */
 export async function smartListPlaces({ q, category, minRating, limit = 50, offset = 0 } = {}) {
   const rawQuery = String(q || '').trim();
@@ -92,14 +133,9 @@ export async function smartListPlaces({ q, category, minRating, limit = 50, offs
   }
 
   const interpretedCategory = explicitCategory || inferCategory(parsed.intent);
-  const anchorMatches = await listPlaces({
-    q: parsed.anchor,
-    limit: 8,
-    offset: 0
-  });
-  const anchor = anchorMatches[0] || null;
+  const { anchor, resolvedQuery } = await resolveAnchor(parsed.anchor);
 
-  if (!anchor || !Number.isFinite(Number(anchor.lat)) || !Number.isFinite(Number(anchor.lng))) {
+  if (!anchor) {
     const items = await listPlaces({ q: rawQuery, category, minRating, limit, offset });
     return {
       items,
@@ -131,6 +167,7 @@ export async function smartListPlaces({ q, category, minRating, limit = 50, offs
       interpretedCategory,
       anchorQuery: parsed.anchor,
       anchorResolved: true,
+      anchorResolvedQuery: resolvedQuery,
       anchor: {
         id: anchor.id,
         name: anchor.name,
