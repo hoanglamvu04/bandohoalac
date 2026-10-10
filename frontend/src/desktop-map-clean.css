@@ -1,0 +1,50 @@
+@media (min-width: 761px) {
+  /*
+   * Desktop map has two independent bottom toolbars:
+   * - basemap switcher on the left
+   * - community/contribution actions
+   * Keeping the contribution dock centered makes both bars overlap whenever
+   * the result panel is open. Anchor it to the right-side map gutter instead.
+   */
+  body.map-route-active .hm-map-contribution-dock {
+    left: auto !important;
+    right: 104px !important;
+    bottom: 18px !important;
+    transform: none !important;
+    max-width: min(500px, calc(100vw - 620px));
+    justify-content: flex-end;
+    white-space: nowrap;
+  }
+
+  body.map-route-active .hm-map-contribution-dock a {
+    flex: 0 0 auto;
+  }
+
+  /* Keep the basemap control visually below map overlays but fully separate. */
+  body.map-route-active .hm-basemap-switcher,
+  body.map-route-active .hm-basemap-switcher.panel-open {
+    bottom: 18px !important;
+  }
+
+  /* A free-pin hint must not sit on top of the contribution dock. */
+  body.map-route-active .hm-pin-hint {
+    bottom: 78px !important;
+  }
+
+  /* On a selected place the preview card stays above the dock. */
+  body.map-route-active .hm-map-preview-card {
+    bottom: 92px !important;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1180px) {
+  body.map-route-active .hm-map-contribution-dock {
+    right: 84px !important;
+    max-width: 390px;
+  }
+
+  body.map-route-active .hm-map-contribution-dock a {
+    padding-inline: 9px;
+    font-size: 11px;
+  }
+}
