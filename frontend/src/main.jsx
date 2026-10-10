@@ -48,6 +48,7 @@ import './community-location-polish.css';
 import './photo-scanner.css';
 import './integration-secrets.css';
 import './halo-hola-map.css';
+import './discovery-v1.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
