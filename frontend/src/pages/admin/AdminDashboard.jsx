@@ -16,6 +16,7 @@ import {
   PencilRuler,
   ShieldCheck,
   Sparkles,
+  Trash2,
   UserCheck,
   UserCog,
   Users
@@ -77,6 +78,13 @@ const moderatorModules = [
 ];
 
 const adminModules = [
+  {
+    to: '/admin/coverage-cleanup',
+    title: 'Dọn địa điểm ngoài vùng',
+    description: 'Quét và ẩn hàng loạt POI nằm ngoài 9 xã đang phục vụ.',
+    icon: Trash2,
+    tone: 'rose'
+  },
   {
     to: '/admin/ctv',
     title: 'CTV kiểm duyệt',
