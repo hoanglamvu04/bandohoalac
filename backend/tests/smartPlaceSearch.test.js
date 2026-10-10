@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   anchorCandidates,
+  foldSearchText,
   selectBestAnchorMatch
 } from '../src/services/smartPlaceSearch.service.js';
 
@@ -60,4 +61,32 @@ test('ĐHQG alias prefers an education landmark', () => {
   ], candidate);
 
   assert.equal(selected.id, 'vnu');
+});
+
+test('road anchors are valid search anchors with coordinates', () => {
+  const candidate = anchorCandidates('Đường 420')[0];
+  const selected = selectBestAnchorMatch([
+    {
+      id: 'map:420',
+      resultType: 'road',
+      name: 'Đường 420',
+      categorySlug: 'duong',
+      lat: 20.995,
+      lng: 105.51
+    },
+    {
+      id: 'place:420',
+      name: 'Quán 420',
+      categorySlug: 'an-uong',
+      lat: 20.996,
+      lng: 105.511
+    }
+  ], candidate);
+
+  assert.equal(selected.id, 'map:420');
+});
+
+test('search folding handles Vietnamese street names consistently', () => {
+  assert.equal(foldSearchText('Đường Tỉnh 420'), 'duong tinh 420');
+  assert.equal(foldSearchText('ĐT.420'), 'dt 420');
 });
