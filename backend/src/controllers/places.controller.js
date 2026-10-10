@@ -1,13 +1,14 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
 import {
-  listPlaces, listFeaturedPlaces, listHomeSections, getPlaceById, getPlaceBySlug, getNearbyPlaces, getPlacesInBoundsCached
+  listFeaturedPlaces, listHomeSections, getPlaceById, getPlaceBySlug, getNearbyPlaces, getPlacesInBoundsCached
 } from '../services/place.service.js';
+import { smartListPlaces } from '../services/smartPlaceSearch.service.js';
 
 export const getPlaces = asyncHandler(async (req, res) => {
   const { q, category, minRating, limit, offset } = req.query;
-  const items = await listPlaces({ q, category, minRating, limit, offset });
-  res.json({ items });
+  const result = await smartListPlaces({ q, category, minRating, limit, offset });
+  res.json(result);
 });
 
 export const getHomeSections = asyncHandler(async (req, res) => {
