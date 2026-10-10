@@ -1,85 +1,82 @@
 const env = import.meta.env;
 
 export const DEFAULT_CENTER = [105.515, 21.025];
-export const DEFAULT_ZOOM = 12.45;
-export const MIN_ZOOM = 11.7;
+export const DEFAULT_ZOOM = 12.8;
+export const MIN_ZOOM = 11.9;
 export const MAX_ZOOM = 18;
 
 /**
  * Product service coverage for Hola Maps.
  *
- * This is intentionally a product coverage polygon, not a legal/official
- * administrative-boundary dataset. The Hòa Lạc / new Thạch Thất core stays
- * central, while the service belt is expanded by roughly 2-3 commune widths
- * in every direction so the map no longer feels cut off at the old edge.
+ * The active product area is intentionally limited to the nine communes the
+ * project currently serves: Yên Xuân, Hòa Lạc, Yên Bài, Đoài Phương,
+ * Thạch Thất, Hạ Bằng, Tây Phương, Kiều Phú and Phú Cát.
  *
- * When an authoritative commune-boundary GeoJSON is available, replace only
- * SERVICE_AREA_RING; every map/API filter continues to work unchanged.
+ * This is a tight product-coverage polygon, not a legal cadastral boundary.
+ * When authoritative commune GeoJSON is available we only need to replace
+ * SERVICE_AREA_RING; the frontend/backend filters already consume this shape.
  */
 export const SERVICE_AREA_RING = [
-  [105.275, 21.235],
-  [105.250, 21.175],
-  [105.250, 21.095],
-  [105.265, 21.015],
-  [105.295, 20.945],
-  [105.340, 20.885],
-  [105.405, 20.845],
-  [105.495, 20.825],
-  [105.595, 20.830],
-  [105.685, 20.855],
-  [105.750, 20.905],
-  [105.785, 20.970],
-  [105.790, 21.050],
-  [105.775, 21.125],
-  [105.745, 21.195],
-  [105.675, 21.225],
-  [105.585, 21.240],
-  [105.485, 21.245],
-  [105.380, 21.245],
-  [105.305, 21.245],
-  [105.275, 21.235]
+  [105.335, 21.145],
+  [105.310, 21.100],
+  [105.310, 21.035],
+  [105.325, 20.975],
+  [105.365, 20.920],
+  [105.430, 20.890],
+  [105.515, 20.890],
+  [105.600, 20.900],
+  [105.660, 20.930],
+  [105.685, 20.985],
+  [105.680, 21.055],
+  [105.655, 21.115],
+  [105.600, 21.145],
+  [105.520, 21.155],
+  [105.430, 21.155],
+  [105.360, 21.150],
+  [105.335, 21.145]
 ];
 
 export const CORE_SERVICE_AREAS = [
-  'Hòa Lạc',
-  'Hạ Bằng',
-  'Thạch Thất',
-  'Tây Phương',
   'Yên Xuân',
+  'Hòa Lạc',
+  'Yên Bài',
+  'Đoài Phương',
+  'Thạch Thất',
+  'Hạ Bằng',
+  'Tây Phương',
+  'Kiều Phú',
   'Phú Cát'
 ];
 
-export const EXTENDED_SERVICE_AREAS = [
-  'Vành đai phía Bắc Hòa Lạc',
-  'Vành đai phía Nam Hòa Lạc',
-  'Vành đai phía Đông Hòa Lạc',
-  'Vành đai phía Tây Hòa Lạc',
-  'Khu vực lân cận Ba Vì',
-  'Khu vực lân cận Quốc Oai'
-];
+// No extra service belt for now. Keeping this export avoids breaking older UI
+// code that reads the field from the GeoJSON properties.
+export const EXTENDED_SERVICE_AREAS = [];
 
 // Product camera presets for discovery. These are navigation presets, not
 // legal administrative boundary definitions.
 export const REGION_PRESETS = [
-  { id: 'all', label: 'Toàn vùng', center: DEFAULT_CENTER, zoom: 11.95 },
-  { id: 'hoa-lac', label: 'Hòa Lạc', center: [105.515, 21.015], zoom: 14.0 },
-  { id: 'ha-bang', label: 'Hạ Bằng', center: [105.558, 21.055], zoom: 14.2 },
-  { id: 'thach-that', label: 'Thạch Thất', center: [105.585, 21.030], zoom: 13.9 },
-  { id: 'tay-phuong', label: 'Tây Phương', center: [105.575, 20.995], zoom: 14.0 },
+  { id: 'all', label: 'Toàn vùng', center: DEFAULT_CENTER, zoom: 12.35 },
   { id: 'yen-xuan', label: 'Yên Xuân', center: [105.405, 21.015], zoom: 13.8 },
+  { id: 'hoa-lac', label: 'Hòa Lạc', center: [105.515, 21.015], zoom: 14.0 },
+  { id: 'yen-bai', label: 'Yên Bài', center: [105.405, 21.090], zoom: 13.8 },
+  { id: 'doai-phuong', label: 'Đoài Phương', center: [105.455, 21.105], zoom: 13.8 },
+  { id: 'thach-that', label: 'Thạch Thất', center: [105.585, 21.030], zoom: 13.9 },
+  { id: 'ha-bang', label: 'Hạ Bằng', center: [105.558, 21.055], zoom: 14.2 },
+  { id: 'tay-phuong', label: 'Tây Phương', center: [105.575, 20.995], zoom: 14.0 },
+  { id: 'kieu-phu', label: 'Kiều Phú', center: [105.615, 20.965], zoom: 13.8 },
   { id: 'phu-cat', label: 'Phú Cát', center: [105.475, 20.985], zoom: 13.9 }
 ];
 
 /**
- * Camera fence with a visual/tile buffer around the expanded service polygon.
- * The product still stays focused on Hòa Lạc instead of exposing all Hanoi.
+ * Camera/tile fence: only a small technical buffer around the nine-commune
+ * product polygon, so users cannot pan out into a Hanoi-scale map.
  */
 export const MAP_COVERAGE_BOUNDS = [
-  [105.21, 20.79],
-  [105.83, 21.29]
+  [105.28, 20.86],
+  [105.71, 21.18]
 ];
 
-export const SERVICE_AREA_BOUNDS = [105.250, 20.825, 105.790, 21.245];
+export const SERVICE_AREA_BOUNDS = [105.310, 20.890, 105.685, 21.155];
 
 export function isInsideMapCoverageBounds(lng, lat) {
   const x = Number(lng);
