@@ -1,7 +1,7 @@
 param(
   [string]$BuildDate = "",
   [int]$MaxZoom = 17,
-  [string]$BBox = "105.30,20.86,105.69,21.16"
+  [string]$BBox = "105.21,20.79,105.83,21.29"
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,7 +42,7 @@ $SourceUrl = Resolve-BuildUrl -RequestedDate $BuildDate
 Write-Host ""
 Write-Host "Hola Maps local basemap"
 Write-Host "Source:   $SourceUrl"
-Write-Host "Coverage: Hoa Lac / Thach That focused service area"
+Write-Host "Coverage: Hoa Lac core + expanded 2-3 commune service belt"
 Write-Host "BBox:     $BBox"
 Write-Host "Zoom:     0-$MaxZoom"
 Write-Host "Output:   $OutputFile"
