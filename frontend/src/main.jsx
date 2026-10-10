@@ -51,6 +51,7 @@ import './integration-secrets.css';
 import './halo-hola-map.css';
 import './discovery-v1.css';
 import './map-power-v3.css';
+import './mobile-map-clean.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
