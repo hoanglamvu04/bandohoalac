@@ -1,0 +1,142 @@
+/* Mobile map layout v4
+   Keep discovery controls in one stable row under search and make the
+   place-results area scroll independently inside the bottom sheet. */
+@media (max-width: 760px) {
+  body.map-route-active {
+    --hm-mobile-actions-top: calc(var(--app-safe-top, 64px) + 64px);
+  }
+
+  /* Chuyên đề and quick filters share the exact same viewport coordinate. */
+  body.map-route-active .theme-layer-dock {
+    position: fixed !important;
+    top: var(--hm-mobile-actions-top) !important;
+    left: 10px !important;
+    right: auto !important;
+    width: auto !important;
+    transform: none !important;
+    z-index: 946 !important;
+  }
+
+  body.map-route-active .theme-layer-dock:not(.open) .theme-layer-toggle {
+    min-height: 38px !important;
+    height: 38px !important;
+    margin: 0 !important;
+    padding: 0 11px !important;
+    border-radius: 13px !important;
+  }
+
+  body.map-route-active .hm-map-topbar {
+    position: fixed !important;
+    top: var(--hm-mobile-actions-top) !important;
+    left: auto !important;
+    right: 10px !important;
+    width: auto !important;
+    height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    z-index: 946 !important;
+  }
+
+  body.map-route-active .hm-map-topbar > * {
+    display: none !important;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-discovery-filters {
+    position: static !important;
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    width: auto !important;
+    max-width: calc(100vw - 126px) !important;
+    height: 38px !important;
+    gap: 7px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.map-route-active .hm-discovery-filters > * {
+    display: none !important;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-quick-filter:first-child,
+  body.map-route-active .hm-discovery-filters .hm-filter-menu {
+    display: flex !important;
+    flex: 0 0 auto !important;
+  }
+
+  body.map-route-active .hm-quick-filter,
+  body.map-route-active .hm-filter-trigger {
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+    border-radius: 13px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Filter opens below the shared action row instead of covering it. */
+  body.map-route-active .hm-filter-popover {
+    position: fixed !important;
+    top: calc(var(--hm-mobile-actions-top) + 46px) !important;
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+    max-height: min(54dvh, 440px) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+  }
+
+  /* The sheet itself no longer scrolls. Header/scope/layers stay stable and
+     only the place list moves, so floating search/theme controls never appear
+     to slide over list content while swiping. */
+  body.map-route-active .hm-left-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    overscroll-behavior: contain;
+  }
+
+  body.map-route-active .hm-panel-heading,
+  body.map-route-active .hm-layer-section {
+    flex: 0 0 auto !important;
+  }
+
+  body.map-route-active .hm-place-results {
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+    overflow: hidden !important;
+  }
+
+  body.map-route-active .hm-place-list {
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    padding-bottom: 14px !important;
+  }
+
+  body.map-route-active .hm-place-scope-bar,
+  body.map-route-active .hm-section-title {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 390px) {
+  body.map-route-active .theme-layer-dock:not(.open) .theme-layer-toggle,
+  body.map-route-active .hm-quick-filter,
+  body.map-route-active .hm-filter-trigger {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    font-size: 11px !important;
+    gap: 5px !important;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-discovery-filters {
+    max-width: calc(100vw - 116px) !important;
+    gap: 5px !important;
+  }
+}
