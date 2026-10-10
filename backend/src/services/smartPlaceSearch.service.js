@@ -1,9 +1,11 @@
+import { pool } from '../database/pool.js';
+import { SERVICE_AREA_GEOJSON_STRING } from '../config/mapCoverage.js';
 import { getNearbyPlaces, listPlaces } from './place.service.js';
 
 const CATEGORY_ALIASES = [
   { slug: 'cafe', aliases: ['cafe', 'coffee', 'ca phe', 'quan ca phe'] },
   { slug: 'an-uong', aliases: ['nha hang', 'quan an', 'an uong', 'do an', 'mon an'] },
-  { slug: 'truong-hoc', aliases: ['truong', 'truong hoc', 'mam non', 'tieu hoc', 'thpt', 'dai hoc', 'hoc vien'] },
+  { slug: 'truong-hoc', aliases: ['truong', 'truong hoc', 'mam non', 'tieu hoc', 'thpt', 'dai hoc', 'hoc vien', 'university'] },
   { slug: 'y-te', aliases: ['benh vien', 'phong kham', 'y te', 'bac si', 'nha thuoc'] },
   { slug: 'sieu-thi', aliases: ['sieu thi', 'cua hang', 'tap hoa', 'shopping'] },
   { slug: 'ngan-hang-atm', aliases: ['ngan hang', 'atm'] },
@@ -49,13 +51,17 @@ const PROXIMITY_PATTERNS = [
   /\s+tai\s+/i
 ];
 
+const NEAR_ME_ALIASES = new Set([
+  'toi', 'gan toi', 'quanh toi', 'vi tri toi', 'vi tri cua toi', 'cho toi dang dung', 'day'
+]);
+
 export function foldSearchText(value) {
   return String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[đĐ]/g, 'd')
-    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/[^a-z0-9\s.-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -136,7 +142,6 @@ function anchorScore(item, candidate) {
     if (name.includes(term)) score += 50;
   }
 
-  // Avoid using a shop/bank carrying the FPT/VNU keyword as the geographic anchor.
   if (/\b(shop|store|bank|atm|livebank|polytechnic)\b/.test(name)) score -= 45;
 
   score += Math.min(Number(item?.reviews) || 0, 20) * 0.1;
@@ -148,6 +153,75 @@ export function selectBestAnchorMatch(items, candidate) {
     .filter((item) => Number.isFinite(Number(item?.lat)) && Number.isFinite(Number(item?.lng)))
     .map((item) => ({ item, score: anchorScore(item, candidate) }))
     .sort((a, b) => b.score - a.score)[0]?.item || null;
+}
+
+function mapFeatureRow(row) {
+  const isRoad = row.layer_type === 'ROAD';
+  return {
+    id: 'map-' + String(row.layer_type || 'feature').toLowerCase() + '-' + row.id,
+    mapFeatureId: row.id,
+    searchEntityType: row.layer_type,
+    name: row.name || row.reference || (isRoad ? 'Tuyến đường' : 'Địa danh'),
+    slug: null,
+    description: row.description || '',
+    address: isRoad ? 'Tuyến đường · Hola Maps' : 'Địa danh · Hola Maps',
+    phone: null,
+    website: null,
+    priceLevel: null,
+    openingHours: null,
+    status: 'PUBLISHED',
+    source: 'HOLA_MAPS',
+    rating: 0,
+    reviews: 0,
+    lat: Number(row.lat),
+    lng: Number(row.lng),
+    category: isRoad ? 'Tuyến đường' : 'Địa danh',
+    categorySlug: isRoad ? 'giao-thong' : 'dia-danh',
+    images: [],
+    thumbnails: [],
+    cardImages: []
+  };
+}
+
+async function searchMapFeatures(query, limit = 20) {
+  const needle = String(query || '').trim();
+  if (!needle) return [];
+
+  const sql = [
+    'WITH service_area AS (',
+    '  SELECT ST_SetSRID(ST_GeomFromGeoJSON($1), 4326) AS geom',
+    '), candidates AS (',
+    '  SELECT mf.id, mf.layer_type, mf.name, mf.properties, mf.geometry',
+    '  FROM map_features mf, service_area',
+    "  WHERE mf.status = 'ACTIVE'",
+    "    AND mf.layer_type IN ('ROAD', 'LANDMARK')",
+    '    AND ST_Intersects(mf.geometry, service_area.geom)',
+    '    AND (',
+    "      lower(public.hola_unaccent(COALESCE(mf.name, ''))) LIKE '%' || lower(public.hola_unaccent($2)) || '%'",
+    "      OR lower(public.hola_unaccent(COALESCE(mf.properties->>'ref', ''))) LIKE '%' || lower(public.hola_unaccent($2)) || '%'",
+    "      OR similarity(lower(public.hola_unaccent(COALESCE(mf.name, ''))), lower(public.hola_unaccent($2))) >= 0.25",
+    '    )',
+    '  ORDER BY',
+    "    CASE WHEN lower(public.hola_unaccent(COALESCE(mf.name, ''))) = lower(public.hola_unaccent($2)) THEN 0 ELSE 1 END,",
+    "    similarity(lower(public.hola_unaccent(COALESCE(mf.name, ''))), lower(public.hola_unaccent($2))) DESC,",
+    '    mf.updated_at DESC',
+    '  LIMIT $3',
+    ')',
+    'SELECT',
+    '  id, layer_type, name,',
+    "  properties->>'ref' AS reference,",
+    "  properties->>'description' AS description,",
+    '  ST_X(ST_PointOnSurface(geometry)) AS lng,',
+    '  ST_Y(ST_PointOnSurface(geometry)) AS lat',
+    'FROM candidates'
+  ].join('\n');
+
+  const { rows } = await pool.query(sql, [
+    SERVICE_AREA_GEOJSON_STRING,
+    needle,
+    Math.min(Math.max(Number(limit) || 20, 1), 40)
+  ]);
+  return rows.map(mapFeatureRow).filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng));
 }
 
 async function resolveAnchor(anchorQuery) {
@@ -171,40 +245,86 @@ async function resolveAnchor(anchorQuery) {
     if (anchor) return { anchor, resolvedQuery: candidate.query };
   }
 
-  return { anchor: null, resolvedQuery: null };
+  const mapMatches = await searchMapFeatures(anchorQuery, 8);
+  const anchor = mapMatches[0] || null;
+  return { anchor, resolvedQuery: anchor ? anchorQuery : null };
+}
+
+async function nearbyWithProgressiveRadius({ lat, lng, category, minRating }) {
+  let items = [];
+  let radius = 2000;
+
+  for (const candidateRadius of [2000, 5000, 10000, 12000]) {
+    radius = candidateRadius;
+    items = await getNearbyPlaces({ lat, lng, radius, category: category || undefined, minRating });
+    if (items.length >= 6 || (items.length > 0 && radius >= 10000)) break;
+  }
+
+  return { items, radius };
 }
 
 /**
- * Smart search keeps the normal fuzzy text search as the default, then adds a
- * local-intent parser for queries such as:
- *   - "quán cafe gần FPT"
- *   - "trường mầm non ở Hạ Bằng"
- *   - "đất quanh Đại học Quốc gia"
- *
- * Known Hòa Lạc landmarks are resolved using canonical names/category first.
- * This prevents keyword-bearing shops, banks or stale legacy records from
- * becoming the geographic anchor for a nearby query.
+ * Unified discovery search for Hola Maps.
+ * - normal text: places + named ROAD/LANDMARK map features
+ * - "cafe gần FPT": resolve canonical anchor then progressively expand radius
+ * - "cafe gần tôi": use caller-provided browser coordinates
  */
-export async function smartListPlaces({ q, category, minRating, limit = 50, offset = 0 } = {}) {
+export async function smartListPlaces({
+  q,
+  category,
+  minRating,
+  limit = 50,
+  offset = 0,
+  lat,
+  lng
+} = {}) {
   const rawQuery = String(q || '').trim();
   const explicitCategory = category && category !== 'all' ? category : null;
   const parsed = splitProximityQuery(rawQuery);
 
   if (!parsed) {
-    const items = await listPlaces({ q: rawQuery, category, minRating, limit, offset });
+    const [placeItems, mapItems] = await Promise.all([
+      listPlaces({ q: rawQuery, category, minRating, limit, offset }),
+      rawQuery ? searchMapFeatures(rawQuery, Math.min(Number(limit) || 20, 20)) : Promise.resolve([])
+    ]);
+
+    const items = [...placeItems, ...mapItems].slice(0, normalizeLimit(limit));
     return {
       items,
-      meta: { mode: 'text', interpretedCategory: explicitCategory }
+      meta: {
+        mode: 'unified-text',
+        interpretedCategory: explicitCategory,
+        mapResultCount: mapItems.length
+      }
     };
   }
 
   const interpretedCategory = explicitCategory || inferCategory(parsed.intent);
-  const { anchor, resolvedQuery } = await resolveAnchor(parsed.anchor);
+  const foldedAnchor = foldSearchText(parsed.anchor);
+  const userLat = Number(lat);
+  const userLng = Number(lng);
+
+  let anchor = null;
+  let resolvedQuery = null;
+  let anchorMode = 'place';
+
+  if (NEAR_ME_ALIASES.has(foldedAnchor) && Number.isFinite(userLat) && Number.isFinite(userLng)) {
+    anchor = { id: 'current-location', name: 'Vị trí của tôi', lat: userLat, lng: userLng };
+    resolvedQuery = 'Vị trí của tôi';
+    anchorMode = 'user-location';
+  } else {
+    const resolved = await resolveAnchor(parsed.anchor);
+    anchor = resolved.anchor;
+    resolvedQuery = resolved.resolvedQuery;
+  }
 
   if (!anchor) {
-    const items = await listPlaces({ q: rawQuery, category, minRating, limit, offset });
+    const [placeItems, mapItems] = await Promise.all([
+      listPlaces({ q: rawQuery, category, minRating, limit, offset }),
+      searchMapFeatures(parsed.anchor, 10)
+    ]);
     return {
-      items,
+      items: [...placeItems, ...mapItems].slice(0, normalizeLimit(limit)),
       meta: {
         mode: 'text-fallback',
         interpretedCategory,
@@ -214,22 +334,22 @@ export async function smartListPlaces({ q, category, minRating, limit = 50, offs
     };
   }
 
-  const nearby = await getNearbyPlaces({
-    lat: anchor.lat,
-    lng: anchor.lng,
-    radius: 12000,
-    category: interpretedCategory || undefined,
+  const nearby = await nearbyWithProgressiveRadius({
+    lat: Number(anchor.lat),
+    lng: Number(anchor.lng),
+    category: interpretedCategory,
     minRating
   });
 
   const safeLimit = normalizeLimit(limit);
   const safeOffset = Math.max(Number(offset) || 0, 0);
-  const items = nearby.slice(safeOffset, safeOffset + safeLimit);
+  const items = nearby.items.slice(safeOffset, safeOffset + safeLimit);
 
   return {
     items,
     meta: {
       mode: 'near-anchor',
+      anchorMode,
       interpretedCategory,
       anchorQuery: parsed.anchor,
       anchorResolved: true,
@@ -240,7 +360,7 @@ export async function smartListPlaces({ q, category, minRating, limit = 50, offs
         lat: anchor.lat,
         lng: anchor.lng
       },
-      radius: 12000
+      radius: nearby.radius
     }
   };
 }
