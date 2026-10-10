@@ -1,3 +1,5 @@
+import '../mapInteractionBridge.js';
+import '../map-experience-v2.css';
 import { useMemo, useState } from 'react';
 import {
   Building2,
@@ -15,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import MapPage from './MapPage.jsx';
+import MapSearchV2 from '../components/MapSearchV2.jsx';
+import MapPinOverlay from '../components/MapPinOverlay.jsx';
 
 const THEMES = [
   { id: 'all', label: 'Tất cả', icon: MapPin, category: null },
@@ -43,12 +47,15 @@ export default function MapDiscoveryPage() {
     if (theme.category) next.set('category', theme.category);
     else next.delete('category');
     next.delete('place');
+    next.delete('q');
     setParams(next, { replace: true });
   }
 
   return (
-    <div className="map-discovery-v1">
+    <div className="map-discovery-v1 map-experience-v2">
       <MapPage />
+      <MapSearchV2 />
+      <MapPinOverlay />
 
       <aside className={open ? 'theme-layer-dock open' : 'theme-layer-dock'} aria-label="Chuyên đề Hòa Lạc">
         <button className="theme-layer-toggle" type="button" onClick={() => setOpen((value) => !value)}>
