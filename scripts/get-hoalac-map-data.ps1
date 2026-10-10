@@ -1,7 +1,7 @@
 param(
   [string]$BuildDate = "",
   [string]$OvertureRelease = "",
-  [string]$BBox = "105.30,20.86,105.69,21.16",
+  [string]$BBox = "105.21,20.79,105.83,21.29",
   [int]$MaxZoom = 17
 )
 
