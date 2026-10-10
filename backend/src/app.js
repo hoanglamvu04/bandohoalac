@@ -18,6 +18,7 @@ import placesRoutes from './routes/places.routes.js';
 import categoriesRoutes from './routes/categories.routes.js';
 import contributionsRoutes from './routes/contributions.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import adminCoverageRoutes from './routes/adminCoverage.routes.js';
 import usersRoutes from './routes/users.routes.js';
 import leaderboardRoutes from './routes/leaderboard.routes.js';
 import directionsRoutes from './routes/directions.routes.js';
@@ -76,6 +77,7 @@ export function createApp() {
   app.use('/api/places', placesRoutes);
   app.use('/api/categories', categoriesRoutes);
   app.use('/api/contributions', contributionsRoutes);
+  app.use('/api/admin/coverage-cleanup', adminCoverageRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/users', usersRoutes);
   app.use('/api/leaderboard', leaderboardRoutes);
