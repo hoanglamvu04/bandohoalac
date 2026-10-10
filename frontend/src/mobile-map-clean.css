@@ -150,10 +150,54 @@
     border-radius: 18px !important;
   }
 
+  /* Hide desktop-only map chrome. Pinch zoom is the primary mobile zoom gesture. */
   body.map-route-active .maplibregl-ctrl-top-right .maplibregl-ctrl-zoom-in,
   body.map-route-active .maplibregl-ctrl-top-right .maplibregl-ctrl-zoom-out,
   body.map-route-active .maplibregl-ctrl-bottom-right .maplibregl-ctrl-zoom-in,
-  body.map-route-active .maplibregl-ctrl-bottom-right .maplibregl-ctrl-zoom-out {
+  body.map-route-active .maplibregl-ctrl-bottom-right .maplibregl-ctrl-zoom-out,
+  body.map-route-active .hm-3d,
+  body.map-route-active .hm-basemap-switcher,
+  body.map-route-active .hm-place-inspector {
+    display: none !important;
+  }
+
+  body.map-route-active .hm-locate {
+    right: 10px !important;
+    bottom: calc(var(--app-safe-bottom, 66px) + 12px) !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    padding: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 14px !important;
+    font-size: 0 !important;
+    box-shadow: 0 8px 24px rgba(16,47,41,.13) !important;
+  }
+
+  body.map-route-active .hm-locate svg {
+    width: 19px !important;
+    height: 19px !important;
+  }
+
+  body.map-route-active .hm-halo-live {
+    top: auto !important;
+    right: 10px !important;
+    bottom: calc(var(--app-safe-bottom, 66px) + 66px) !important;
+    width: auto !important;
+  }
+
+  body.map-route-active .hm-halo-live.open {
+    left: 10px !important;
+    width: auto !important;
+  }
+
+  body.map-route-active .hm-halo-live-trigger {
+    min-height: 40px !important;
+    border-radius: 14px !important;
+  }
+
+  body.map-route-active .hm-power-overlay:has(.hm-map-preview-card) .hm-halo-live {
     display: none !important;
   }
 
@@ -214,6 +258,13 @@
 
   body.map-route-active .bottom-nav .bottom-link span {
     font-size: 10px !important;
+  }
+
+  body.map-route-active .bottom-nav .bottom-link:nth-child(3) {
+    margin-top: -8px !important;
+    background: #145344 !important;
+    color: #fff !important;
+    box-shadow: 0 8px 20px rgba(20,83,68,.2) !important;
   }
 
   body.map-route-active .hm-pin-hint {
