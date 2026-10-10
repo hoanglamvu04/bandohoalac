@@ -1,7 +1,7 @@
 param(
   [string]$BuildDate = "",
   [string]$OvertureRelease = "",
-  [string]$BBox = "105.21,20.79,105.83,21.29",
+  [string]$BBox = "105.28,20.86,105.71,21.18",
   [int]$MaxZoom = 17
 )
 
@@ -9,6 +9,7 @@ $ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "=== Hola Maps: rebuilding local map data ==="
+Write-Host "Target communes: Yen Xuan, Hoa Lac, Yen Bai, Doai Phuong, Thach That, Ha Bang, Tay Phuong, Kieu Phu, Phu Cat"
 Write-Host ""
 
 & (Join-Path $PSScriptRoot "get-hoalac-pmtiles.ps1") `
