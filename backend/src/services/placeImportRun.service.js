@@ -8,10 +8,12 @@ import { env } from '../config/env.js';
 import { SERVICE_AREA_BOUNDS } from '../config/mapCoverage.js';
 import { AppError } from '../utils/AppError.js';
 import { stageOvertureFeatures } from './placeImport.service.js';
+import { publishFoundationPois } from './foundationPoi.service.js';
 
 const SOURCE = 'OVERTURE';
 const STALE_AFTER_HOURS = 2;
 const MAX_LOG_CHARS = 5000;
+const SCAN_MODES = new Set(['STAGING', 'FOUNDATION']);
 
 function clampConfidence(value) {
   const n = Number(value);
@@ -19,8 +21,14 @@ function clampConfidence(value) {
   return Math.min(Math.max(n, 0), 1);
 }
 
+function normalizeScanMode(value) {
+  const mode = String(value || 'STAGING').trim().toUpperCase();
+  return SCAN_MODES.has(mode) ? mode : 'STAGING';
+}
+
 function mapRun(row) {
   if (!row) return null;
+  const logExcerpt = row.log_excerpt || null;
   return {
     id: String(row.id),
     source: row.source,
@@ -37,7 +45,8 @@ function mapRun(row) {
     startedAt: row.started_at,
     finishedAt: row.finished_at,
     errorMessage: row.error_message || null,
-    logExcerpt: row.log_excerpt || null,
+    logExcerpt,
+    scanMode: logExcerpt?.includes('MODE: FOUNDATION') ? 'FOUNDATION' : 'STAGING',
     createdAt: row.created_at
   };
 }
@@ -207,14 +216,15 @@ async function updateRun(runId, fields) {
   );
 }
 
-async function executeOvertureRun(runId, minConfidence, bbox) {
+async function executeOvertureRun(runId, minConfidence, bbox, scanMode, startedBy) {
   const outputFile = path.join(os.tmpdir(), 'hola-overture-places-' + runId + '.geojson');
 
   try {
     await updateRun(runId, {
       status: 'RUNNING',
       startedAtNow: true,
-      errorMessage: null
+      errorMessage: null,
+      logExcerpt: 'MODE: ' + scanMode
     });
 
     const download = await downloadOvertureGeoJson(outputFile, bbox);
@@ -227,6 +237,9 @@ async function executeOvertureRun(runId, minConfidence, bbox) {
     }
 
     const stats = await stageOvertureFeatures(features, { minConfidence });
+    const foundation = scanMode === 'FOUNDATION'
+      ? await publishFoundationPois({ reviewerId: startedBy, limit: 1200 })
+      : null;
 
     await updateRun(runId, {
       status: 'SUCCESS',
@@ -237,6 +250,12 @@ async function executeOvertureRun(runId, minConfidence, bbox) {
       duplicates: stats.duplicates,
       skipped: stats.skipped,
       logExcerpt: [
+        'MODE: ' + scanMode,
+        foundation
+          ? 'FOUNDATION_PUBLISHED: ' + foundation.approvedCount +
+            ' | POLICY_SKIPPED: ' + foundation.skippedByPolicyCount +
+            ' | FAILED: ' + foundation.failedCount
+          : null,
         'CLI: ' + download.command,
         download.stdout?.trim(),
         download.stderr?.trim()
@@ -247,7 +266,10 @@ async function executeOvertureRun(runId, minConfidence, bbox) {
     await updateRun(runId, {
       status: 'FAILED',
       errorMessage: String(error?.message || error).slice(0, 3000),
-      logExcerpt: String(error?.stderr || error?.stdout || '').slice(-MAX_LOG_CHARS),
+      logExcerpt: [
+        'MODE: ' + scanMode,
+        String(error?.stderr || error?.stdout || '')
+      ].filter(Boolean).join('\n').slice(-MAX_LOG_CHARS),
       finishedAtNow: true
     });
   } finally {
@@ -257,7 +279,8 @@ async function executeOvertureRun(runId, minConfidence, bbox) {
 
 export async function startOverturePlaceScan({
   startedBy,
-  minConfidence = 0.55
+  minConfidence = 0.55,
+  mode = 'STAGING'
 } = {}) {
   await expireStaleRuns();
 
@@ -267,17 +290,18 @@ export async function startOverturePlaceScan({
   }
 
   const threshold = clampConfidence(minConfidence);
+  const scanMode = normalizeScanMode(mode);
   const bbox = SERVICE_AREA_BOUNDS.join(',');
 
   let row;
   try {
     const result = await pool.query(
       `INSERT INTO place_import_runs (
-         source, status, bbox, min_confidence, started_by
+         source, status, bbox, min_confidence, started_by, log_excerpt
        )
-       VALUES ($1, 'QUEUED', $2, $3, $4)
+       VALUES ($1, 'QUEUED', $2, $3, $4, $5)
        RETURNING *`,
-      [SOURCE, bbox, threshold, startedBy || null]
+      [SOURCE, bbox, threshold, startedBy || null, 'MODE: ' + scanMode]
     );
     row = result.rows[0];
   } catch (error) {
@@ -289,10 +313,13 @@ export async function startOverturePlaceScan({
   }
 
   setImmediate(() => {
-    executeOvertureRun(row.id, threshold, bbox).catch((error) => {
+    executeOvertureRun(row.id, threshold, bbox, scanMode, startedBy).catch((error) => {
       console.error('[Hola Maps] background Overture scan failed:', error);
     });
   });
 
-  return mapRun(row);
+  return {
+    ...mapRun(row),
+    scanMode
+  };
 }
