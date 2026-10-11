@@ -1,0 +1,107 @@
+/* iOS/iPad embedded HOLA Maps picker fixes.
+   Keep the picker tied to the iframe viewport instead of dynamic-vh state,
+   and keep search controls >=16px so Safari never focus-zooms. */
+
+html:has(.hm-picker-page.is-embedded),
+html:has(.hm-picker-page.is-embedded) body,
+html:has(.hm-picker-page.is-embedded) #root{
+  width:100%;
+  height:100%;
+  min-height:100%;
+  margin:0;
+  overflow:hidden;
+}
+
+.hm-picker-page.is-embedded{
+  position:fixed!important;
+  inset:0!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+  overscroll-behavior:none;
+  background:#e5ece6!important;
+}
+
+.hm-picker-page.is-embedded .hm-picker-shell{
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:none!important;
+  display:grid!important;
+  grid-template-rows:minmax(0,1fr) auto!important;
+  overflow:hidden!important;
+}
+
+.hm-picker-page.is-embedded .hm-picker-map-area,
+.hm-picker-page.is-embedded .location-picker,
+.hm-picker-page.is-embedded .location-picker-stage,
+.hm-picker-page.is-embedded .location-picker-map,
+.hm-picker-page.is-embedded .maplibregl-map,
+.hm-picker-page.is-embedded .maplibregl-canvas-container{
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  min-height:0!important;
+}
+
+.hm-picker-page.is-embedded .hm-picker-map-area{
+  position:relative!important;
+  overflow:hidden!important;
+}
+
+.hm-picker-page.is-embedded .location-picker,
+.hm-picker-page.is-embedded .location-picker-stage,
+.hm-picker-page.is-embedded .location-picker-map{
+  position:absolute!important;
+  inset:0!important;
+}
+
+/* Prevent iOS Safari/WebView auto-zoom while searching inside the iframe. */
+@supports (-webkit-touch-callout:none){
+  .hm-picker-search input{
+    font-size:16px!important;
+    line-height:1.2!important;
+  }
+}
+
+@media(max-width:760px){
+  .hm-picker-page.is-embedded .hm-picker-search-wrap{
+    top:max(8px,env(safe-area-inset-top))!important;
+    left:8px!important;
+    width:calc(100% - 16px)!important;
+  }
+
+  .hm-picker-page.is-embedded .hm-picker-search{
+    min-height:46px!important;
+    border-radius:14px!important;
+  }
+
+  .hm-picker-page.is-embedded .hm-picker-locate{
+    min-width:46px!important;
+    width:46px!important;
+    border-radius:14px!important;
+  }
+
+  .hm-picker-page.is-embedded .hm-picker-results{
+    max-height:min(42vh,330px)!important;
+  }
+
+  .hm-picker-page.is-embedded .hm-picker-footer{
+    position:relative!important;
+    z-index:50!important;
+    padding:9px 10px calc(9px + env(safe-area-inset-bottom))!important;
+    background:rgba(255,255,255,.98)!important;
+  }
+
+  .hm-picker-page.is-embedded .hm-picker-selection strong{
+    max-width:42vw!important;
+  }
+
+  .hm-picker-page.is-embedded .hm-picker-selection span{
+    max-width:43vw!important;
+  }
+}
