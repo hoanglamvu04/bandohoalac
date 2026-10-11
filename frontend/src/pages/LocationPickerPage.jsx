@@ -6,6 +6,7 @@ import { getPlaces } from '../services/api.js';
 import { getBestBrowserLocation } from '../utils/geolocation.js';
 import { reverseGeocodeLocation } from '../utils/reverseGeocoding.js';
 import '../location-picker-embed.css';
+import '../location-picker-ios-fix.css';
 
 const DEFAULT_LOCATION = { lat: 21.005, lng: 105.525 };
 const QUICK_SEARCHES = ['Quán cafe', 'Đường 420', 'FPT', 'Hạ Bằng'];
@@ -69,6 +70,41 @@ export default function LocationPickerPage() {
     if (window.parent === window) return;
     window.parent.postMessage({ type: 'HOLA_MAP_PICKER_READY' }, targetOrigin);
   }, [targetOrigin]);
+
+  useEffect(() => {
+    if (!embedded) return undefined;
+
+    let timers = [];
+    const pokeMapResize = () => {
+      window.dispatchEvent(new Event('resize'));
+      timers.forEach(window.clearTimeout);
+      timers = [80, 220, 480].map(delay => window.setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, delay));
+    };
+
+    const onFocusOut = () => pokeMapResize();
+    const onPageShow = () => pokeMapResize();
+    const onVisibility = () => {
+      if (!document.hidden) pokeMapResize();
+    };
+
+    window.addEventListener('pageshow', onPageShow);
+    document.addEventListener('focusout', onFocusOut, true);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.visualViewport?.addEventListener('resize', pokeMapResize);
+    window.visualViewport?.addEventListener('scroll', pokeMapResize);
+    pokeMapResize();
+
+    return () => {
+      timers.forEach(window.clearTimeout);
+      window.removeEventListener('pageshow', onPageShow);
+      document.removeEventListener('focusout', onFocusOut, true);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.visualViewport?.removeEventListener('resize', pokeMapResize);
+      window.visualViewport?.removeEventListener('scroll', pokeMapResize);
+    };
+  }, [embedded]);
 
   useEffect(() => {
     const term = query.trim();
@@ -234,8 +270,9 @@ export default function LocationPickerPage() {
                     setError('');
                   }}
                   placeholder="Tìm địa điểm, tên đường, quán cafe..."
-                  autoFocus={embedded}
                   autoComplete="off"
+                  inputMode="search"
+                  enterKeyHint="search"
                 />
                 {query ? <button type="button" onClick={() => { setQuery(''); setResults([]); }} aria-label="Xóa tìm kiếm"><X size={17} /></button> : null}
                 {searching ? <Loader2 className="spin" size={17} /> : null}
