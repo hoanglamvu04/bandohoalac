@@ -1,0 +1,61 @@
+/* Restore the shared Hola Maps header while preserving the approved desktop map layout. */
+@media (min-width: 761px) {
+  body.map-route-active .map-app-shell > .navbar {
+    display: flex !important;
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 1200;
+  }
+
+  body.map-route-active .map-app-shell {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden;
+  }
+
+  body.map-route-active .map-app-main {
+    height: auto !important;
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+    overflow: hidden;
+  }
+
+  body.map-route-active .map-app-main > .map-discovery-v1,
+  body.map-route-active .map-app-main > .map-discovery-v1 > .hm-workspace {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  /* Fixed controls must start below the restored website header. */
+  body.map-route-active .theme-layer-dock {
+    top: calc(var(--app-safe-top, 78px) + 103px) !important;
+  }
+
+  body.map-route-active .theme-layer-panel {
+    top: calc(var(--app-safe-top, 78px) + 158px) !important;
+    max-height: calc(100dvh - var(--app-safe-top, 78px) - 250px) !important;
+  }
+
+  body.map-route-active .hm-search-v2-wrap {
+    top: calc(var(--app-safe-top, 78px) + 18px) !important;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-discovery-filters {
+    top: calc(var(--app-safe-top, 78px) + 18px) !important;
+  }
+
+  body.map-route-active .map-experience-v2:not(:has(.hm-left-panel.open)) .hm-map-menu {
+    top: calc(var(--app-safe-top, 78px) + 18px) !important;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1319px) {
+  body.map-route-active .hm-search-v2-wrap {
+    top: calc(var(--app-safe-top, 78px) + 16px) !important;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-discovery-filters {
+    top: calc(var(--app-safe-top, 78px) + 78px) !important;
+  }
+}
