@@ -1,6 +1,7 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import {
   approvePhotoCandidate,
+  cancelPhotoScan,
   getPhotoScannerStats,
   listPhotoCandidates,
   listPhotoScanRuns,
@@ -34,6 +35,25 @@ export const listPhotoScanRunsAdmin = asyncHandler(async (req, res) => {
 });
 
 export const startPhotoScanAdmin = asyncHandler(async (req, res) => {
+  if (req.body?.cancelRunId) {
+    const run = await cancelPhotoScan(req.body.cancelRunId);
+
+    await writeAuditLog({
+      actorUserId: req.user.id,
+      action: 'PLACE_PHOTO_SCAN_CANCEL',
+      entityType: 'PLACE_PHOTO_SCAN_RUN',
+      entityId: run.id,
+      metadata: {
+        scannedPlaces: run.scannedPlaces,
+        candidates: run.candidates
+      },
+      ...auditContextFromRequest(req)
+    });
+
+    res.json({ run, cancelled: true });
+    return;
+  }
+
   const autoFill = req.body?.autoFill !== false;
   const run = await startPhotoScan({
     startedBy: req.user.id,
