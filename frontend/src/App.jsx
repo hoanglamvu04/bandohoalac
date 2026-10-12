@@ -7,8 +7,9 @@ import Footer from './components/Footer.jsx';
 export default function App() {
   const location = useLocation();
   const isPickerRoute = location.pathname === '/picker' || location.pathname === '/embed/picker';
-  const isEmbedRoute = location.pathname === '/embed' || isPickerRoute;
-  const isHaloRoute = location.pathname === '/halo';
+  const isEmbedHaloRoute = location.pathname === '/embed/halo';
+  const isEmbedRoute = location.pathname === '/embed' || isPickerRoute || isEmbedHaloRoute;
+  const isHaloRoute = location.pathname === '/halo' || isEmbedHaloRoute;
   const isMapRoute = location.pathname === '/map' || isHaloRoute || isEmbedRoute;
   const isProfileRoute = location.pathname === '/profile';
   const isPartnerScannerRoute = location.pathname === '/partner/scanner';
