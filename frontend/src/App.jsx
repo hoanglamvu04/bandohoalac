@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import Footer from './components/Footer.jsx';
+import RouteSeoRuntime from './components/RouteSeoRuntime.jsx';
 
 export default function App() {
   const location = useLocation();
@@ -131,6 +132,7 @@ export default function App() {
       isProfileRoute ? 'profile-app-shell' : '',
       isPartnerScannerRoute ? 'partner-scanner-app-shell' : ''
     ].filter(Boolean).join(' ')}>
+      <RouteSeoRuntime />
       {!isPartnerScannerRoute && !isEmbedRoute && <Navbar />}
 
       <main className={[
