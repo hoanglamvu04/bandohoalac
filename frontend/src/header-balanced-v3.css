@@ -1,11 +1,17 @@
 /* Balanced desktop header: more presence than compact v2 without returning to the crowded legacy nav. */
 @media (min-width: 761px) {
+  /* The header itself is a clean product bar, not a giant rounded card. */
   .reference-navbar.compact-product-navbar.balanced-product-navbar {
     min-height: 78px !important;
     height: 78px !important;
     padding: 0 28px !important;
     gap: 24px !important;
-    border-radius: 0 0 26px 26px !important;
+    border-radius: 0 !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-top: 0 !important;
+    border-bottom: 1px solid rgba(16,47,41,.08) !important;
+    box-shadow: 0 8px 24px rgba(16,47,41,.05) !important;
   }
 
   .balanced-product-navbar .brand-logo-main {
@@ -15,22 +21,43 @@
 
   .balanced-product-navbar .compact-primary-nav {
     gap: 6px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* One radius language for every interactive control. */
+  .balanced-product-navbar .compact-primary-nav .nav-link,
+  .balanced-product-navbar .compact-nav-actions .nav-cta,
+  .balanced-product-navbar .compact-install-button,
+  .balanced-product-navbar .nav-notification-button,
+  .balanced-product-navbar .compact-account-button {
+    border-radius: 12px !important;
   }
 
   .balanced-product-navbar .compact-primary-nav .nav-link {
     min-height: 44px !important;
     padding: 0 15px !important;
-    border-radius: 13px !important;
     font-size: 13.5px !important;
     gap: 8px !important;
   }
 
-  .balanced-product-navbar .compact-primary-nav .nav-link.active {
-    background: #edf5f1 !important;
+  .balanced-product-navbar .compact-primary-nav .nav-link:hover {
+    background: #f4f7f5 !important;
   }
 
+  .balanced-product-navbar .compact-primary-nav .nav-link.active {
+    color: #124f3e !important;
+    background: #edf5f1 !important;
+    box-shadow: none !important;
+  }
+
+  /* Keep active state inside the item; remove the floating underline that made
+     the nav mix pill and tab visual languages. */
   .balanced-product-navbar .compact-primary-nav .nav-link.active::after {
-    bottom: -9px !important;
+    display: none !important;
   }
 
   .balanced-product-navbar .compact-nav-actions {
@@ -40,7 +67,6 @@
   .balanced-product-navbar .compact-nav-actions .nav-cta {
     min-height: 44px !important;
     padding: 0 16px !important;
-    border-radius: 13px !important;
     font-size: 12.5px !important;
   }
 
@@ -52,7 +78,6 @@
     align-items: center;
     gap: 7px;
     border: 1px solid #d7e3dd !important;
-    border-radius: 13px !important;
     color: #31574b !important;
     background: #fff !important;
     box-shadow: none !important;
@@ -70,6 +95,9 @@
   .balanced-product-navbar .nav-notification-button,
   .balanced-product-navbar .compact-account-button {
     height: 44px !important;
+    border: 1px solid #dfe8e3 !important;
+    background: #fff !important;
+    box-shadow: none !important;
   }
 
   .balanced-product-navbar .nav-notification-button {
@@ -80,6 +108,18 @@
   .balanced-product-navbar .compact-account-button {
     min-width: 58px !important;
     padding-inline: 9px !important;
+  }
+
+  .balanced-product-navbar .compact-account-button:hover,
+  .balanced-product-navbar .nav-notification-button:hover {
+    background: #f4f8f6 !important;
+    border-color: #d1dfd8 !important;
+  }
+
+  /* Dropdown is a separate floating surface, so it can keep a softer radius. */
+  .balanced-product-navbar .desktop-account-menu,
+  .balanced-product-navbar .nav-notification-menu {
+    border-radius: 16px !important;
   }
 }
 
