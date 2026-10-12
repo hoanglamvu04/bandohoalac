@@ -19,6 +19,7 @@ import { useSearchParams } from 'react-router-dom';
 import MapPage from './MapPage.jsx';
 import MapSearchV2 from '../components/MapSearchV2.jsx';
 import MapPinOverlay from '../components/MapPinOverlay.jsx';
+import MapHaloFilterPortal from '../components/MapHaloFilterPortal.jsx';
 
 const THEMES = [
   { id: 'all', label: 'Tất cả', icon: MapPin, category: null },
@@ -60,6 +61,7 @@ export default function MapDiscoveryPage() {
       <MapPage />
       <MapSearchV2 />
       <MapPinOverlay />
+      <MapHaloFilterPortal />
 
       <aside className={open ? 'theme-layer-dock open' : 'theme-layer-dock'} aria-label="Chuyên đề Hòa Lạc">
         <button className="theme-layer-toggle" type="button" onClick={() => setOpen((value) => !value)}>
