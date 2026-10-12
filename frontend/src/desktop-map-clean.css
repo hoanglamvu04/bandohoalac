@@ -38,25 +38,21 @@
 }
 
 /*
- * The HOLA MAPS ENGINE drawer is a real desktop sidebar, not a floating card
- * that is allowed to cover useful map content. Keep the MapLibre canvas full
- * size for stable rendering, but visually reserve the left gutter while the
- * drawer is open. MapDiscoveryPage applies the matching MapLibre camera
- * padding so pins, flyTo and viewport focus use the visible map area.
+ * Desktop safe corridor for the open results drawer.
+ * The drawer occupies 16px + 340px on the left. Search/thematic controls are
+ * normally centered against the full viewport, which makes their left edge
+ * slide underneath the drawer around common 125% Windows/browser scaling.
+ * Shrink those floating controls only while the drawer is open so their left
+ * edge always stays clear of the panel. Closing the drawer restores the normal
+ * centered width automatically without duplicating React state.
  */
-@media (min-width: 1100px) {
-  body.map-route-active .hm-map-shell {
-    clip-path: inset(0);
-    transition: clip-path .22s ease;
+@media (min-width: 980px) {
+  body.map-route-active .map-experience-v2:has(.hm-left-panel.open) .hm-search-v2-wrap {
+    width: min(620px, max(260px, calc(100vw - 780px))) !important;
   }
 
-  body.map-route-active .map-experience-v2:has(.hm-left-panel.open) .hm-map-shell {
-    clip-path: inset(0 0 0 372px);
-  }
-
-  /* Keep bottom map controls inside the usable map area beside the drawer. */
-  body.map-route-active .hm-basemap-switcher.panel-open {
-    left: 374px !important;
+  body.map-route-active .map-experience-v2:has(.hm-left-panel.open) .theme-layer-dock {
+    width: min(760px, max(260px, calc(100vw - 780px))) !important;
   }
 }
 
