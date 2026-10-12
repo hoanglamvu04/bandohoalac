@@ -24,7 +24,8 @@ import {
 
 const navItems = [
   { to: '/map', label: 'Bản đồ', icon: MapPinned },
-  { to: '/leaderboard', label: 'Cộng đồng', icon: Trophy }
+  { to: '/leaderboard', label: 'Cộng đồng', icon: Trophy },
+  { to: '/profile', label: 'Trang cá nhân', icon: UserRound }
 ];
 
 function notificationTarget(item) {
@@ -234,12 +235,6 @@ export default function Navbar() {
           <BadgeCheck size={16} />
           Xác minh cộng đồng
         </Link>
-        {!installed && installPrompt && (
-          <button type="button" onClick={installApp}>
-            <Download size={16} />
-            Cài ứng dụng
-          </button>
-        )}
         {user?.partnerAccess?.hasAccess && (
           <Link to={partnerTarget} onClick={() => setMobileAccountOpen(false)}>
             <Building2 size={16} />
@@ -263,7 +258,7 @@ export default function Navbar() {
   return (
     <header
       className={[
-        'navbar premium-navbar modern-blue-navbar reference-navbar compact-product-navbar',
+        'navbar premium-navbar modern-blue-navbar reference-navbar compact-product-navbar balanced-product-navbar',
         isHome ? 'home-navbar' : '',
         isHome && homeHeaderScrolled ? 'home-navbar-scrolled' : ''
       ].filter(Boolean).join(' ')}
@@ -306,6 +301,13 @@ export default function Navbar() {
 
       <div className="nav-actions premium-nav-actions compact-nav-actions">
         <Link className="nav-cta" to="/contribute"><Plus size={17}/>Đóng góp</Link>
+
+        {!installed && installPrompt && (
+          <button className="nav-install compact-install-button" type="button" onClick={installApp}>
+            <Download size={16} />
+            <span>Cài app</span>
+          </button>
+        )}
 
         {user && (
           <div className="nav-notification-control" ref={notificationRef}>
