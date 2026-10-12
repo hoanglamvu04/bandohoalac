@@ -60,6 +60,7 @@ import './header-clean-mobile-bridge.css';
 import './header-balanced-v3.css';
 import './place-detail-readable.css';
 import './desktop-map-search-overlap-fix.css';
+import './desktop-map-header-restore.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
