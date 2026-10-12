@@ -33,6 +33,10 @@ export function startPhotoScan(payload = {}) {
   return unwrap(client.post('/admin/photo-scanner/scan', payload));
 }
 
+export function stopPhotoScan(id) {
+  return unwrap(client.post('/admin/photo-scanner/scan', { cancelRunId: id }));
+}
+
 export function approvePhotoCandidate(id, payload = {}) {
   return unwrap(client.post('/admin/photo-scanner/' + encodeURIComponent(id) + '/approve', payload));
 }
