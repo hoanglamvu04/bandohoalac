@@ -36,7 +36,7 @@
     height: 38px !important;
     display: flex !important;
     align-items: center !important;
-    gap: 7px !important;
+    gap: 4px !important;
     z-index: 1040 !important;
   }
 
@@ -48,11 +48,12 @@
     position: static !important;
     display: flex !important;
     align-items: center !important;
+    justify-content: flex-end !important;
     flex-wrap: nowrap !important;
     width: auto !important;
-    max-width: calc(100vw - 126px) !important;
+    max-width: none !important;
     height: 38px !important;
-    gap: 7px !important;
+    gap: 4px !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: visible !important;
@@ -62,20 +63,94 @@
     display: none !important;
   }
 
-  /* Mobile keeps only the two quick actions requested beside Chuyen de. */
+  /* Mobile keeps only Near me + Filter. Keep them compact and visually one
+     control group instead of two wide pills drifting apart. */
   body.map-route-active .hm-discovery-filters .hm-quick-filter:first-child,
   body.map-route-active .hm-discovery-filters .hm-filter-menu {
     display: flex !important;
     flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-quick-filter:first-child {
+    min-width: 86px !important;
+    max-width: 104px !important;
+    padding: 0 9px !important;
+    color: #174d41 !important;
+    background: rgba(255,255,255,.96) !important;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-quick-filter:first-child.active {
+    color: #fff !important;
+    border-color: #174d41 !important;
+    background: #174d41 !important;
+    box-shadow: 0 7px 18px rgba(23,77,65,.18) !important;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-filter-menu,
+  body.map-route-active .hm-discovery-filters .hm-filter-trigger {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
   }
 
   body.map-route-active .hm-quick-filter,
   body.map-route-active .hm-filter-trigger {
     min-height: 38px !important;
     height: 38px !important;
-    padding: 0 10px !important;
+    padding: 0 9px !important;
     border-radius: 13px !important;
     white-space: nowrap !important;
+    gap: 5px !important;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-quick-filter span,
+  body.map-route-active .hm-discovery-filters .hm-filter-trigger span {
+    display: inline !important;
+    width: auto !important;
+    max-width: none !important;
+    overflow: visible !important;
+    color: inherit !important;
+    opacity: 1 !important;
+  }
+
+  /* The GPS action already exists in MapView. On mobile expose the label so
+     users do not have to guess what the small compass icon means. */
+  body.map-route-active .hm-locate {
+    position: fixed !important;
+    right: 12px !important;
+    bottom: calc(var(--app-safe-bottom, 66px) + 14px) !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    border-radius: 999px !important;
+    color: #174d41 !important;
+    background: rgba(255,255,255,.97) !important;
+    font-size: 11px !important;
+    line-height: 1 !important;
+    font-weight: 850 !important;
+    white-space: nowrap !important;
+    box-shadow: 0 8px 24px rgba(16,47,41,.14) !important;
+    z-index: 1045 !important;
+  }
+
+  body.map-route-active .hm-locate svg {
+    width: 17px !important;
+    height: 17px !important;
+    flex: 0 0 auto !important;
+  }
+
+  body.map-route-active .hm-locate:disabled {
+    opacity: .72 !important;
   }
 
   /* Menus open below the action row and above the sheet. */
@@ -200,20 +275,36 @@
     min-height: 300px !important;
     max-height: calc(100% - 184px) !important;
   }
+
+  body.map-route-active .hm-discovery-filters .hm-quick-filter:first-child {
+    min-width: 80px !important;
+    max-width: 96px !important;
+  }
+
+  body.map-route-active .hm-locate {
+    right: 10px !important;
+    padding: 0 10px !important;
+    font-size: 10.5px !important;
+  }
 }
 
 @media (max-width: 390px) {
   body.map-route-active .theme-layer-dock:not(.open) .theme-layer-toggle,
   body.map-route-active .hm-quick-filter,
   body.map-route-active .hm-filter-trigger {
-    padding-left: 8px !important;
-    padding-right: 8px !important;
+    padding-left: 7px !important;
+    padding-right: 7px !important;
     font-size: 11px !important;
-    gap: 5px !important;
+    gap: 4px !important;
   }
 
   body.map-route-active .hm-map-topbar .hm-discovery-filters {
-    max-width: calc(100vw - 116px) !important;
-    gap: 5px !important;
+    max-width: none !important;
+    gap: 3px !important;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-quick-filter:first-child {
+    min-width: 76px !important;
+    max-width: 90px !important;
   }
 }
