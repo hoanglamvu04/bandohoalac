@@ -41,12 +41,15 @@ export default function MapHaloFilterPortal() {
 
   if (!target) return null;
 
+  const embedded = typeof window !== 'undefined' && window.location.pathname.startsWith('/embed');
+  const haloHref = embedded ? '/embed/halo' : '/halo';
+
   return createPortal(
-    <a className="hm-halo-filter-link" href="/halo">
+    <a className="hm-halo-filter-link" href={haloHref}>
       <span className="hm-halo-filter-icon"><Camera size={18} /></span>
       <span className="hm-halo-filter-copy">
-        <strong>HALO HOLA</strong>
-        <small>Ảnh & check-in cộng đồng</small>
+        <strong>Góc nhìn HALO HOLA</strong>
+        <small>Tác phẩm & check-in cộng đồng theo vị trí</small>
       </span>
       <ChevronRight size={17} />
     </a>,
