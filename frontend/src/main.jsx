@@ -63,6 +63,7 @@ import './place-detail-readable.css';
 import './desktop-map-search-overlap-fix.css';
 import './desktop-map-header-restore.css';
 import './desktop-map-sidebar-compact.css';
+import './public-info.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
