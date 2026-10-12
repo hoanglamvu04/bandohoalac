@@ -1,0 +1,160 @@
+/* Hola Maps — place detail readability pass
+   Keep the compact mobile layout, but make desktop detail pages easier to scan. */
+
+@media (min-width: 761px) {
+  .place-v2-page {
+    font-size: 16px;
+  }
+
+  .place-v2-topbar,
+  .place-v2-back,
+  .place-v2-source,
+  .place-v2-rating-row,
+  .place-v2-actions a {
+    font-size: 15px;
+  }
+
+  .place-v2-heading h1 {
+    font-size: clamp(38px, 3.2vw, 52px);
+    line-height: 1.06;
+  }
+
+  .place-v2-kicker {
+    font-size: 13px;
+  }
+
+  .place-v2-facts span {
+    font-size: 13px;
+  }
+
+  .place-v2-facts strong {
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
+  .place-v2-section-title h2,
+  .place-v2-section-head h2,
+  .place-reviews-head h2,
+  .place-contribution-head h2 {
+    font-size: 27px;
+    line-height: 1.18;
+  }
+
+  .place-v2-card p,
+  .place-v2-section-head p,
+  .place-v2-contact-list a,
+  .place-v2-inline-action,
+  .place-review-item p,
+  .place-contribution-head p {
+    font-size: 16px;
+    line-height: 1.65;
+  }
+
+  .place-v2-nearby-card span,
+  .place-v2-nearby-card small {
+    font-size: 13px;
+  }
+
+  .place-v2-nearby-card strong {
+    font-size: 16px;
+    line-height: 1.35;
+  }
+
+  /* Contribution / correction panel shown at the bottom of place detail. */
+  .place-contribution-head .eyebrow,
+  .place-reviews-head .eyebrow {
+    font-size: 13px;
+    letter-spacing: .13em;
+  }
+
+  .place-contribution-head h2 {
+    margin-top: 8px;
+    margin-bottom: 8px;
+    font-size: 30px;
+  }
+
+  .place-contribution-head p {
+    margin-top: 0;
+    color: #60736d;
+  }
+
+  .place-contribution-actions {
+    gap: 9px;
+  }
+
+  .place-contribution-actions button {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1.2;
+  }
+
+  .place-contribution-actions button svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .place-contribution-editor {
+    gap: 17px;
+    padding: 20px;
+  }
+
+  .place-contribution-editor-title {
+    font-size: 17px;
+  }
+
+  .place-contribution-grid label,
+  .place-contribution-single {
+    gap: 8px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .place-contribution-editor input,
+  .place-contribution-editor textarea,
+  .place-contribution-editor select {
+    min-height: 48px;
+    padding: 12px 14px;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .place-contribution-editor textarea {
+    min-height: 112px;
+  }
+
+  .place-contribution-editor .primary-action {
+    min-height: 52px;
+    font-size: 16px;
+  }
+
+  .place-review-editor textarea {
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .place-review-editor-actions .primary-action,
+  .place-review-editor-actions .secondary-action,
+  .place-review-login {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 760px) {
+  /* Mobile was intentionally compact before; only lift the smallest text a little. */
+  .place-contribution-head p,
+  .place-v2-card p,
+  .place-v2-section-head p {
+    font-size: 15px !important;
+  }
+
+  .place-contribution-actions button {
+    font-size: 12px;
+  }
+
+  .place-contribution-editor input,
+  .place-contribution-editor textarea,
+  .place-contribution-editor select {
+    font-size: 15px;
+  }
+}
