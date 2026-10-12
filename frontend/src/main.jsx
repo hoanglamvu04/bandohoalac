@@ -55,6 +55,8 @@ import './mobile-map-clean.css';
 import './mobile-map-overlap-fix.css';
 import './map-mobile-layout-v4.css';
 import './desktop-map-clean.css';
+import './header-clean-v2.css';
+import './header-clean-mobile-bridge.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
