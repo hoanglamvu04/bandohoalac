@@ -1,10 +1,8 @@
 @media (min-width: 761px) {
   /*
    * Desktop map has two independent bottom toolbars:
-   * - basemap switcher on the left
-   * - community/contribution actions
-   * Keeping the contribution dock centered makes both bars overlap whenever
-   * the result panel is open. Anchor it to the right-side map gutter instead.
+   * - compact basemap picker on the left
+   * - community/contribution actions on the right
    */
   body.map-route-active .hm-map-contribution-dock {
     left: auto !important;
@@ -20,25 +18,145 @@
     flex: 0 0 auto;
   }
 
-  /* Keep the basemap control visually below map overlays but fully separate. */
-  body.map-route-active .hm-basemap-switcher,
-  body.map-route-active .hm-basemap-switcher.panel-open {
-    bottom: 18px !important;
-  }
-
   /*
-   * HOLA MAPS ENGINE uses viewport height rather than a fixed 680px cap.
-   * Browser zoom changes the CSS viewport, so 64dvh keeps the panel at a
-   * visually consistent physical height at 100%, 90%, 80%, etc. The second
-   * limit guarantees a footer corridor for the basemap switcher.
+   * HOLA MAPS ENGINE is a finite floating card. Its outer frame no longer
+   * scrolls or stretches almost to the bottom of the map. Only the place list
+   * scrolls, giving the card a visible beginning and ending on every desktop.
    */
   body.map-route-active .hm-left-panel {
     bottom: auto !important;
-    height: min(64dvh, calc(100% - 196px));
-    min-height: 360px;
-    max-height: none;
+    height: min(560px, calc(100% - 188px));
+    min-height: 390px;
+    overflow: hidden !important;
     border-radius: 22px !important;
-    box-shadow: 0 18px 46px rgba(11,39,32,.13), 0 2px 0 rgba(255,255,255,.82) inset;
+    box-shadow:
+      0 20px 50px rgba(11,39,32,.15),
+      0 1px 0 rgba(255,255,255,.9) inset;
+  }
+
+  body.map-route-active .hm-panel-heading {
+    flex: 0 0 auto;
+  }
+
+  body.map-route-active .hm-place-results {
+    position: relative;
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    padding-bottom: 10px;
+  }
+
+  body.map-route-active .hm-place-list {
+    min-height: 0;
+    height: 100%;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-bottom: 22px;
+    scrollbar-gutter: stable;
+  }
+
+  /* Soft bottom cue makes it obvious that more places continue below. */
+  body.map-route-active .hm-place-results::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 0;
+    height: 28px;
+    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(252,253,250,0), rgba(252,253,250,.98));
+    border-radius: 0 0 16px 16px;
+  }
+
+  /* Keep the collapsed data-layer footer visibly attached to the panel. */
+  body.map-route-active .hm-layer-section {
+    flex: 0 0 auto;
+    background: rgba(249,251,249,.98);
+    border-top: 1px solid rgba(16,47,41,.07);
+  }
+
+  /*
+   * Compact basemap picker. At rest it shows only the current basemap as one
+   * small map button. Hovering or focusing it opens a 3 x 2 palette, so the
+   * six permanent buttons no longer consume the whole lower-left corner.
+   */
+  body.map-route-active .hm-basemap-switcher,
+  body.map-route-active .hm-basemap-switcher.panel-open {
+    left: 18px !important;
+    bottom: 18px !important;
+    width: 116px;
+    min-height: 52px;
+    padding: 6px;
+    display: block;
+    overflow: visible !important;
+    border-radius: 16px;
+    background: rgba(255,255,255,.97);
+    border: 1px solid rgba(16,47,41,.1);
+    box-shadow: 0 12px 34px rgba(11,39,32,.16);
+    backdrop-filter: blur(16px);
+    transition: width .18s ease, box-shadow .18s ease;
+  }
+
+  body.map-route-active .hm-basemap-switcher button {
+    display: none;
+    min-width: 0 !important;
+    min-height: 40px;
+    margin: 0;
+  }
+
+  body.map-route-active .hm-basemap-switcher button.active {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 11px;
+    text-align: left;
+  }
+
+  body.map-route-active .hm-basemap-switcher button.active span {
+    width: 28px;
+    height: 28px;
+    margin: 0;
+  }
+
+  body.map-route-active .hm-basemap-switcher button.active b {
+    font-size: 11px;
+  }
+
+  body.map-route-active .hm-basemap-switcher:hover,
+  body.map-route-active .hm-basemap-switcher:focus-within {
+    width: 326px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px;
+    box-shadow: 0 18px 48px rgba(11,39,32,.2);
+  }
+
+  body.map-route-active .hm-basemap-switcher:hover button,
+  body.map-route-active .hm-basemap-switcher:focus-within button {
+    display: flex;
+    min-height: 66px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px 5px;
+    border-radius: 11px;
+    text-align: center;
+  }
+
+  body.map-route-active .hm-basemap-switcher:hover button span,
+  body.map-route-active .hm-basemap-switcher:focus-within button span {
+    width: 34px;
+    height: 28px;
+  }
+
+  body.map-route-active .hm-basemap-switcher:hover button b,
+  body.map-route-active .hm-basemap-switcher:focus-within button b {
+    font-size: 11px;
   }
 
   /* A free-pin hint must not sit on top of the contribution dock. */
@@ -52,14 +170,11 @@
   }
 }
 
-/*
- * Short desktop/laptop viewports get a denser panel automatically. This also
- * covers browser zoom levels where the usable CSS viewport becomes shorter.
- */
+/* Short laptop viewports: keep the card comfortably above the basemap button. */
 @media (min-width: 761px) and (max-height: 780px) {
   body.map-route-active .hm-left-panel {
-    height: min(59dvh, calc(100% - 188px));
-    min-height: 330px;
+    height: min(480px, calc(100% - 174px));
+    min-height: 340px;
   }
 
   body.map-route-active .hm-panel-heading {
@@ -83,8 +198,8 @@
 
 @media (min-width: 761px) and (max-height: 660px) {
   body.map-route-active .hm-left-panel {
-    height: min(54dvh, calc(100% - 174px));
-    min-height: 292px;
+    height: min(410px, calc(100% - 158px));
+    min-height: 300px;
   }
 
   body.map-route-active .hm-panel-heading {
@@ -112,13 +227,8 @@
 }
 
 /*
- * Desktop safe corridor for the open results drawer.
- * The drawer occupies 16px + 340px on the left. Search/thematic controls are
- * normally centered against the full viewport, which makes their left edge
- * slide underneath the drawer around common Windows/browser scaling.
- * Shrink those floating controls only while the drawer is open so their left
- * edge always stays clear of the panel. Closing the drawer restores the normal
- * centered width automatically without duplicating React state.
+ * Desktop safe corridor for the open results drawer. Search/thematic controls
+ * become narrower only when needed, while the map canvas itself remains stable.
  */
 @media (min-width: 980px) {
   body.map-route-active .map-experience-v2:has(.hm-left-panel.open) .hm-search-v2-wrap {
