@@ -16,10 +16,12 @@ const RAW_BUILDINGS_PMTILES_URL = (
   import.meta.env.VITE_BUILDINGS_PMTILES_URL || '/maps/hoalac-buildings.pmtiles'
 ).trim();
 
-export const PMTILES_URL = versionLocalArchive(RAW_PMTILES_URL, 'basemap-v2');
+// Bump these tags whenever the cartography contract changes so browsers do
+// not keep an older PMTiles header/style combination after deploys.
+export const PMTILES_URL = versionLocalArchive(RAW_PMTILES_URL, 'basemap-v3');
 export const BUILDINGS_PMTILES_URL = versionLocalArchive(
   RAW_BUILDINGS_PMTILES_URL,
-  'buildings-v2'
+  'buildings-v3'
 );
 
 const MAPTILER_KEY = (import.meta.env.VITE_MAPTILER_KEY || '').trim();
@@ -87,16 +89,84 @@ const FLAVORS = {
 
 const DETAIL_PALETTES = {
   streets: {
-    buildingOutline: '#b7c2ca'
+    building: '#d7ddd9',
+    buildingPart: '#e6eae7',
+    buildingOutline: '#aeb9b4',
+    building3D: '#cbd4cf',
+    buildingPart3D: '#dce3df',
+    roadHighway: '#fff3d8',
+    roadHighwayCasing: '#d6c9aa',
+    roadMajor: '#ffffff',
+    roadMajorCasing: '#cbd4d0',
+    roadMinor: '#ffffff',
+    roadMinorCasing: '#d8dfdc',
+    roadService: '#f7f9f8',
+    roadPath: '#d8cdbd',
+    roadLabel: '#45534d',
+    roadLabelHalo: '#ffffff',
+    localityLabel: '#29473e',
+    subplaceLabel: '#607069',
+    placeHalo: 'rgba(255,255,255,0.96)'
   },
   contrast: {
-    buildingOutline: '#aab2b8'
+    building: '#d5d9dc',
+    buildingPart: '#e4e7e9',
+    buildingOutline: '#a6aeb3',
+    building3D: '#c9d0d4',
+    buildingPart3D: '#dce1e4',
+    roadHighway: '#ffffff',
+    roadHighwayCasing: '#9ca5aa',
+    roadMajor: '#f8f9fa',
+    roadMajorCasing: '#aeb6ba',
+    roadMinor: '#f5f6f7',
+    roadMinorCasing: '#c5cbce',
+    roadService: '#eceff0',
+    roadPath: '#b5b8ba',
+    roadLabel: '#343a3d',
+    roadLabelHalo: '#ffffff',
+    localityLabel: '#22292c',
+    subplaceLabel: '#626a6e',
+    placeHalo: 'rgba(255,255,255,0.96)'
   },
   dark: {
-    buildingOutline: '#59636c'
+    building: '#606b66',
+    buildingPart: '#6d7873',
+    buildingOutline: '#8b9691',
+    building3D: '#6a7771',
+    buildingPart3D: '#78857f',
+    roadHighway: '#88785c',
+    roadHighwayCasing: '#4b4640',
+    roadMajor: '#68736e',
+    roadMajorCasing: '#414944',
+    roadMinor: '#56615c',
+    roadMinorCasing: '#343b38',
+    roadService: '#49534f',
+    roadPath: '#756c60',
+    roadLabel: '#e5ebe8',
+    roadLabelHalo: '#18211e',
+    localityLabel: '#f0f5f2',
+    subplaceLabel: '#bdc8c3',
+    placeHalo: 'rgba(19,28,24,0.94)'
   },
   clean: {
-    buildingOutline: '#c8d0d5'
+    building: '#e0e4e2',
+    buildingPart: '#ecefed',
+    buildingOutline: '#c0c8c4',
+    building3D: '#d4dbd7',
+    buildingPart3D: '#e2e7e4',
+    roadHighway: '#f7f2e8',
+    roadHighwayCasing: '#d5cec0',
+    roadMajor: '#fafafa',
+    roadMajorCasing: '#d1d7d4',
+    roadMinor: '#f8f9f8',
+    roadMinorCasing: '#e0e4e2',
+    roadService: '#f2f4f3',
+    roadPath: '#d8d0c6',
+    roadLabel: '#56615c',
+    roadLabelHalo: '#ffffff',
+    localityLabel: '#355148',
+    subplaceLabel: '#718079',
+    placeHalo: 'rgba(255,255,255,0.98)'
   }
 };
 
@@ -117,14 +187,6 @@ function cloneLayer(layer) {
   };
 }
 
-/**
- * Protomaps already ships detailed OSM buildings, roads, address points and
- * POIs. Now that Hola Maps covers a much smaller area, we can afford to make
- * those layers more useful at local zooms without cluttering the overview.
- *
- * The source itself is still the same compact PMTiles archive. This function
- * only changes cartography / progressive disclosure by zoom.
- */
 function buildingHeightExpression(fallbackHeight = 7.5) {
   return [
     'case',
@@ -149,16 +211,6 @@ function buildingBaseExpression() {
 
 function createSupplementalBuildingLayers(mode) {
   const palette = DETAIL_PALETTES[mode] || DETAIL_PALETTES.streets;
-  const fillOpacity = [
-    'interpolate',
-    ['linear'],
-    ['zoom'],
-    14.4, 0,
-    15, 0.46,
-    16, 0.58,
-    17, 0.68,
-    18, 0.74
-  ];
 
   return [
     {
@@ -166,10 +218,17 @@ function createSupplementalBuildingLayers(mode) {
       type: 'fill',
       source: 'overture-buildings',
       'source-layer': 'building',
-      minzoom: 14.4,
+      minzoom: 14.45,
       paint: {
-        'fill-color': mode === 'dark' ? '#6b747d' : '#d8dee5',
-        'fill-opacity': fillOpacity,
+        'fill-color': palette.building,
+        'fill-opacity': [
+          'interpolate', ['linear'], ['zoom'],
+          14.45, 0,
+          15, 0.38,
+          16, 0.56,
+          17, 0.68,
+          18, 0.74
+        ],
         'fill-outline-color': palette.buildingOutline
       }
     },
@@ -178,17 +237,15 @@ function createSupplementalBuildingLayers(mode) {
       type: 'fill',
       source: 'overture-buildings',
       'source-layer': 'building_part',
-      minzoom: 15,
+      minzoom: 15.15,
       paint: {
-        'fill-color': mode === 'dark' ? '#737d87' : '#e3e7eb',
+        'fill-color': palette.buildingPart,
         'fill-opacity': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          15, 0.18,
-          16, 0.30,
-          17, 0.42,
-          18, 0.5
+          'interpolate', ['linear'], ['zoom'],
+          15.15, 0,
+          16, 0.24,
+          17, 0.38,
+          18, 0.48
         ],
         'fill-outline-color': palette.buildingOutline
       }
@@ -198,16 +255,19 @@ function createSupplementalBuildingLayers(mode) {
       type: 'fill-extrusion',
       source: 'overture-buildings',
       'source-layer': 'building',
-      minzoom: 16.4,
+      minzoom: 16.35,
       filter: ['!=', ['get', 'has_parts'], true],
-      layout: {
-        visibility: 'none'
-      },
+      layout: { visibility: 'none' },
       paint: {
-        'fill-extrusion-color': mode === 'dark' ? '#737d87' : '#d4dce2',
-        'fill-extrusion-height': buildingHeightExpression(7.5),
+        'fill-extrusion-color': palette.building3D,
+        'fill-extrusion-height': buildingHeightExpression(7.2),
         'fill-extrusion-base': buildingBaseExpression(),
-        'fill-extrusion-opacity': 0.88,
+        'fill-extrusion-opacity': [
+          'interpolate', ['linear'], ['zoom'],
+          16.35, 0.72,
+          17, 0.84,
+          18, 0.9
+        ],
         'fill-extrusion-vertical-gradient': true
       }
     },
@@ -216,184 +276,246 @@ function createSupplementalBuildingLayers(mode) {
       type: 'fill-extrusion',
       source: 'overture-buildings',
       'source-layer': 'building_part',
-      minzoom: 16.4,
-      layout: {
-        visibility: 'none'
-      },
+      minzoom: 16.35,
+      layout: { visibility: 'none' },
       paint: {
-        'fill-extrusion-color': mode === 'dark' ? '#7f8993' : '#e1e6ea',
-        'fill-extrusion-height': buildingHeightExpression(6),
+        'fill-extrusion-color': palette.buildingPart3D,
+        'fill-extrusion-height': buildingHeightExpression(5.8),
         'fill-extrusion-base': buildingBaseExpression(),
-        'fill-extrusion-opacity': 0.9,
+        'fill-extrusion-opacity': [
+          'interpolate', ['linear'], ['zoom'],
+          16.35, 0.7,
+          17, 0.86,
+          18, 0.92
+        ],
         'fill-extrusion-vertical-gradient': true
       }
     }
   ];
 }
 
+function roadWidth(kind) {
+  if (kind === 'highway') {
+    return ['interpolate', ['exponential', 1.35], ['zoom'], 10, 1.1, 13, 2.7, 15, 5.2, 17, 9, 18, 12.5];
+  }
+  if (kind === 'major') {
+    return ['interpolate', ['exponential', 1.35], ['zoom'], 11, 0.9, 13, 2, 15, 4, 17, 7.2, 18, 10.2];
+  }
+  if (kind === 'minor') {
+    return ['interpolate', ['exponential', 1.35], ['zoom'], 13, 0.65, 15, 1.8, 16, 3, 17, 5.1, 18, 7.8];
+  }
+  return ['interpolate', ['exponential', 1.35], ['zoom'], 14, 0.4, 15, 0.95, 16, 1.8, 17, 3.3, 18, 5.3];
+}
+
+function enhanceRoadLayer(layer, palette) {
+  const id = String(layer.id || '');
+  if (layer['source-layer'] !== 'roads') return layer;
+
+  const isCasing = id.includes('casing');
+  const isHighway = id.includes('highway');
+  const isMajor = id.includes('major');
+  const isMinor = id.includes('minor') && !id.includes('service');
+  const isService = id.includes('minor_service');
+  const isOther = id === 'roads_other';
+
+  if (isHighway) {
+    layer.paint = {
+      ...layer.paint,
+      'line-color': isCasing ? palette.roadHighwayCasing : palette.roadHighway,
+      ...(isCasing ? {} : { 'line-width': roadWidth('highway') })
+    };
+  } else if (isMajor) {
+    layer.paint = {
+      ...layer.paint,
+      'line-color': isCasing ? palette.roadMajorCasing : palette.roadMajor,
+      ...(isCasing ? {} : { 'line-width': roadWidth('major') })
+    };
+  } else if (isMinor) {
+    layer.paint = {
+      ...layer.paint,
+      'line-color': isCasing ? palette.roadMinorCasing : palette.roadMinor,
+      ...(isCasing ? {} : { 'line-width': roadWidth('minor') })
+    };
+  }
+
+  if (isService) {
+    layer.minzoom = 13.65;
+    layer.paint = {
+      ...layer.paint,
+      'line-color': isCasing ? palette.roadMinorCasing : palette.roadService,
+      ...(isCasing
+        ? {
+            'line-gap-width': roadWidth('service'),
+            'line-width': ['interpolate', ['linear'], ['zoom'], 13.65, 0.45, 17, 0.9]
+          }
+        : { 'line-width': roadWidth('service') })
+    };
+  }
+
+  if (isOther) {
+    layer.minzoom = 14;
+    layer.paint = {
+      ...layer.paint,
+      'line-color': palette.roadPath,
+      'line-width': ['interpolate', ['exponential', 1.3], ['zoom'], 14, 0.4, 15, 0.72, 16, 1.25, 17, 2.1, 18, 3.5],
+      'line-opacity': ['interpolate', ['linear'], ['zoom'], 14, 0.46, 16, 0.72, 17, 0.84]
+    };
+  }
+
+  return layer;
+}
+
+function enhancePlaceLayer(layer, palette) {
+  if (layer['source-layer'] !== 'places') return layer;
+
+  if (layer.id === 'places_locality') {
+    layer.minzoom = 10.5;
+    layer.layout = {
+      ...layer.layout,
+      'text-size': [
+        'interpolate', ['linear'], ['zoom'],
+        10.5,
+        [
+          'match', ['get', 'kind_detail'],
+          ['city', 'town'], 13,
+          'village', 12,
+          ['hamlet', 'locality'], 10.5,
+          11
+        ],
+        13,
+        [
+          'match', ['get', 'kind_detail'],
+          ['city', 'town'], 16,
+          'village', 14,
+          ['hamlet', 'locality'], 12,
+          12.5
+        ],
+        16,
+        [
+          'match', ['get', 'kind_detail'],
+          ['city', 'town'], 18,
+          'village', 16,
+          ['hamlet', 'locality'], 13.5,
+          14
+        ]
+      ],
+      'text-padding': ['interpolate', ['linear'], ['zoom'], 10.5, 2, 13, 4, 16, 7],
+      'text-letter-spacing': [
+        'match', ['get', 'kind_detail'],
+        ['city', 'town'], 0.02,
+        0
+      ],
+      'text-transform': 'none',
+      'text-max-width': 9,
+      'text-optional': true
+    };
+    layer.paint = {
+      ...layer.paint,
+      'text-color': palette.localityLabel,
+      'text-halo-color': palette.placeHalo,
+      'text-halo-width': 1.45,
+      'text-halo-blur': 0.2
+    };
+  }
+
+  if (layer.id === 'places_subplace') {
+    layer.minzoom = 12.4;
+    layer.layout = {
+      ...layer.layout,
+      'text-size': ['interpolate', ['linear'], ['zoom'], 12.4, 9.5, 14, 11.5, 16, 13],
+      'text-padding': ['interpolate', ['linear'], ['zoom'], 12.4, 2, 15, 5],
+      'text-transform': 'none',
+      'text-letter-spacing': 0,
+      'text-max-width': 9,
+      'text-optional': true
+    };
+    layer.paint = {
+      ...layer.paint,
+      'text-color': palette.subplaceLabel,
+      'text-halo-color': palette.placeHalo,
+      'text-halo-width': 1.25,
+      'text-halo-blur': 0.2
+    };
+  }
+
+  return layer;
+}
+
 function enhanceLocalDetailLayers(baseLayers, mode, includeSupplementalBuildings = false) {
   const palette = DETAIL_PALETTES[mode] || DETAIL_PALETTES.streets;
 
   const enhanced = baseLayers.map((baseLayer) => {
-    const layer = cloneLayer(baseLayer);
+    let layer = cloneLayer(baseLayer);
     const sourceLayer = layer['source-layer'];
 
-    // z15+ in Protomaps contains individual OSM building footprints instead
-    // of the merged low-zoom representation. Keep the overview clean, then
-    // make each house/building increasingly legible while zooming in.
+    layer = enhanceRoadLayer(layer, palette);
+    layer = enhancePlaceLayer(layer, palette);
+
     if (layer.id === 'buildings' && sourceLayer === 'buildings') {
-      layer.minzoom = 14.6;
+      layer.minzoom = 14.55;
       layer.paint = {
         ...layer.paint,
-        'fill-opacity': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          14.6, 0,
-          15, 0.42,
-          16, 0.52,
-          17, 0.62,
-          18, 0.68
-        ],
+        'fill-color': palette.building,
+        'fill-opacity': ['interpolate', ['linear'], ['zoom'], 14.55, 0, 15, 0.38, 16, 0.5, 17, 0.6, 18, 0.66],
         'fill-outline-color': palette.buildingOutline
       };
     }
 
-    // Address points are styled at z18 upstream. Our local archive now has
-    // real z17 tiles, so expose available house numbers one level earlier.
     if (layer.id === 'address_label' && sourceLayer === 'buildings') {
       layer.minzoom = 17;
       layer.layout = {
         ...layer.layout,
-        'text-size': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          17, 10,
-          18, 12
-        ],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 17, 9.5, 18, 11.5],
         'text-allow-overlap': false
       };
     }
 
-    // Service roads become important in campuses, villages and industrial
-    // areas. Keep them subtle at z14 and progressively strengthen them.
-    if (layer.id === 'roads_minor_service' && sourceLayer === 'roads') {
-      layer.minzoom = 13.8;
-      layer.paint = {
-        ...layer.paint,
-        'line-width': [
-          'interpolate',
-          ['exponential', 1.45],
-          ['zoom'],
-          13.8, 0.35,
-          15, 1.1,
-          16, 2.2,
-          17, 4.2,
-          18, 7
-        ]
-      };
-    }
-
-    if (layer.id === 'roads_minor_service_casing' && sourceLayer === 'roads') {
-      layer.minzoom = 13.8;
-      layer.paint = {
-        ...layer.paint,
-        'line-gap-width': [
-          'interpolate',
-          ['exponential', 1.45],
-          ['zoom'],
-          13.8, 0,
-          15, 1.1,
-          16, 2.2,
-          17, 4.2,
-          18, 7
-        ],
-        'line-width': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          13.8, 0.5,
-          17, 1
-        ]
-      };
-    }
-
-    // Paths, tracks, alleys and pedestrian links should only become visually
-    // meaningful when the user is already looking at a neighbourhood.
-    if (layer.id === 'roads_other' && sourceLayer === 'roads') {
-      layer.minzoom = 14;
-      layer.paint = {
-        ...layer.paint,
-        'line-width': [
-          'interpolate',
-          ['exponential', 1.35],
-          ['zoom'],
-          14, 0.45,
-          15, 0.8,
-          16, 1.45,
-          17, 2.5,
-          18, 4.2
-        ],
-        'line-opacity': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          14, 0.55,
-          16, 0.78,
-          17, 0.92
-        ]
-      };
-    }
-
-    // Street names become useful slightly before z15 now that the map is a
-    // local product rather than a regional overview.
-    if (layer.id === 'roads_labels_minor' && sourceLayer === 'roads') {
-      layer.minzoom = 14.4;
+    if (layer.id === 'roads_labels_major' && sourceLayer === 'roads') {
+      layer.minzoom = 10.7;
       layer.layout = {
         ...layer.layout,
-        'text-size': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          14.4, 10.5,
-          16, 12,
-          18, 13
-        ],
-        'text-max-width': 10
+        'text-size': ['interpolate', ['linear'], ['zoom'], 10.7, 10.5, 13, 11.5, 16, 13, 18, 14],
+        'symbol-spacing': ['interpolate', ['linear'], ['zoom'], 11, 420, 15, 300, 18, 220],
+        'text-max-width': 12
+      };
+      layer.paint = {
+        ...layer.paint,
+        'text-color': palette.roadLabel,
+        'text-halo-color': palette.roadLabelHalo,
+        'text-halo-width': 1.35,
+        'text-halo-blur': 0.15
       };
     }
 
-    // Keep one-way arrows readable without flooding z15.
+    if (layer.id === 'roads_labels_minor' && sourceLayer === 'roads') {
+      layer.minzoom = 14.15;
+      layer.layout = {
+        ...layer.layout,
+        'text-size': ['interpolate', ['linear'], ['zoom'], 14.15, 10, 16, 11.5, 18, 12.5],
+        'symbol-spacing': ['interpolate', ['linear'], ['zoom'], 14.15, 360, 18, 240],
+        'text-max-width': 10
+      };
+      layer.paint = {
+        ...layer.paint,
+        'text-color': palette.roadLabel,
+        'text-halo-color': palette.roadLabelHalo,
+        'text-halo-width': 1.2,
+        'text-halo-blur': 0.15
+      };
+    }
+
     if (layer.id === 'roads_oneway' && sourceLayer === 'roads') {
       layer.minzoom = 16;
       layer.layout = {
         ...layer.layout,
-        'symbol-spacing': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          16, 140,
-          18, 90
-        ]
+        'symbol-spacing': ['interpolate', ['linear'], ['zoom'], 16, 145, 18, 95]
       };
     }
 
-    // POIs are the most useful local context. Preserve Protomaps' ranking
-    // filter, but make labels more readable as soon as dense z16-z17 data
-    // starts appearing.
     if (layer.id === 'pois' && sourceLayer === 'pois') {
       layer.layout = {
         ...layer.layout,
-        'text-size': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          15, 9,
-          16, 10,
-          17, 11.5,
-          19, 15
-        ],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 15, 9, 16, 10, 17, 11.5, 19, 15],
         'text-max-width': 9,
         'text-padding': 2
       };
@@ -409,7 +531,9 @@ function enhanceLocalDetailLayers(baseLayers, mode, includeSupplementalBuildings
   if (buildingIndex >= 0) {
     enhanced.splice(buildingIndex, 1, ...supplementalLayers);
   } else {
-    enhanced.push(...supplementalLayers);
+    const firstRoadIndex = enhanced.findIndex((layer) => layer['source-layer'] === 'roads');
+    if (firstRoadIndex >= 0) enhanced.splice(firstRoadIndex, 0, ...supplementalLayers);
+    else enhanced.push(...supplementalLayers);
   }
 
   return enhanced;
@@ -429,8 +553,6 @@ function createSatelliteRasterLayer({
     maxzoom: 22,
     paint: {
       'raster-opacity': opacity,
-      // Zero fade avoids temporary white seams while zooming/panning between
-      // remote raster tiles. Failed primary tiles reveal the fallback layer.
       'raster-fade-duration': 0,
       'raster-resampling': 'linear',
       'raster-saturation': enhance ? 0.04 : 0,
@@ -487,8 +609,8 @@ function createHybridOverlayLayers(layers) {
         const isCasing = String(layer.id).includes('casing');
         layer.paint = {
           ...layer.paint,
-          'line-opacity': isCasing ? 0.72 : 0.88,
-          ...(isCasing ? { 'line-color': 'rgba(255,255,255,0.9)' } : {})
+          'line-opacity': isCasing ? 0.74 : 0.9,
+          ...(isCasing ? { 'line-color': 'rgba(255,255,255,0.92)' } : {})
         };
       }
 
