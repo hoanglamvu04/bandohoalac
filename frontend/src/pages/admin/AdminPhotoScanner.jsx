@@ -18,7 +18,8 @@ import {
   getPhotoScannerStats,
   getPhotoScanRuns,
   rejectPhotoCandidate,
-  startPhotoScan
+  startPhotoScan,
+  stopPhotoScan
 } from '../../services/photoScannerApi.js';
 
 const STATUS_LABELS = {
@@ -55,6 +56,7 @@ export default function AdminPhotoScanner() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
   const [starting, setStarting] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const [filters, setFilters] = useState({ status: 'PENDING', source: 'ALL', q: '' });
   const [scope, setScope] = useState('MISSING_IMAGES');
   const [scanLimit, setScanLimit] = useState(50);
@@ -93,7 +95,7 @@ export default function AdminPhotoScanner() {
   }, [activeRun, load]);
 
   async function startScan() {
-    if (starting || activeRun) return;
+    if (starting || stopping || activeRun) return;
     setStarting(true);
     try {
       const data = await startPhotoScan({ scope, limit: Number(scanLimit) || 50 });
@@ -104,6 +106,26 @@ export default function AdminPhotoScanner() {
       showToast(error.message, 'error');
     } finally {
       setStarting(false);
+    }
+  }
+
+  async function stopScan() {
+    if (!activeRun || stopping) return;
+    const confirmed = window.confirm(
+      'Dừng lượt quét hiện tại? Các ảnh đã tìm được vẫn được giữ lại và bạn có thể bắt đầu lượt quét mới ngay sau đó.'
+    );
+    if (!confirmed) return;
+
+    setStopping(true);
+    try {
+      await stopPhotoScan(activeRun.id);
+      showToast('Đã dừng lượt quét. Bạn có thể quét lại ngay.', 'success');
+      await load({ quiet: true });
+    } catch (error) {
+      showToast(error.message, 'error');
+      await load({ quiet: true });
+    } finally {
+      setStopping(false);
     }
   }
 
@@ -172,7 +194,7 @@ export default function AdminPhotoScanner() {
               <small>Wikimedia chạy ngay. Foursquare tự bật khi VPS có FOURSQUARE_API_KEY.</small>
             </div>
           </div>
-          <select value={scope} onChange={(event) => setScope(event.target.value)}>
+          <select value={scope} onChange={(event) => setScope(event.target.value)} disabled={Boolean(activeRun)}>
             <option value="MISSING_IMAGES">Chỉ địa điểm thiếu ảnh</option>
             <option value="ALL">Quét lại tất cả</option>
           </select>
@@ -183,11 +205,30 @@ export default function AdminPhotoScanner() {
             value={scanLimit}
             onChange={(event) => setScanLimit(event.target.value)}
             aria-label="Số địa điểm cần quét"
+            disabled={Boolean(activeRun)}
           />
-          <button type="button" onClick={startScan} disabled={starting || Boolean(activeRun)}>
-            <ScanSearch size={16} />
-            {activeRun ? 'Đang quét…' : (starting ? 'Đang tạo…' : 'Bắt đầu quét')}
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button type="button" onClick={startScan} disabled={starting || stopping || Boolean(activeRun)}>
+              <ScanSearch size={16} />
+              {activeRun ? 'Đang quét…' : (starting ? 'Đang tạo…' : 'Bắt đầu quét')}
+            </button>
+            {activeRun && (
+              <button
+                type="button"
+                onClick={stopScan}
+                disabled={stopping}
+                style={{
+                  background: '#fff4f1',
+                  color: '#9a3f2e',
+                  border: '1px solid #e8c2b8',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <X size={16} />
+                {stopping ? 'Đang dừng…' : 'Dừng quét'}
+              </button>
+            )}
+          </div>
         </section>
       )}
 
