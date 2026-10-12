@@ -1,0 +1,135 @@
+.place-v2-actions-expanded {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.place-v2-actions-expanded > a,
+.place-v2-actions-expanded > button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 15px;
+  border: 1px solid rgba(20, 54, 47, 0.12);
+  border-radius: 14px;
+  background: #fffdfa;
+  color: #173d32;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 750;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: 0 8px 22px rgba(20, 54, 47, 0.055);
+}
+
+.place-v2-actions-expanded > a:first-child {
+  background: #153f33;
+  color: #fff;
+  border-color: #153f33;
+}
+
+.place-v2-actions-expanded > button.active {
+  background: #f6ece6;
+  color: #b45d39;
+  border-color: rgba(180, 93, 57, 0.18);
+}
+
+.place-v2-actions-expanded > button:disabled {
+  opacity: 0.62;
+  cursor: wait;
+}
+
+.place-v2-owner-card {
+  margin: 22px 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 22px 24px;
+  border: 1px solid rgba(20, 54, 47, 0.1);
+  border-radius: 24px;
+  background: linear-gradient(135deg, #fffdfa 0%, #f3f6f2 100%);
+  box-shadow: 0 14px 36px rgba(20, 54, 47, 0.05);
+}
+
+.place-v2-owner-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: #e8f0eb;
+  color: #173d32;
+}
+
+.place-v2-owner-card h2 {
+  margin: 4px 0 7px;
+  color: #173d32;
+  font-size: 1.18rem;
+}
+
+.place-v2-owner-card p {
+  margin: 0;
+  color: #64736f;
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+.place-v2-owner-card > a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 17px;
+  border-radius: 14px;
+  background: #153f33;
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .place-v2-actions-expanded {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .place-v2-actions-expanded > a,
+  .place-v2-actions-expanded > button {
+    min-width: 0;
+    width: 100%;
+    padding: 0 10px;
+    font-size: 0.84rem;
+  }
+
+  .place-v2-owner-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 13px;
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .place-v2-owner-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+  }
+
+  .place-v2-owner-card h2 {
+    font-size: 1.03rem;
+  }
+
+  .place-v2-owner-card p {
+    font-size: 0.88rem;
+  }
+
+  .place-v2-owner-card > a {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
