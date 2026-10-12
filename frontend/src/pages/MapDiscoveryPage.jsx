@@ -1,6 +1,6 @@
 import '../mapInteractionBridge.js';
 import '../map-experience-v2.css';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Building2,
   Coffee,
@@ -19,7 +19,6 @@ import { useSearchParams } from 'react-router-dom';
 import MapPage from './MapPage.jsx';
 import MapSearchV2 from '../components/MapSearchV2.jsx';
 import MapPinOverlay from '../components/MapPinOverlay.jsx';
-import { getHolaMapInstance } from '../mapInteractionBridge.js';
 
 const THEMES = [
   { id: 'all', label: 'Tất cả', icon: MapPin, category: null },
@@ -33,57 +32,6 @@ const THEMES = [
   { id: 'mobility', label: 'Di chuyển', icon: Route, category: 'giao-thong' },
   { id: 'property', label: 'Nhà đất', icon: Building2, category: 'bat-dong-san' }
 ];
-
-const DESKTOP_ENGINE_GUTTER = 372;
-
-function DesktopEnginePanelLayout() {
-  useEffect(() => {
-    const panel = document.querySelector('.hm-left-panel');
-    if (!panel) return undefined;
-
-    let lastPadding = null;
-
-    const applyLayout = () => {
-      const isDesktop = window.matchMedia('(min-width: 1100px)').matches;
-      const panelOpen = panel.classList.contains('open');
-      const nextPadding = isDesktop && panelOpen ? DESKTOP_ENGINE_GUTTER : 0;
-      const map = getHolaMapInstance();
-
-      if (!map || nextPadding === lastPadding) return;
-
-      map.setPadding({
-        top: 0,
-        right: 0,
-        bottom: 0,
-        left: nextPadding
-      });
-      map.resize();
-      lastPadding = nextPadding;
-    };
-
-    const observer = new MutationObserver(applyLayout);
-    observer.observe(panel, { attributes: true, attributeFilter: ['class'] });
-    window.addEventListener('resize', applyLayout);
-
-    const retryTimers = [0, 180, 450, 900, 1800, 3200].map((delay) =>
-      window.setTimeout(applyLayout, delay)
-    );
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', applyLayout);
-      retryTimers.forEach((timer) => window.clearTimeout(timer));
-
-      const map = getHolaMapInstance();
-      if (map) {
-        map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
-        map.resize();
-      }
-    };
-  }, []);
-
-  return null;
-}
 
 export default function MapDiscoveryPage() {
   const [params, setParams] = useSearchParams();
@@ -112,7 +60,6 @@ export default function MapDiscoveryPage() {
       <MapPage />
       <MapSearchV2 />
       <MapPinOverlay />
-      <DesktopEnginePanelLayout />
 
       <aside className={open ? 'theme-layer-dock open' : 'theme-layer-dock'} aria-label="Chuyên đề Hòa Lạc">
         <button className="theme-layer-toggle" type="button" onClick={() => setOpen((value) => !value)}>
