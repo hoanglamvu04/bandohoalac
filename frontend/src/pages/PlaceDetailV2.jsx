@@ -2,20 +2,33 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   BadgeCheck,
+  Building2,
   Camera,
   Clock3,
   ExternalLink,
   Globe2,
+  Heart,
   Images,
   MapPin,
   Navigation,
   Phone,
+  Share2,
   Sparkles,
   Star,
   Users
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
-import { client, getNearbyPlaces, getPlace } from '../services/api.js';
+import {
+  addFavorite,
+  client,
+  getNearbyPlaces,
+  getPlace,
+  getPlaceMe,
+  removeFavorite
+} from '../services/api.js';
+import { useAuth } from '../context/AuthContext.jsx';
+import { useToast } from '../context/ToastContext.jsx';
+import SeoHead from '../components/SeoHead.jsx';
 import PlaceContributionPanel from '../components/PlaceContributionPanel.jsx';
 import PlaceReviews from '../components/PlaceReviews.jsx';
 
@@ -34,13 +47,22 @@ function normalizeWebsite(value) {
   return /^https?:\/\//i.test(value) ? value : 'https://' + value;
 }
 
+function compactDescription(value, fallback) {
+  const text = String(value || fallback || '').replace(/\s+/g, ' ').trim();
+  return text.length > 165 ? text.slice(0, 162).trimEnd() + '...' : text;
+}
+
 export default function PlaceDetailV2() {
   const { id } = useParams();
+  const { user } = useAuth();
+  const { showToast } = useToast();
   const [place, setPlace] = useState(null);
   const [status, setStatus] = useState('loading');
   const [nearby, setNearby] = useState([]);
   const [haloSpot, setHaloSpot] = useState(null);
   const [activeImage, setActiveImage] = useState(0);
+  const [favorite, setFavorite] = useState(false);
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -48,6 +70,7 @@ export default function PlaceDetailV2() {
     setNearby([]);
     setHaloSpot(null);
     setActiveImage(0);
+    setFavorite(false);
 
     getPlace(id)
       .then((data) => {
@@ -80,6 +103,29 @@ export default function PlaceDetailV2() {
     };
   }, [id]);
 
+  useEffect(() => {
+    let active = true;
+
+    if (!user || !place?.id) {
+      setFavorite(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    getPlaceMe(place.id)
+      .then((data) => {
+        if (active) setFavorite(Boolean(data?.favorite));
+      })
+      .catch(() => {
+        if (active) setFavorite(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id, place?.id]);
+
   const images = useMemo(() => uniqueImages([
     ...(Array.isArray(place?.images) ? place.images : []),
     ...(Array.isArray(haloSpot?.media) ? haloSpot.media.map((item) => item?.url) : [])
@@ -100,13 +146,97 @@ export default function PlaceDetailV2() {
   }
 
   const rating = Number(place.rating) || 0;
+  const reviewCount = Number(place.reviews || place.ratingCount || 0);
   const website = normalizeWebsite(place.website);
+  const canonical = 'https://maps.dothihoalac.vn/place/' + encodeURIComponent(place.id);
+  const metaDescription = compactDescription(
+    place.description,
+    `${place.name} tại ${place.address || 'Hòa Lạc'}. Xem vị trí, hình ảnh, đánh giá và chỉ đường trên Hola Maps.`
+  );
   const mapsUrl = Number.isFinite(Number(place.lat)) && Number.isFinite(Number(place.lng))
     ? 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(place.lat + ',' + place.lng)
     : '';
 
+  const placeSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Place',
+    name: place.name,
+    description: metaDescription,
+    url: canonical,
+    ...(place.address ? { address: place.address } : {}),
+    ...(place.phone ? { telephone: place.phone } : {}),
+    ...(images.length ? { image: images.slice(0, 4) } : {}),
+    ...(Number.isFinite(Number(place.lat)) && Number.isFinite(Number(place.lng)) ? {
+      geo: {
+        '@type': 'GeoCoordinates',
+        latitude: Number(place.lat),
+        longitude: Number(place.lng)
+      }
+    } : {}),
+    ...(rating > 0 && reviewCount > 0 ? {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: rating,
+        reviewCount
+      }
+    } : {})
+  };
+
+  async function toggleFavorite() {
+    if (!user) {
+      showToast('Đăng nhập để lưu địa điểm này.', 'info');
+      return;
+    }
+    if (favoriteBusy) return;
+
+    setFavoriteBusy(true);
+    try {
+      const data = favorite
+        ? await removeFavorite(place.id)
+        : await addFavorite(place.id);
+      setFavorite(Boolean(data?.favorite));
+      showToast(data?.favorite ? 'Đã lưu địa điểm.' : 'Đã bỏ lưu địa điểm.', 'success');
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setFavoriteBusy(false);
+    }
+  }
+
+  async function sharePlace() {
+    const shareData = {
+      title: place.name + ' | Hola Maps',
+      text: `${place.name}${place.address ? ' · ' + place.address : ''}`,
+      url: canonical
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(canonical);
+        showToast('Đã sao chép link địa điểm.', 'success');
+        return;
+      }
+      showToast('Bạn có thể sao chép đường dẫn trên thanh địa chỉ để chia sẻ.', 'info');
+    } catch (error) {
+      if (error?.name !== 'AbortError') showToast('Chưa thể chia sẻ địa điểm lúc này.', 'error');
+    }
+  }
+
   return (
     <main className="place-v2-page">
+      <SeoHead
+        title={place.name}
+        description={metaDescription}
+        canonical={canonical}
+        image={images[0] || undefined}
+        type="article"
+        jsonLd={placeSchema}
+      />
+
       <div className="place-v2-topbar">
         <Link to="/map" className="place-v2-back"><ArrowLeft size={18} /> Bản đồ</Link>
         <span className="place-v2-source"><BadgeCheck size={15} /> {place.source === 'ADMIN' ? 'Hola Maps' : 'Dữ liệu cộng đồng'}</span>
@@ -118,14 +248,18 @@ export default function PlaceDetailV2() {
           <h1>{place.name}</h1>
           <div className="place-v2-rating-row">
             <span className="place-v2-rating"><Star size={17} fill="currentColor" /> {rating > 0 ? rating.toFixed(1) : 'Mới'}</span>
-            <span>{place.reviews || 0} đánh giá</span>
+            <span>{reviewCount} đánh giá</span>
             <span>•</span>
             <span><MapPin size={16} /> {place.address || 'Hòa Lạc, Hà Nội'}</span>
           </div>
         </div>
 
-        <div className="place-v2-actions">
+        <div className="place-v2-actions place-v2-actions-expanded">
           {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer"><Navigation size={17} /> Chỉ đường</a>}
+          <button type="button" onClick={toggleFavorite} className={favorite ? 'active' : ''} disabled={favoriteBusy}>
+            <Heart size={17} fill={favorite ? 'currentColor' : 'none'} /> {favorite ? 'Đã lưu' : 'Lưu'}
+          </button>
+          <button type="button" onClick={sharePlace}><Share2 size={17} /> Chia sẻ</button>
           {place.phone && <a href={'tel:' + place.phone}><Phone size={17} /> Gọi</a>}
           {website && <a href={website} target="_blank" rel="noreferrer"><Globe2 size={17} /> Website</a>}
         </div>
@@ -176,6 +310,16 @@ export default function PlaceDetailV2() {
           {mapsUrl && <a className="place-v2-inline-action" href={mapsUrl} target="_blank" rel="noreferrer"><Navigation size={16} /> Mở chỉ đường</a>}
         </section>
       </div>
+
+      <section className="place-v2-owner-card">
+        <div className="place-v2-owner-icon"><Building2 size={21} /></div>
+        <div>
+          <span className="place-v2-kicker">THÔNG TIN DOANH NGHIỆP</span>
+          <h2>Bạn đang quản lý địa điểm này?</h2>
+          <p>Xác nhận quyền quản lý để gửi thông tin chính thức và giúp dữ liệu địa điểm luôn đúng hơn.</p>
+        </div>
+        <Link to={'/claim-place/' + encodeURIComponent(place.id)}>Xác nhận địa điểm</Link>
+      </section>
 
       {haloSpot?.media?.length > 0 && (
         <section className="place-v2-section">
