@@ -141,11 +141,12 @@ export const router = createBrowserRouter([
       { index: true, element: withSuspense(HomePage) },
       { path: 'map', element: withSuspense(MapPage) },
       { path: 'halo', element: withSuspense(HaloHolaMapPage) },
-      // Embed must use the same discovery stack as /map so HALO HOLA receives
-      // every mobile map capability (search, current location, filters, pins)
-      // without maintaining a second UI implementation. App.jsx still treats
-      // /embed as an embed route, so native Hola Maps navbar/bottom-nav stay hidden.
+      // Embed uses the same discovery stack as /map so HALO HOLA receives
+      // every mobile map capability without maintaining a second UI.
       { path: 'embed', element: withSuspense(MapPage) },
+      // HALO HOLA artwork/check-in layer also has an embed-safe route so the
+      // user stays inside the HALO HOLA iframe instead of opening native chrome.
+      { path: 'embed/halo', element: withSuspense(HaloHolaMapPage) },
       { path: 'picker', element: withSuspense(LocationPickerPage) },
       { path: 'embed/picker', element: withSuspense(LocationPickerPage) },
       { path: 'place/:id', element: withSuspense(PlaceDetail) },
