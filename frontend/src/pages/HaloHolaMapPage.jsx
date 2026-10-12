@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ArrowLeft,
   Camera,
   ChevronLeft,
   ChevronRight,
@@ -10,7 +11,7 @@ import {
   Sparkles,
   X
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import MapView from '../components/MapView.jsx';
 import { getHaloSpot, getHaloSpots } from '../services/haloHolaApi.js';
 
@@ -52,6 +53,8 @@ function formatDate(value) {
 }
 
 export default function HaloHolaMapPage() {
+  const location = useLocation();
+  const embedded = location.pathname.startsWith('/embed/');
   const [viewport, setViewport] = useState(null);
   const [spotsPayload, setSpotsPayload] = useState(EMPTY_GEOJSON);
   const [loading, setLoading] = useState(true);
@@ -153,11 +156,17 @@ export default function HaloHolaMapPage() {
       />
 
       <section className="halo-map-brand-card">
+        {embedded && (
+          <Link className="halo-map-back" to="/embed" aria-label="Quay lại bản đồ địa điểm">
+            <ArrowLeft size={16} />
+            <span>Bản đồ</span>
+          </Link>
+        )}
         <div className="halo-map-brand-icon"><Camera size={20} /></div>
         <div>
           <span>HALO HOLA × HOLA MAPS</span>
-          <h1>Ảnh cộng đồng theo địa điểm</h1>
-          <p>Chạm vào một điểm để xem ảnh người dùng đã gửi tại đúng vị trí đó.</p>
+          <h1>Góc nhìn HALO HOLA</h1>
+          <p>Tác phẩm và check-in cộng đồng được đặt đúng nơi câu chuyện diễn ra.</p>
         </div>
         <div className="halo-map-count">
           <b>{places.length}</b>
@@ -166,9 +175,9 @@ export default function HaloHolaMapPage() {
       </section>
 
       <div className="halo-map-status" aria-live="polite">
-        {loading ? <><RefreshCw className="spin" size={14} /> Đang tải ảnh cộng đồng…</> : null}
+        {loading ? <><RefreshCw className="spin" size={14} /> Đang tải góc nhìn cộng đồng…</> : null}
         {!loading && error ? <span>{error}</span> : null}
-        {!loading && !error && places.length === 0 ? <span>Chưa có ảnh HALO HOLA trong vùng đang xem.</span> : null}
+        {!loading && !error && places.length === 0 ? <span>Chưa có góc nhìn HALO HOLA trong vùng đang xem.</span> : null}
       </div>
 
       {selectedPlace && (
@@ -229,7 +238,7 @@ export default function HaloHolaMapPage() {
               <div className="halo-gallery-footer">
                 <span><b>{detail?.mediaCount || media.length}</b> ảnh cộng đồng</span>
                 {detail?.placeId && (
-                  <Link to={'/place/' + detail.placeId}>
+                  <Link to={embedded ? '/embed?place=' + detail.placeId : '/place/' + detail.placeId}>
                     Mở địa điểm Hola Maps <ExternalLink size={14} />
                   </Link>
                 )}
