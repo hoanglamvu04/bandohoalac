@@ -57,6 +57,7 @@ import './map-mobile-layout-v4.css';
 import './desktop-map-clean.css';
 import './header-clean-v2.css';
 import './header-clean-mobile-bridge.css';
+import './header-balanced-v3.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
