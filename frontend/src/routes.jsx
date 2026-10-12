@@ -6,7 +6,6 @@ import './route-error.css';
 
 const HomePage = lazy(() => import('./pages/HomePage.jsx'));
 const MapPage = lazy(() => import('./pages/MapDiscoveryPage.jsx'));
-const RawMapPage = lazy(() => import('./pages/MapPage.jsx'));
 const HaloHolaMapPage = lazy(() => import('./pages/HaloHolaMapPage.jsx'));
 const LocationPickerPage = lazy(() => import('./pages/LocationPickerPage.jsx'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetailV2.jsx'));
@@ -142,7 +141,11 @@ export const router = createBrowserRouter([
       { index: true, element: withSuspense(HomePage) },
       { path: 'map', element: withSuspense(MapPage) },
       { path: 'halo', element: withSuspense(HaloHolaMapPage) },
-      { path: 'embed', element: withSuspense(RawMapPage) },
+      // Embed must use the same discovery stack as /map so HALO HOLA receives
+      // every mobile map capability (search, current location, filters, pins)
+      // without maintaining a second UI implementation. App.jsx still treats
+      // /embed as an embed route, so native Hola Maps navbar/bottom-nav stay hidden.
+      { path: 'embed', element: withSuspense(MapPage) },
       { path: 'picker', element: withSuspense(LocationPickerPage) },
       { path: 'embed/picker', element: withSuspense(LocationPickerPage) },
       { path: 'place/:id', element: withSuspense(PlaceDetail) },
