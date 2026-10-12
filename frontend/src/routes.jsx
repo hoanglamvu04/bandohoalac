@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import RequireRole from './components/RequireRole.jsx';
+import './route-error.css';
 
 const HomePage = lazy(() => import('./pages/HomePage.jsx'));
 const MapPage = lazy(() => import('./pages/MapDiscoveryPage.jsx'));
@@ -73,21 +74,60 @@ function withRole(Page, roles) {
 
 function RouteError() {
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'grid',
-      placeItems: 'center',
-      padding: 24,
-      background: '#f7f3ea',
-      color: '#102f29',
-      fontFamily: 'Inter, system-ui, sans-serif'
-    }}>
-      <div style={{ maxWidth: 620 }}>
-        <h1>Hola Maps gặp lỗi khi tải trang.</h1>
-        <p>Hãy mở Console để xem lỗi chi tiết hoặc quay lại trang chủ.</p>
-        <a href="/" style={{ color: '#102f29', fontWeight: 800 }}>Về trang chủ</a>
-      </div>
-    </div>
+    <main className="hm-route-error" role="main">
+      <section className="hm-route-error__card" aria-labelledby="hm-route-error-title">
+        <div className="hm-route-error__brand" aria-label="Hola Maps">
+          <span className="hm-route-error__brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z" stroke="currentColor" strokeWidth="1.8" />
+              <circle cx="12" cy="10" r="2.2" fill="currentColor" />
+            </svg>
+          </span>
+          HOLA MAPS
+        </div>
+
+        <div className="hm-route-error__icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48" fill="none">
+            <path d="m7.5 12.5 10-4 13 4 10-4v27l-10 4-13-4-10 4v-27Z" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
+            <path d="M17.5 8.5v27M30.5 12.5v27" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+            <path d="M12 21c3-3 5.5-3 8.5-.5 3 2.6 5.5 2.6 8.5 0 2.8-2.4 5.2-2.5 8-.6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+          </svg>
+          <span className="hm-route-error__icon-dot">!</span>
+        </div>
+
+        <div className="hm-route-error__eyebrow">Không thể tải trang</div>
+        <h1 id="hm-route-error-title">Hola Maps đang gặp chút sự cố.</h1>
+        <p className="hm-route-error__description">
+          Trang này chưa thể hiển thị ngay lúc này. Bạn có thể thử tải lại hoặc quay về trang chủ để tiếp tục khám phá Hòa Lạc.
+        </p>
+
+        <div className="hm-route-error__actions">
+          <button
+            type="button"
+            className="hm-route-error__button hm-route-error__button--primary"
+            onClick={() => window.location.reload()}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M20 11a8 8 0 1 0-2.34 5.66" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path d="M20 5v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Thử tải lại
+          </button>
+          <a className="hm-route-error__button hm-route-error__button--secondary" href="/">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="m3 11 9-7 9 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M5 10v10h14V10M9 20v-6h6v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Về trang chủ
+          </a>
+        </div>
+
+        <div className="hm-route-error__footnote">
+          <span aria-hidden="true" />
+          Không cần thao tác kỹ thuật — hãy thử lại sau ít phút nếu lỗi vẫn còn.
+        </div>
+      </section>
+    </main>
   );
 }
 
