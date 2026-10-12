@@ -24,11 +24,14 @@ export {
 const WIKIMEDIA_API = 'https://commons.wikimedia.org/w/api.php';
 const FOURSQUARE_API = 'https://places-api.foursquare.com';
 const FOURSQUARE_VERSION = '2025-06-17';
-const MAX_INLINE_RATE_WAIT_MS = 90_000;
+const MAX_INLINE_RATE_WAIT_MS = Object.freeze({
+  WIKIMEDIA: 45_000,
+  FOURSQUARE: 15_000
+});
 
 const PROVIDER_POLICY = Object.freeze({
   WIKIMEDIA: { minIntervalMs: 850, maxAttempts: 4 },
-  FOURSQUARE: { minIntervalMs: 1100, maxAttempts: 4 }
+  FOURSQUARE: { minIntervalMs: 1500, maxAttempts: 3 }
 });
 
 function sleep(ms) {
@@ -124,8 +127,8 @@ class ProviderHttpError extends Error {
 
 function createRateState() {
   return {
-    WIKIMEDIA: { nextAt: 0 },
-    FOURSQUARE: { nextAt: 0 }
+    WIKIMEDIA: { nextAt: 0, rateLimitStrikes: 0 },
+    FOURSQUARE: { nextAt: 0, rateLimitStrikes: 0 }
   };
 }
 
@@ -167,7 +170,10 @@ async function fetchJson(provider, url, options, rateState, diagnostics) {
       clearTimeout(timeout);
     }
 
-    if (response.ok) return await response.json();
+    if (response.ok) {
+      rateState[provider].rateLimitStrikes = 0;
+      return await response.json();
+    }
 
     if (response.status === 429 || response.status === 503) {
       const headerWait = parseRetryAfterMs(response.headers);
@@ -175,8 +181,11 @@ async function fetchJson(provider, url, options, rateState, diagnostics) {
       diagnostics.retryCounts[provider] += 1;
       diagnostics.rateLimitWaitMs[provider] += retryMs;
       diagnostics.lastRateLimitMs[provider] = retryMs;
+      rateState[provider].rateLimitStrikes += 1;
 
-      if (retryMs > MAX_INLINE_RATE_WAIT_MS) {
+      const maxInlineWait = MAX_INLINE_RATE_WAIT_MS[provider] || 15_000;
+      const circuitOpen = provider === 'FOURSQUARE' && rateState[provider].rateLimitStrikes >= 2;
+      if (retryMs > maxInlineWait || circuitOpen) {
         throw new ProviderHttpError(provider, response.status, {
           retryAfterMs: retryMs,
           stopProvider: true
