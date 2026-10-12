@@ -1,0 +1,14 @@
+/* Desktop-only cleanup for the discovery rail.
+ * The shared site header already carries HOLA Maps branding and navigation,
+ * so the duplicated engine/title/tab block inside the map rail is redundant.
+ */
+@media (min-width: 761px) {
+  body.map-route-active .hm-left-panel .hm-panel-heading {
+    display: none !important;
+  }
+
+  /* Let the useful content begin immediately at the top of the rail. */
+  body.map-route-active .hm-left-panel .hm-place-results {
+    padding-top: 18px !important;
+  }
+}
