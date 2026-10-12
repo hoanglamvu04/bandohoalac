@@ -58,6 +58,7 @@ import './desktop-map-clean.css';
 import './header-clean-v2.css';
 import './header-clean-mobile-bridge.css';
 import './header-balanced-v3.css';
+import './place-detail-readable.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
