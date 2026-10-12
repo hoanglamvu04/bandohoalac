@@ -1,0 +1,66 @@
+/*
+ * Desktop /map command-bar collision fix.
+ *
+ * MapDiscoveryPage renders the unified MapSearchV2 on top of MapPage. The old
+ * .hm-map-search inside MapPage was only made transparent, so it still occupied
+ * flex width. At normal desktop zoom that phantom width pushed Gần tôi / Đang
+ * mở / Bộ lọc under the fixed V2 search (z-index 1080).
+ *
+ * Keep one real search control and give discovery actions their own second-row
+ * corridor. This stays stable at 100% browser zoom and does not depend on the
+ * current left drawer width.
+ */
+@media (min-width: 761px) {
+  body.map-route-active .map-experience-v2 .hm-map-topbar .hm-map-search {
+    display: none !important;
+  }
+}
+
+/* Full desktop: quick filters live directly below the search row, aligned to
+   the right. The unified search remains centered and can no longer cover them. */
+@media (min-width: 1281px) {
+  body.map-route-active .hm-map-topbar {
+    left: 18px !important;
+    right: 18px !important;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-discovery-filters {
+    position: absolute !important;
+    top: 58px !important;
+    right: 0 !important;
+    left: auto !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 7px;
+    width: max-content;
+    max-width: calc(100vw - 36px);
+  }
+
+  body.map-route-active .hm-map-topbar .hm-quick-filter,
+  body.map-route-active .hm-map-topbar .hm-filter-trigger,
+  body.map-route-active .hm-map-topbar .hm-report-status {
+    flex: 0 0 auto;
+  }
+}
+
+/* Medium desktop already uses a second line in the base map CSS. Anchor that
+   line to the right as well so resizing between laptop and desktop widths does
+   not make the controls jump back underneath MapSearchV2. */
+@media (min-width: 761px) and (max-width: 1280px) {
+  body.map-route-active .hm-map-topbar .hm-discovery-filters {
+    left: auto !important;
+    right: 0 !important;
+    margin: 0 !important;
+    justify-content: flex-end;
+    max-width: calc(100vw - 92px);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-discovery-filters::-webkit-scrollbar {
+    display: none;
+  }
+}
