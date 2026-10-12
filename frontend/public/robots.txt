@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /partner/
+Disallow: /profile
+Disallow: /login
+Disallow: /register
+
+Sitemap: https://maps.dothihoalac.vn/sitemap.xml
