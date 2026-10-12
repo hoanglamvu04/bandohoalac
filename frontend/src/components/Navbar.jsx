@@ -3,6 +3,7 @@ import {
   BadgeCheck,
   Bell,
   Building2,
+  ChevronDown,
   Download,
   LogOut,
   MapPinned,
@@ -23,8 +24,7 @@ import {
 
 const navItems = [
   { to: '/map', label: 'Bản đồ', icon: MapPinned },
-  { to: '/leaderboard', label: 'Cộng đồng', icon: Trophy },
-  { to: '/profile', label: 'Trang cá nhân', icon: UserRound }
+  { to: '/leaderboard', label: 'Cộng đồng', icon: Trophy }
 ];
 
 function notificationTarget(item) {
@@ -54,6 +54,7 @@ export default function Navbar() {
   );
   const notificationRef = useRef(null);
   const mobileAccountRef = useRef(null);
+  const desktopAccountRef = useRef(null);
 
   const partnerMemberships = user?.partnerAccess?.memberships || [];
   const isPartnerStaffOnly = partnerMemberships.length > 0
@@ -61,6 +62,7 @@ export default function Navbar() {
   const partnerTarget = isPartnerStaffOnly ? '/partner/scanner' : '/partner';
 
   const isHome = location.pathname === '/';
+  const accountInitial = String(user?.name || user?.email || 'U').trim().charAt(0).toUpperCase();
 
   const handleLogout = () => {
     setNotificationsOpen(false);
@@ -138,7 +140,10 @@ export default function Navbar() {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setNotificationsOpen(false);
       }
-      if (mobileAccountRef.current && !mobileAccountRef.current.contains(event.target)) {
+
+      const insideMobileAccount = mobileAccountRef.current?.contains(event.target);
+      const insideDesktopAccount = desktopAccountRef.current?.contains(event.target);
+      if (!insideMobileAccount && !insideDesktopAccount) {
         setMobileAccountOpen(false);
       }
     }
@@ -189,6 +194,7 @@ export default function Navbar() {
       }
     } finally {
       setInstallPrompt(null);
+      setMobileAccountOpen(false);
     }
   }
 
@@ -207,10 +213,57 @@ export default function Navbar() {
     }
   }
 
+  function renderAccountMenu(className) {
+    if (!user || !mobileAccountOpen) return null;
+
+    return (
+      <div className={className}>
+        <div className="compact-account-summary">
+          <span className="compact-account-avatar">{accountInitial}</span>
+          <div>
+            <b>{user.name || 'Thành viên Hola Maps'}</b>
+            <small>{user.email || 'Tài khoản Hola Maps'}</small>
+          </div>
+        </div>
+
+        <Link to="/profile" onClick={() => setMobileAccountOpen(false)}>
+          <UserRound size={16} />
+          Trang cá nhân
+        </Link>
+        <Link to="/verify" onClick={() => setMobileAccountOpen(false)}>
+          <BadgeCheck size={16} />
+          Xác minh cộng đồng
+        </Link>
+        {!installed && installPrompt && (
+          <button type="button" onClick={installApp}>
+            <Download size={16} />
+            Cài ứng dụng
+          </button>
+        )}
+        {user?.partnerAccess?.hasAccess && (
+          <Link to={partnerTarget} onClick={() => setMobileAccountOpen(false)}>
+            <Building2 size={16} />
+            {isPartnerStaffOnly ? 'Máy quét Partner' : 'Partner Portal'}
+          </Link>
+        )}
+        {isModerator && (
+          <Link to="/admin" onClick={() => setMobileAccountOpen(false)}>
+            <ShieldCheck size={16} />
+            Quản trị
+          </Link>
+        )}
+        <button className="compact-account-logout" type="button" onClick={handleLogout}>
+          <LogOut size={16} />
+          Đăng xuất
+        </button>
+      </div>
+    );
+  }
+
   return (
     <header
       className={[
-        'navbar premium-navbar modern-blue-navbar reference-navbar',
+        'navbar premium-navbar modern-blue-navbar reference-navbar compact-product-navbar',
         isHome ? 'home-navbar' : '',
         isHome && homeHeaderScrolled ? 'home-navbar-scrolled' : ''
       ].filter(Boolean).join(' ')}
@@ -239,7 +292,7 @@ export default function Navbar() {
         </form>
       )}
 
-      <nav className="desktop-nav premium-desktop-nav">
+      <nav className="desktop-nav premium-desktop-nav compact-primary-nav">
         {navItems.map(({to,label,icon:Icon}) => (
           <NavLink
             key={to}
@@ -249,32 +302,10 @@ export default function Navbar() {
             <Icon size={16}/>{label}
           </NavLink>
         ))}
-        {user && (
-          <NavLink className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'} to="/verify">
-            <BadgeCheck size={16}/>Xác minh
-          </NavLink>
-        )}
-        {user?.partnerAccess?.hasAccess && (
-          <NavLink className="nav-link" to={partnerTarget}>
-            <Building2 size={16}/>{isPartnerStaffOnly ? 'Scanner' : 'Partner'}
-          </NavLink>
-        )}
-        {isModerator && (
-          <NavLink className="nav-link" to="/admin">
-            <ShieldCheck size={16}/>Admin
-          </NavLink>
-        )}
       </nav>
 
-      <div className="nav-actions premium-nav-actions">
+      <div className="nav-actions premium-nav-actions compact-nav-actions">
         <Link className="nav-cta" to="/contribute"><Plus size={17}/>Đóng góp</Link>
-
-        {!installed && installPrompt && (
-          <button className="nav-install" type="button" onClick={installApp}>
-            <Download size={16} />
-            <span>Cài app</span>
-          </button>
-        )}
 
         {user && (
           <div className="nav-notification-control" ref={notificationRef}>
@@ -323,9 +354,22 @@ export default function Navbar() {
         )}
 
         {user ? (
-          <button className="nav-user desktop-account-control" type="button" onClick={handleLogout}>
-            <span className="nav-user-avatar">{user.name?.[0] || 'U'}</span><LogOut size={15}/>
-          </button>
+          <div className="desktop-account-control desktop-account-menu-control" ref={desktopAccountRef}>
+            <button
+              className="nav-user compact-account-button"
+              type="button"
+              onClick={() => {
+                setNotificationsOpen(false);
+                setMobileAccountOpen((value) => !value);
+              }}
+              aria-label="Mở tài khoản"
+              aria-expanded={mobileAccountOpen}
+            >
+              <span className="nav-user-avatar">{accountInitial}</span>
+              <ChevronDown size={14}/>
+            </button>
+            {renderAccountMenu('desktop-account-menu')}
+          </div>
         ) : (
           <Link className="nav-login desktop-account-control" to="/login">Đăng nhập</Link>
         )}
@@ -345,51 +389,10 @@ export default function Navbar() {
             aria-label={user ? 'Mở tài khoản' : 'Đăng nhập'}
             aria-expanded={user ? mobileAccountOpen : undefined}
           >
-            {user ? (
-              <span>{String(user.name || user.email || 'U').trim().charAt(0).toUpperCase()}</span>
-            ) : (
-              <UserRound size={18} />
-            )}
+            {user ? <span>{accountInitial}</span> : <UserRound size={18} />}
           </button>
 
-          {user && mobileAccountOpen && (
-            <div className="mobile-account-menu">
-              <div className="mobile-account-summary">
-                <span className="mobile-account-avatar">
-                  {String(user.name || user.email || 'U').trim().charAt(0).toUpperCase()}
-                </span>
-                <div>
-                  <b>{user.name || 'Thành viên Hola Maps'}</b>
-                  <small>{user.email || 'Tài khoản Hola Maps'}</small>
-                </div>
-              </div>
-
-              <Link to="/profile" onClick={() => setMobileAccountOpen(false)}>
-                <UserRound size={16} />
-                Trang cá nhân
-              </Link>
-              <Link to="/verify" onClick={() => setMobileAccountOpen(false)}>
-                <BadgeCheck size={16} />
-                Xác minh cộng đồng
-              </Link>
-              {user?.partnerAccess?.hasAccess && (
-                <Link to={partnerTarget} onClick={() => setMobileAccountOpen(false)}>
-                  <Building2 size={16} />
-                  {isPartnerStaffOnly ? 'Máy quét Partner' : 'Partner Portal'}
-                </Link>
-              )}
-              {isModerator && (
-                <Link to="/admin" onClick={() => setMobileAccountOpen(false)}>
-                  <ShieldCheck size={16} />
-                  Quản trị
-                </Link>
-              )}
-              <button type="button" onClick={handleLogout}>
-                <LogOut size={16} />
-                Đăng xuất
-              </button>
-            </div>
-          )}
+          {renderAccountMenu('mobile-account-menu compact-mobile-account-menu')}
         </div>
       </div>
     </header>
