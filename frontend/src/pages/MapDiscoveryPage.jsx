@@ -4,6 +4,7 @@ import MapPage from './MapPage.jsx';
 import MapSearchV2 from '../components/MapSearchV2.jsx';
 import MapPinOverlay from '../components/MapPinOverlay.jsx';
 import MapHaloFilterPortal from '../components/MapHaloFilterPortal.jsx';
+import MapMobileLocationButton from '../components/MapMobileLocationButton.jsx';
 
 export default function MapDiscoveryPage() {
   return (
@@ -12,6 +13,7 @@ export default function MapDiscoveryPage() {
       <MapSearchV2 />
       <MapPinOverlay />
       <MapHaloFilterPortal />
+      <MapMobileLocationButton />
     </div>
   );
 }
