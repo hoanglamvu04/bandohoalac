@@ -34,8 +34,36 @@ const PROVIDER_POLICY = Object.freeze({
   FOURSQUARE: { minIntervalMs: 1500, maxAttempts: 3 }
 });
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
+const activeScanControllers = new Map();
+
+class ScanCancelledError extends Error {
+  constructor() {
+    super('Photo scan cancelled');
+    this.name = 'ScanCancelledError';
+  }
+}
+
+function sleep(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new ScanCancelledError());
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, Math.max(0, Number(ms) || 0));
+
+    const onAbort = () => {
+      clearTimeout(timer);
+      cleanup();
+      reject(new ScanCancelledError());
+    };
+
+    const cleanup = () => signal?.removeEventListener('abort', onAbort);
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 }
 
 function clamp(value, min, max) {
@@ -132,21 +160,26 @@ function createRateState() {
   };
 }
 
-async function waitForProviderTurn(provider, rateState) {
+async function waitForProviderTurn(provider, rateState, signal) {
   const state = rateState[provider];
   const policy = PROVIDER_POLICY[provider];
   const waitMs = Math.max(0, state.nextAt - Date.now());
-  if (waitMs) await sleep(waitMs);
+  if (waitMs) await sleep(waitMs, signal);
+  if (signal?.aborted) throw new ScanCancelledError();
   state.nextAt = Date.now() + policy.minIntervalMs;
 }
 
-async function fetchJson(provider, url, options, rateState, diagnostics) {
+async function fetchJson(provider, url, options, rateState, diagnostics, scanSignal) {
   const policy = PROVIDER_POLICY[provider];
   let lastError = null;
 
   for (let attempt = 0; attempt < policy.maxAttempts; attempt += 1) {
-    await waitForProviderTurn(provider, rateState);
+    await waitForProviderTurn(provider, rateState, scanSignal);
+    if (scanSignal?.aborted) throw new ScanCancelledError();
+
     const controller = new AbortController();
+    const cancelRequest = () => controller.abort();
+    scanSignal?.addEventListener('abort', cancelRequest, { once: true });
     const timeout = setTimeout(() => controller.abort(), env.photoScanRequestTimeoutMs || 9000);
     let response;
     try {
@@ -160,6 +193,7 @@ async function fetchJson(provider, url, options, rateState, diagnostics) {
         }
       });
     } catch (error) {
+      if (scanSignal?.aborted) throw new ScanCancelledError();
       lastError = error;
       if (attempt >= policy.maxAttempts - 1) throw error;
       const retryMs = 1500 * (2 ** attempt);
@@ -168,7 +202,10 @@ async function fetchJson(provider, url, options, rateState, diagnostics) {
       continue;
     } finally {
       clearTimeout(timeout);
+      scanSignal?.removeEventListener('abort', cancelRequest);
     }
+
+    if (scanSignal?.aborted) throw new ScanCancelledError();
 
     if (response.ok) {
       rateState[provider].rateLimitStrikes = 0;
@@ -203,7 +240,7 @@ async function fetchJson(provider, url, options, rateState, diagnostics) {
   throw lastError || new ProviderHttpError(provider, 500);
 }
 
-async function scanWikimedia(place, rateState, diagnostics) {
+async function scanWikimedia(place, rateState, diagnostics, scanSignal) {
   const params = new URLSearchParams({
     action: 'query',
     format: 'json',
@@ -223,12 +260,14 @@ async function scanWikimedia(place, rateState, diagnostics) {
     WIKIMEDIA_API + '?' + params.toString(),
     {},
     rateState,
-    diagnostics
+    diagnostics,
+    scanSignal
   );
   const pages = Object.values(payload?.query?.pages || {});
   const candidates = [];
 
   for (const page of pages) {
+    if (scanSignal?.aborted) throw new ScanCancelledError();
     const info = page?.imageinfo?.[0];
     if (!info?.url) continue;
     const metadata = info.extmetadata || {};
@@ -279,7 +318,7 @@ function foursquareCoords(item) {
   return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
 }
 
-async function scanFoursquare(place, apiKey, rateState, diagnostics) {
+async function scanFoursquare(place, apiKey, rateState, diagnostics, scanSignal) {
   const headers = {
     Authorization: 'Bearer ' + apiKey,
     'X-Places-Api-Version': FOURSQUARE_VERSION
@@ -296,13 +335,15 @@ async function scanFoursquare(place, apiKey, rateState, diagnostics) {
     FOURSQUARE_API + '/places/search?' + params.toString(),
     { headers },
     rateState,
-    diagnostics
+    diagnostics,
+    scanSignal
   );
   const results = Array.isArray(search?.results) ? search.results : [];
   diagnostics.foursquareSearchResults += results.length;
   let best = null;
 
   for (const item of results) {
+    if (scanSignal?.aborted) throw new ScanCancelledError();
     const coords = foursquareCoords(item);
     if (!coords) continue;
     const similarity = photoNameSimilarity(place.name, item.name);
@@ -334,13 +375,15 @@ async function scanFoursquare(place, apiKey, rateState, diagnostics) {
     FOURSQUARE_API + '/places/' + encodeURIComponent(fsqId) + '/photos?' + photoParams.toString(),
     { headers },
     rateState,
-    diagnostics
+    diagnostics,
+    scanSignal
   );
   const photos = Array.isArray(photosPayload) ? photosPayload : (photosPayload?.results || []);
   if (!photos.length) diagnostics.foursquareMatchedWithoutPhotos += 1;
   const candidates = [];
 
   for (const photo of photos) {
+    if (scanSignal?.aborted) throw new ScanCancelledError();
     const classScore = foursquareClassificationScore(photo.classifications);
     if (classScore < 0) continue;
     const photoId = photo.id || photo.fsq_photo_id;
@@ -452,6 +495,34 @@ async function updateRun(id, fields) {
   await pool.query(`UPDATE place_photo_scan_runs SET ${clauses.join(', ')} WHERE id = $${params.length}`, params);
 }
 
+async function markRunStarted(id) {
+  const { rowCount } = await pool.query(
+    `UPDATE place_photo_scan_runs
+     SET status = 'RUNNING', started_at = NOW(), error_message = NULL
+     WHERE id = $1 AND status = 'QUEUED'`,
+    [Number(id)]
+  );
+  return rowCount > 0;
+}
+
+function mapRunRow(row) {
+  return {
+    id: String(row.id),
+    status: row.status,
+    scope: row.scope,
+    requestedLimit: Number(row.requested_limit) || 0,
+    providers: Array.isArray(row.providers) ? row.providers : [],
+    scannedPlaces: Number(row.scanned_places_count) || 0,
+    candidates: Number(row.candidate_count) || 0,
+    skipped: Number(row.skipped_count) || 0,
+    startedBy: row.started_by ? String(row.started_by) : null,
+    startedAt: row.started_at,
+    finishedAt: row.finished_at,
+    errorMessage: row.error_message || null,
+    createdAt: row.created_at
+  };
+}
+
 function formatWait(ms) {
   if (!ms) return null;
   if (ms < 60_000) return Math.max(1, Math.ceil(ms / 1000)) + ' giây';
@@ -500,7 +571,8 @@ function diagnosticsMessage(diagnostics, candidateCount) {
   return parts.join(' · ').slice(0, 3000);
 }
 
-async function executeScan(runId, scope, limit, foursquareKey) {
+async function executeScan(runId, scope, limit, foursquareKey, scanController) {
+  const scanSignal = scanController.signal;
   const diagnostics = {
     wikimediaCandidates: 0,
     foursquareCandidates: 0,
@@ -520,60 +592,69 @@ async function executeScan(runId, scope, limit, foursquareKey) {
   const progress = { WIKIMEDIA: 0, FOURSQUARE: foursquareKey ? 0 : null };
   let lastPersistedProgress = -1;
 
-  const places = await getScanTargets(scope, limit);
-  await updateRun(runId, { status: 'RUNNING', started_at: new Date(), error_message: null });
+  try {
+    if (scanSignal.aborted) return;
+    const places = await getScanTargets(scope, limit);
+    if (scanSignal.aborted) return;
+    if (!(await markRunStarted(runId))) return;
 
-  const persistProgress = async () => {
-    const active = Object.values(progress).filter((value) => value !== null);
-    const scannedPlaces = active.length ? Math.min(...active) : 0;
-    if (scannedPlaces === lastPersistedProgress || (scannedPlaces % 5 !== 0 && scannedPlaces !== places.length)) return;
-    lastPersistedProgress = scannedPlaces;
-    await updateRun(runId, {
-      scanned_places_count: scannedPlaces,
-      candidate_count: candidateCount,
-      skipped_count: Math.max(0, scannedPlaces - placesWithCandidates.size),
-      error_message: diagnosticsMessage(diagnostics, candidateCount)
-    });
-  };
+    const persistProgress = async () => {
+      if (scanSignal.aborted) return;
+      const active = Object.values(progress).filter((value) => value !== null);
+      const scannedPlaces = active.length ? Math.min(...active) : 0;
+      if (scannedPlaces === lastPersistedProgress || (scannedPlaces % 5 !== 0 && scannedPlaces !== places.length)) return;
+      lastPersistedProgress = scannedPlaces;
+      await updateRun(runId, {
+        scanned_places_count: scannedPlaces,
+        candidate_count: candidateCount,
+        skipped_count: Math.max(0, scannedPlaces - placesWithCandidates.size),
+        error_message: diagnosticsMessage(diagnostics, candidateCount)
+      });
+    };
 
-  const runWorker = async (provider) => {
-    for (let index = 0; index < places.length; index += 1) {
-      const place = places[index];
-      try {
-        const found = provider === 'WIKIMEDIA'
-          ? await scanWikimedia(place, rateState, diagnostics)
-          : await scanFoursquare(place, foursquareKey, rateState, diagnostics);
+    const runWorker = async (provider) => {
+      for (let index = 0; index < places.length; index += 1) {
+        if (scanSignal.aborted) return;
+        const place = places[index];
+        try {
+          const found = provider === 'WIKIMEDIA'
+            ? await scanWikimedia(place, rateState, diagnostics, scanSignal)
+            : await scanFoursquare(place, foursquareKey, rateState, diagnostics, scanSignal);
 
-        if (provider === 'WIKIMEDIA') diagnostics.wikimediaCandidates += found.length;
-        else diagnostics.foursquareCandidates += found.length;
+          if (scanSignal.aborted) return;
+          if (provider === 'WIKIMEDIA') diagnostics.wikimediaCandidates += found.length;
+          else diagnostics.foursquareCandidates += found.length;
 
-        const sorted = found
-          .sort((a, b) => b.score - a.score)
-          .slice(0, env.photoScanMaxCandidatesPerPlace || 8);
-        for (const candidate of sorted) {
-          if (await saveCandidate(place.id, candidate)) {
-            candidateCount += 1;
-            placesWithCandidates.add(place.id);
+          const sorted = found
+            .sort((a, b) => b.score - a.score)
+            .slice(0, env.photoScanMaxCandidatesPerPlace || 8);
+          for (const candidate of sorted) {
+            if (scanSignal.aborted) return;
+            if (await saveCandidate(place.id, candidate)) {
+              candidateCount += 1;
+              placesWithCandidates.add(place.id);
+            }
+          }
+        } catch (error) {
+          if (scanSignal.aborted || error?.name === 'ScanCancelledError') return;
+          recordProviderError(diagnostics, provider, error);
+          if (error?.stopProvider) {
+            progress[provider] = places.length;
+            await persistProgress();
+            break;
           }
         }
-      } catch (error) {
-        recordProviderError(diagnostics, provider, error);
-        if (error?.stopProvider) {
-          progress[provider] = places.length;
-          await persistProgress();
-          break;
-        }
+        if (scanSignal.aborted) return;
+        progress[provider] = index + 1;
+        await persistProgress();
       }
-      progress[provider] = index + 1;
-      await persistProgress();
-    }
-  };
+    };
 
-  try {
     const workers = [runWorker('WIKIMEDIA')];
     if (foursquareKey) workers.push(runWorker('FOURSQUARE'));
     await Promise.all(workers);
 
+    if (scanSignal.aborted) return;
     const message = diagnosticsMessage(diagnostics, candidateCount);
     const hardFailure = candidateCount === 0 && diagnostics.providerErrors > 0;
     await updateRun(runId, {
@@ -585,14 +666,40 @@ async function executeScan(runId, scope, limit, foursquareKey) {
       finished_at: new Date()
     });
   } catch (error) {
+    if (scanSignal.aborted || error?.name === 'ScanCancelledError') return;
     await updateRun(runId, {
       status: 'FAILED',
       candidate_count: candidateCount,
-      skipped_count: Math.max(0, places.length - placesWithCandidates.size),
       error_message: String(error?.message || error).slice(0, 3000),
       finished_at: new Date()
     });
+  } finally {
+    activeScanControllers.delete(String(runId));
   }
+}
+
+export async function cancelPhotoScan(runId) {
+  const id = Number(runId);
+  if (!Number.isInteger(id) || id <= 0) throw new AppError('Lượt quét không hợp lệ.', 400);
+
+  activeScanControllers.get(String(id))?.abort();
+
+  const { rows } = await pool.query(
+    `UPDATE place_photo_scan_runs
+     SET status = 'FAILED', finished_at = NOW(),
+         error_message = 'Đã dừng thủ công. Bạn có thể bắt đầu lượt quét mới.'
+     WHERE id = $1 AND status IN ('QUEUED','RUNNING')
+     RETURNING *`,
+    [id]
+  );
+
+  if (!rows[0]) {
+    const existing = await pool.query('SELECT id, status FROM place_photo_scan_runs WHERE id = $1 LIMIT 1', [id]);
+    if (!existing.rows[0]) throw new AppError('Không tìm thấy lượt quét.', 404);
+    throw new AppError('Lượt quét này đã kết thúc, không cần dừng.', 409);
+  }
+
+  return mapRunRow(rows[0]);
 }
 
 export async function startPhotoScan({ startedBy, scope = 'MISSING_IMAGES', limit = 50 } = {}) {
@@ -622,25 +729,13 @@ export async function startPhotoScan({ startedBy, scope = 'MISSING_IMAGES', limi
     [normalizedScope, safeLimit, JSON.stringify(providers), startedBy || null]
   );
   const row = rows[0];
+  const scanController = new AbortController();
+  activeScanControllers.set(String(row.id), scanController);
 
   setImmediate(() => {
-    executeScan(row.id, normalizedScope, safeLimit, foursquare.secret || null)
+    executeScan(row.id, normalizedScope, safeLimit, foursquare.secret || null, scanController)
       .catch((error) => console.error('[Hola Maps] Photo Scanner V3 failed:', error));
   });
 
-  return {
-    id: String(row.id),
-    status: row.status,
-    scope: row.scope,
-    requestedLimit: Number(row.requested_limit) || 0,
-    providers: Array.isArray(row.providers) ? row.providers : [],
-    scannedPlaces: 0,
-    candidates: 0,
-    skipped: 0,
-    startedBy: row.started_by ? String(row.started_by) : null,
-    startedAt: row.started_at,
-    finishedAt: row.finished_at,
-    errorMessage: row.error_message || null,
-    createdAt: row.created_at
-  };
+  return mapRunRow(row);
 }
