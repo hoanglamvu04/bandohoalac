@@ -7,6 +7,7 @@ import {
   rejectPhotoCandidate,
   startPhotoScan
 } from '../services/photoScannerV3.service.js';
+import { scheduleTrustedPhotoAutoFill } from '../services/photoAutoFill.service.js';
 import {
   auditContextFromRequest,
   writeAuditLog
@@ -33,11 +34,19 @@ export const listPhotoScanRunsAdmin = asyncHandler(async (req, res) => {
 });
 
 export const startPhotoScanAdmin = asyncHandler(async (req, res) => {
+  const autoFill = req.body?.autoFill !== false;
   const run = await startPhotoScan({
     startedBy: req.user.id,
     scope: req.body?.scope || 'MISSING_IMAGES',
     limit: req.body?.limit ?? 50
   });
+
+  if (autoFill) {
+    scheduleTrustedPhotoAutoFill({
+      runId: run.id,
+      reviewerId: req.user.id
+    });
+  }
 
   await writeAuditLog({
     actorUserId: req.user.id,
@@ -47,12 +56,13 @@ export const startPhotoScanAdmin = asyncHandler(async (req, res) => {
     metadata: {
       scope: run.scope,
       requestedLimit: run.requestedLimit,
-      providers: run.providers
+      providers: run.providers,
+      autoFill
     },
     ...auditContextFromRequest(req)
   });
 
-  res.status(202).json({ run });
+  res.status(202).json({ run, autoFill });
 });
 
 export const approvePhotoCandidateAdmin = asyncHandler(async (req, res) => {
