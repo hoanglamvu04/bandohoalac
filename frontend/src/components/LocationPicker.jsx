@@ -14,9 +14,7 @@ import {
   PMTILES_URL,
   BUILDINGS_PMTILES_URL,
   createPmtilesStyle,
-  createFallbackStyle,
-  localPmtilesAvailable,
-  supplementalBuildingsAvailable
+  createFallbackStyle
 } from '../localBasemap.js';
 
 // Keep the picker on exactly the same MapLibre worker/runtime as the main map.
@@ -25,12 +23,52 @@ import {
 maplibre.setWorkerUrl(maplibreWorkerUrl);
 
 const DEFAULT_PICKER_LOCATION = { lat: 21.005, lng: 105.525 };
+const BASEMAP_RETRY_LIMIT = 1;
+const BASEMAP_VERIFY_DELAYS = [1200, 4200, 8000];
 
 function validCoordinatePair(lat, lng) {
   const y = Number(lat);
   const x = Number(lng);
   return Number.isFinite(y) && Number.isFinite(x) &&
     y >= -90 && y <= 90 && x >= -180 && x <= 180;
+}
+
+function withTimeout(promise, timeoutMs, message) {
+  let timer = null;
+
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    })
+  ]).finally(() => {
+    if (timer) window.clearTimeout(timer);
+  });
+}
+
+async function openPmtilesArchive(url, timeoutMs = 6000) {
+  const archive = new PMTiles(url);
+  await withTimeout(
+    archive.getHeader(),
+    timeoutMs,
+    'PMTiles header timed out: ' + url
+  );
+  return archive;
+}
+
+function hasStreetStyleContract(map) {
+  const style = map?.getStyle?.();
+  const layers = Array.isArray(style?.layers) ? style.layers : [];
+  const hasRoadLayer = layers.some((layer) =>
+    layer.source === 'protomaps' &&
+    layer['source-layer'] === 'roads' &&
+    layer.type === 'line'
+  );
+  const hasLabelLayer = layers.some((layer) =>
+    layer.source === 'protomaps' && layer.type === 'symbol'
+  );
+
+  return Boolean(map?.getSource?.('protomaps')) && hasRoadLayer && hasLabelLayer;
 }
 
 export default function LocationPicker({ lat, lng, onChange }) {
@@ -56,7 +94,14 @@ export default function LocationPicker({ lat, lng, onChange }) {
     let resizeObserver = null;
     let resizeHandler = null;
     let mapInstance = null;
+    let basemapRetryCount = 0;
+    let localSourceErrorCount = 0;
+    let fallbackActive = false;
+    let supplementalBuildingsEnabled = false;
+    let basemapArchive = null;
+    let buildingsArchive = null;
     const resizeTimers = [];
+    const basemapVerifyTimers = [];
 
     const clearResizeHooks = () => {
       resizeObserver?.disconnect();
@@ -68,28 +113,48 @@ export default function LocationPicker({ lat, lng, onChange }) {
       }
     };
 
+    const clearBasemapVerifyTimers = () => {
+      basemapVerifyTimers.splice(0).forEach((timer) => window.clearTimeout(timer));
+    };
+
     (async () => {
       try {
-        const sameOriginBasemap = PMTILES_URL.startsWith('/');
-        const sameOriginBuildings = BUILDINGS_PMTILES_URL.startsWith('/');
-        const [hasLocalPmtiles, hasSupplementalBuildings] = await Promise.all([
-          sameOriginBasemap ? Promise.resolve(true) : localPmtilesAvailable(),
-          sameOriginBuildings ? Promise.resolve(true) : supplementalBuildingsAvailable()
-        ]);
-
-        if (cancelled || !containerRef.current || mapRef.current) return;
-
         const protocol = new Protocol();
         protocolRef.current = protocol;
         try {
           maplibre.addProtocol('pmtiles', protocol.tile);
         } catch {
-          // Protocol may already exist after hot reload/navigation.
+          // Protocol may already exist after hot reload/navigation. The normal
+          // production picker loads in its own iframe/window, so this is mostly
+          // a development safeguard.
         }
 
-        const canUseSupplementalBuildings = hasLocalPmtiles && hasSupplementalBuildings;
-        if (hasLocalPmtiles) protocol.add(new PMTiles(PMTILES_URL));
-        if (canUseSupplementalBuildings) protocol.add(new PMTiles(BUILDINGS_PMTILES_URL));
+        // Validate the actual PMTiles header instead of assuming a same-origin
+        // archive is healthy. This catches a broken range response/reverse proxy
+        // before MapLibre ends up rendering only the supplemental buildings.
+        try {
+          basemapArchive = await openPmtilesArchive(PMTILES_URL);
+          if (cancelled) return;
+          protocol.add(basemapArchive);
+        } catch (error) {
+          console.warn('[Hola Maps picker] Base PMTiles preflight failed:', error);
+          basemapArchive = null;
+        }
+
+        if (basemapArchive) {
+          try {
+            buildingsArchive = await openPmtilesArchive(BUILDINGS_PMTILES_URL, 5000);
+            if (cancelled) return;
+            protocol.add(buildingsArchive);
+            supplementalBuildingsEnabled = true;
+          } catch (error) {
+            console.warn('[Hola Maps picker] Supplemental buildings unavailable:', error);
+            buildingsArchive = null;
+            supplementalBuildingsEnabled = false;
+          }
+        }
+
+        if (cancelled || !containerRef.current || mapRef.current) return;
 
         const requestedInside = validCoordinatePair(lat, lng) && isInsideServiceCoverage(lng, lat);
         const initialCenter = requestedInside
@@ -98,8 +163,10 @@ export default function LocationPicker({ lat, lng, onChange }) {
 
         const map = new maplibre.Map({
           container: containerRef.current,
-          style: hasLocalPmtiles
-            ? createPmtilesStyle('streets', { includeSupplementalBuildings: canUseSupplementalBuildings })
+          style: basemapArchive
+            ? createPmtilesStyle('streets', {
+                includeSupplementalBuildings: supplementalBuildingsEnabled
+              })
             : createFallbackStyle(),
           center: initialCenter,
           zoom: Math.max(DEFAULT_ZOOM, 15.2),
@@ -109,12 +176,13 @@ export default function LocationPicker({ lat, lng, onChange }) {
           renderWorldCopies: false,
           refreshExpiredTiles: false,
           fadeDuration: 0,
-          maxTileCacheSize: 12,
+          maxTileCacheSize: 18,
           dragRotate: false,
           pitchWithRotate: false,
           attributionControl: false
         });
 
+        fallbackActive = !basemapArchive;
         mapInstance = map;
         mapRef.current = map;
 
@@ -125,6 +193,96 @@ export default function LocationPicker({ lat, lng, onChange }) {
           });
         };
         resizeHandler = resizeMap;
+
+        const applyFallback = (reason) => {
+          if (cancelled || fallbackActive || !mapRef.current) return;
+          fallbackActive = true;
+          clearBasemapVerifyTimers();
+          console.warn('[Hola Maps picker] Falling back from local basemap:', reason);
+          setMapError('Bản đồ nền HOLA Maps đang gặp lỗi. Đã chuyển sang nền dự phòng để bạn vẫn chọn được vị trí.');
+
+          try {
+            map.setStyle(createFallbackStyle(), { diff: false });
+          } catch (error) {
+            console.error('[Hola Maps picker] Fallback style failed:', error);
+            setMapError('Không tải được bản đồ nền. Vui lòng tải lại cửa sổ chọn vị trí.');
+          }
+        };
+
+        const retryLocalBasemap = (reason) => {
+          if (cancelled || fallbackActive || !mapRef.current) return;
+
+          if (basemapRetryCount >= BASEMAP_RETRY_LIMIT) {
+            applyFallback(reason);
+            return;
+          }
+
+          basemapRetryCount += 1;
+          localSourceErrorCount = 0;
+          clearBasemapVerifyTimers();
+          setMapError('Bản đồ nền đang tải lại…');
+          console.warn('[Hola Maps picker] Retrying local basemap:', reason);
+
+          try {
+            // Re-register fresh archive instances with the same protocol so a
+            // failed/cached reader cannot leave roads/labels stuck while the
+            // optional building archive keeps rendering.
+            basemapArchive = new PMTiles(PMTILES_URL);
+            protocol.add(basemapArchive);
+            if (supplementalBuildingsEnabled) {
+              buildingsArchive = new PMTiles(BUILDINGS_PMTILES_URL);
+              protocol.add(buildingsArchive);
+            }
+
+            map.setStyle(
+              createPmtilesStyle('streets', {
+                includeSupplementalBuildings: supplementalBuildingsEnabled
+              }),
+              { diff: false }
+            );
+          } catch (error) {
+            console.error('[Hola Maps picker] Local basemap retry failed:', error);
+            applyFallback(error?.message || reason);
+          }
+        };
+
+        const verifyLocalBasemap = (finalAttempt = false) => {
+          if (cancelled || fallbackActive || !mapRef.current) return;
+
+          if (!hasStreetStyleContract(map)) {
+            retryLocalBasemap('street style is missing the protomaps roads/label contract');
+            return;
+          }
+
+          let sourceLoaded = false;
+          try {
+            sourceLoaded = map.isSourceLoaded('protomaps');
+          } catch {
+            sourceLoaded = false;
+          }
+
+          if (sourceLoaded) {
+            localSourceErrorCount = 0;
+            clearBasemapVerifyTimers();
+            setMapError('');
+            return;
+          }
+
+          if (finalAttempt) {
+            retryLocalBasemap('protomaps source did not finish loading');
+          }
+        };
+
+        const scheduleBasemapVerification = () => {
+          if (fallbackActive || !basemapArchive) return;
+          clearBasemapVerifyTimers();
+
+          BASEMAP_VERIFY_DELAYS.forEach((delay, index) => {
+            basemapVerifyTimers.push(window.setTimeout(() => {
+              verifyLocalBasemap(index === BASEMAP_VERIFY_DELAYS.length - 1);
+            }, delay));
+          });
+        };
 
         // iOS browsers often report a smaller iframe/map size on the first
         // paint, then expand it after the browser chrome and 100dvh settle.
@@ -148,16 +306,81 @@ export default function LocationPicker({ lat, lng, onChange }) {
         map.touchZoomRotate.disableRotation();
 
         map.on('load', () => {
-          setMapError('');
           resizeMap();
           resizeTimers.push(window.setTimeout(resizeMap, 120));
           resizeTimers.push(window.setTimeout(resizeMap, 420));
+
+          if (fallbackActive) {
+            setMapError('Bản đồ HOLA Maps tạm thời không khả dụng. Đang dùng nền dự phòng để chọn vị trí.');
+          } else {
+            scheduleBasemapVerification();
+          }
+        });
+
+        map.on('style.load', () => {
+          resizeMap();
+          if (!fallbackActive && basemapArchive) {
+            scheduleBasemapVerification();
+          }
+        });
+
+        map.on('sourcedata', (event) => {
+          if (fallbackActive || event?.sourceId !== 'protomaps') return;
+          if (!event.isSourceLoaded) return;
+
+          localSourceErrorCount = 0;
+          clearBasemapVerifyTimers();
+          setMapError('');
         });
 
         map.on('error', (event) => {
           const message = event?.error?.message || '';
-          if (/pmtiles|source|tile|style/i.test(message)) {
-            setMapError('Bản đồ nền đang tải lỗi. Bạn vẫn có thể tìm địa điểm hoặc thử tải lại cửa sổ chọn vị trí.');
+          const lowerMessage = message.toLowerCase();
+          const sourceId = event?.sourceId || event?.source?.id || '';
+
+          if (lowerMessage.includes('webgl')) {
+            setMapError('Trình duyệt hiện không hỗ trợ WebGL cho bản đồ.');
+            return;
+          }
+
+          // Buildings are optional. Their failure must never hide roads/labels.
+          if (
+            sourceId === 'overture-buildings' ||
+            lowerMessage.includes('hoalac-buildings.pmtiles')
+          ) {
+            if (!supplementalBuildingsEnabled || fallbackActive) return;
+            supplementalBuildingsEnabled = false;
+            console.warn('[Hola Maps picker] Supplemental buildings failed:', message);
+
+            try {
+              map.setStyle(
+                createPmtilesStyle('streets', { includeSupplementalBuildings: false }),
+                { diff: false }
+              );
+            } catch (error) {
+              console.error('[Hola Maps picker] Could not remove broken building source:', error);
+            }
+            return;
+          }
+
+          const isLocalPmtilesError =
+            sourceId === 'protomaps' ||
+            lowerMessage.includes('hoalac.pmtiles') ||
+            lowerMessage.includes('pmtiles://');
+
+          if (!isLocalPmtilesError || fallbackActive) return;
+
+          localSourceErrorCount += 1;
+          console.warn(
+            '[Hola Maps picker] Local PMTiles source error',
+            localSourceErrorCount,
+            message
+          );
+
+          // Match the main map's tolerance for transient source errors, but the
+          // picker adds one explicit style retry before moving to fallback.
+          if (localSourceErrorCount >= 3) {
+            retryLocalBasemap(message || 'repeated protomaps source errors');
           }
         });
 
@@ -220,6 +443,7 @@ export default function LocationPicker({ lat, lng, onChange }) {
     return () => {
       cancelled = true;
       clearResizeHooks();
+      clearBasemapVerifyTimers();
       mapInstance?.remove();
       if (mapRef.current === mapInstance) mapRef.current = null;
       protocolRef.current = null;
