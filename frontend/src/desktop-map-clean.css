@@ -26,6 +26,20 @@
     bottom: 18px !important;
   }
 
+  /*
+   * HOLA MAPS ENGINE is a floating discovery panel, not a full-height drawer.
+   * Leave a deliberate footer zone for the basemap switcher so the panel has
+   * a clear visual ending and never covers the Map / Minimal controls.
+   */
+  body.map-route-active .hm-left-panel {
+    bottom: auto !important;
+    height: min(680px, calc(100% - 188px));
+    min-height: 432px;
+    max-height: calc(100% - 188px);
+    border-radius: 22px !important;
+    box-shadow: 0 18px 46px rgba(11,39,32,.13), 0 2px 0 rgba(255,255,255,.82) inset;
+  }
+
   /* A free-pin hint must not sit on top of the contribution dock. */
   body.map-route-active .hm-pin-hint {
     bottom: 78px !important;
