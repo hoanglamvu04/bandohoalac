@@ -1,66 +1,410 @@
 /*
- * Desktop /map command-bar collision fix.
+ * Desktop /map reference layout.
  *
- * MapDiscoveryPage renders the unified MapSearchV2 on top of MapPage. The old
- * .hm-map-search inside MapPage was only made transparent, so it still occupied
- * flex width. At normal desktop zoom that phantom width pushed Gần tôi / Đang
- * mở / Bộ lọc under the fixed V2 search (z-index 1080).
+ * Goal: map-first workspace like the approved reference:
+ * - no shared website header on desktop map
+ * - one floating discovery rail on the left
+ * - one large search box at the top of the map
+ * - Gần tôi / Đang mở / Bộ lọc / Báo tình trạng stay on the SAME row
+ * - controls never sit underneath the search at 100% browser zoom
  *
- * Keep one real search control and give discovery actions their own second-row
- * corridor. This stays stable at 100% browser zoom and does not depend on the
- * current left drawer width.
+ * This file is intentionally loaded last so it can normalize the older map
+ * layout layers without changing mobile behaviour.
  */
+
 @media (min-width: 761px) {
+  /* /map is an application workspace, not a normal website page. */
+  body.map-route-active .map-app-shell > .navbar {
+    display: none !important;
+  }
+
+  body.map-route-active .map-app-shell,
+  body.map-route-active .map-app-main,
+  body.map-route-active .map-app-main > .map-discovery-v1,
+  body.map-route-active .map-app-main > .map-discovery-v1 > .hm-workspace {
+    height: 100dvh !important;
+    min-height: 0 !important;
+  }
+
+  /* MapPage still contains the legacy search. MapSearchV2 is the only visible
+     search on /map, therefore the legacy field must not reserve flex width. */
   body.map-route-active .map-experience-v2 .hm-map-topbar .hm-map-search {
     display: none !important;
   }
-}
 
-/* Full desktop: quick filters live directly below the search row, aligned to
-   the right. The unified search remains centered and can no longer cover them. */
-@media (min-width: 1281px) {
-  body.map-route-active .hm-map-topbar {
+  /* Reference-style left discovery rail. */
+  body.map-route-active .hm-left-panel {
+    top: 18px !important;
     left: 18px !important;
-    right: 18px !important;
+    bottom: 18px !important;
+    width: 380px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(16, 47, 41, .08) !important;
+    background: rgba(255, 255, 255, .975) !important;
+    box-shadow: 0 18px 48px rgba(11, 39, 32, .14) !important;
+    backdrop-filter: blur(18px);
   }
 
+  body.map-route-active .hm-sheet-drag-handle {
+    display: none !important;
+  }
+
+  body.map-route-active .hm-panel-heading {
+    position: relative;
+    min-height: 132px;
+    padding: 20px 20px 68px !important;
+    border-bottom: 1px solid rgba(16, 47, 41, .07);
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  body.map-route-active .hm-panel-heading > div {
+    padding-left: 48px;
+  }
+
+  /* Small brand mark placeholder keeps the same hierarchy as the reference
+     without requiring a second logo asset inside MapPage. */
+  body.map-route-active .hm-panel-heading::before {
+    content: "H";
+    position: absolute;
+    left: 20px;
+    top: 21px;
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    color: #fff;
+    background: #146b53;
+    box-shadow: 0 7px 18px rgba(20, 107, 83, .22);
+    font-size: 15px;
+    font-weight: 900;
+  }
+
+  body.map-route-active .hm-panel-heading span {
+    font-size: 11px !important;
+    letter-spacing: .14em;
+  }
+
+  body.map-route-active .hm-panel-heading h1 {
+    margin-top: 3px !important;
+    font-size: 23px !important;
+    line-height: 1.08;
+    letter-spacing: -.035em;
+  }
+
+  body.map-route-active .hm-panel-heading > button {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: #f2f5f3;
+  }
+
+  /* Current/default sidebar tab. The actual Chuyên đề toggle is positioned as
+     the second tab below. */
+  body.map-route-active .hm-panel-heading::after {
+    content: "⌖  Địa điểm";
+    position: absolute;
+    left: 20px;
+    bottom: 13px;
+    width: 166px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 13px;
+    color: #fff;
+    background: #10654f;
+    box-shadow: 0 8px 20px rgba(16, 101, 79, .18);
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0;
+    pointer-events: none;
+  }
+
+  /* Put the existing thematic control inside the left rail so the top map row
+     is reserved for search and discovery actions only. */
+  body.map-route-active .theme-layer-dock {
+    top: 103px !important;
+    left: 211px !important;
+    right: auto !important;
+    width: 166px !important;
+    transform: none !important;
+    z-index: 950;
+  }
+
+  body.map-route-active .theme-layer-toggle {
+    width: 166px;
+    min-height: 46px;
+    margin: 0 !important;
+    justify-content: center;
+    border-radius: 13px;
+    border-color: rgba(16, 47, 41, .09);
+    background: rgba(255, 255, 255, .98);
+    box-shadow: 0 5px 14px rgba(11, 39, 32, .06);
+    font-size: 13px;
+  }
+
+  body.map-route-active .theme-layer-panel {
+    position: fixed;
+    top: 158px;
+    left: 38px;
+    width: 342px;
+    max-height: calc(100dvh - 250px);
+    margin: 0;
+    overflow: auto;
+    border-radius: 15px;
+    padding: 12px;
+    box-shadow: 0 16px 38px rgba(11, 39, 32, .14);
+  }
+
+  body.map-route-active .theme-layer-chips {
+    gap: 7px;
+  }
+
+  body.map-route-active .theme-layer-chips button {
+    min-height: 36px;
+    padding-inline: 10px;
+    font-size: 12px;
+  }
+
+  /* Place list = compact cards, matching the reference rail density. */
+  body.map-route-active .hm-place-results {
+    padding: 13px 14px 8px !important;
+  }
+
+  body.map-route-active .hm-section-title {
+    margin: 0 2px 10px;
+  }
+
+  body.map-route-active .hm-section-title span {
+    font-size: 14px !important;
+    letter-spacing: 0 !important;
+    text-transform: none;
+    color: #173f35;
+  }
+
+  body.map-route-active .hm-section-title b {
+    min-width: 38px;
+    padding: 5px 9px;
+    font-size: 13px !important;
+  }
+
+  body.map-route-active .hm-place-list {
+    padding: 0 2px 16px 0 !important;
+  }
+
+  body.map-route-active .hm-place-row {
+    grid-template-columns: 72px minmax(0, 1fr) auto !important;
+    gap: 10px !important;
+    min-height: 96px !important;
+    margin-bottom: 8px;
+    padding: 9px !important;
+    border: 1px solid rgba(16, 47, 41, .07) !important;
+    border-radius: 15px !important;
+    background: rgba(255, 255, 255, .96) !important;
+    box-shadow: 0 4px 14px rgba(11, 39, 32, .045);
+  }
+
+  body.map-route-active .hm-place-row:hover,
+  body.map-route-active .hm-place-row.active {
+    border-color: rgba(16, 101, 79, .18) !important;
+    background: #f8fbf9 !important;
+    box-shadow: 0 8px 20px rgba(11, 39, 32, .075);
+  }
+
+  body.map-route-active .hm-place-thumb {
+    width: 72px !important;
+    height: 68px !important;
+    border-radius: 12px !important;
+  }
+
+  body.map-route-active .hm-place-copy small {
+    font-size: 10px !important;
+  }
+
+  body.map-route-active .hm-place-copy b {
+    font-size: 14px !important;
+    line-height: 1.25;
+  }
+
+  body.map-route-active .hm-place-copy em,
+  body.map-route-active .hm-open-status,
+  body.map-route-active .hm-place-rating {
+    font-size: 11px !important;
+  }
+
+  body.map-route-active .hm-layer-section {
+    padding: 9px 14px 12px !important;
+  }
+
+  body.map-route-active .hm-layer-section-toggle {
+    min-height: 48px;
+    border-radius: 12px;
+    background: #f8faf9;
+  }
+
+  /* Top command bar. The wrapper is only used as an anchor for the map menu and
+     discovery filters; the legacy search/add-place controls are hidden. */
+  body.map-route-active .hm-map-topbar {
+    top: 18px !important;
+    left: 418px !important;
+    right: 18px !important;
+    height: 52px;
+    display: block !important;
+    pointer-events: none;
+  }
+
+  body.map-route-active .hm-map-topbar > * {
+    pointer-events: auto;
+  }
+
+  body.map-route-active .hm-add-place {
+    display: none !important;
+  }
+
+  body.map-route-active .map-experience-v2:has(.hm-left-panel.open) .hm-map-menu {
+    display: none !important;
+  }
+
+  body.map-route-active .map-experience-v2:not(:has(.hm-left-panel.open)) .hm-map-menu {
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 1100;
+    display: grid !important;
+    width: 50px;
+    height: 50px;
+    border-radius: 15px;
+  }
+
+  /* Unified search occupies its own corridor between the sidebar and filters. */
+  body.map-route-active .hm-search-v2-wrap {
+    top: 18px !important;
+    left: 430px !important;
+    right: clamp(560px, 36vw, 670px) !important;
+    width: auto !important;
+    transform: none !important;
+    z-index: 1080;
+  }
+
+  body.map-route-active .hm-search-v2,
+  body.map-route-active .hm-search-v2-dropdown {
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  body.map-route-active .hm-search-v2 {
+    min-height: 52px;
+    border-radius: 16px;
+    padding-inline: 16px;
+    box-shadow: 0 10px 28px rgba(11, 39, 32, .13);
+  }
+
+  body.map-route-active .hm-search-v2 input {
+    font-size: 14px;
+  }
+
+  /* Discovery actions stay on the same row as search, aligned to the right. */
   body.map-route-active .hm-map-topbar .hm-discovery-filters {
-    position: absolute !important;
-    top: 58px !important;
-    right: 0 !important;
+    position: fixed !important;
+    top: 18px !important;
+    right: 18px !important;
     left: auto !important;
+    width: auto !important;
+    max-width: none !important;
     margin: 0 !important;
     display: flex !important;
     align-items: center;
     justify-content: flex-end;
     flex-wrap: nowrap;
-    gap: 7px;
-    width: max-content;
-    max-width: calc(100vw - 36px);
+    gap: 8px;
+    overflow: visible !important;
+    z-index: 1085;
   }
 
   body.map-route-active .hm-map-topbar .hm-quick-filter,
   body.map-route-active .hm-map-topbar .hm-filter-trigger,
   body.map-route-active .hm-map-topbar .hm-report-status {
+    min-height: 50px !important;
+    height: 50px !important;
     flex: 0 0 auto;
+    padding-inline: 15px;
+    border-radius: 15px;
+    font-size: 12px !important;
+    box-shadow: 0 8px 22px rgba(11, 39, 32, .09);
+  }
+
+  body.map-route-active .hm-map-topbar .hm-filter-popover {
+    top: 58px;
+    right: 0;
+  }
+
+  /* Keep lower map overlays clear of the wider left rail. */
+  body.map-route-active .hm-pin-hint {
+    left: calc(50% + 190px);
+  }
+
+  body.map-route-active .hm-map-contribution-dock {
+    right: 18px !important;
+    max-width: min(500px, calc(100vw - 440px));
   }
 }
 
-/* Medium desktop already uses a second line in the base map CSS. Anchor that
-   line to the right as well so resizing between laptop and desktop widths does
-   not make the controls jump back underneath MapSearchV2. */
-@media (min-width: 761px) and (max-width: 1280px) {
+/* Regular laptop widths: preserve the reference hierarchy but allow the quick
+   actions to sit on a second line before they become cramped. */
+@media (min-width: 761px) and (max-width: 1319px) {
+  body.map-route-active .hm-left-panel {
+    width: 350px !important;
+  }
+
+  body.map-route-active .hm-panel-heading::after {
+    width: 150px;
+  }
+
+  body.map-route-active .theme-layer-dock {
+    left: 192px !important;
+    width: 154px !important;
+  }
+
+  body.map-route-active .theme-layer-toggle {
+    width: 154px;
+  }
+
+  body.map-route-active .theme-layer-panel {
+    left: 36px;
+    width: 314px;
+  }
+
+  body.map-route-active .hm-search-v2-wrap {
+    left: 386px !important;
+    right: 18px !important;
+    top: 16px !important;
+  }
+
   body.map-route-active .hm-map-topbar .hm-discovery-filters {
-    left: auto !important;
-    right: 0 !important;
-    margin: 0 !important;
-    justify-content: flex-end;
-    max-width: calc(100vw - 92px);
-    overflow-x: auto;
+    top: 78px !important;
+    right: 18px !important;
+    max-width: calc(100vw - 404px) !important;
+    overflow-x: auto !important;
     scrollbar-width: none;
   }
 
   body.map-route-active .hm-map-topbar .hm-discovery-filters::-webkit-scrollbar {
     display: none;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-quick-filter,
+  body.map-route-active .hm-map-topbar .hm-filter-trigger,
+  body.map-route-active .hm-map-topbar .hm-report-status {
+    min-height: 42px !important;
+    height: 42px !important;
+    padding-inline: 11px;
+  }
+
+  body.map-route-active .hm-pin-hint {
+    left: calc(50% + 175px);
   }
 }
