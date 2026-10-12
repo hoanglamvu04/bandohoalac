@@ -1,5 +1,26 @@
 /* Mobile map experience v5
    Final interaction pass for the shared /map + /embed discovery experience. */
+
+.halo-map-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid rgba(23, 77, 65, .12);
+  border-radius: 11px;
+  background: #f3f7f4;
+  color: #174d41;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+body.map-embed-active .halo-map-brand-card {
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+}
+
 @media (max-width: 760px) {
   /* Keep the three primary actions readable and on one line. */
   body.map-route-active .hm-map-topbar .hm-discovery-filters {
@@ -172,6 +193,33 @@
   body.map-route-active .hm-halo-filter-link {
     border-radius: 14px !important;
     background: linear-gradient(135deg, #fff8ef, #f2f7f2) !important;
+  }
+
+  body.map-embed-active .halo-map-brand-card {
+    grid-template-columns: auto auto minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  body.map-embed-active .halo-map-back {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0;
+    border-radius: 10px;
+  }
+
+  body.map-embed-active .halo-map-back span {
+    display: none;
+  }
+
+  body.map-embed-active .halo-map-brand-card .halo-map-brand-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  body.map-embed-active .halo-map-brand-card h1 {
+    font-size: 14px !important;
   }
 }
 
