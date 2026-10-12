@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#102f29" />
     <meta name="application-name" content="Hola Maps" />
+    <meta name="description" content="Bản đồ cộng đồng dành cho Hòa Lạc và khu vực lân cận: khám phá địa điểm, tuyến đường, trải nghiệm địa phương và dữ liệu được cộng đồng cập nhật." />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta property="og:locale" content="vi_VN" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Hola Maps" />
+    <meta property="og:title" content="Hola Maps - Khám phá Hòa Lạc" />
+    <meta property="og:description" content="Bản đồ cộng đồng dành cho Hòa Lạc và khu vực lân cận." />
+    <meta property="og:url" content="https://maps.dothihoalac.vn/" />
+    <meta property="og:image" content="https://maps.dothihoalac.vn/pwa-icon.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Hola Maps - Khám phá Hòa Lạc" />
+    <meta name="twitter:description" content="Bản đồ cộng đồng dành cho Hòa Lạc và khu vực lân cận." />
+    <link rel="canonical" href="https://maps.dothihoalac.vn/" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Hola Maps" />
@@ -21,6 +34,33 @@
     <link rel="dns-prefetch" href="//tiles.openfreemap.org" />
     <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin />
     <link rel="dns-prefetch" href="//tile.openstreetmap.org" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://maps.dothihoalac.vn/#organization",
+            "name": "Hola Maps",
+            "url": "https://maps.dothihoalac.vn/"
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://maps.dothihoalac.vn/#website",
+            "url": "https://maps.dothihoalac.vn/",
+            "name": "Hola Maps",
+            "inLanguage": "vi-VN",
+            "publisher": { "@id": "https://maps.dothihoalac.vn/#organization" },
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "https://maps.dothihoalac.vn/map?q={search_term_string}",
+              "query-input": "required name=search_term_string"
+            }
+          }
+        ]
+      }
+    </script>
 
     <title>Hola Maps - Khám phá Hòa Lạc</title>
   </head>
