@@ -309,7 +309,7 @@ function roadWidth(kind) {
 
 function enhanceRoadLayer(layer, palette) {
   const id = String(layer.id || '');
-  if (layer['source-layer'] !== 'roads') return layer;
+  if (layer['source-layer'] !== 'roads' || layer.type !== 'line') return layer;
 
   const isCasing = id.includes('casing');
   const isHighway = id.includes('highway');
