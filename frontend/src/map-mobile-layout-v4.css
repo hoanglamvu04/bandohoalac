@@ -1,6 +1,6 @@
 /* Mobile map layout v4
    One clean mobile stack:
-   header -> search -> Chuyen de / Gan toi / Bo loc -> result sheet.
+   header -> search -> Vi tri cua toi / Gan toi / Bo loc -> result sheet.
    The result sheet never slides underneath the floating controls. */
 @media (max-width: 760px) {
   body.map-route-active {
@@ -30,12 +30,13 @@
   body.map-route-active .hm-map-topbar {
     position: fixed !important;
     top: var(--hm-mobile-actions-top) !important;
-    left: auto !important;
+    left: 10px !important;
     right: 10px !important;
     width: auto !important;
     height: 38px !important;
     display: flex !important;
     align-items: center !important;
+    justify-content: flex-end !important;
     gap: 4px !important;
     z-index: 1040 !important;
   }
@@ -51,7 +52,7 @@
     justify-content: flex-end !important;
     flex-wrap: nowrap !important;
     width: auto !important;
-    max-width: none !important;
+    max-width: 100% !important;
     height: 38px !important;
     gap: 4px !important;
     margin: 0 !important;
@@ -63,9 +64,9 @@
     display: none !important;
   }
 
-  /* Mobile keeps only Near me + Filter. Keep them compact and visually one
-     control group instead of two wide pills drifting apart. */
+  /* Mobile top actions: current location, nearby places and filter. */
   body.map-route-active .hm-discovery-filters .hm-quick-filter:first-child,
+  body.map-route-active .hm-discovery-filters .hm-my-location-filter,
   body.map-route-active .hm-discovery-filters .hm-filter-menu {
     display: flex !important;
     flex: 0 0 auto !important;
@@ -75,10 +76,24 @@
     margin: 0 !important;
   }
 
-  body.map-route-active .hm-discovery-filters .hm-quick-filter:first-child {
-    min-width: 86px !important;
-    max-width: 104px !important;
+  body.map-route-active .hm-discovery-filters .hm-my-location-filter {
+    order: -1 !important;
+    min-width: 102px !important;
     padding: 0 9px !important;
+    color: #174d41 !important;
+    border-color: rgba(23,77,65,.15) !important;
+    background: rgba(255,255,255,.96) !important;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-my-location-filter:disabled {
+    opacity: .68 !important;
+    cursor: wait !important;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-quick-filter:first-child {
+    min-width: 72px !important;
+    max-width: 92px !important;
+    padding: 0 8px !important;
     color: #174d41 !important;
     background: rgba(255,255,255,.96) !important;
   }
@@ -101,7 +116,7 @@
   body.map-route-active .hm-filter-trigger {
     min-height: 38px !important;
     height: 38px !important;
-    padding: 0 9px !important;
+    padding: 0 8px !important;
     border-radius: 13px !important;
     white-space: nowrap !important;
     gap: 5px !important;
@@ -117,40 +132,11 @@
     opacity: 1 !important;
   }
 
-  /* The GPS action already exists in MapView. On mobile expose the label so
-     users do not have to guess what the small compass icon means. */
+  /* The visible mobile location action now lives in the top control row.
+     Keep the original MapView GPS button in the DOM as the working engine,
+     but hide its duplicate visual button on small screens. */
   body.map-route-active .hm-locate {
-    position: fixed !important;
-    right: 12px !important;
-    bottom: calc(var(--app-safe-bottom, 66px) + 14px) !important;
-    width: auto !important;
-    min-width: 0 !important;
-    height: 40px !important;
-    min-height: 40px !important;
-    padding: 0 12px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 6px !important;
-    border-radius: 999px !important;
-    color: #174d41 !important;
-    background: rgba(255,255,255,.97) !important;
-    font-size: 11px !important;
-    line-height: 1 !important;
-    font-weight: 850 !important;
-    white-space: nowrap !important;
-    box-shadow: 0 8px 24px rgba(16,47,41,.14) !important;
-    z-index: 1045 !important;
-  }
-
-  body.map-route-active .hm-locate svg {
-    width: 17px !important;
-    height: 17px !important;
-    flex: 0 0 auto !important;
-  }
-
-  body.map-route-active .hm-locate:disabled {
-    opacity: .72 !important;
+    display: none !important;
   }
 
   /* Menus open below the action row and above the sheet. */
@@ -276,15 +262,14 @@
     max-height: calc(100% - 184px) !important;
   }
 
-  body.map-route-active .hm-discovery-filters .hm-quick-filter:first-child {
-    min-width: 80px !important;
-    max-width: 96px !important;
+  body.map-route-active .hm-discovery-filters .hm-my-location-filter {
+    min-width: 94px !important;
+    padding: 0 7px !important;
   }
 
-  body.map-route-active .hm-locate {
-    right: 10px !important;
-    padding: 0 10px !important;
-    font-size: 10.5px !important;
+  body.map-route-active .hm-discovery-filters .hm-quick-filter:first-child {
+    min-width: 68px !important;
+    max-width: 84px !important;
   }
 }
 
@@ -292,19 +277,23 @@
   body.map-route-active .theme-layer-dock:not(.open) .theme-layer-toggle,
   body.map-route-active .hm-quick-filter,
   body.map-route-active .hm-filter-trigger {
-    padding-left: 7px !important;
-    padding-right: 7px !important;
-    font-size: 11px !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    font-size: 10.5px !important;
     gap: 4px !important;
   }
 
   body.map-route-active .hm-map-topbar .hm-discovery-filters {
-    max-width: none !important;
+    max-width: 100% !important;
     gap: 3px !important;
   }
 
+  body.map-route-active .hm-discovery-filters .hm-my-location-filter {
+    min-width: 88px !important;
+  }
+
   body.map-route-active .hm-discovery-filters .hm-quick-filter:first-child {
-    min-width: 76px !important;
-    max-width: 90px !important;
+    min-width: 64px !important;
+    max-width: 78px !important;
   }
 }
