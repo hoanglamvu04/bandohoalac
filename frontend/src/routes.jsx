@@ -15,6 +15,7 @@ const Contribute = lazy(() => import('./pages/Contribute.jsx'));
 const CommunityVerification = lazy(() => import('./pages/CommunityVerification.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
 const Register = lazy(() => import('./pages/Register.jsx'));
+const PublicInfoPage = lazy(() => import('./pages/PublicInfoPage.jsx'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
 const AdminContributions = lazy(() => import('./pages/admin/AdminContributions.jsx'));
 const AdminDataTrust = lazy(() => import('./pages/admin/AdminDataTrust.jsx'));
@@ -162,6 +163,11 @@ export const router = createBrowserRouter([
       { path: 'login', element: withSuspense(Login) },
       { path: 'register', element: withSuspense(Register) },
       { path: 'developers', element: withSuspense(DeveloperDocs) },
+      { path: 'huong-dan', element: withSuspense(PublicInfoPage) },
+      { path: 'quy-dinh-cong-dong', element: withSuspense(PublicInfoPage) },
+      { path: 'dieu-khoan', element: withSuspense(PublicInfoPage) },
+      { path: 'quyen-rieng-tu', element: withSuspense(PublicInfoPage) },
+      { path: 'nguon-du-lieu', element: withSuspense(PublicInfoPage) },
       { path: 'admin', element: withRole(AdminDashboard, STAFF_ROLES) },
       { path: 'admin/contributions', element: withRole(AdminContributions, STAFF_ROLES) },
       { path: 'admin/data-quality', element: withRole(AdminDataTrust, STAFF_ROLES) },
