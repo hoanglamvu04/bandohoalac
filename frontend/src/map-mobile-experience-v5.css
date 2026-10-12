@@ -1,0 +1,207 @@
+/* Mobile map experience v5
+   Final interaction pass for the shared /map + /embed discovery experience. */
+@media (max-width: 760px) {
+  /* Keep the three primary actions readable and on one line. */
+  body.map-route-active .hm-map-topbar .hm-discovery-filters {
+    gap: 5px !important;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-my-location-filter,
+  body.map-route-active .hm-discovery-filters .hm-quick-filter:first-child,
+  body.map-route-active .hm-discovery-filters .hm-filter-trigger {
+    box-shadow: 0 7px 20px rgba(15, 58, 49, .09) !important;
+    border-color: rgba(23, 77, 65, .13) !important;
+    background: rgba(255, 255, 255, .97) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-my-location-filter.located {
+    color: #fff !important;
+    border-color: #174d41 !important;
+    background: #174d41 !important;
+    box-shadow: 0 8px 22px rgba(23, 77, 65, .20) !important;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-my-location-filter.located svg {
+    stroke-width: 2.6;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-quick-filter:first-child.active {
+    background: #174d41 !important;
+  }
+
+  /* Near-me already has a radius summary in the result sheet. Make it feel
+     like a useful status line rather than another large toolbar. */
+  body.map-route-active .hm-place-scope-bar {
+    margin: 4px 8px 8px !important;
+    min-height: 34px !important;
+    padding: 6px 9px !important;
+    gap: 8px !important;
+    border: 1px solid rgba(23, 77, 65, .10) !important;
+    border-radius: 12px !important;
+    background: #f4f8f5 !important;
+    color: #174d41 !important;
+    font-size: 11px !important;
+  }
+
+  body.map-route-active .hm-place-scope-bar button {
+    min-height: 26px !important;
+    padding: 0 8px !important;
+    border-radius: 9px !important;
+    font-size: 10px !important;
+  }
+
+  /* Marker detail becomes a real mobile bottom sheet instead of a floating
+     desktop inspector. This works in both native /map and HALO HOLA /embed. */
+  body.map-route-active .hm-place-inspector.discovery-v3 {
+    position: fixed !important;
+    z-index: 1120 !important;
+    top: auto !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: calc(var(--app-safe-bottom, 72px) + 8px) !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: min(46dvh, 430px) !important;
+    margin: 0 !important;
+    padding-top: 20px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid rgba(16, 47, 41, .09) !important;
+    border-radius: 24px 24px 18px 18px !important;
+    background: rgba(255, 255, 252, .985) !important;
+    box-shadow: 0 -12px 40px rgba(15, 52, 44, .17) !important;
+  }
+
+  body.map-embed-active .hm-place-inspector.discovery-v3 {
+    bottom: 10px !important;
+  }
+
+  body.map-route-active .hm-place-inspector.discovery-v3::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 42px;
+    height: 4px;
+    transform: translateX(-50%);
+    border-radius: 999px;
+    background: rgba(23, 77, 65, .20);
+  }
+
+  body.map-route-active .hm-place-inspector.discovery-v3.has-gallery .hm-inspector-gallery,
+  body.map-route-active .hm-place-inspector.discovery-v3 .hm-inspector-gallery {
+    max-height: 138px !important;
+    min-height: 112px !important;
+    border-radius: 15px !important;
+    overflow: hidden !important;
+  }
+
+  body.map-route-active .hm-place-inspector.discovery-v3 .hm-inspector-gallery img {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 138px !important;
+    object-fit: cover !important;
+  }
+
+  body.map-route-active .hm-place-inspector.discovery-v3 h2,
+  body.map-route-active .hm-place-inspector.discovery-v3 h3 {
+    font-size: 18px !important;
+    line-height: 1.16 !important;
+    letter-spacing: -.02em !important;
+  }
+
+  body.map-route-active .hm-place-inspector.discovery-v3 p {
+    font-size: 11.5px !important;
+    line-height: 1.45 !important;
+  }
+
+  body.map-route-active .hm-place-inspector.discovery-v3 .hm-inspector-description,
+  body.map-route-active .hm-place-inspector.discovery-v3 .hm-place-description {
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden !important;
+  }
+
+  body.map-route-active .hm-inspector-actions.discovery-actions {
+    position: sticky !important;
+    bottom: -1px !important;
+    z-index: 4 !important;
+    display: grid !important;
+    grid-template-columns: 1.3fr .8fr .8fr !important;
+    gap: 7px !important;
+    margin: 10px -2px -2px !important;
+    padding: 8px 2px 2px !important;
+    background: linear-gradient(to bottom, rgba(255,255,252,0), rgba(255,255,252,.98) 22%) !important;
+  }
+
+  body.map-route-active .hm-inspector-actions.discovery-actions > * {
+    min-width: 0 !important;
+    min-height: 40px !important;
+    height: 40px !important;
+    padding: 0 8px !important;
+    border-radius: 12px !important;
+    font-size: 11px !important;
+    gap: 5px !important;
+    white-space: nowrap !important;
+  }
+
+  body.map-route-active .hm-inspector-actions.discovery-actions .primary {
+    background: #174d41 !important;
+    color: #fff !important;
+    box-shadow: 0 8px 20px rgba(23,77,65,.18) !important;
+  }
+
+  /* The result drawer remains behind the selected-place sheet. */
+  body.map-route-active .hm-left-panel {
+    z-index: 1080 !important;
+  }
+
+  /* Location feedback stays above the detail sheet and controls. */
+  body.map-route-active .hm-location-notice {
+    z-index: 1160 !important;
+    max-width: calc(100vw - 24px) !important;
+    font-size: 11px !important;
+  }
+
+  /* A slightly cleaner HALO entry inside the filter menu. */
+  body.map-route-active .hm-halo-filter-link {
+    border-radius: 14px !important;
+    background: linear-gradient(135deg, #fff8ef, #f2f7f2) !important;
+  }
+}
+
+@media (max-width: 420px) {
+  body.map-route-active .hm-discovery-filters .hm-my-location-filter {
+    min-width: 88px !important;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-my-location-filter span {
+    max-width: 64px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  body.map-route-active .hm-inspector-actions.discovery-actions {
+    grid-template-columns: 1.25fr .78fr .78fr !important;
+  }
+}
+
+@media (max-width: 380px) {
+  body.map-route-active .hm-discovery-filters .hm-my-location-filter span {
+    font-size: 0 !important;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-my-location-filter span::after {
+    content: 'Vị trí';
+    font-size: 10.5px;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-my-location-filter.located span::after {
+    content: 'Đã định vị';
+  }
+}
