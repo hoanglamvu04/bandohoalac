@@ -63,22 +63,22 @@ export default function Footer() {
         </div>
 
         <div className="footer-column footer-contact-column">
-          <h4>Hỗ trợ & liên hệ</h4>
-          <Link to="#">Hướng dẫn sử dụng</Link>
-          <Link to="#">Quy định cộng đồng</Link>
-          <a href="https://www.facebook.com/lamvudcba" target="_blank" rel="noreferrer">
-            Facebook <ExternalLink size={11}/>
-          </a>
+          <h4>Hỗ trợ & tin cậy</h4>
+          <Link to="/huong-dan">Hướng dẫn sử dụng</Link>
+          <Link to="/quy-dinh-cong-dong">Quy định cộng đồng</Link>
+          <Link to="/nguon-du-lieu">Nguồn dữ liệu</Link>
+          <Link to="/quyen-rieng-tu">Quyền riêng tư</Link>
+          <Link to="/dieu-khoan">Điều khoản sử dụng</Link>
+        </div>
+
+        <div className="footer-column">
+          <h4>Liên hệ & khu vực</h4>
           <a href="https://www.facebook.com/groups/1436045585156420" target="_blank" rel="noreferrer">
             Nhóm Facebook <ExternalLink size={11}/>
           </a>
           <a href="https://zalo.me/0376531093" target="_blank" rel="noreferrer">
             Zalo · 0376531093 <ExternalLink size={11}/>
           </a>
-        </div>
-
-        <div className="footer-column">
-          <h4>Khu vực</h4>
           <div className="footer-tags">
             <span>Yên Xuân</span>
             <span>Hòa Lạc</span>
