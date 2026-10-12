@@ -60,6 +60,7 @@ import './header-clean-v2.css';
 import './header-clean-mobile-bridge.css';
 import './header-balanced-v3.css';
 import './place-detail-readable.css';
+import './place-detail-actions-v2.css';
 import './desktop-map-search-overlap-fix.css';
 import './desktop-map-header-restore.css';
 import './desktop-map-sidebar-compact.css';
