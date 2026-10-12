@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
+import { pool } from './database/pool.js';
 import { uploadRoot } from './middleware/upload.js';
 import {
   generalApiRateLimiter,
@@ -70,6 +71,31 @@ export function createApp() {
 
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, service: 'hola-maps-api', env: env.nodeEnv });
+  });
+
+  app.get('/api/sitemap-places.xml', async (_req, res, next) => {
+    try {
+      const { rows } = await pool.query(`
+        SELECT id, updated_at
+        FROM places
+        WHERE status = 'PUBLISHED'
+        ORDER BY updated_at DESC
+        LIMIT 10000
+      `);
+
+      const urls = rows.map((place) => {
+        const lastmod = place.updated_at
+          ? `\n    <lastmod>${new Date(place.updated_at).toISOString()}</lastmod>`
+          : '';
+        return `  <url>\n    <loc>https://maps.dothihoalac.vn/place/${place.id}</loc>${lastmod}\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`;
+      }).join('\n');
+
+      res.set('Content-Type', 'application/xml; charset=utf-8');
+      res.set('Cache-Control', 'public, max-age=900, stale-while-revalidate=3600');
+      res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`);
+    } catch (error) {
+      next(error);
+    }
   });
 
   app.use('/api/public/v1', publicIntegrationRoutes);
