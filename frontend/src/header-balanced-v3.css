@@ -1,10 +1,20 @@
 /* Balanced desktop header: more presence than compact v2 without returning to the crowded legacy nav. */
 @media (min-width: 761px) {
-  /* The header itself is a clean product bar, not a giant rounded card. */
+  /*
+   * Full-bleed header surface.
+   * The old reference header was capped/inset, which made the whole white bar
+   * read like a floating card. Stretch only the header surface to the viewport
+   * and preserve roughly the same inner content alignment with responsive
+   * horizontal padding.
+   */
   .reference-navbar.compact-product-navbar.balanced-product-navbar {
+    width: 100% !important;
+    max-width: none !important;
     min-height: 78px !important;
     height: 78px !important;
-    padding: 0 28px !important;
+    margin: 0 !important;
+    top: 0 !important;
+    padding: 0 max(52px, calc((100vw - 1500px) / 2 + 28px)) !important;
     gap: 24px !important;
     border-radius: 0 !important;
     border-left: 0 !important;
@@ -125,7 +135,9 @@
 
 @media (min-width: 761px) and (max-width: 1260px) {
   .reference-navbar.compact-product-navbar.balanced-product-navbar {
-    padding-inline: 18px !important;
+    /* Old layout had 24px outer inset + 18px inner padding. Keep that content
+       position while the white header surface itself now reaches both edges. */
+    padding-inline: 42px !important;
     gap: 14px !important;
   }
 
