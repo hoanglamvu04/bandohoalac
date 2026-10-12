@@ -27,15 +27,16 @@
   }
 
   /*
-   * HOLA MAPS ENGINE is a floating discovery panel, not a full-height drawer.
-   * Leave a deliberate footer zone for the basemap switcher so the panel has
-   * a clear visual ending and never covers the Map / Minimal controls.
+   * HOLA MAPS ENGINE uses viewport height rather than a fixed 680px cap.
+   * Browser zoom changes the CSS viewport, so 64dvh keeps the panel at a
+   * visually consistent physical height at 100%, 90%, 80%, etc. The second
+   * limit guarantees a footer corridor for the basemap switcher.
    */
   body.map-route-active .hm-left-panel {
     bottom: auto !important;
-    height: min(680px, calc(100% - 188px));
-    min-height: 432px;
-    max-height: calc(100% - 188px);
+    height: min(64dvh, calc(100% - 196px));
+    min-height: 360px;
+    max-height: none;
     border-radius: 22px !important;
     box-shadow: 0 18px 46px rgba(11,39,32,.13), 0 2px 0 rgba(255,255,255,.82) inset;
   }
@@ -52,10 +53,69 @@
 }
 
 /*
+ * Short desktop/laptop viewports get a denser panel automatically. This also
+ * covers browser zoom levels where the usable CSS viewport becomes shorter.
+ */
+@media (min-width: 761px) and (max-height: 780px) {
+  body.map-route-active .hm-left-panel {
+    height: min(59dvh, calc(100% - 188px));
+    min-height: 330px;
+  }
+
+  body.map-route-active .hm-panel-heading {
+    padding: 15px 18px 13px;
+  }
+
+  body.map-route-active .hm-panel-heading h1 {
+    font-size: 22px;
+  }
+
+  body.map-route-active .hm-place-row {
+    min-height: 70px;
+    padding-block: 7px;
+  }
+
+  body.map-route-active .hm-place-thumb {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+@media (min-width: 761px) and (max-height: 660px) {
+  body.map-route-active .hm-left-panel {
+    height: min(54dvh, calc(100% - 174px));
+    min-height: 292px;
+  }
+
+  body.map-route-active .hm-panel-heading {
+    padding: 13px 16px 11px;
+  }
+
+  body.map-route-active .hm-panel-heading span {
+    font-size: 10px;
+  }
+
+  body.map-route-active .hm-panel-heading h1 {
+    margin-top: 2px;
+    font-size: 20px;
+  }
+
+  body.map-route-active .hm-place-row {
+    min-height: 62px;
+  }
+
+  body.map-route-active .hm-place-thumb {
+    width: 50px;
+    height: 50px;
+    border-radius: 13px;
+  }
+}
+
+/*
  * Desktop safe corridor for the open results drawer.
  * The drawer occupies 16px + 340px on the left. Search/thematic controls are
  * normally centered against the full viewport, which makes their left edge
- * slide underneath the drawer around common 125% Windows/browser scaling.
+ * slide underneath the drawer around common Windows/browser scaling.
  * Shrink those floating controls only while the drawer is open so their left
  * edge always stays clear of the panel. Closing the drawer restores the normal
  * centered width automatically without duplicating React state.
