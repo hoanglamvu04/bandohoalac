@@ -1,0 +1,117 @@
+/* Balanced desktop header: more presence than compact v2 without returning to the crowded legacy nav. */
+@media (min-width: 761px) {
+  .reference-navbar.compact-product-navbar.balanced-product-navbar {
+    min-height: 78px !important;
+    height: 78px !important;
+    padding: 0 28px !important;
+    gap: 24px !important;
+    border-radius: 0 0 26px 26px !important;
+  }
+
+  .balanced-product-navbar .brand-logo-main {
+    width: min(var(--brand-header-desktop-width, 220px), 218px) !important;
+    max-height: 56px !important;
+  }
+
+  .balanced-product-navbar .compact-primary-nav {
+    gap: 6px !important;
+  }
+
+  .balanced-product-navbar .compact-primary-nav .nav-link {
+    min-height: 44px !important;
+    padding: 0 15px !important;
+    border-radius: 13px !important;
+    font-size: 13.5px !important;
+    gap: 8px !important;
+  }
+
+  .balanced-product-navbar .compact-primary-nav .nav-link.active {
+    background: #edf5f1 !important;
+  }
+
+  .balanced-product-navbar .compact-primary-nav .nav-link.active::after {
+    bottom: -9px !important;
+  }
+
+  .balanced-product-navbar .compact-nav-actions {
+    gap: 9px !important;
+  }
+
+  .balanced-product-navbar .compact-nav-actions .nav-cta {
+    min-height: 44px !important;
+    padding: 0 16px !important;
+    border-radius: 13px !important;
+    font-size: 12.5px !important;
+  }
+
+  .balanced-product-navbar .compact-install-button {
+    min-height: 44px !important;
+    height: 44px !important;
+    padding: 0 13px !important;
+    display: inline-flex !important;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid #d7e3dd !important;
+    border-radius: 13px !important;
+    color: #31574b !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    font-size: 12px !important;
+    font-weight: 820 !important;
+    cursor: pointer;
+  }
+
+  .balanced-product-navbar .compact-install-button:hover {
+    color: #174f40 !important;
+    background: #f4f8f6 !important;
+    border-color: #cbdcd4 !important;
+  }
+
+  .balanced-product-navbar .nav-notification-button,
+  .balanced-product-navbar .compact-account-button {
+    height: 44px !important;
+  }
+
+  .balanced-product-navbar .nav-notification-button {
+    width: 44px !important;
+    min-width: 44px !important;
+  }
+
+  .balanced-product-navbar .compact-account-button {
+    min-width: 58px !important;
+    padding-inline: 9px !important;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1260px) {
+  .reference-navbar.compact-product-navbar.balanced-product-navbar {
+    padding-inline: 18px !important;
+    gap: 14px !important;
+  }
+
+  .balanced-product-navbar .brand-logo-main {
+    width: min(var(--brand-header-desktop-width, 190px), 184px) !important;
+  }
+
+  .balanced-product-navbar .compact-primary-nav .nav-link {
+    padding-inline: 11px !important;
+    font-size: 12.5px !important;
+  }
+
+  .balanced-product-navbar .compact-install-button span {
+    display: none;
+  }
+
+  .balanced-product-navbar .compact-install-button {
+    width: 44px !important;
+    min-width: 44px !important;
+    padding: 0 !important;
+    justify-content: center;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1040px) {
+  .balanced-product-navbar .compact-primary-nav .nav-link:nth-child(3) {
+    display: none !important;
+  }
+}
