@@ -1,7 +1,7 @@
 import * as maplibre from 'maplibre-gl';
 import { isInsideServiceCoverage } from './mapConfig.js';
 
-const PATCH_KEY = '__holaInteractionBridgePatchedV3';
+const PATCH_KEY = '__holaInteractionBridgePatchedV4';
 const MAP_KEY = '__HOLA_MAP_INSTANCE__';
 const INTERACTIVE_LAYER_IDS = [
   'hm-place-clusters',
@@ -46,6 +46,11 @@ function featureDescriptor(feature, name) {
   return (sourceLayer + ' ' + layerId + ' ' + kind + ' ' + name).toLowerCase();
 }
 
+function isLocalityFeature(feature, name = '') {
+  return /\b(place|locality|village|town|hamlet|neighbour|neighborhood|suburb|quarter|district|ward)\b/i
+    .test(featureDescriptor(feature, name));
+}
+
 function featureSubtitle(feature, name) {
   const descriptor = featureDescriptor(feature, name);
   if (/\b(hồ|lake|water|reservoir|river|stream|canal|pond|wetland|physical)\b/i.test(descriptor)) {
@@ -56,6 +61,9 @@ function featureSubtitle(feature, name) {
   }
   if (/\b(poi|landmark|amenity|shop|tourism|school|hospital|restaurant|cafe)\b/i.test(descriptor)) {
     return 'Địa điểm trên HOLA Maps';
+  }
+  if (isLocalityFeature(feature, name)) {
+    return 'Khu vực trên HOLA Maps';
   }
   return 'Địa danh trên HOLA Maps';
 }
@@ -70,7 +78,7 @@ function featureScore(feature, name, nearby = false, index = 0) {
 
   if (/\b(hồ|lake|water|reservoir|river|stream|canal|pond|wetland)\b/i.test(descriptor)) {
     score -= 42;
-  } else if (/\b(place|locality|village|town|hamlet|neighbour|physical)\b/i.test(descriptor)) {
+  } else if (isLocalityFeature(feature, name) || /\bphysical\b/i.test(descriptor)) {
     score -= 28;
   } else if (/\b(poi|landmark|amenity|tourism)\b/i.test(descriptor)) {
     score -= 22;
@@ -126,13 +134,99 @@ function collectNamedFeatures(map, point) {
   return candidates.sort((left, right) => left.score - right.score);
 }
 
-function resolvePinnedMapFeature(map, point) {
-  const best = collectNamedFeatures(map, point)[0];
-  if (!best) return null;
+function geometryScreenDistance(map, feature, point) {
+  const geometry = feature?.geometry;
+  if (!geometry || typeof map?.project !== 'function') return Number.POSITIVE_INFINITY;
+
+  let coordinate = null;
+  if (geometry.type === 'Point') coordinate = geometry.coordinates;
+  else if (geometry.type === 'MultiPoint') coordinate = geometry.coordinates?.[0];
+
+  if (!Array.isArray(coordinate) || coordinate.length < 2) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  try {
+    const projected = map.project(coordinate);
+    const dx = Number(projected.x) - Number(point.x);
+    const dy = Number(projected.y) - Number(point.y);
+    if (!Number.isFinite(dx) || !Number.isFinite(dy)) return Number.POSITIVE_INFINITY;
+    return Math.sqrt(dx * dx + dy * dy);
+  } catch {
+    return Number.POSITIVE_INFINITY;
+  }
+}
+
+function resolveNearestLocality(map, point) {
+  if (!point || typeof map?.queryRenderedFeatures !== 'function') return null;
+
+  // Locality labels are intentionally sparse at this zoom. Search a wider screen
+  // area so a pin inside Kim Quan can still resolve to the visible "Kim Quan"
+  // label even when the user did not click directly on the text.
+  const radiusX = 520;
+  const radiusY = 340;
+  const box = [
+    [point.x - radiusX, point.y - radiusY],
+    [point.x + radiusX, point.y + radiusY]
+  ];
+
+  let features = [];
+  try {
+    features = map.queryRenderedFeatures(box) || [];
+  } catch {
+    return null;
+  }
+
+  const seen = new Set();
+  const candidates = [];
+
+  features.forEach((feature, index) => {
+    const name = cleanFeatureName(feature);
+    if (!name || !isLocalityFeature(feature, name)) return;
+
+    const key = [feature?.source || '', feature?.sourceLayer || '', feature?.layer?.id || '', feature?.id || '', name].join('|');
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    const distance = geometryScreenDistance(map, feature, point);
+    candidates.push({ feature, name, distance, index });
+  });
+
+  if (!candidates.length) return null;
+
+  candidates.sort((left, right) => {
+    const leftDistance = Number.isFinite(left.distance) ? left.distance : 99999;
+    const rightDistance = Number.isFinite(right.distance) ? right.distance : 99999;
+    if (leftDistance !== rightDistance) return leftDistance - rightDistance;
+    return left.index - right.index;
+  });
+
+  const best = candidates[0];
   return {
     title: best.name,
-    subtitle: featureSubtitle(best.feature, best.name)
+    subtitle: 'Khu vực trên HOLA Maps'
   };
+}
+
+function resolvePinnedMapFeature(map, point) {
+  const named = collectNamedFeatures(map, point);
+  const best = named[0];
+
+  if (best) {
+    const descriptor = featureDescriptor(best.feature, best.name);
+    const isSpecificFeature =
+      /\b(hồ|lake|water|reservoir|river|stream|canal|pond|wetland|road|street|highway|motorway|trunk|primary|secondary|tertiary|đường|poi|landmark|amenity|shop|tourism|school|hospital|restaurant|cafe)\b/i
+        .test(descriptor) || /^hồ\s/i.test(best.name);
+
+    if (isSpecificFeature || isLocalityFeature(best.feature, best.name)) {
+      return {
+        title: best.name,
+        subtitle: featureSubtitle(best.feature, best.name)
+      };
+    }
+  }
+
+  return resolveNearestLocality(map, point);
 }
 
 function dispatchPin(map, payload) {
