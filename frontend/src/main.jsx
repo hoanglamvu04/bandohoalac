@@ -4,7 +4,6 @@ import { router } from './routes.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
 import { BrandProvider } from './context/BrandContext.jsx';
-import MapPowerOverlay from './components/MapPowerOverlay.jsx';
 import { registerHolaPwa } from './pwa.js';
 import './style.css';
 import './premium.css';
@@ -51,7 +50,6 @@ import './integration-secrets.css';
 import './halo-hola-map.css';
 import './halo-hola-scroll-fix.css';
 import './discovery-v1.css';
-import './map-power-v3.css';
 import './mobile-map-clean.css';
 import './mobile-map-overlap-fix.css';
 import './map-mobile-layout-v4.css';
@@ -66,8 +64,6 @@ import './desktop-map-search-overlap-fix.css';
 import './desktop-map-header-restore.css';
 import './desktop-map-sidebar-compact.css';
 import './public-info.css';
-import './data-quality-v3.css';
-import './halo-sync-monitor.css';
 /* Stability V3 must remain the final map stylesheet so legacy overrides cannot
    reintroduce the 100% browser zoom clipping/overlap bugs. */
 import './map-stability-v3.css';
@@ -77,7 +73,6 @@ createRoot(document.getElementById('root')).render(
     <BrandProvider>
       <AuthProvider>
         <RouterProvider router={router} />
-        <MapPowerOverlay />
       </AuthProvider>
     </BrandProvider>
   </ToastProvider>
