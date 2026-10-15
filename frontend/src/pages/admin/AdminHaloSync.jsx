@@ -2,11 +2,18 @@ import { useEffect, useState } from 'react';
 import { Activity, ExternalLink, Image, Link2, MapPin, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 import { getHaloSyncMonitor } from '../../services/haloSyncAdminApi.js';
 import { useToast } from '../../context/ToastContext.jsx';
+import '../../halo-sync-monitor.css';
 
 function formatDate(value) {
   if (!value) return '—';
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('vi-VN');
+}
+
+function healthLabel(status) {
+  if (status === 'HEALTHY') return 'Ổn định';
+  if (status === 'ATTENTION') return 'Cần kiểm tra';
+  return 'Chưa có dữ liệu';
 }
 
 export default function AdminHaloSync() {
@@ -28,6 +35,7 @@ export default function AdminHaloSync() {
   useEffect(() => { load(); }, []);
 
   const summary = data?.summary || {};
+  const health = data?.health || {};
   const recent = data?.recent || [];
 
   return (
@@ -35,8 +43,8 @@ export default function AdminHaloSync() {
       <section className="halo-sync-hero">
         <div>
           <span className="eyebrow">HALO HOLA INTEGRATION</span>
-          <h1>Sync Monitor</h1>
-          <p>Theo dõi bài đã công bố, pin riêng, canonical place và các lần cập nhật/xóa gần nhất từ HALO HOLA.</p>
+          <h1>Sync Monitor V3</h1>
+          <p>Theo dõi bài đã công bố, pin riêng, canonical place và kiểm tra lỗi integrity như bài thiếu spot, thiếu media hoặc URL media không ổn định.</p>
         </div>
         <button type="button" onClick={load} disabled={loading}><RefreshCw className={loading ? 'spin' : ''} size={16} /> Làm mới</button>
       </section>
@@ -50,16 +58,17 @@ export default function AdminHaloSync() {
         <article><Activity /><span><small>Pin HALO riêng</small><b>{summary.pinPosts ?? '—'}</b></span></article>
       </section>
 
-      <section className="halo-sync-health">
+      <section className={'halo-sync-health ' + String(health.status || 'IDLE').toLowerCase()}>
+        <div><small>TRẠNG THÁI</small><b>{healthLabel(health.status)} · {health.integrityIssueCount || 0} lỗi integrity</b></div>
         <div><small>SYNC GẦN NHẤT</small><b>{formatDate(summary.lastSyncAt)}</b></div>
-        <div><small>PUBLIC GẦN NHẤT</small><b>{formatDate(summary.lastPublishedAt)}</b></div>
-        <div><small>PIN TẠM ĐÃ ẨN</small><b>{summary.hiddenTempSpots ?? 0}</b></div>
+        <div><small>THIẾU SPOT / MEDIA</small><b>{summary.publishedWithoutSpot || 0} / {summary.publishedWithoutMedia || 0}</b></div>
+        <div><small>URL MEDIA KHÔNG ỔN ĐỊNH</small><b>{summary.unstableMediaUrls || 0}</b></div>
       </section>
 
       <section className="halo-sync-table-card">
         <div className="halo-sync-table-head">
           <div><span className="eyebrow">RECENT SYNC</span><h2>Dữ liệu HALO HOLA gần đây</h2></div>
-          <small>{recent.length} bản ghi</small>
+          <small>{recent.length} bản ghi · {summary.hiddenTempSpots || 0} pin tạm đã ẩn</small>
         </div>
         <div className="halo-sync-table-wrap">
           <table className="halo-sync-table">
