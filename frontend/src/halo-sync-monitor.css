@@ -9,11 +9,13 @@
 .halo-sync-kpis small,.halo-sync-kpis b { display:block; }
 .halo-sync-kpis small { color:#7d8982; font-size:10px; }
 .halo-sync-kpis b { margin-top:2px; color:#173a30; font-size:19px; }
-.halo-sync-health { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
+.halo-sync-health { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:12px; }
 .halo-sync-health > div { padding:14px 16px; border-radius:14px; background:#103323; color:#fff; }
+.halo-sync-health.attention > div:first-child { background:#7b4c1f; }
+.halo-sync-health.idle > div:first-child { background:#52645d; }
 .halo-sync-health small,.halo-sync-health b { display:block; }
 .halo-sync-health small { opacity:.62; font-size:9px; letter-spacing:.1em; }
-.halo-sync-health b { margin-top:5px; font-size:13px; }
+.halo-sync-health b { margin-top:5px; font-size:13px; line-height:1.35; }
 .halo-sync-table-card { margin-top:14px; overflow:hidden; border:1px solid #dfe7e2; border-radius:18px; background:#fff; }
 .halo-sync-table-head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; padding:18px 20px 14px; border-bottom:1px solid #edf1ee; }
 .halo-sync-table-head h2 { margin:3px 0 0; color:#183a30; font-size:19px; }
@@ -30,5 +32,5 @@
 .halo-sync-status.published { background:#e7f5ee; color:#17634e; }
 .halo-sync-status.deleted { background:#fff0ef; color:#a2433d; }
 .halo-sync-empty { padding:36px !important; text-align:center; color:#86938c !important; }
-@media (max-width:1180px){.halo-sync-kpis{grid-template-columns:repeat(3,minmax(0,1fr));}}
-@media (max-width:700px){.halo-sync-hero{align-items:flex-start;flex-direction:column}.halo-sync-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.halo-sync-health{grid-template-columns:1fr}}
+@media (max-width:1180px){.halo-sync-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.halo-sync-health{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:700px){.halo-sync-hero{align-items:flex-start;flex-direction:column}.halo-sync-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.halo-sync-health{grid-template-columns:1fr}.halo-sync-table-head{align-items:flex-start;flex-direction:column}}
