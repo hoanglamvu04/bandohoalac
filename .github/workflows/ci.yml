@@ -25,12 +25,43 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install
-        # package-lock predates the bundled PMTiles runtime; npm install
-        # reconciles the pinned package.json until the lockfile is regenerated.
+        # package-lock predates some runtime additions; npm install reconciles
+        # package.json while the lockfile is being refreshed incrementally.
         run: npm install --no-audit --no-fund
 
       - name: Build
         run: npm run build
+
+  e2e:
+    name: Frontend E2E stability
+    runs-on: ubuntu-latest
+    needs: frontend
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm install --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      - name: Run E2E
+        run: npm run test:e2e
 
   backend:
     name: Backend migrate and test
