@@ -36,8 +36,8 @@ const baseModules = [
   },
   {
     to: '/admin/data-quality',
-    title: 'Data Trust',
-    description: 'Spam, dữ liệu cũ/thiếu, lịch sử thay đổi và độ tin cậy CTV.',
+    title: 'Data Quality V3',
+    description: 'Coverage theo khu vực, nghi trùng, dữ liệu thiếu/cũ và độ tin cậy CTV.',
     icon: Gauge,
     tone: 'green'
   }
@@ -84,6 +84,13 @@ const adminModules = [
     description: 'Quét và ẩn hàng loạt POI nằm ngoài 9 xã đang phục vụ.',
     icon: Trash2,
     tone: 'rose'
+  },
+  {
+    to: '/admin/halo-sync',
+    title: 'HALO Sync Monitor',
+    description: 'Theo dõi bài, pin, media và trạng thái đồng bộ HALO HOLA → HOLA Maps.',
+    icon: Activity,
+    tone: 'cyan'
   },
   {
     to: '/admin/ctv',
