@@ -1,14 +1,96 @@
 /* Desktop-only cleanup for the discovery rail.
  * The shared site header already carries HOLA Maps branding and navigation,
  * so the duplicated engine/title/tab block inside the map rail is redundant.
+ *
+ * This file is loaded after the older desktop layout patches, so it also owns
+ * two desktop interaction fixes:
+ * - keep a compact close control even though the old rail heading is hidden;
+ * - never let the quick-filter row clip the advanced filter popover.
  */
 @media (min-width: 761px) {
+  /* Keep only the original close button from the old heading. The title,
+     H badge and fake "Địa điểm" tab stay removed. */
   body.map-route-active .hm-left-panel .hm-panel-heading {
-    display: none !important;
+    display: block !important;
+    position: absolute !important;
+    top: 12px !important;
+    right: 12px !important;
+    left: auto !important;
+    z-index: 70 !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    pointer-events: none;
   }
 
-  /* Let the useful content begin immediately at the top of the rail. */
+  body.map-route-active .hm-left-panel .hm-panel-heading > div,
+  body.map-route-active .hm-left-panel .hm-panel-heading::before,
+  body.map-route-active .hm-left-panel .hm-panel-heading::after {
+    display: none !important;
+    content: none !important;
+  }
+
+  body.map-route-active .hm-left-panel .hm-panel-heading > button {
+    position: static !important;
+    display: grid !important;
+    place-items: center;
+    width: 36px !important;
+    height: 36px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid rgba(16, 47, 41, .08) !important;
+    border-radius: 11px !important;
+    color: #587168 !important;
+    background: rgba(244, 248, 246, .98) !important;
+    box-shadow: 0 5px 14px rgba(11, 39, 32, .06) !important;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  body.map-route-active .hm-left-panel .hm-panel-heading > button:hover {
+    color: #173f35 !important;
+    background: #edf4f0 !important;
+  }
+
+  /* Let the useful content begin immediately at the top of the rail while
+     reserving enough room for the close control beside the result count. */
   body.map-route-active .hm-left-panel .hm-place-results {
     padding-top: 18px !important;
+  }
+
+  body.map-route-active .hm-left-panel .hm-section-title {
+    padding-right: 42px !important;
+  }
+
+  /* At laptop widths an older rule used overflow-x:auto on this row. Because
+     the advanced filter panel is a child of the row, that scroll container
+     clipped the popup at 100% browser zoom. Keep the row visible and let the
+     popup escape normally. */
+  body.map-route-active .hm-map-topbar .hm-discovery-filters {
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-filter-menu {
+    position: relative !important;
+    overflow: visible !important;
+    z-index: 1300 !important;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-filter-popover {
+    position: absolute !important;
+    top: calc(100% + 9px) !important;
+    right: 0 !important;
+    left: auto !important;
+    z-index: 1310 !important;
+    width: min(360px, calc(100vw - 36px)) !important;
+    max-height: min(500px, calc(100dvh - 220px));
+    overflow-y: auto !important;
+    pointer-events: auto !important;
   }
 }
