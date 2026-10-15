@@ -3,6 +3,8 @@ import { isInsideServiceCoverage } from '../config/mapCoverage.js';
 import { AppError } from '../utils/AppError.js';
 
 const MAX_MEDIA_PER_POST = 20;
+const HALO_SOURCE = 'HALO_HOLA';
+const HALO_MEDIA_ORIGIN = 'https://halohola.vn';
 
 function text(value, max = 2000) {
   const result = String(value ?? '').trim();
@@ -12,7 +14,7 @@ function text(value, max = 2000) {
 function httpUrl(value, { required = false } = {}) {
   const raw = String(value || '').trim();
   if (!raw) {
-    if (required) throw new AppError('URL ảnh không được để trống.', 400);
+    if (required) throw new AppError('URL không được để trống.', 400);
     return null;
   }
   try {
@@ -24,23 +26,44 @@ function httpUrl(value, { required = false } = {}) {
   }
 }
 
+export function stableHaloMediaUrl(mediaId) {
+  const id = text(mediaId, 160);
+  if (!id) throw new AppError('Media HALO HOLA thiếu id ổn định.', 400);
+  return `${HALO_MEDIA_ORIGIN}/api/submissions/media/${encodeURIComponent(id)}/halo`;
+}
+
 function normalizeMedia(media) {
   if (!Array.isArray(media) || !media.length) {
-    throw new AppError('Bài HALO HOLA phải có ít nhất một ảnh.', 400);
+    throw new AppError('Bài HALO HOLA phải có ít nhất một media.', 400);
   }
   if (media.length > MAX_MEDIA_PER_POST) {
-    throw new AppError(`Mỗi bài HALO HOLA tối đa ${MAX_MEDIA_PER_POST} ảnh.`, 400);
+    throw new AppError(`Mỗi bài HALO HOLA tối đa ${MAX_MEDIA_PER_POST} media.`, 400);
   }
 
-  return media.map((item, index) => ({
-    externalMediaId: text(item?.id ?? item?.externalMediaId, 160),
-    url: httpUrl(item?.url, { required: true }),
-    thumbnailUrl: httpUrl(item?.thumbnailUrl),
-    width: Number.isFinite(Number(item?.width)) ? Math.max(1, Math.min(Number(item.width), 20000)) : null,
-    height: Number.isFinite(Number(item?.height)) ? Math.max(1, Math.min(Number(item.height), 20000)) : null,
-    sortOrder: index,
-    metadata: item?.metadata && typeof item.metadata === 'object' ? item.metadata : {}
-  }));
+  return media.map((item, index) => {
+    const externalMediaId = text(item?.id ?? item?.externalMediaId, 160);
+    const stableUrl = stableHaloMediaUrl(externalMediaId);
+
+    return {
+      externalMediaId,
+      // Never persist a signed R2 target. The stable HALO endpoint issues a
+      // fresh redirect whenever Maps renders the media.
+      url: stableUrl,
+      thumbnailUrl: stableUrl,
+      width: Number.isFinite(Number(item?.width)) ? Math.max(1, Math.min(Number(item.width), 20000)) : null,
+      height: Number.isFinite(Number(item?.height)) ? Math.max(1, Math.min(Number(item.height), 20000)) : null,
+      sortOrder: index,
+      metadata: item?.metadata && typeof item.metadata === 'object' ? item.metadata : {}
+    };
+  });
+}
+
+function normalizeMetadata(value) {
+  const metadata = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    ...metadata,
+    source: HALO_SOURCE
+  };
 }
 
 async function resolveSpot(client, postId, location = {}) {
@@ -56,7 +79,7 @@ async function resolveSpot(client, postId, location = {}) {
       [placeId]
     );
     const place = rows[0];
-    if (!place) throw new AppError('Địa điểm Hola Maps không tồn tại hoặc chưa xuất bản.', 404);
+    if (!place) throw new AppError('Địa điểm HOLA Maps không tồn tại hoặc chưa xuất bản.', 404);
 
     const { rows: spotRows } = await client.query(
       `INSERT INTO halo_spots (place_id, label, address, location, status)
@@ -74,16 +97,20 @@ async function resolveSpot(client, postId, location = {}) {
     return spotRows[0];
   }
 
+  const externalSpotId = text(location?.spotId ?? location?.externalSpotId, 180);
   const lat = Number(location?.lat);
   const lng = Number(location?.lng);
+
+  if (!externalSpotId) {
+    throw new AppError('Pin mới từ HALO HOLA phải có spotId.', 400);
+  }
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     throw new AppError('Điểm ghim HALO HOLA thiếu tọa độ hợp lệ.', 400);
   }
   if (!isInsideServiceCoverage(lng, lat)) {
-    throw new AppError('Điểm HALO HOLA nằm ngoài vùng phục vụ của Hola Maps.', 400);
+    throw new AppError('Điểm HALO HOLA nằm ngoài vùng phục vụ của HOLA Maps.', 400);
   }
 
-  const externalSpotId = text(location?.spotId ?? location?.externalSpotId, 180) || `halo-post:${postId}`;
   const label = text(location?.label, 240) || 'Điểm ảnh HALO HOLA';
   const address = text(location?.address, 500);
 
@@ -103,14 +130,30 @@ async function resolveSpot(client, postId, location = {}) {
   return rows[0];
 }
 
+async function hideTemporarySpotIfUnused(client, spotId) {
+  if (!spotId) return;
+  await client.query(
+    `UPDATE halo_spots hs
+     SET status = 'HIDDEN', updated_at = NOW()
+     WHERE hs.id = $1
+       AND hs.place_id IS NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM halo_posts hp
+         WHERE hp.spot_id = hs.id AND hp.status = 'PUBLISHED'
+       )`,
+    [spotId]
+  );
+}
+
 export async function upsertHaloPost(payload = {}) {
   const externalPostId = text(payload.postId ?? payload.externalPostId, 180);
   if (!externalPostId) throw new AppError('Thiếu postId của HALO HOLA.', 400);
 
   const media = normalizeMedia(payload.media ?? payload.images);
-  const sourceUrl = httpUrl(payload.sourceUrl ?? payload.url);
+  const sourceUrl = httpUrl(payload.sourceUrl ?? payload.url, { required: true });
   const user = payload.user && typeof payload.user === 'object' ? payload.user : {};
   const location = payload.location && typeof payload.location === 'object' ? payload.location : {};
+  const metadata = normalizeMetadata(payload.metadata);
   const postedAt = payload.postedAt ? new Date(payload.postedAt) : null;
   if (postedAt && Number.isNaN(postedAt.getTime())) {
     throw new AppError('postedAt không hợp lệ.', 400);
@@ -119,15 +162,27 @@ export async function upsertHaloPost(payload = {}) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
+    const { rows: existingRows } = await client.query(
+      `SELECT id, spot_id
+       FROM halo_posts
+       WHERE external_post_id = $1
+       FOR UPDATE`,
+      [externalPostId]
+    );
+    const existing = existingRows[0] || null;
+    const oldSpotId = existing?.spot_id || null;
+
     const spot = await resolveSpot(client, externalPostId, location);
 
     const { rows } = await client.query(
       `INSERT INTO halo_posts (
-         spot_id, external_post_id, external_user_id, external_user_name,
+         spot_id, source, external_post_id, external_user_id, external_user_name,
          caption, source_url, status, posted_at, metadata
-       ) VALUES ($1,$2,$3,$4,$5,$6,'PUBLISHED',$7,$8::jsonb)
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,'PUBLISHED',$8,$9::jsonb)
        ON CONFLICT (external_post_id) DO UPDATE
        SET spot_id = EXCLUDED.spot_id,
+           source = EXCLUDED.source,
            external_user_id = EXCLUDED.external_user_id,
            external_user_name = EXCLUDED.external_user_name,
            caption = EXCLUDED.caption,
@@ -139,19 +194,20 @@ export async function upsertHaloPost(payload = {}) {
        RETURNING id, external_post_id`,
       [
         spot.id,
+        HALO_SOURCE,
         externalPostId,
         text(user.id ?? payload.userId, 180),
         text(user.name ?? payload.userName, 240),
         text(payload.caption, 4000),
         sourceUrl,
         postedAt,
-        JSON.stringify(payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : {})
+        JSON.stringify(metadata)
       ]
     );
     const post = rows[0];
 
-    // Replace the media set on every sync. This keeps edits/deletions on HALO HOLA
-    // idempotent and prevents stale images from remaining on Hola Maps.
+    // Replace the complete media set on every sync. POST is therefore a true
+    // idempotent representation update and edited HALO media cannot linger.
     await client.query('DELETE FROM halo_media WHERE post_id = $1', [post.id]);
     for (const item of media) {
       await client.query(
@@ -172,10 +228,16 @@ export async function upsertHaloPost(payload = {}) {
       );
     }
 
+    if (oldSpotId && String(oldSpotId) !== String(spot.id)) {
+      await hideTemporarySpotIfUnused(client, oldSpotId);
+    }
+
     await client.query('COMMIT');
     return {
       ok: true,
       postId: externalPostId,
+      action: existing ? 'updated' : 'created',
+      source: HALO_SOURCE,
       internalPostId: String(post.id),
       spot: {
         id: String(spot.id),
@@ -199,13 +261,46 @@ export async function upsertHaloPost(payload = {}) {
 export async function deleteHaloPost(externalPostId) {
   const id = text(externalPostId, 180);
   if (!id) throw new AppError('Thiếu postId của HALO HOLA.', 400);
-  const { rowCount } = await pool.query(
-    `UPDATE halo_posts
-     SET status = 'DELETED', updated_at = NOW()
-     WHERE external_post_id = $1`,
-    [id]
-  );
-  return { ok: true, deleted: rowCount > 0 };
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `SELECT id, spot_id
+       FROM halo_posts
+       WHERE external_post_id = $1
+       FOR UPDATE`,
+      [id]
+    );
+    const post = rows[0] || null;
+
+    if (!post) {
+      await client.query('COMMIT');
+      return { ok: true, postId: id, deleted: false };
+    }
+
+    await client.query(
+      `UPDATE halo_posts
+       SET status = 'DELETED', updated_at = NOW()
+       WHERE id = $1`,
+      [post.id]
+    );
+    await client.query(
+      `UPDATE halo_media
+       SET status = 'HIDDEN', updated_at = NOW()
+       WHERE post_id = $1`,
+      [post.id]
+    );
+    await hideTemporarySpotIfUnused(client, post.spot_id);
+
+    await client.query('COMMIT');
+    return { ok: true, postId: id, deleted: true };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 function boundsWhere(params, values, alias = 'hs') {
@@ -229,7 +324,7 @@ export async function listHaloSpotFeatures(params = {}) {
               ORDER BY COALESCE(hp.posted_at, hp.created_at) DESC, hm.sort_order, hm.id)
               FILTER (WHERE hm.id IS NOT NULL))[1] AS cover_url
      FROM halo_spots hs
-     JOIN halo_posts hp ON hp.spot_id = hs.id AND hp.status = 'PUBLISHED'
+     JOIN halo_posts hp ON hp.spot_id = hs.id AND hp.status = 'PUBLISHED' AND hp.source = 'HALO_HOLA'
      JOIN halo_media hm ON hm.post_id = hp.id AND hm.status = 'ACTIVE'
      WHERE hs.status = 'ACTIVE'${bbox}
      GROUP BY hs.id
@@ -249,14 +344,15 @@ export async function listHaloSpotFeatures(params = {}) {
       id: `halo-${row.id}`,
       haloSpotId: String(row.id),
       layerType: 'HALO',
+      source: HALO_SOURCE,
+      sourceLabel: 'HALO HOLA',
       name: row.label,
       address: row.address || null,
       placeId: row.place_id ? String(row.place_id) : null,
       externalSpotId: row.external_spot_id || null,
       postCount: Number(row.post_count) || 0,
       mediaCount: Number(row.media_count) || 0,
-      coverUrl: row.cover_url || null,
-      sourceLabel: 'HALO HOLA'
+      coverUrl: row.cover_url || null
     }
   }));
 }
@@ -269,9 +365,13 @@ function mediaRow(row) {
     thumbnailUrl: row.thumbnail_url || row.url,
     width: row.width ? Number(row.width) : null,
     height: row.height ? Number(row.height) : null,
+    source: row.source || HALO_SOURCE,
+    sourceLabel: 'HALO HOLA',
     postId: row.external_post_id,
     caption: row.caption || null,
     sourceUrl: row.source_url || null,
+    code: row.metadata?.code || null,
+    metadata: row.metadata || {},
     user: row.external_user_id || row.external_user_name ? {
       id: row.external_user_id || null,
       name: row.external_user_name || null
@@ -296,12 +396,12 @@ async function getSpotMedia(spotId, limit = 60) {
   const safeLimit = Math.min(Math.max(Number(limit) || 60, 1), 100);
   const { rows } = await pool.query(
     `SELECT hm.id AS media_id, hm.external_media_id, hm.url, hm.thumbnail_url,
-            hm.width, hm.height, hp.external_post_id, hp.caption, hp.source_url,
-            hp.external_user_id, hp.external_user_name, hp.posted_at,
-            hp.created_at AS post_created_at
+            hm.width, hm.height, hp.source, hp.external_post_id, hp.caption,
+            hp.source_url, hp.metadata, hp.external_user_id, hp.external_user_name,
+            hp.posted_at, hp.created_at AS post_created_at
      FROM halo_posts hp
      JOIN halo_media hm ON hm.post_id = hp.id AND hm.status = 'ACTIVE'
-     WHERE hp.spot_id = $1 AND hp.status = 'PUBLISHED'
+     WHERE hp.spot_id = $1 AND hp.status = 'PUBLISHED' AND hp.source = 'HALO_HOLA'
      ORDER BY COALESCE(hp.posted_at, hp.created_at) DESC, hm.sort_order, hm.id
      LIMIT $2`,
     [spotId, safeLimit]
@@ -312,6 +412,8 @@ async function getSpotMedia(spotId, limit = 60) {
 function spotPayload(spot, media) {
   return {
     id: String(spot.id),
+    source: HALO_SOURCE,
+    sourceLabel: 'HALO HOLA',
     placeId: spot.place_id ? String(spot.place_id) : null,
     externalSpotId: spot.external_spot_id || null,
     label: spot.label,
