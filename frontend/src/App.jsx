@@ -15,7 +15,10 @@ export default function App() {
   const isProfileRoute = location.pathname === '/profile';
   const isPartnerScannerRoute = location.pathname === '/partner/scanner';
 
-  useEffect(() => {
+  // Map layout classes drive the fixed-toolbar geometry. Apply them before
+  // paint so the shared desktop header can never briefly sit above / intercept
+  // map controls during the first frame of a route load.
+  useLayoutEffect(() => {
     document.body.classList.toggle('map-route-active', isMapRoute);
     document.body.classList.toggle('map-embed-active', isEmbedRoute);
     document.body.classList.toggle('map-picker-active', isPickerRoute);
