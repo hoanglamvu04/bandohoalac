@@ -1,0 +1,60 @@
+/* HALO HOLA story detail: native, always-discoverable scrolling.
+   The detail card can be taller than short laptop/mobile viewports, so keep
+   the card itself as the scroll container instead of using a floating action. */
+
+.halo-map-page .halo-story-detail {
+  overflow-x: hidden;
+  overflow-y: scroll;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: #789188 #edf2ef;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.halo-map-page .halo-story-detail::-webkit-scrollbar {
+  width: 10px;
+}
+
+.halo-map-page .halo-story-detail::-webkit-scrollbar-track {
+  margin: 46px 0 14px;
+  border-radius: 999px;
+  background: #edf2ef;
+}
+
+.halo-map-page .halo-story-detail::-webkit-scrollbar-thumb {
+  min-height: 48px;
+  border: 2px solid #edf2ef;
+  border-radius: 999px;
+  background: #789188;
+}
+
+.halo-map-page .halo-story-detail::-webkit-scrollbar-thumb:hover {
+  background: #496d61;
+}
+
+/* Remove the temporary floating “Cuộn xuống” action. Native wheel/touch/drag
+   scrolling is the intended interaction. */
+.halo-map-page button[aria-label="Cuộn xuống xem thêm nội dung"] {
+  display: none !important;
+}
+
+@media (max-height: 760px) and (min-width: 761px) {
+  .halo-map-page .halo-story-detail {
+    top: 10px;
+    bottom: 10px;
+    max-height: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .halo-map-page .halo-story-detail {
+    max-height: min(68dvh, 620px);
+    padding-right: 12px;
+  }
+
+  .halo-map-page .halo-story-detail::-webkit-scrollbar {
+    width: 7px;
+  }
+}
