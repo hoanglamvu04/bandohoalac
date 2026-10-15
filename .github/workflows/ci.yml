@@ -32,6 +32,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Performance V3 budget
+        run: npm run perf:budget
+
   e2e:
     name: Frontend E2E stability
     runs-on: ubuntu-latest
