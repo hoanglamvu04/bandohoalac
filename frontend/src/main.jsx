@@ -66,6 +66,11 @@ import './desktop-map-search-overlap-fix.css';
 import './desktop-map-header-restore.css';
 import './desktop-map-sidebar-compact.css';
 import './public-info.css';
+import './data-quality-v3.css';
+import './halo-sync-monitor.css';
+/* Stability V3 must remain the final map stylesheet so legacy overrides cannot
+   reintroduce the 100% browser zoom clipping/overlap bugs. */
+import './map-stability-v3.css';
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>
