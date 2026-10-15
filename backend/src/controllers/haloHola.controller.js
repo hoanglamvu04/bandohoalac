@@ -37,7 +37,7 @@ export const syncHaloPost = asyncHandler(async (req, res) => {
 
 export const removeHaloPost = asyncHandler(async (req, res) => {
   assertHaloIntegration(req);
-  res.status(200).json(await deleteHaloPost(req.params.externalPostId));
+  res.status(200).json(await deleteHaloPost(req.params.postId));
 });
 
 export const listHaloSpots = asyncHandler(async (req, res) => {
