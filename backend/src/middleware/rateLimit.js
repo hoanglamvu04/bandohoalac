@@ -22,10 +22,12 @@ export const generalApiRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip(req) {
-    // Interactive map reads naturally fire more often while users pan/zoom.
-    // They have a separate limiter below so they do not consume the budget
-    // for login/profile/admin APIs.
     const url = String(req.originalUrl || req.url || '').split('?')[0];
+
+    // Interactive map reads and trusted HALO server-to-server writes have
+    // dedicated rate limits so they do not consume the normal web API budget.
+    if (url.startsWith('/api/halo/v1/posts')) return true;
+
     return (
       req.method === 'GET' &&
       (
@@ -47,6 +49,17 @@ export const mapReadRateLimiter = rateLimit({
   }
 });
 
+// HALO HOLA may publish/cleanup in batches after moderation. Keep protection
+// against accidental loops without throttling legitimate sync jobs.
+export const haloIntegrationRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 1200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'HALO HOLA sync is being requested too quickly. Please retry shortly.'
+  }
+});
 
 export const claimRateLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000,
@@ -71,7 +84,6 @@ export const partnerScanRateLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Có quá nhiều lần kiểm tra voucher. Hãy chờ một lúc.' }
 });
-
 
 export const publicIntegrationRateLimiter = rateLimit({
   windowMs: 60 * 1000,
