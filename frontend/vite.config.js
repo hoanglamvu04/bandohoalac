@@ -40,6 +40,25 @@ export default defineConfig({
     exclude: ['maplibre-gl']
   },
 
+  build: {
+    target: 'es2020',
+    cssCodeSplit: true,
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('maplibre-gl') || id.includes('/pmtiles/') || id.includes('@protomaps')) return 'map-vendor';
+          if (id.includes('react-router')) return 'router-vendor';
+          if (id.includes('/react/') || id.includes('/react-dom/')) return 'react-vendor';
+          if (id.includes('/axios/')) return 'http-vendor';
+          if (id.includes('lucide-react')) return 'icons-vendor';
+          return undefined;
+        }
+      }
+    }
+  },
+
   server: {
     port: 5175,
     strictPort: false,
