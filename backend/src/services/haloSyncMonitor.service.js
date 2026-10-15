@@ -6,12 +6,12 @@ export async function getHaloSyncMonitor({ limit = 30 } = {}) {
   const [{ rows: summaryRows }, { rows: recentRows }] = await Promise.all([
     pool.query(
       `SELECT
-         COUNT(*) FILTER (WHERE hp.status = 'PUBLISHED')::int AS published_posts,
-         COUNT(*) FILTER (WHERE hp.status = 'DELETED')::int AS deleted_posts,
+         COUNT(DISTINCT hp.id) FILTER (WHERE hp.status = 'PUBLISHED')::int AS published_posts,
+         COUNT(DISTINCT hp.id) FILTER (WHERE hp.status = 'DELETED')::int AS deleted_posts,
          COUNT(DISTINCT hp.spot_id) FILTER (WHERE hp.status = 'PUBLISHED')::int AS active_spots,
-         COUNT(*) FILTER (WHERE hp.status = 'PUBLISHED' AND hs.place_id IS NOT NULL)::int AS canonical_posts,
-         COUNT(*) FILTER (WHERE hp.status = 'PUBLISHED' AND hs.place_id IS NULL)::int AS pin_posts,
-         COUNT(hm.id) FILTER (WHERE hp.status = 'PUBLISHED' AND hm.status = 'ACTIVE')::int AS active_media,
+         COUNT(DISTINCT hp.id) FILTER (WHERE hp.status = 'PUBLISHED' AND hs.place_id IS NOT NULL)::int AS canonical_posts,
+         COUNT(DISTINCT hp.id) FILTER (WHERE hp.status = 'PUBLISHED' AND hs.place_id IS NULL)::int AS pin_posts,
+         COUNT(DISTINCT hm.id) FILTER (WHERE hp.status = 'PUBLISHED' AND hm.status = 'ACTIVE')::int AS active_media,
          MAX(hp.updated_at) AS last_sync_at,
          MAX(COALESCE(hp.posted_at, hp.created_at)) FILTER (WHERE hp.status = 'PUBLISHED') AS last_published_at,
          COUNT(DISTINCT hs.id) FILTER (WHERE hs.status = 'HIDDEN' AND hs.place_id IS NULL)::int AS hidden_temp_spots
