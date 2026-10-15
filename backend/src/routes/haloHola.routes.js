@@ -13,6 +13,6 @@ router.get('/spots', listHaloSpots);
 router.get('/spots/:id', readHaloSpot);
 router.get('/places/:placeId', readHaloPlaceMedia);
 router.post('/posts', syncHaloPost);
-router.delete('/posts/:externalPostId', removeHaloPost);
+router.delete('/posts/:postId', removeHaloPost);
 
 export default router;
