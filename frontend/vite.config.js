@@ -48,7 +48,14 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
-          if (id.includes('maplibre-gl') || id.includes('/pmtiles/') || id.includes('@protomaps')) return 'map-vendor';
+
+          // Keep the expensive mapping runtime in separate long-lived chunks.
+          // Map routes are lazy, so these files are not downloaded by normal
+          // content/admin pages and individual libraries can be cached across
+          // deployments instead of invalidating one 1MB+ map-vendor bundle.
+          if (id.includes('maplibre-gl')) return 'maplibre-vendor';
+          if (id.includes('/pmtiles/')) return 'pmtiles-vendor';
+          if (id.includes('@protomaps')) return 'basemap-vendor';
           if (id.includes('react-router')) return 'router-vendor';
           if (id.includes('/react/') || id.includes('/react-dom/')) return 'react-vendor';
           if (id.includes('/axios/')) return 'http-vendor';
