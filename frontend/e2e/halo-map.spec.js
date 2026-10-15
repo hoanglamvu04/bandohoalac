@@ -34,20 +34,23 @@ const spotDetail = {
 
 test('HALO deeplink opens selected spot with native scroll', async ({ page }) => {
   await page.setViewportSize({ width: 1365, height: 650 });
-  await page.route('**/api/halo/v1/spots/1**', (route) => route.fulfill({
+
+  // Register broad fallback first. Playwright evaluates routes newest-first,
+  // therefore the HALO-specific handlers below retain priority.
+  await page.route('**/api/**', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify(spotDetail)
+    body: JSON.stringify({ items: [], ok: true })
   }));
   await page.route('**/api/halo/v1/spots**', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
     body: JSON.stringify({ type: 'FeatureCollection', features: [spotFeature] })
   }));
-  await page.route('**/api/**', (route) => route.fulfill({
+  await page.route('**/api/halo/v1/spots/1**', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify({ items: [], ok: true })
+    body: JSON.stringify(spotDetail)
   }));
 
   await page.goto('/halo?spot=1', { waitUntil: 'domcontentloaded' });
