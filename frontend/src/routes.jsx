@@ -18,7 +18,8 @@ const Register = lazy(() => import('./pages/Register.jsx'));
 const PublicInfoPage = lazy(() => import('./pages/PublicInfoPage.jsx'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
 const AdminContributions = lazy(() => import('./pages/admin/AdminContributions.jsx'));
-const AdminDataTrust = lazy(() => import('./pages/admin/AdminDataTrust.jsx'));
+const AdminDataQualityV3 = lazy(() => import('./pages/admin/AdminDataQualityV3.jsx'));
+const AdminHaloSync = lazy(() => import('./pages/admin/AdminHaloSync.jsx'));
 const AdminCtvManagement = lazy(() => import('./pages/admin/AdminCtvManagement.jsx'));
 const MapEditor = lazy(() => import('./pages/admin/MapEditor.jsx'));
 const AdminPlaces = lazy(() => import('./pages/admin/AdminPlaces.jsx'));
@@ -170,7 +171,7 @@ export const router = createBrowserRouter([
       { path: 'nguon-du-lieu', element: withSuspense(PublicInfoPage) },
       { path: 'admin', element: withRole(AdminDashboard, STAFF_ROLES) },
       { path: 'admin/contributions', element: withRole(AdminContributions, STAFF_ROLES) },
-      { path: 'admin/data-quality', element: withRole(AdminDataTrust, STAFF_ROLES) },
+      { path: 'admin/data-quality', element: withRole(AdminDataQualityV3, STAFF_ROLES) },
       { path: 'admin/places', element: withRole(AdminPlaces, STAFF_ROLES) },
       { path: 'admin/coverage-cleanup', element: withRole(AdminCoverageCleanup, ['ADMIN']) },
       { path: 'admin/place-imports', element: withRole(AdminPlaceImports, STAFF_ROLES) },
@@ -184,6 +185,7 @@ export const router = createBrowserRouter([
       { path: 'admin/missions', element: withRole(AdminMissions, ['ADMIN']) },
       { path: 'admin/audit', element: withRole(AdminAudit, ['ADMIN']) },
       { path: 'admin/brand', element: withRole(AdminBranding, ['ADMIN']) },
+      { path: 'admin/halo-sync', element: withRole(AdminHaloSync, ['ADMIN']) },
       { path: 'admin/developer-api', element: withRole(AdminDeveloperApi, ['ADMIN']) }
     ]
   }
