@@ -26,9 +26,20 @@ for (const viewport of [
     await stubApi(page);
     await page.goto('/map', { waitUntil: 'domcontentloaded' });
 
+    await expect(page.locator('body')).toHaveClass(/map-route-active/);
     await expect(page.locator('.hm-search-v2')).toBeVisible();
+
+    const header = page.locator('.navbar').first();
     const filter = page.locator('.hm-filter-trigger').first();
     await expect(filter).toBeVisible();
+
+    const headerBox = await header.boundingBox();
+    const filterBox = await filter.boundingBox();
+    expect(filterBox).toBeTruthy();
+    if (headerBox) {
+      expect(filterBox.y).toBeGreaterThanOrEqual(headerBox.y + headerBox.height - 1);
+    }
+
     await filter.click();
 
     const popover = page.locator('.hm-filter-popover').first();
@@ -51,6 +62,7 @@ test('mobile map keeps controls inside viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await stubApi(page);
   await page.goto('/map', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('body')).toHaveClass(/map-route-active/);
   await expect(page.locator('.hm-workspace')).toBeVisible();
   const workspace = await page.locator('.hm-workspace').boundingBox();
   expect(workspace.width).toBeLessThanOrEqual(390);
