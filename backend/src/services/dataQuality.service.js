@@ -1,9 +1,11 @@
 import { pool, withTransaction } from '../database/pool.js';
 import { AppError } from '../utils/AppError.js';
+import { isInsideServiceCoverage } from '../config/mapCoverage.js';
 import { capturePlaceSnapshot, recordPlaceRevision } from './placeRevision.service.js';
 
 const STALE_DAYS = 180;
 const STALE_IMAGE_DAYS = 365;
+const DUPLICATE_DISTANCE_METERS = 120;
 const TARGET_AREAS = ['Hòa Lạc', 'Hạ Bằng', 'Thạch Thất', 'Tây Phương', 'Yên Xuân', 'Phú Cát', 'Ba Vì', 'Quốc Oai'];
 
 function ageDays(value) {
@@ -31,6 +33,7 @@ function scorePlace(row) {
   const lat = Number(row.lat);
   const lng = Number(row.lng);
   const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
+  const insideCoverage = hasCoordinates ? isInsideServiceCoverage(lng, lat) : false;
   const duplicateCount = Number(row.duplicate_count || 1);
 
   if (!row.address) { issues.push('MISSING_ADDRESS'); score -= 12; }
@@ -40,6 +43,7 @@ function scorePlace(row) {
   if (!row.phone && !row.website) { issues.push('MISSING_CONTACT'); score -= 7; }
   if (!imageCount) { issues.push('MISSING_IMAGES'); score -= 25; }
   if (!hasCoordinates) { issues.push('MISSING_COORDINATES'); score -= 35; }
+  if (hasCoordinates && !insideCoverage) { issues.push('OUT_OF_COVERAGE'); score -= 40; }
   if (duplicateCount > 1) { issues.push('POSSIBLE_DUPLICATE'); score -= 20; }
   if (imageCount > 0 && imageAge !== null && imageAge > STALE_IMAGE_DAYS) {
     issues.push('STALE_IMAGES'); score -= 10;
@@ -57,6 +61,7 @@ function scorePlace(row) {
     status: row.status,
     lat: hasCoordinates ? lat : null,
     lng: hasCoordinates ? lng : null,
+    insideCoverage: hasCoordinates ? insideCoverage : null,
     duplicateCount,
     imageCount,
     latestImageAt: row.latest_image_at,
@@ -89,6 +94,7 @@ function buildCoverage(items) {
     const needsAttention = bucket.items.filter((item) => item.issues.length > 0).length;
     const missingImages = bucket.items.filter((item) => item.issues.includes('MISSING_IMAGES')).length;
     const possibleDuplicates = bucket.items.filter((item) => item.issues.includes('POSSIBLE_DUPLICATE')).length;
+    const outOfCoverage = bucket.items.filter((item) => item.issues.includes('OUT_OF_COVERAGE')).length;
     const averageScore = total
       ? Math.round(bucket.items.reduce((sum, item) => sum + item.qualityScore, 0) / total)
       : 0;
@@ -98,6 +104,7 @@ function buildCoverage(items) {
       needsAttention,
       missingImages,
       possibleDuplicates,
+      outOfCoverage,
       averageScore
     };
   });
@@ -117,6 +124,7 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
          p.id, p.name, p.address, p.description, p.category_id,
          p.phone, p.website, p.opening_hours, p.status,
          p.last_verified_at, p.created_at, p.updated_at,
+         p.location,
          c.name AS category_name, c.slug AS category_slug,
          ST_Y(p.location)::double precision AS lat,
          ST_X(p.location)::double precision AS lng,
@@ -126,17 +134,28 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
        FROM places p
        LEFT JOIN categories c ON c.id = p.category_id
        WHERE p.status = 'PUBLISHED'
+     ),
+     duplicate_counts AS (
+       SELECT
+         a.id,
+         (1 + COUNT(b.id))::int AS duplicate_count
+       FROM enriched a
+       LEFT JOIN enriched b
+         ON b.id <> a.id
+        AND a.location IS NOT NULL
+        AND b.location IS NOT NULL
+        AND a.normalized_name <> ''
+        AND b.normalized_name = a.normalized_name
+        AND ST_DWithin(a.location::geography, b.location::geography, $1)
+       GROUP BY a.id
      )
      SELECT enriched.*,
-            CASE
-              WHEN lat IS NULL OR lng IS NULL THEN 1
-              ELSE COUNT(*) OVER (
-                PARTITION BY normalized_name, ROUND(lat::numeric, 3), ROUND(lng::numeric, 3)
-              )
-            END::int AS duplicate_count
+            COALESCE(duplicate_counts.duplicate_count, 1)::int AS duplicate_count
      FROM enriched
-     ORDER BY updated_at ASC
-     LIMIT 5000`
+     LEFT JOIN duplicate_counts ON duplicate_counts.id = enriched.id
+     ORDER BY enriched.updated_at ASC
+     LIMIT 5000`,
+    [DUPLICATE_DISTANCE_METERS]
   );
 
   const all = rows.map(scorePlace);
@@ -147,6 +166,7 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
     missingImages: all.filter((item) => item.issues.includes('MISSING_IMAGES')).length,
     missingHours: all.filter((item) => item.issues.includes('MISSING_HOURS')).length,
     missingCoordinates: all.filter((item) => item.issues.includes('MISSING_COORDINATES')).length,
+    outOfCoverage: all.filter((item) => item.issues.includes('OUT_OF_COVERAGE')).length,
     possibleDuplicates: all.filter((item) => item.issues.includes('POSSIBLE_DUPLICATE')).length,
     stalePlaces: all.filter((item) => item.issues.includes('STALE_PLACE')).length,
     staleImages: all.filter((item) => item.issues.includes('STALE_IMAGES')).length,
@@ -160,10 +180,15 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
     .slice(0, Math.min(Math.max(Number(limit) || 100, 1), 300));
 
   return {
+    version: 3,
     summary,
     coverage: buildCoverage(all),
     items,
-    thresholds: { staleDays: STALE_DAYS, staleImageDays: STALE_IMAGE_DAYS }
+    thresholds: {
+      staleDays: STALE_DAYS,
+      staleImageDays: STALE_IMAGE_DAYS,
+      duplicateDistanceMeters: DUPLICATE_DISTANCE_METERS
+    }
   };
 }
 
