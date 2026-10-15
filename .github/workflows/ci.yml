@@ -59,6 +59,7 @@ jobs:
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hola_maps
       JWT_SECRET: ci-test-secret
+      HOLA_MAPS_HALO_SECRET: ci-halo-shared-secret
       CORS_ORIGIN: http://localhost:5175
       PUBLIC_BASE_URL: http://localhost:5003
       UPLOAD_PROVIDER: local
