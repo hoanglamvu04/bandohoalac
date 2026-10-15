@@ -7,6 +7,7 @@ import { pool } from './database/pool.js';
 import { uploadRoot } from './middleware/upload.js';
 import {
   generalApiRateLimiter,
+  haloIntegrationRateLimiter,
   mapReadRateLimiter,
   publicIntegrationRateLimiter
 } from './middleware/rateLimit.js';
@@ -68,6 +69,7 @@ export function createApp() {
   app.use('/api/map-layers', mapReadRateLimiter);
   app.use('/api/halo/v1/spots', mapReadRateLimiter);
   app.use('/api/halo/v1/places', mapReadRateLimiter);
+  app.use('/api/halo/v1/posts', haloIntegrationRateLimiter);
 
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, service: 'hola-maps-api', env: env.nodeEnv });
