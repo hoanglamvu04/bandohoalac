@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Camera,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -260,6 +261,15 @@ export default function HaloHolaMapPage() {
     setGalleryIndex((value) => (value + 1) % media.length);
   }
 
+  function scrollDetailDown() {
+    const panel = document.querySelector('.halo-story-detail');
+    if (!panel) return;
+    panel.scrollBy({
+      top: Math.max(260, Math.round(panel.clientHeight * 0.72)),
+      behavior: 'smooth'
+    });
+  }
+
   return (
     <main className={selectedPlace ? 'halo-map-page has-selection' : 'halo-map-page'}>
       <MapView
@@ -430,6 +440,38 @@ export default function HaloHolaMapPage() {
             <div className="halo-gallery-empty">Chưa có ảnh công khai tại điểm này.</div>
           )}
         </aside>
+      )}
+
+      {selectedPlace && !detailLoading && (
+        <button
+          type="button"
+          onClick={scrollDetailDown}
+          aria-label="Cuộn xuống xem thêm nội dung"
+          title="Cuộn xuống"
+          style={{
+            position: 'absolute',
+            zIndex: 13,
+            right: 34,
+            bottom: 32,
+            height: 38,
+            padding: '0 14px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            border: '1px solid rgba(255,255,255,.62)',
+            borderRadius: 999,
+            background: '#103323',
+            color: '#fff',
+            boxShadow: '0 10px 28px rgba(12,43,36,.24)',
+            fontSize: 11,
+            fontWeight: 800,
+            cursor: 'pointer'
+          }}
+        >
+          <span>Cuộn xuống</span>
+          <ChevronDown size={15} />
+        </button>
       )}
 
       <div className="halo-map-status" aria-live="polite">
