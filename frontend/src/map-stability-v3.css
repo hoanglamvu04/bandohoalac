@@ -1,0 +1,156 @@
+/* HOLA Maps Stability V3
+ * Final map-only guardrails loaded after the legacy visual layers.
+ * Keep the workspace stable at browser 100%, 90%, 80% and across common
+ * laptop/desktop viewport widths without redesigning the map again.
+ */
+
+:root {
+  --hm-v3-gap: 18px;
+  --hm-v3-rail: 380px;
+  --hm-v3-command-h: 52px;
+}
+
+@media (min-width: 761px) {
+  body.map-route-active,
+  body.map-route-active #root,
+  body.map-route-active .map-app-shell,
+  body.map-route-active .map-app-main,
+  body.map-route-active .map-discovery-v1,
+  body.map-route-active .hm-workspace,
+  body.map-route-active .map-experience-v2 {
+    min-width: 0 !important;
+    min-height: 0 !important;
+  }
+
+  body.map-route-active .hm-left-panel {
+    max-height: calc(100dvh - (var(--hm-v3-gap) * 2)) !important;
+    overflow: hidden !important;
+    contain: layout paint;
+  }
+
+  body.map-route-active .hm-place-results,
+  body.map-route-active .hm-place-list {
+    min-height: 0 !important;
+  }
+
+  body.map-route-active .hm-place-list {
+    overscroll-behavior: contain;
+  }
+
+  /* A filter popup must never be clipped by the horizontal toolbar. */
+  body.map-route-active .hm-map-topbar,
+  body.map-route-active .hm-map-topbar .hm-discovery-filters,
+  body.map-route-active .hm-map-topbar .hm-filter-trigger {
+    overflow: visible !important;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-filter-popover {
+    position: absolute !important;
+    z-index: 2140 !important;
+    max-height: min(70dvh, 620px) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  body.map-route-active .hm-search-v2-wrap,
+  body.map-route-active .hm-map-topbar .hm-discovery-filters {
+    min-width: 0 !important;
+  }
+
+  body.map-route-active .hm-search-v2 {
+    box-sizing: border-box;
+    min-width: 0;
+  }
+
+  body.map-route-active .hm-search-v2 input {
+    min-width: 0;
+    text-overflow: ellipsis;
+  }
+
+  /* Desktop >= 1440: one-row command bar. */
+  @media (min-width: 1440px) {
+    :root { --hm-v3-rail: 380px; }
+
+    body.map-route-active .hm-search-v2-wrap {
+      left: calc(var(--hm-v3-rail) + 50px) !important;
+      right: clamp(560px, 35vw, 690px) !important;
+      top: var(--hm-v3-gap) !important;
+    }
+
+    body.map-route-active .hm-map-topbar .hm-discovery-filters {
+      top: var(--hm-v3-gap) !important;
+      right: var(--hm-v3-gap) !important;
+      max-width: min(670px, calc(100vw - var(--hm-v3-rail) - 530px)) !important;
+      flex-wrap: nowrap !important;
+    }
+  }
+
+  /* Normal laptop widths: search on row 1, filters on row 2. The toolbar is
+     allowed to wrap instead of horizontal-scroll clipping its popover. */
+  @media (max-width: 1439px) {
+    :root { --hm-v3-rail: 350px; }
+
+    body.map-route-active .hm-left-panel {
+      width: var(--hm-v3-rail) !important;
+    }
+
+    body.map-route-active .hm-search-v2-wrap {
+      left: calc(var(--hm-v3-rail) + 36px) !important;
+      right: var(--hm-v3-gap) !important;
+      top: 16px !important;
+    }
+
+    body.map-route-active .hm-map-topbar .hm-discovery-filters {
+      top: 78px !important;
+      right: var(--hm-v3-gap) !important;
+      left: calc(var(--hm-v3-rail) + 36px) !important;
+      width: auto !important;
+      max-width: none !important;
+      justify-content: flex-end !important;
+      flex-wrap: wrap !important;
+      overflow: visible !important;
+      scrollbar-width: auto !important;
+    }
+
+    body.map-route-active .hm-map-topbar .hm-filter-popover {
+      top: calc(100% + 8px) !important;
+      right: 0 !important;
+      left: auto !important;
+    }
+  }
+
+  /* Small laptops: keep controls readable rather than squeezing them. */
+  @media (max-width: 1080px) {
+    :root { --hm-v3-rail: 320px; }
+
+    body.map-route-active .hm-search-v2-wrap,
+    body.map-route-active .hm-map-topbar .hm-discovery-filters {
+      left: 344px !important;
+    }
+
+    body.map-route-active .hm-map-topbar .hm-quick-filter,
+    body.map-route-active .hm-map-topbar .hm-filter-trigger,
+    body.map-route-active .hm-map-topbar .hm-report-status {
+      min-height: 40px !important;
+      height: 40px !important;
+      padding-inline: 10px !important;
+    }
+  }
+}
+
+/* Mobile is a separate sheet experience. Only add interaction guardrails. */
+@media (max-width: 760px) {
+  body.map-route-active .hm-left-panel,
+  body.map-route-active .hm-filter-popover,
+  body.map-route-active .hm-place-list {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.map-route-active .hm-filter-popover {
+    max-height: min(72dvh, 620px);
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+}
