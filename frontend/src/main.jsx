@@ -49,6 +49,7 @@ import './community-location-polish.css';
 import './photo-scanner.css';
 import './integration-secrets.css';
 import './halo-hola-map.css';
+import './halo-hola-scroll-fix.css';
 import './discovery-v1.css';
 import './map-power-v3.css';
 import './mobile-map-clean.css';
