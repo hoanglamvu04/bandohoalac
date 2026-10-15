@@ -1,10 +1,13 @@
 import '../mapInteractionBridge.js';
 import '../map-experience-v2.css';
+import '../discovery-v1.css';
+import '../map-power-v3.css';
 import MapPage from './MapPage.jsx';
 import MapSearchV2 from '../components/MapSearchV2.jsx';
 import MapPinOverlay from '../components/MapPinOverlay.jsx';
 import MapHaloFilterPortal from '../components/MapHaloFilterPortal.jsx';
 import MapMobileLocationButton from '../components/MapMobileLocationButton.jsx';
+import MapPowerOverlay from '../components/MapPowerOverlay.jsx';
 
 export default function MapDiscoveryPage() {
   return (
@@ -14,6 +17,7 @@ export default function MapDiscoveryPage() {
       <MapPinOverlay />
       <MapHaloFilterPortal />
       <MapMobileLocationButton />
+      <MapPowerOverlay />
     </div>
   );
 }
