@@ -1,0 +1,162 @@
+/* Mobile-only safety net for marker detail rendering.
+ * It appears only when the normal inspector / MapPower preview did not mount. */
+.hm-mobile-place-fallback { display: none; }
+
+@media (max-width: 760px) {
+  .hm-mobile-place-fallback {
+    position: fixed;
+    z-index: 1118;
+    left: 8px;
+    right: 8px;
+    bottom: calc(var(--app-safe-bottom, 72px) + 8px);
+    display: block;
+    padding: 20px 12px 12px;
+    border: 1px solid rgba(16, 47, 41, .10);
+    border-radius: 24px 24px 18px 18px;
+    background: rgba(255, 255, 252, .99);
+    box-shadow: 0 -14px 42px rgba(15, 52, 44, .18);
+    color: #173f35;
+    pointer-events: auto;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .hm-mobile-place-fallback-handle {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 42px;
+    height: 4px;
+    transform: translateX(-50%);
+    border-radius: 999px;
+    background: rgba(23, 77, 65, .20);
+  }
+
+  .hm-mobile-place-fallback-close {
+    position: absolute;
+    z-index: 2;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: #eff4f1;
+    color: #31584d;
+  }
+
+  .hm-mobile-place-fallback-main {
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 11px;
+    align-items: center;
+    padding-right: 30px;
+  }
+
+  .hm-mobile-place-fallback-cover {
+    width: 78px;
+    height: 78px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 15px;
+    background: #e9f0ec;
+    color: #2f6657;
+  }
+
+  .hm-mobile-place-fallback-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .hm-mobile-place-fallback-copy {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+  }
+
+  .hm-mobile-place-fallback-copy small {
+    color: #6f8379;
+    font-size: 9.5px;
+    font-weight: 900;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+  }
+
+  .hm-mobile-place-fallback-copy strong {
+    overflow: hidden;
+    color: #153d32;
+    font-size: 16px;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hm-mobile-place-fallback-copy > span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #2c6957;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .hm-mobile-place-fallback-copy p {
+    min-width: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow: hidden;
+    color: #76857e;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hm-mobile-place-fallback-actions {
+    display: grid;
+    grid-template-columns: 1.25fr .9fr;
+    gap: 7px;
+    margin-top: 10px;
+  }
+
+  .hm-mobile-place-fallback-actions a {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid #dce6e1;
+    border-radius: 12px;
+    background: #fafcfb;
+    color: #31584d;
+    font-size: 11px;
+    font-weight: 850;
+    text-decoration: none;
+  }
+
+  .hm-mobile-place-fallback-actions a.primary {
+    border-color: #174d41;
+    background: #174d41;
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(23, 77, 65, .17);
+  }
+
+  .hm-mobile-place-fallback-loading {
+    min-height: 78px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #6d7e76;
+    font-size: 12px;
+  }
+
+  body.map-embed-active .hm-mobile-place-fallback {
+    bottom: 10px;
+  }
+}
