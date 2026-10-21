@@ -4,26 +4,11 @@ import { Check, LocateFixed } from 'lucide-react';
 
 export default function MapMobileLocationButton() {
   const [target, setTarget] = useState(null);
-  const [mobile, setMobile] = useState(false);
   const [locating, setLocating] = useState(false);
   const [located, setLocated] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-
-    const media = window.matchMedia('(max-width: 760px)');
-    const syncMobile = () => setMobile(media.matches);
-    syncMobile();
-    media.addEventListener?.('change', syncMobile);
-
-    return () => media.removeEventListener?.('change', syncMobile);
-  }, []);
-
-  useEffect(() => {
-    if (!mobile || typeof document === 'undefined') {
-      setTarget(null);
-      return undefined;
-    }
+    if (typeof document === 'undefined') return undefined;
 
     const syncTarget = () => {
       setTarget(document.querySelector('.hm-discovery-filters'));
@@ -31,12 +16,17 @@ export default function MapMobileLocationButton() {
 
     syncTarget();
     const frame = window.requestAnimationFrame(syncTarget);
+    const observer = new MutationObserver(syncTarget);
+    observer.observe(document.body, { childList: true, subtree: true });
 
-    return () => window.cancelAnimationFrame(frame);
-  }, [mobile]);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
-    if (!mobile || !target || typeof document === 'undefined') return undefined;
+    if (!target || typeof document === 'undefined') return undefined;
 
     const syncState = () => {
       const nativeButton = document.querySelector('.hm-locate');
@@ -64,9 +54,9 @@ export default function MapMobileLocationButton() {
     });
 
     return () => observer.disconnect();
-  }, [mobile, target]);
+  }, [target]);
 
-  if (!mobile || !target) return null;
+  if (!target) return null;
 
   const locate = () => {
     const nativeButton = document.querySelector('.hm-locate');
@@ -82,8 +72,8 @@ export default function MapMobileLocationButton() {
       className={'hm-quick-filter hm-my-location-filter' + (located ? ' located' : '')}
       onClick={locate}
       disabled={locating}
-      aria-label="Đưa bản đồ tới vị trí của tôi"
-      title="Đưa bản đồ tới vị trí hiện tại"
+      aria-label={label}
+      title={label}
     >
       {located && !locating ? <Check size={14} /> : <LocateFixed size={14} />}
       <span>{label}</span>
