@@ -136,20 +136,31 @@ export default function ExplorePage() {
               chọn nhanh rồi mở thẳng trên HOLA Maps.
             </p>
 
+            <div className="explore-hero-note">
+              <span>{data.items.length || 20} cẩm nang</span>
+              <span>Dữ liệu địa phương · cập nhật liên tục</span>
+            </div>
+          </div>
+
+          <div className="explore-hero-actions">
+            <span className="explore-hero-actions-label">Tìm nhanh</span>
+
             <form className="explore-search" onSubmit={submitSearch}>
               <Search size={18} />
               <input
                 name="q"
                 defaultValue={query}
-                placeholder="Tìm cafe, homestay, FPT, cuối tuần..."
+                placeholder="Cafe, homestay, FPT, cuối tuần..."
                 aria-label="Tìm bài Khám phá Hòa Lạc"
               />
               <button type="submit">Tìm</button>
             </form>
 
-            <div className="explore-hero-note">
-              <span>{data.items.length || 20} cẩm nang</span>
-              <span>Cập nhật từ dữ liệu HOLA Maps</span>
+            <div className="explore-quick-links" aria-label="Chủ đề tìm nhanh">
+              <button type="button" onClick={() => updateCategory('an-gi')}>Ăn gì</button>
+              <button type="button" onClick={() => updateCategory('cafe')}>Cafe</button>
+              <button type="button" onClick={() => updateCategory('homestay')}>Homestay</button>
+              <button type="button" onClick={() => updateCategory('choi-gi')}>Chơi gì</button>
             </div>
           </div>
         </div>
