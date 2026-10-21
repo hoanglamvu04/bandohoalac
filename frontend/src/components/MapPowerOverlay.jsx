@@ -147,6 +147,8 @@ export default function MapPowerOverlay() {
             className="hm-halo-live-trigger"
             onClick={() => setHaloOpen((value) => !value)}
             aria-expanded={haloOpen}
+            aria-label={`HALO Live, ${haloItems.length} điểm cộng đồng`}
+            title={`HALO Live · ${haloItems.length} điểm cộng đồng`}
           >
             <span className="hm-halo-live-dot" />
             <span><b>HALO Live</b><small>{haloItems.length} điểm cộng đồng</small></span>
