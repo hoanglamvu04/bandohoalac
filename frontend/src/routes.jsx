@@ -40,6 +40,8 @@ const AdminAudit = lazy(() => import('./pages/admin/AdminAudit.jsx'));
 const AdminBranding = lazy(() => import('./pages/admin/AdminBranding.jsx'));
 const AdminDeveloperApi = lazy(() => import('./pages/admin/AdminDeveloperApi.jsx'));
 const DeveloperDocs = lazy(() => import('./pages/DeveloperDocs.jsx'));
+const ExplorePage = lazy(() => import('./pages/ExplorePage.jsx'));
+const ExploreArticlePage = lazy(() => import('./pages/ExploreArticlePage.jsx'));
 
 function LoadingPage() {
   return (
@@ -142,6 +144,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: withSuspense(HomePage) },
       { path: 'map', element: withSuspense(MapPage) },
+      { path: 'kham-pha', element: withSuspense(ExplorePage) },
+      { path: 'kham-pha/:slug', element: withSuspense(ExploreArticlePage) },
       { path: 'halo', element: withSuspense(HaloHolaMapPage) },
       // Embed uses the same discovery stack as /map so HALO HOLA receives
       // every mobile map capability without maintaining a second UI.

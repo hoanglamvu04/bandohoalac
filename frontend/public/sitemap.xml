@@ -6,4 +6,7 @@
   <sitemap>
     <loc>https://maps.dothihoalac.vn/api/sitemap-places.xml</loc>
   </sitemap>
+  <sitemap>
+    <loc>https://maps.dothihoalac.vn/api/sitemap-explore.xml</loc>
+  </sitemap>
 </sitemapindex>

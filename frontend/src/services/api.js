@@ -612,4 +612,19 @@ export function getAdminDeveloperApiLogs(params = {}) {
   return unwrap(client.get('/admin/developer-api/logs', { params: cleanParams(params) }));
 }
 
+
+export function getExploreArticles(params = {}, options = {}) {
+  return unwrap(client.get('/explore', {
+    params: cleanParams(params),
+    signal: options.signal
+  }));
+}
+
+export function getExploreArticle(slug, options = {}) {
+  return unwrap(client.get('/explore/' + encodeURIComponent(slug), {
+    signal: options.signal
+  }));
+}
+
+
 export { API_URL };

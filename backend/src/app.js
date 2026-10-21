@@ -35,6 +35,7 @@ import partnerPortalRoutes from './routes/partnerPortal.routes.js';
 import brandRoutes from './routes/brand.routes.js';
 import publicIntegrationRoutes from './routes/publicIntegration.routes.js';
 import haloHolaRoutes from './routes/haloHola.routes.js';
+import exploreRoutes from './routes/explore.routes.js';
 
 export function createApp() {
   const app = express();
@@ -100,6 +101,43 @@ export function createApp() {
       next(error);
     }
   });
+
+  app.get('/api/sitemap-explore.xml', async (_req, res, next) => {
+    try {
+      const { rows } = await pool.query(`
+        SELECT slug, updated_at
+        FROM explore_articles
+        WHERE status = 'PUBLISHED'
+          AND published_at <= NOW()
+        ORDER BY published_at DESC, id DESC
+        LIMIT 5000
+      `);
+
+      const urls = [
+        {
+          slug: '',
+          updated_at: rows[0]?.updated_at || new Date()
+        },
+        ...rows
+      ].map((article) => {
+        const path = article.slug
+          ? '/kham-pha/' + encodeURIComponent(article.slug)
+          : '/kham-pha';
+        const lastmod = article.updated_at
+          ? `\n    <lastmod>${new Date(article.updated_at).toISOString()}</lastmod>`
+          : '';
+        return `  <url>\n    <loc>https://maps.dothihoalac.vn${path}</loc>${lastmod}\n    <changefreq>weekly</changefreq>\n    <priority>${article.slug ? '0.8' : '0.9'}</priority>\n  </url>`;
+      }).join('\n');
+
+      res.set('Content-Type', 'application/xml; charset=utf-8');
+      res.set('Cache-Control', 'public, max-age=900, stale-while-revalidate=3600');
+      res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.use('/api/explore', exploreRoutes);
 
   app.use('/api/public/v1', publicIntegrationRoutes);
   app.use('/api/auth', authRoutes);

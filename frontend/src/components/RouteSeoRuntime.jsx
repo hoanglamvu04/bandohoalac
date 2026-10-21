@@ -15,6 +15,10 @@ const ROUTE_META = {
     title: 'Bản đồ cộng đồng HALO HOLA',
     description: 'Khám phá các góc nhìn, ảnh và điểm check-in cộng đồng HALO HOLA trên bản đồ.'
   },
+  '/kham-pha': {
+    title: 'Khám phá Hòa Lạc',
+    description: 'Cẩm nang ăn gì, chơi gì, cafe, homestay, check-in và lịch trình địa phương tại Hòa Lạc.'
+  },
   '/leaderboard': {
     title: 'Cộng đồng Explorer',
     description: 'Bảng xếp hạng và hoạt động đóng góp dữ liệu của cộng đồng Hola Maps.'
@@ -65,6 +69,13 @@ function isPrivateRoute(pathname) {
 export default function RouteSeoRuntime() {
   const location = useLocation();
   const meta = useMemo(() => {
+    if (location.pathname.startsWith('/kham-pha/')) {
+      return {
+        title: 'Cẩm nang Hòa Lạc',
+        description: 'Gợi ý địa điểm và trải nghiệm địa phương, kết nối trực tiếp với HOLA Maps.'
+      };
+    }
+
     if (location.pathname.startsWith('/place/')) {
       return {
         title: 'Địa điểm Hòa Lạc',
