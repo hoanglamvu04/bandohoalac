@@ -80,14 +80,7 @@ export default function MapPinOverlay() {
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 
-  if (!pin) {
-    return (
-      <div className="hm-pin-hint">
-        <MapPin size={15} />
-        <span>Chạm bản đồ hoặc nhấn giữ để ghim vị trí</span>
-      </div>
-    );
-  }
+  if (!pin) return null;
 
   return (
     <aside className="hm-pin-card" aria-label="Điểm đã ghim">
