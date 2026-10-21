@@ -25,6 +25,7 @@ const ARTICLE_SELECT = `
       LEFT JOIN categories c ON c.id = p.category_id
       JOIN place_images pi ON pi.place_id = p.id
       WHERE p.status = 'PUBLISHED'
+        AND (a.related_query IS NOT NULL OR a.related_category IS NOT NULL)
         AND (a.related_category IS NULL OR c.slug = a.related_category)
         AND (
           a.related_query IS NULL OR
