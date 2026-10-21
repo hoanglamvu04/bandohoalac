@@ -132,6 +132,18 @@
     box-shadow: 0 0 0 2px #fff;
   }
 
+
+  /* Mirror the native geolocation action into the compact desktop toolbar.
+     Keep the original MapView button as the functional source but hide its
+     lower-right visual duplicate on desktop. */
+  body.map-route-active .hm-map-topbar .hm-my-location-filter {
+    order: -1;
+  }
+
+  body.map-route-active .hm-locate {
+    display: none !important;
+  }
+
   /* Search/filter controls are fixed to the viewport while the shared header
      is restored on desktop. Always offset them by the measured header bottom;
      otherwise the header CTA intercepts pointer events at 100% zoom. */
