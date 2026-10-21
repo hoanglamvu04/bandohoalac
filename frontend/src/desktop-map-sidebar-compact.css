@@ -66,6 +66,67 @@
     padding-right: 42px !important;
   }
 
+  /* The rail is only 320-380px wide even on a large desktop. Stack the
+     empty-state actions by rail width, not viewport width, and let text grow
+     vertically instead of squeezing labels into two narrow grid tracks. */
+  body.map-route-active .hm-left-panel .hm-place-empty {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    align-items: stretch;
+    gap: 8px;
+    padding: 16px;
+  }
+
+  body.map-route-active .hm-left-panel .hm-place-empty > b {
+    min-width: 0;
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.4;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+
+  body.map-route-active .hm-left-panel .hm-place-empty > p {
+    min-width: 0;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+  }
+
+  body.map-route-active .hm-left-panel .hm-place-empty-actions {
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  body.map-route-active .hm-left-panel .hm-place-empty-actions > button,
+  body.map-route-active .hm-left-panel .hm-place-empty-reset {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 44px;
+    padding: 10px 12px;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  body.map-route-active .hm-left-panel .hm-place-empty-actions > button > svg {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+  }
+
   /* At laptop widths an older rule used overflow-x:auto on this row. Because
      the advanced filter panel is a child of the row, that scroll container
      clipped the popup at 100% browser zoom. Keep the row visible and let the
