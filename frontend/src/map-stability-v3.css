@@ -68,6 +68,70 @@
     text-overflow: ellipsis;
   }
 
+  /* Compact desktop command bar: keep search short and put map actions on
+     the same row. Labels remain available via aria-label/title but are hidden
+     visually so the map gets more usable space. */
+  body.map-route-active .hm-search-v2-wrap {
+    right: auto !important;
+    width: min(520px, calc(100vw - var(--hm-v3-rail) - 250px)) !important;
+    top: calc(var(--app-safe-top, 78px) + var(--hm-v3-gap)) !important;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-discovery-filters {
+    top: calc(var(--app-safe-top, 78px) + var(--hm-v3-gap)) !important;
+    left: auto !important;
+    right: var(--hm-v3-gap) !important;
+    width: auto !important;
+    max-width: none !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-quick-filter,
+  body.map-route-active .hm-map-topbar .hm-filter-trigger,
+  body.map-route-active .hm-map-topbar .hm-report-status {
+    width: 48px !important;
+    min-width: 48px !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    border-radius: 14px !important;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-quick-filter > span,
+  body.map-route-active .hm-map-topbar .hm-filter-trigger > span,
+  body.map-route-active .hm-map-topbar .hm-report-status > span,
+  body.map-route-active .hm-map-topbar .hm-filter-trigger > svg:last-child {
+    display: none !important;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-quick-filter > svg,
+  body.map-route-active .hm-map-topbar .hm-filter-trigger > svg:first-child,
+  body.map-route-active .hm-map-topbar .hm-report-status > svg {
+    width: 19px !important;
+    height: 19px !important;
+    flex: 0 0 19px !important;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-filter-menu {
+    width: 48px;
+    flex: 0 0 48px;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-filter-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    font-size: 9px;
+    box-shadow: 0 0 0 2px #fff;
+  }
+
   /* Search/filter controls are fixed to the viewport while the shared header
      is restored on desktop. Always offset them by the measured header bottom;
      otherwise the header CTA intercepts pointer events at 100% zoom. */
@@ -76,15 +140,6 @@
 
     body.map-route-active .hm-search-v2-wrap {
       left: calc(var(--hm-v3-rail) + 50px) !important;
-      right: clamp(560px, 35vw, 690px) !important;
-      top: calc(var(--app-safe-top, 78px) + var(--hm-v3-gap)) !important;
-    }
-
-    body.map-route-active .hm-map-topbar .hm-discovery-filters {
-      top: calc(var(--app-safe-top, 78px) + var(--hm-v3-gap)) !important;
-      right: var(--hm-v3-gap) !important;
-      max-width: min(670px, calc(100vw - var(--hm-v3-rail) - 530px)) !important;
-      flex-wrap: nowrap !important;
     }
   }
 
@@ -99,18 +154,9 @@
 
     body.map-route-active .hm-search-v2-wrap {
       left: calc(var(--hm-v3-rail) + 36px) !important;
-      right: var(--hm-v3-gap) !important;
-      top: calc(var(--app-safe-top, 78px) + 16px) !important;
     }
 
     body.map-route-active .hm-map-topbar .hm-discovery-filters {
-      top: calc(var(--app-safe-top, 78px) + 78px) !important;
-      right: var(--hm-v3-gap) !important;
-      left: calc(var(--hm-v3-rail) + 36px) !important;
-      width: auto !important;
-      max-width: none !important;
-      justify-content: flex-end !important;
-      flex-wrap: wrap !important;
       overflow: visible !important;
       scrollbar-width: auto !important;
     }
@@ -126,8 +172,7 @@
   @media (max-width: 1080px) {
     :root { --hm-v3-rail: 320px; }
 
-    body.map-route-active .hm-search-v2-wrap,
-    body.map-route-active .hm-map-topbar .hm-discovery-filters {
+    body.map-route-active .hm-search-v2-wrap {
       left: 344px !important;
     }
 
