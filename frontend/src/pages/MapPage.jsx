@@ -1427,6 +1427,8 @@ export default function MapPage() {
             className={placeScope === 'near-me' ? 'hm-quick-filter active' : 'hm-quick-filter'}
             onClick={() => placeScope === 'near-me' ? resetToViewportPlaces() : showNearMePlaces()}
             disabled={placeScopeLoading}
+            aria-label={placeScope === 'near-me' ? 'Bỏ chế độ gần tôi' : 'Tìm địa điểm gần tôi'}
+            title={placeScope === 'near-me' ? 'Bỏ chế độ gần tôi' : 'Gần tôi'}
           >
             <Navigation size={14} />
             <span>{placeScope === 'near-me' ? 'Đang gần tôi' : 'Gần tôi'}</span>
@@ -1436,6 +1438,8 @@ export default function MapPage() {
             type="button"
             className={openNow ? 'hm-quick-filter active' : 'hm-quick-filter'}
             onClick={handleOpenNowToggle}
+            aria-label={openNow ? 'Tắt bộ lọc đang mở' : 'Chỉ hiện địa điểm đang mở'}
+            title="Đang mở"
           >
             <Clock3 size={14} />
             <span>Đang mở</span>
@@ -1448,6 +1452,7 @@ export default function MapPage() {
               onClick={() => setFilterMenuOpen((value) => !value)}
               aria-expanded={filterMenuOpen}
               aria-label="Mở bộ lọc địa điểm"
+              title="Bộ lọc"
             >
               <SlidersHorizontal size={15} />
               <span>Bộ lọc</span>
