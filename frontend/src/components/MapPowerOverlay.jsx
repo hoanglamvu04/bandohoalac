@@ -3,21 +3,15 @@ import {
   BadgeCheck,
   Building2,
   Camera,
-  ChevronDown,
-  ChevronUp,
   CircleUserRound,
-  ExternalLink,
-  Images,
   MapPin,
   MessageSquarePlus,
   PencilLine,
-  Sparkles,
   Star,
   Store,
   X
 } from 'lucide-react';
 import { getPlace } from '../services/api.js';
-import { getHaloSpots } from '../services/haloHolaApi.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
 function currentRoute() {
@@ -48,34 +42,11 @@ function useBrowserRoute() {
   return route;
 }
 
-function haloItemsFromGeoJson(data) {
-  const features = Array.isArray(data?.features) ? data.features : [];
-  return features
-    .map((feature) => {
-      const props = feature?.properties || {};
-      const coords = feature?.geometry?.coordinates || [];
-      return {
-        id: props.haloSpotId || String(feature?.id || '').replace(/^halo-/, ''),
-        name: props.name || 'Check-in HALO HOLA',
-        address: props.address || 'Hòa Lạc',
-        coverUrl: props.coverUrl || '',
-        postCount: Number(props.postCount || 0),
-        mediaCount: Number(props.mediaCount || 0),
-        lat: Number(coords[1]),
-        lng: Number(coords[0])
-      };
-    })
-    .filter((item) => item.id && Number.isFinite(item.lat) && Number.isFinite(item.lng))
-    .slice(0, 8);
-}
-
 export default function MapPowerOverlay() {
   const { user } = useAuth();
   const route = useBrowserRoute();
   const [place, setPlace] = useState(null);
   const [placeLoading, setPlaceLoading] = useState(false);
-  const [haloOpen, setHaloOpen] = useState(false);
-  const [haloItems, setHaloItems] = useState([]);
   const [dismissedPlaceId, setDismissedPlaceId] = useState('');
 
   const onMap = route.pathname === '/map';
@@ -113,24 +84,7 @@ export default function MapPowerOverlay() {
     };
   }, [onMap, selectedPlaceId, dismissedPlaceId]);
 
-  useEffect(() => {
-    if (!onMap) return undefined;
-    let active = true;
-    const controller = new AbortController();
 
-    getHaloSpots({}, { signal: controller.signal })
-      .then((data) => {
-        if (active) setHaloItems(haloItemsFromGeoJson(data));
-      })
-      .catch((error) => {
-        if (active && error?.name !== 'AbortError') setHaloItems([]);
-      });
-
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [onMap]);
 
   if (!onMap) return null;
 
@@ -140,49 +94,7 @@ export default function MapPowerOverlay() {
 
   return (
     <div className="hm-power-overlay" aria-live="polite">
-      {haloItems.length > 0 && (
-        <section className={haloOpen ? 'hm-halo-live open' : 'hm-halo-live'}>
-          <button
-            type="button"
-            className="hm-halo-live-trigger"
-            onClick={() => setHaloOpen((value) => !value)}
-            aria-expanded={haloOpen}
-            aria-label={`HALO Live, ${haloItems.length} điểm cộng đồng`}
-            title={`HALO Live · ${haloItems.length} điểm cộng đồng`}
-          >
-            <span className="hm-halo-live-dot" />
-            <span><b>HALO Live</b><small>{haloItems.length} điểm cộng đồng</small></span>
-            {haloOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-          </button>
 
-          {haloOpen && (
-            <div className="hm-halo-live-panel">
-              <div className="hm-halo-live-head">
-                <div>
-                  <span><Sparkles size={14} /> CỘNG ĐỒNG SỐNG</span>
-                  <strong>Ảnh & check-in HALO HOLA</strong>
-                </div>
-                <a href="/halo">Mở bản đồ HALO <ExternalLink size={13} /></a>
-              </div>
-
-              <div className="hm-halo-live-grid">
-                {haloItems.slice(0, 6).map((item) => (
-                  <a href={'/halo?spot=' + encodeURIComponent(item.id)} key={item.id} className="hm-halo-live-item">
-                    <span className="hm-halo-live-cover">
-                      {item.coverUrl ? <img src={item.coverUrl} alt="" loading="lazy" /> : <Camera size={18} />}
-                    </span>
-                    <span>
-                      <b>{item.name}</b>
-                      <small><Images size={12} /> {item.mediaCount} ảnh · {item.postCount} bài</small>
-                      <em>{item.address}</em>
-                    </span>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-      )}
 
       {(place || placeLoading) && selectedPlaceId !== dismissedPlaceId && (
         <aside className="hm-map-preview-card">
