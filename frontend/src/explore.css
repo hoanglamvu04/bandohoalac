@@ -24,19 +24,22 @@
 /* ---------- Landing ---------- */
 
 .explore-hero{
-  padding:38px 0 28px;
-  border-bottom:1px solid #e5edf7;
+  padding:34px 0 30px;
+  border-bottom:1px solid #e4edf8;
   background:
-    radial-gradient(circle at 86% 12%,rgba(41,131,255,.10),transparent 26%),
-    linear-gradient(180deg,#ffffff 0%,#f7fbff 100%);
+    radial-gradient(circle at 82% 20%,rgba(48,137,255,.09),transparent 24%),
+    linear-gradient(180deg,#fff 0%,#f8fbff 100%);
 }
 
 .explore-hero-grid{
-  display:block;
+  display:grid;
+  grid-template-columns:minmax(0,1.1fr) minmax(360px,.9fr);
+  gap:64px;
+  align-items:center;
 }
 
 .explore-hero-copy{
-  max-width:790px;
+  max-width:690px;
 }
 
 .explore-kicker{
@@ -51,33 +54,64 @@
 }
 
 .explore-hero h1{
-  margin:7px 0 8px;
+  margin:8px 0 9px;
   color:var(--explore-navy);
-  font-size:clamp(34px,4vw,48px);
-  line-height:1.06;
-  letter-spacing:-.035em;
+  font-size:clamp(40px,4.4vw,58px);
+  line-height:1.02;
+  letter-spacing:-.04em;
 }
 
 .explore-hero p{
-  max-width:700px;
+  max-width:650px;
   margin:0;
   color:var(--explore-muted);
   font-size:15px;
   line-height:1.65;
 }
 
+.explore-hero-note{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 18px;
+  margin-top:16px;
+  color:#7f8fa3;
+  font-size:12px;
+}
+
+.explore-hero-note span:first-child{
+  color:#315f94;
+  font-weight:850;
+}
+
+.explore-hero-actions{
+  align-self:stretch;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding-left:34px;
+  border-left:1px solid #dfe9f5;
+}
+
+.explore-hero-actions-label{
+  margin-bottom:9px;
+  color:#55779e;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
 .explore-search{
-  width:min(620px,100%);
-  margin-top:20px;
+  width:100%;
   display:grid;
   grid-template-columns:auto 1fr auto;
   align-items:center;
   gap:10px;
   padding:6px 6px 6px 14px;
-  border:1px solid #cfe0f3;
-  border-radius:12px;
+  border:1px solid #cbdff4;
+  border-radius:13px;
   background:#fff;
-  box-shadow:0 7px 22px rgba(37,94,156,.07);
+  box-shadow:0 9px 24px rgba(31,87,149,.07);
 }
 
 .explore-search svg{
@@ -95,32 +129,48 @@
 }
 
 .explore-search input::placeholder{
-  color:#93a2b5;
+  color:#95a4b6;
 }
 
 .explore-search button{
-  min-height:38px;
+  min-height:40px;
   padding:0 16px;
   border:0;
   border-radius:9px;
   color:#fff;
-  background:linear-gradient(135deg,#1680f5,#0a67df);
+  background:#0b6fe8;
   font-weight:850;
   cursor:pointer;
 }
 
-.explore-hero-note{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px 18px;
-  margin-top:13px;
-  color:#7a8da4;
-  font-size:12px;
+.explore-search button:hover{
+  background:#095fc9;
 }
 
-.explore-hero-note span:first-child{
-  color:#315d91;
+.explore-quick-links{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:12px;
+}
+
+.explore-quick-links button{
+  min-height:32px;
+  padding:0 11px;
+  border:1px solid #d9e6f3;
+  border-radius:9px;
+  color:#55718e;
+  background:#fff;
+  font:inherit;
+  font-size:12px;
   font-weight:800;
+  cursor:pointer;
+}
+
+.explore-quick-links button:hover{
+  color:#0b6fe8;
+  border-color:#bdd7f5;
+  background:#f4f9ff;
 }
 
 .explore-main{
@@ -738,6 +788,17 @@
 /* ---------- Responsive ---------- */
 
 @media(max-width:960px){
+  .explore-hero-grid{
+    grid-template-columns:1fr;
+    gap:24px;
+  }
+
+  .explore-hero-actions{
+    padding:20px 0 0;
+    border-left:0;
+    border-top:1px solid #dfe9f5;
+  }
+
   .explore-grid{
     grid-template-columns:1fr;
   }
@@ -765,25 +826,43 @@
   }
 
   .explore-hero{
-    padding:28px 0 21px;
+    padding:24px 0 22px;
+  }
+
+  .explore-hero-grid{
+    gap:20px;
   }
 
   .explore-hero h1{
-    font-size:34px;
+    font-size:36px;
   }
 
   .explore-hero p{
     font-size:14px;
   }
 
+  .explore-hero-actions{
+    padding-top:18px;
+  }
+
   .explore-search{
-    grid-template-columns:auto 1fr;
-    padding:7px 11px;
+    grid-template-columns:auto 1fr auto;
+    padding:6px 6px 6px 12px;
   }
 
   .explore-search button{
-    grid-column:1/-1;
-    min-height:39px;
+    min-height:38px;
+    padding:0 13px;
+  }
+
+  .explore-quick-links{
+    gap:6px;
+  }
+
+  .explore-quick-links button{
+    min-height:30px;
+    padding:0 9px;
+    font-size:11px;
   }
 
   .explore-main{
