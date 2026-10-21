@@ -34,8 +34,7 @@ CREATE INDEX IF NOT EXISTS explore_articles_search_trgm_idx
       lower(
         public.hola_unaccent(
           COALESCE(title, '') || ' ' ||
-          COALESCE(excerpt, '') || ' ' ||
-          COALESCE(array_to_string(tags, ' '), '')
+          COALESCE(excerpt, '')
         )
       )
     ) gin_trgm_ops
