@@ -4,6 +4,7 @@ import {
   Bell,
   Building2,
   ChevronDown,
+  Compass,
   Download,
   LogOut,
   MapPinned,
@@ -24,6 +25,7 @@ import {
 
 const navItems = [
   { to: '/map', label: 'Bản đồ', icon: MapPinned },
+  { to: '/kham-pha', label: 'Khám phá', icon: Compass },
   { to: '/leaderboard', label: 'Cộng đồng', icon: Trophy },
   { to: '/profile', label: 'Trang cá nhân', icon: UserRound }
 ];
