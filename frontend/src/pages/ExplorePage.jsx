@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Compass, Search, Sparkles } from 'lucide-react';
+import { ArrowRight, Compass, Search } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import SeoHead from '../components/SeoHead.jsx';
 import { getExploreArticles } from '../services/api.js';
@@ -71,7 +71,10 @@ export default function ExplorePage() {
   }, [category, query]);
 
   const featured = useMemo(
-    () => data.items.find((item) => item.featured) || data.items[0] || null,
+    () => data.items.find((item) => item.slug === 'hoa-lac-choi-gi')
+      || data.items.find((item) => item.featured)
+      || data.items[0]
+      || null,
     [data.items]
   );
   const rest = useMemo(
@@ -126,29 +129,28 @@ export default function ExplorePage() {
       <section className="explore-hero">
         <div className="explore-shell explore-hero-grid">
           <div className="explore-hero-copy">
-            <span className="explore-kicker"><Sparkles size={15} /> HOLA GUIDE</span>
-            <h1>Khám phá Hòa Lạc theo cách dễ đi hơn.</h1>
+            <span className="explore-kicker"><Compass size={15} /> HOLA GUIDE</span>
+            <h1>Khám phá Hòa Lạc</h1>
             <p>
-              Ăn gì, chơi gì, cafe nào đẹp, ở đâu cuối tuần — chọn ý tưởng trước,
-              rồi mở địa điểm thật trên bản đồ.
+              Ăn gì, chơi gì, cafe, homestay và những điểm đáng ghé —
+              chọn nhanh rồi mở thẳng trên HOLA Maps.
             </p>
 
             <form className="explore-search" onSubmit={submitSearch}>
-              <Search size={19} />
+              <Search size={18} />
               <input
                 name="q"
                 defaultValue={query}
-                placeholder="Tìm: cafe, homestay, FPT, cuối tuần..."
+                placeholder="Tìm cafe, homestay, FPT, cuối tuần..."
                 aria-label="Tìm bài Khám phá Hòa Lạc"
               />
               <button type="submit">Tìm</button>
             </form>
-          </div>
 
-          <div className="explore-hero-stat">
-            <Compass size={28} />
-            <strong>{data.items.length || 20}</strong>
-            <span>cẩm nang địa phương đang có</span>
+            <div className="explore-hero-note">
+              <span>{data.items.length || 20} cẩm nang</span>
+              <span>Cập nhật từ dữ liệu HOLA Maps</span>
+            </div>
           </div>
         </div>
       </section>
