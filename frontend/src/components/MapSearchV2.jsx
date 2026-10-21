@@ -193,7 +193,7 @@ export default function MapSearchV2() {
           value={query}
           onFocus={() => query.trim().length >= 2 && setOpen(true)}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Tìm địa điểm, tên đường, cafe gần FPT, cafe gần tôi..."
+          placeholder="Tìm địa điểm..."
           aria-label="Tìm kiếm Hola Maps"
         />
         {loading && <span className="hm-search-v2-loading" />}
