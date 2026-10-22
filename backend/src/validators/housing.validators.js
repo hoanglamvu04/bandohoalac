@@ -14,6 +14,7 @@ export const housingListQuerySchema = z.object({
   verifiedWithinDays: numericString.optional(),
   availability: z.enum(['AVAILABLE', 'LIMITED', 'FULL', 'UNKNOWN']).optional(),
   availableOnly: booleanString.optional(),
+  partnerOnly: booleanString.optional(),
   airConditioner: booleanString.optional(),
   waterHeater: booleanString.optional(),
   privateBathroom: booleanString.optional(),
