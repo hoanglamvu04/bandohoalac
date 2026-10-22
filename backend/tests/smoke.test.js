@@ -62,6 +62,14 @@ test('GET /api/housing validates structured filters', async () => {
   assert.equal(res.status, 400);
 });
 
+test('GET /api/housing supports distance and amenity filters', async () => {
+  const res = await fetch(url('/api/housing?maxDistanceFpt=3000&parking=true&sort=distance'));
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body.items));
+  assert.ok(body.meta?.fpt);
+});
+
 test('auth: register, login, and me flow', async () => {
   const email = `smoke-${Date.now()}@holamaps.vn`;
   const registerRes = await fetch(url('/api/auth/register'), {
