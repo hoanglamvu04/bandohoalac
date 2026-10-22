@@ -13,6 +13,7 @@ import {
   Navigation,
   Phone,
   Share2,
+  ShieldCheck,
   Sparkles,
   Star,
   Users
@@ -54,12 +55,14 @@ function compactDescription(value, fallback) {
 }
 
 function formatHousingMoney(value) {
+  if (value === null || value === undefined || value === '') return 'Chưa cập nhật';
   const number = Number(value);
   if (!Number.isFinite(number)) return 'Chưa cập nhật';
   return new Intl.NumberFormat('vi-VN').format(number) + 'đ';
 }
 
 function formatHousingRent(value) {
+  if (value === null || value === undefined || value === '') return 'Chưa cập nhật';
   const number = Number(value);
   if (!Number.isFinite(number)) return 'Chưa cập nhật';
   if (number >= 1000000) {
