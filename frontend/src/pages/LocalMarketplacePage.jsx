@@ -28,7 +28,11 @@ const VERTICALS = {
     description: 'Lọc phòng theo giá, diện tích, tiện ích, trạng thái còn phòng và khoảng cách tới Đại học FPT. Dữ liệu Partner được đóng dấu thời điểm xác minh gần nhất.',
     canonical: 'https://maps.dothihoalac.vn/phong-tro',
     searchPlaceholder: 'Tìm phòng trọ gần FPT, Thạch Hòa...',
-    quickQueries: ['phòng trọ gần Đại học FPT', 'phòng trọ Thạch Hòa', 'phòng trọ Hòa Lạc'],
+    quickQueries: [
+      { label: 'Gần Đại học FPT', params: { maxDistanceFpt: '3000', sort: 'distance' } },
+      { label: 'Thạch Hòa', params: { q: 'Thạch Hòa' } },
+      { label: 'Hòa Lạc', params: { q: 'Hòa Lạc' } }
+    ],
     primaryMapHref: '/map?category=bat-dong-san',
     emptyTitle: 'Chưa có phòng trọ phù hợp',
     emptyText: 'Hãy nới bộ lọc hoặc mở bản đồ để xem toàn bộ địa điểm Bất động sản quanh Hòa Lạc.',
@@ -103,12 +107,14 @@ function formatDate(value) {
 }
 
 function formatMoney(value) {
+  if (value === null || value === undefined || value === '') return '';
   const number = Number(value);
   if (!Number.isFinite(number)) return '';
   return new Intl.NumberFormat('vi-VN').format(number) + 'đ';
 }
 
 function formatRent(value) {
+  if (value === null || value === undefined || value === '') return 'Chưa cập nhật giá';
   const number = Number(value);
   if (!Number.isFinite(number)) return 'Chưa cập nhật giá';
   if (number >= 1000000) {
@@ -381,11 +387,14 @@ export default function LocalMarketplacePage() {
 
     const request = mode === 'housing'
       ? getHousingListings(
-          Object.fromEntries(
-            HOUSING_FILTER_KEYS
-              .map((key) => [key, params.get(key)])
-              .filter(([, value]) => value !== null && value !== '')
-          ),
+          {
+            ...Object.fromEntries(
+              HOUSING_FILTER_KEYS
+                .map((key) => [key, params.get(key)])
+                .filter(([, value]) => value !== null && value !== '')
+            ),
+            limit: '100'
+          },
           { signal: controller.signal }
         )
       : Promise.all(
@@ -463,6 +472,15 @@ export default function LocalMarketplacePage() {
     setParams(next, { replace: true });
   }
 
+  function applyHousingShortcut(shortcut) {
+    const next = new URLSearchParams(params);
+    for (const [key, value] of Object.entries(shortcut?.params || {})) {
+      if (value === null || value === undefined || value === '') next.delete(key);
+      else next.set(key, String(value));
+    }
+    setParams(next, { replace: true });
+  }
+
   function submitFoodSearch(event) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -521,11 +539,20 @@ export default function LocalMarketplacePage() {
             )}
 
             <div className="local-market-quick">
-              {config.quickQueries.map((item) => (
-                <button type="button" key={item} onClick={() => updateQuery(item)}>
-                  {item}
-                </button>
-              ))}
+              {config.quickQueries.map((item) => {
+                const label = typeof item === 'string' ? item : item.label;
+                return (
+                  <button
+                    type="button"
+                    key={label}
+                    onClick={() => mode === 'housing' && typeof item !== 'string'
+                      ? applyHousingShortcut(item)
+                      : updateQuery(item)}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
