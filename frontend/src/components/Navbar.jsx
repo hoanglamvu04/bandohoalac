@@ -26,9 +26,9 @@ import {
 } from '../services/api.js';
 
 const navItems = [
-  { to: '/map', label: 'Bản đồ', icon: MapPinned },
-  { to: '/phong-tro', label: 'Phòng trọ', icon: Home },
-  { to: '/an-uong', label: 'Ăn uống', icon: UtensilsCrossed },
+  { to: '/map', label: 'Bản đồ', icon: MapPinned, mapMode: 'default' },
+  { to: '/map?vertical=housing&category=bat-dong-san', label: 'Phòng trọ', icon: Home, mapMode: 'housing' },
+  { to: '/map?vertical=food', label: 'Ăn uống', icon: UtensilsCrossed, mapMode: 'food' },
   { to: '/kham-pha', label: 'Khám phá', icon: Compass },
   { to: '/leaderboard', label: 'Cộng đồng', icon: Trophy }
 ];
@@ -293,15 +293,29 @@ export default function Navbar() {
       )}
 
       <nav className="desktop-nav premium-desktop-nav compact-primary-nav">
-        {navItems.map(({to,label,icon:Icon}) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'}
-          >
-            <Icon size={16}/>{label}
-          </NavLink>
-        ))}
+        {navItems.map(({to,label,icon:Icon,mapMode}) => {
+          const vertical = new URLSearchParams(location.search).get('vertical') || '';
+          const mapActive = location.pathname === '/map' && (
+            mapMode === 'housing'
+              ? vertical === 'housing'
+              : mapMode === 'food'
+                ? vertical === 'food'
+                : mapMode === 'default'
+                  ? !vertical
+                  : false
+          );
+          const normalActive = !mapMode && location.pathname === to;
+
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              className={mapActive || normalActive ? 'nav-link active' : 'nav-link'}
+            >
+              <Icon size={16}/>{label}
+            </NavLink>
+          );
+        })}
       </nav>
 
       <div className="nav-actions premium-nav-actions compact-nav-actions">
