@@ -36,6 +36,7 @@ import brandRoutes from './routes/brand.routes.js';
 import publicIntegrationRoutes from './routes/publicIntegration.routes.js';
 import haloHolaRoutes from './routes/haloHola.routes.js';
 import exploreRoutes from './routes/explore.routes.js';
+import housingRoutes from './routes/housing.routes.js';
 
 export function createApp() {
   const app = express();
@@ -138,6 +139,7 @@ export function createApp() {
   });
 
   app.use('/api/explore', exploreRoutes);
+  app.use('/api/housing', housingRoutes);
 
   app.use('/api/public/v1', publicIntegrationRoutes);
   app.use('/api/auth', authRoutes);
