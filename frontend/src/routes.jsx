@@ -42,6 +42,9 @@ const AdminDeveloperApi = lazy(() => import('./pages/admin/AdminDeveloperApi.jsx
 const DeveloperDocs = lazy(() => import('./pages/DeveloperDocs.jsx'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage.jsx'));
 const ExploreArticlePage = lazy(() => import('./pages/ExploreArticlePage.jsx'));
+const LocalMarketplacePage = lazy(() => import('./pages/LocalMarketplacePage.jsx'));
+const PartnerLandingPage = lazy(() => import('./pages/PartnerLandingPage.jsx'));
+const ContributorHubPage = lazy(() => import('./pages/ContributorHubPage.jsx'));
 
 function LoadingPage() {
   return (
@@ -144,6 +147,10 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: withSuspense(HomePage) },
       { path: 'map', element: withSuspense(MapPage) },
+      { path: 'phong-tro', element: withSuspense(LocalMarketplacePage) },
+      { path: 'an-uong', element: withSuspense(LocalMarketplacePage) },
+      { path: 'doi-tac', element: withSuspense(PartnerLandingPage) },
+      { path: 'cong-tac-vien', element: withSuspense(ContributorHubPage) },
       { path: 'kham-pha', element: withSuspense(ExplorePage) },
       { path: 'kham-pha/:slug', element: withSuspense(ExploreArticlePage) },
       { path: 'halo', element: withSuspense(HaloHolaMapPage) },
