@@ -442,3 +442,294 @@ body.map-route-active .hm-inspector-housing-foot b{
     grid-template-columns:1fr;
   }
 }
+
+
+/* Filter UI V4: custom selects instead of browser-native dropdowns. */
+body.map-route-active .hm-filter-popover{
+  padding:14px!important;
+  border:1px solid rgba(27,75,62,.10)!important;
+  border-radius:18px!important;
+  background:rgba(255,255,255,.985)!important;
+  box-shadow:0 22px 58px rgba(20,55,46,.18)!important;
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+
+body.map-route-active .hm-filter-popover-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin:-2px -2px 12px;
+  padding:3px 3px 11px;
+  border-bottom:1px solid #edf2ef;
+}
+
+body.map-route-active .hm-filter-popover-head>div{
+  display:grid;
+  gap:2px;
+}
+
+body.map-route-active .hm-filter-popover-head small{
+  color:#789087;
+  font-size:9px;
+  font-weight:950;
+  letter-spacing:.11em;
+}
+
+body.map-route-active .hm-filter-popover-head strong{
+  color:#173f35;
+  font-size:16px;
+  line-height:1.2;
+}
+
+body.map-route-active .hm-filter-popover-head>button{
+  width:32px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  border:0;
+  border-radius:10px;
+  color:#557068;
+  background:#f1f6f3;
+  cursor:pointer;
+}
+
+body.map-route-active .hm-filter-popover-head>button:hover{
+  color:#174d41;
+  background:#e7f0ec;
+}
+
+body.map-route-active .hm-filter-popover-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+body.map-route-active .hm-filter-select-field{
+  min-width:0;
+}
+
+body.map-route-active .hm-filter-select-field>span,
+body.map-route-active .hm-filter-field>span{
+  display:block;
+  margin-bottom:5px;
+  color:#5f776f;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+
+body.map-route-active .hm-filter-select{
+  position:relative;
+}
+
+body.map-route-active .hm-filter-select>summary{
+  min-height:44px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 16px;
+  align-items:center;
+  gap:8px;
+  padding:0 12px;
+  border:1px solid #d8e5df;
+  border-radius:12px;
+  color:#214a3f;
+  background:#fff;
+  list-style:none;
+  cursor:pointer;
+  box-shadow:0 1px 0 rgba(16,47,41,.02);
+}
+
+body.map-route-active .hm-filter-select>summary::-webkit-details-marker{
+  display:none;
+}
+
+body.map-route-active .hm-filter-select>summary:hover{
+  border-color:#bfd4cb;
+  background:#fbfdfc;
+}
+
+body.map-route-active .hm-filter-select[open]>summary{
+  border-color:#86b3a5;
+  box-shadow:0 0 0 3px rgba(34,105,85,.08);
+}
+
+body.map-route-active .hm-filter-select>summary strong{
+  overflow:hidden;
+  color:#234a40;
+  font-size:11px;
+  font-weight:850;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+body.map-route-active .hm-filter-select>summary svg{
+  color:#6d837b;
+  transition:transform .16s ease;
+}
+
+body.map-route-active .hm-filter-select[open]>summary svg{
+  transform:rotate(180deg);
+}
+
+body.map-route-active .hm-filter-select-menu{
+  margin-top:6px;
+  overflow:hidden;
+  border:1px solid #dce7e2;
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 14px 34px rgba(21,62,51,.12);
+}
+
+body.map-route-active .hm-filter-select-search{
+  display:grid;
+  grid-template-columns:16px minmax(0,1fr);
+  align-items:center;
+  gap:7px;
+  margin:8px;
+  padding:0 9px;
+  border:1px solid #e0e9e5;
+  border-radius:9px;
+  color:#71877f;
+  background:#f7faf8;
+}
+
+body.map-route-active .hm-filter-select-search input{
+  min-width:0;
+  min-height:36px;
+  padding:0;
+  border:0;
+  outline:0;
+  color:#20483d;
+  background:transparent;
+  font-size:11px;
+}
+
+body.map-route-active .hm-filter-select-options{
+  display:grid;
+  gap:3px;
+  max-height:230px;
+  overflow:auto;
+  padding:5px;
+  scrollbar-width:thin;
+  scrollbar-color:#c7d8d1 transparent;
+}
+
+body.map-route-active .hm-filter-select-options button{
+  width:100%;
+  min-height:34px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 16px;
+  align-items:center;
+  gap:7px;
+  padding:0 9px;
+  border:1px solid transparent;
+  border-radius:8px;
+  color:#47655d;
+  background:transparent;
+  text-align:left;
+  cursor:pointer;
+  font-size:10px;
+  font-weight:760;
+}
+
+body.map-route-active .hm-filter-select-options button:hover{
+  border-color:#e1e9e5;
+  background:#f5f8f6;
+}
+
+body.map-route-active .hm-filter-select-options button.active{
+  border-color:#c7ded5;
+  color:#155947;
+  background:#edf7f2;
+  font-weight:900;
+}
+
+body.map-route-active .hm-filter-select-options button:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+body.map-route-active .hm-filter-select-options button svg{
+  color:#218363;
+}
+
+body.map-route-active .hm-filter-select-empty{
+  padding:18px 10px;
+  color:#83948e;
+  text-align:center;
+  font-size:10px;
+}
+
+body.map-route-active .hm-filter-popover>.hm-filter-select-field{
+  margin-bottom:11px;
+}
+
+body.map-route-active .hm-filter-popover-footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:12px;
+  padding-top:11px;
+  border-top:1px solid #edf2ef;
+}
+
+body.map-route-active .hm-filter-popover-footer>span{
+  color:#7c8f88;
+  font-size:9px;
+  line-height:1.35;
+}
+
+body.map-route-active .hm-filter-popover-footer>button{
+  min-height:30px;
+  padding:0 10px;
+  border:1px solid #d9e5df;
+  border-radius:9px;
+  color:#285f51;
+  background:#f5f9f7;
+  font-size:9px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+body.map-route-active .hm-filter-popover-footer>button:hover{
+  background:#eaf4ef;
+}
+
+@media(min-width:761px){
+  body.map-route-active .hm-filter-popover:not(.housing-mode){
+    width:min(390px,calc(100vw - 36px))!important;
+  }
+
+  body.map-route-active .hm-filter-popover>.hm-filter-select-field .hm-filter-select-options{
+    grid-template-columns:1fr 1fr;
+  }
+}
+
+@media(max-width:760px){
+  body.map-route-active .hm-filter-popover{
+    width:min(94vw,420px)!important;
+    padding:12px!important;
+    border-radius:16px!important;
+  }
+
+  body.map-route-active .hm-filter-popover-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+  body.map-route-active .hm-filter-select>summary{
+    min-height:42px;
+  }
+
+  body.map-route-active .hm-filter-select-options{
+    max-height:210px;
+  }
+}
+
+@media(max-width:430px){
+  body.map-route-active .hm-filter-popover-grid{
+    grid-template-columns:1fr;
+  }
+}
