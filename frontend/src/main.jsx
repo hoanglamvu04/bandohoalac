@@ -25,6 +25,7 @@ import './advertisements.css';
 import './community-rewards.css';
 import './mobile-detail.css';
 import './mobile-contribute.css';
+import './contribute-polish-v3.css';
 import './mobile-profile.css';
 import './mobile-community.css';
 import './mobile-admin-places.css';
