@@ -53,3 +53,378 @@
 @media(max-width:760px){
   .nav-partner-entry{display:none!important}
 }
+
+/* ---------- Housing V2 discovery ---------- */
+.housing-filter-panel{
+  margin-bottom:22px;
+  padding:20px;
+  border:1px solid var(--hm-line);
+  border-radius:18px;
+  background:#f9fcff;
+}
+.housing-filter-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:18px;
+}
+.housing-filter-head>div{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:var(--hm-blue);
+}
+.housing-filter-head>div>span{
+  display:grid;
+  gap:2px;
+}
+.housing-filter-head b{
+  color:var(--hm-navy);
+  font-size:15px;
+}
+.housing-filter-head small{
+  color:var(--hm-muted);
+  font-size:11px;
+}
+.housing-filter-head>button,
+.housing-active-filter-count{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border:0;
+  background:transparent;
+  color:var(--hm-blue-dark);
+  font-weight:850;
+  cursor:pointer;
+}
+.housing-filter-grid{
+  display:grid;
+  grid-template-columns:1.5fr repeat(7,minmax(110px,1fr));
+  gap:10px;
+}
+.housing-filter-grid label{
+  display:grid;
+  gap:6px;
+  min-width:0;
+}
+.housing-filter-grid label>span{
+  color:#60788f;
+  font-size:10px;
+  font-weight:850;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.housing-filter-grid input,
+.housing-filter-grid select{
+  width:100%;
+  min-width:0;
+  height:40px;
+  padding:0 10px;
+  border:1px solid #cfdeeb;
+  border-radius:10px;
+  outline:0;
+  background:#fff;
+  color:var(--hm-navy);
+  font:inherit;
+  font-size:12px;
+}
+.housing-filter-grid input:focus,
+.housing-filter-grid select:focus{
+  border-color:#8ebbea;
+  box-shadow:0 0 0 3px rgba(20,104,212,.08);
+}
+.housing-filter-toggles{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:14px;
+}
+.housing-filter-toggles label{
+  position:relative;
+  cursor:pointer;
+}
+.housing-filter-toggles input{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+}
+.housing-filter-toggles span{
+  min-height:34px;
+  display:inline-flex;
+  align-items:center;
+  padding:0 12px;
+  border:1px solid #d4e1ed;
+  border-radius:999px;
+  background:#fff;
+  color:#506b84;
+  font-size:11px;
+  font-weight:820;
+}
+.housing-filter-toggles input:checked+span{
+  border-color:#9fc6ef;
+  color:#0b5fc0;
+  background:#eaf4ff;
+  box-shadow:inset 0 0 0 1px rgba(20,104,212,.05);
+}
+.housing-filter-actions{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:14px;
+}
+.housing-filter-actions button{
+  min-height:40px;
+  padding:0 18px;
+  border:0;
+  border-radius:10px;
+  background:var(--hm-blue);
+  color:#fff;
+  font-weight:900;
+  cursor:pointer;
+}
+.local-market-results-toolbar{
+  margin-top:2px;
+  padding-top:4px;
+  border-top:1px solid #edf3f8;
+}
+.housing-active-filter-count{
+  font-size:11px;
+}
+.housing-availability{
+  position:absolute;
+  right:12px;
+  bottom:12px;
+  padding:7px 9px;
+  border-radius:9px;
+  background:rgba(255,255,255,.95);
+  box-shadow:0 4px 14px rgba(22,53,86,.08);
+  font-size:10px;
+  font-weight:900;
+}
+.housing-availability.status-available{color:#087847}
+.housing-availability.status-limited{color:#9a6500}
+.housing-availability.status-full{color:#a13b3b}
+.housing-availability.status-unknown{color:#66798c}
+.housing-card-price{
+  margin-top:12px;
+  color:#0d5bb4;
+  font-size:20px;
+  line-height:1.2;
+  font-weight:950;
+}
+.housing-card-metrics{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-top:8px;
+}
+.housing-card-metrics span{
+  padding:5px 8px;
+  border-radius:8px;
+  background:#f2f7fc;
+  color:#526f89;
+  font-size:10px;
+  font-weight:850;
+}
+.housing-amenities{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:10px;
+}
+.housing-amenities span{
+  padding:5px 8px;
+  border:1px solid #dae7f3;
+  border-radius:999px;
+  color:#496780;
+  background:#fff;
+  font-size:10px;
+  font-weight:780;
+}
+.housing-utilities{
+  display:grid;
+  gap:3px;
+  margin-top:10px;
+  color:#778a9d;
+  font-size:10px;
+}
+
+/* ---------- Partner Housing editor ---------- */
+.partner-housing-editor{
+  margin:18px 0;
+  padding:16px;
+  border:1px solid #d8e7f5;
+  border-radius:14px;
+  background:#f8fbff;
+}
+.partner-housing-editor-head{
+  margin-bottom:14px;
+}
+.partner-housing-editor-head span{
+  display:block;
+  color:#0f64c6;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.partner-housing-editor-head h3{
+  margin:5px 0 4px;
+  color:#143352;
+  font-size:18px;
+}
+.partner-housing-editor-head p{
+  margin:0;
+  color:#72869a;
+  font-size:11px;
+  line-height:1.5;
+}
+.partner-housing-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+.partner-housing-grid label,
+.partner-housing-notes label{
+  display:grid;
+  gap:6px;
+  color:#546f87;
+  font-size:10px;
+  font-weight:850;
+}
+.partner-housing-grid input,
+.partner-housing-grid select,
+.partner-housing-notes input,
+.partner-housing-notes textarea{
+  width:100%;
+  min-width:0;
+  box-sizing:border-box;
+  border:1px solid #d1deea;
+  border-radius:9px;
+  background:#fff;
+  color:#173650;
+  font:inherit;
+}
+.partner-housing-grid input,
+.partner-housing-grid select,
+.partner-housing-notes input{
+  min-height:38px;
+  padding:0 9px;
+}
+.partner-housing-notes{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:10px;
+}
+.partner-housing-notes textarea{
+  min-height:76px;
+  padding:9px;
+  resize:vertical;
+}
+.partner-edit-card.housing-edit-card{
+  width:min(900px,calc(100vw - 32px));
+  max-height:min(88vh,900px);
+  overflow:auto;
+}
+
+/* ---------- Housing on place detail ---------- */
+.place-v2-housing-card{
+  margin:0 0 24px;
+  border-color:#cfe1f2;
+  background:linear-gradient(180deg,#fbfdff,#f6faff);
+}
+.place-v2-housing-summary{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+  margin-top:16px;
+}
+.place-v2-housing-summary>div{
+  padding:14px;
+  border:1px solid #deebf6;
+  border-radius:12px;
+  background:#fff;
+}
+.place-v2-housing-summary small{
+  display:block;
+  margin-bottom:5px;
+  color:#778b9f;
+  font-size:10px;
+  text-transform:uppercase;
+  font-weight:850;
+}
+.place-v2-housing-summary strong{
+  color:#153957;
+  font-size:16px;
+}
+.place-v2-housing-status{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  margin-left:auto;
+  padding:6px 9px;
+  border-radius:999px;
+  background:#eaf6ef;
+  color:#087847;
+  font-size:10px;
+  font-weight:900;
+}
+.place-v2-housing-status.full{background:#fff0f0;color:#a13b3b}
+.place-v2-housing-status.unknown{background:#f1f4f7;color:#64798b}
+.place-v2-housing-amenities{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-top:14px;
+}
+.place-v2-housing-amenities span{
+  padding:7px 10px;
+  border-radius:999px;
+  background:#edf5fd;
+  color:#315f87;
+  font-size:11px;
+  font-weight:800;
+}
+.place-v2-housing-detail-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin-top:14px;
+}
+.place-v2-housing-detail-grid p{
+  margin:0;
+  padding:10px 12px;
+  border-top:1px solid #e1ebf4;
+  color:#536d84;
+  font-size:12px;
+}
+.place-v2-housing-detail-grid strong{color:#183b59}
+.place-v2-housing-verified{
+  margin-top:15px;
+  padding-top:12px;
+  border-top:1px solid #dbe8f3;
+  color:#647d93;
+  font-size:11px;
+}
+
+@media(max-width:1200px){
+  .housing-filter-grid{grid-template-columns:repeat(4,minmax(120px,1fr))}
+  .housing-filter-search{grid-column:span 2}
+}
+@media(max-width:800px){
+  .housing-filter-grid{grid-template-columns:1fr 1fr}
+  .housing-filter-search{grid-column:1/-1}
+  .partner-housing-grid{grid-template-columns:1fr 1fr}
+  .partner-housing-notes{grid-template-columns:1fr}
+  .place-v2-housing-summary{grid-template-columns:1fr 1fr}
+  .place-v2-housing-detail-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:560px){
+  .housing-filter-panel{padding:15px}
+  .housing-filter-head{align-items:flex-start}
+  .housing-filter-grid{grid-template-columns:1fr}
+  .housing-filter-search{grid-column:auto}
+  .partner-housing-grid{grid-template-columns:1fr}
+  .place-v2-housing-summary,
+  .place-v2-housing-detail-grid{grid-template-columns:1fr}
+}
