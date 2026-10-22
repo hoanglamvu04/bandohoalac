@@ -49,6 +49,19 @@ test('GET /api/places/nearby with invalid params returns 400', async () => {
   assert.equal(res.status, 400);
 });
 
+test('GET /api/housing returns the Housing V2 collection', async () => {
+  const res = await fetch(url('/api/housing'));
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body.items));
+  assert.equal(typeof body.meta, 'object');
+});
+
+test('GET /api/housing validates structured filters', async () => {
+  const res = await fetch(url('/api/housing?maxRent=not-a-number'));
+  assert.equal(res.status, 400);
+});
+
 test('auth: register, login, and me flow', async () => {
   const email = `smoke-${Date.now()}@holamaps.vn`;
   const registerRes = await fetch(url('/api/auth/register'), {
