@@ -21,6 +21,7 @@ import { Link, useParams } from 'react-router-dom';
 import {
   addFavorite,
   client,
+  getHousingListing,
   getNearbyPlaces,
   getPlace,
   getPlaceMe,
@@ -52,6 +53,32 @@ function compactDescription(value, fallback) {
   return text.length > 165 ? text.slice(0, 162).trimEnd() + '...' : text;
 }
 
+function formatHousingMoney(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 'Chưa cập nhật';
+  return new Intl.NumberFormat('vi-VN').format(number) + 'đ';
+}
+
+function formatHousingRent(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 'Chưa cập nhật';
+  if (number >= 1000000) {
+    return (number / 1000000).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' triệu/tháng';
+  }
+  return formatHousingMoney(number) + '/tháng';
+}
+
+function housingFreshness(value) {
+  if (!value) return 'Chưa có mốc xác minh';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Chưa có mốc xác minh';
+  const days = Math.max(0, Math.floor((Date.now() - date.getTime()) / 86400000));
+  if (days === 0) return 'Xác minh hôm nay';
+  if (days === 1) return 'Xác minh hôm qua';
+  if (days < 30) return 'Xác minh ' + days + ' ngày trước';
+  return 'Xác minh ' + date.toLocaleDateString('vi-VN');
+}
+
 export default function PlaceDetailV2() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -63,12 +90,14 @@ export default function PlaceDetailV2() {
   const [activeImage, setActiveImage] = useState(0);
   const [favorite, setFavorite] = useState(false);
   const [favoriteBusy, setFavoriteBusy] = useState(false);
+  const [housingDetail, setHousingDetail] = useState(null);
 
   useEffect(() => {
     let active = true;
     setStatus('loading');
     setNearby([]);
     setHaloSpot(null);
+    setHousingDetail(null);
     setActiveImage(0);
     setFavorite(false);
 
@@ -93,6 +122,14 @@ export default function PlaceDetailV2() {
             if (active) setHaloSpot(response?.data?.item || null);
           })
           .catch(() => {});
+
+        if (data?.categorySlug === 'bat-dong-san') {
+          getHousingListing(data.id)
+            .then((response) => {
+              if (active) setHousingDetail(response?.item || null);
+            })
+            .catch(() => {});
+        }
       })
       .catch(() => {
         if (active) setStatus('error');
@@ -291,6 +328,94 @@ export default function PlaceDetailV2() {
         <div><Star size={19} /><span>Đánh giá</span><strong>{rating > 0 ? rating.toFixed(1) + '/5' : 'Mới'}</strong></div>
         <div><Users size={19} /><span>Ảnh HALO</span><strong>{haloSpot?.mediaCount || 0}</strong></div>
       </section>
+
+      {place.categorySlug === 'bat-dong-san' && (
+        <section className="place-v2-card place-v2-housing-card">
+          <div className="place-v2-section-title">
+            <Building2 size={19} />
+            <h2>Thông tin phòng trọ</h2>
+            <span className={
+              'place-v2-housing-status ' +
+              (housingDetail?.housing?.availabilityStatus === 'FULL'
+                ? 'full'
+                : housingDetail?.housing?.availabilityStatus === 'UNKNOWN' || !housingDetail?.housing
+                  ? 'unknown'
+                  : '')
+            }>
+              <BadgeCheck size={13} />
+              {housingDetail?.housing?.availabilityStatus === 'AVAILABLE'
+                ? 'Còn phòng'
+                : housingDetail?.housing?.availabilityStatus === 'LIMITED'
+                  ? 'Sắp hết'
+                  : housingDetail?.housing?.availabilityStatus === 'FULL'
+                    ? 'Hết phòng'
+                    : 'Chưa xác nhận'}
+            </span>
+          </div>
+
+          {housingDetail?.housing ? (
+            <>
+              <div className="place-v2-housing-summary">
+                <div>
+                  <small>Giá thuê</small>
+                  <strong>{formatHousingRent(housingDetail.housing.monthlyRent)}</strong>
+                </div>
+                <div>
+                  <small>Diện tích</small>
+                  <strong>{housingDetail.housing.areaM2 ? housingDetail.housing.areaM2 + ' m²' : 'Chưa cập nhật'}</strong>
+                </div>
+                <div>
+                  <small>Khoảng cách FPT</small>
+                  <strong>{distanceLabel(housingDetail.distanceToFptM) || 'Chưa tính'}</strong>
+                </div>
+                <div>
+                  <small>Phòng trống</small>
+                  <strong>
+                    {housingDetail.housing.availableRooms !== null
+                      ? housingDetail.housing.availableRooms + (housingDetail.housing.totalRooms !== null ? '/' + housingDetail.housing.totalRooms : '')
+                      : 'Chưa cập nhật'}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="place-v2-housing-amenities">
+                {[
+                  [housingDetail.housing.hasAirConditioner, 'Điều hòa'],
+                  [housingDetail.housing.hasWaterHeater, 'Nóng lạnh'],
+                  [housingDetail.housing.hasPrivateBathroom, 'Khép kín'],
+                  [housingDetail.housing.hasLoft, 'Có gác'],
+                  [housingDetail.housing.hasBalcony, 'Ban công'],
+                  [housingDetail.housing.hasParking, 'Chỗ để xe'],
+                  [housingDetail.housing.allowsPets, 'Cho nuôi thú cưng']
+                ].filter(([enabled]) => enabled === true).map(([, label]) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+
+              <div className="place-v2-housing-detail-grid">
+                <p><strong>Tiền cọc:</strong> {formatHousingMoney(housingDetail.housing.depositAmount)}</p>
+                <p><strong>Điện:</strong> {housingDetail.housing.electricityPricePerKwh ? formatHousingMoney(housingDetail.housing.electricityPricePerKwh) + '/kWh' : 'Chưa cập nhật'}</p>
+                <p><strong>Nước:</strong> {housingDetail.housing.waterPricePerPersonMonth ? formatHousingMoney(housingDetail.housing.waterPricePerPersonMonth) + '/người/tháng' : 'Chưa cập nhật'}</p>
+                <p><strong>Gửi xe:</strong> {housingDetail.housing.parkingFeeMonthly !== null ? formatHousingMoney(housingDetail.housing.parkingFeeMonthly) + '/tháng' : 'Chưa cập nhật'}</p>
+                <p><strong>Có phòng từ:</strong> {housingDetail.housing.availableFrom ? new Date(housingDetail.housing.availableFrom).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</p>
+                <p><strong>Zalo:</strong> {housingDetail.housing.contactZalo || 'Chưa cập nhật'}</p>
+                {housingDetail.housing.curfewNote && <p><strong>Giờ giấc:</strong> {housingDetail.housing.curfewNote}</p>}
+                {housingDetail.housing.availabilityNote && <p><strong>Tình trạng:</strong> {housingDetail.housing.availabilityNote}</p>}
+              </div>
+
+              <div className="place-v2-housing-verified">
+                <ShieldCheck size={14} /> {housingFreshness(housingDetail.housing.lastVerifiedAt)}
+                {housingDetail.housing.verificationSource === 'PARTNER' ? ' · HOLA Partner xác minh' : ''}
+              </div>
+            </>
+          ) : (
+            <p>
+              Địa điểm này đã thuộc danh mục Bất động sản nhưng chưa có hồ sơ Housing V2.
+              Chủ trọ hoặc cộng đồng có thể tiếp tục bổ sung giá, tình trạng phòng và tiện ích.
+            </p>
+          )}
+        </section>
+      )}
 
       <div className="place-v2-grid">
         <section className="place-v2-card place-v2-about">
