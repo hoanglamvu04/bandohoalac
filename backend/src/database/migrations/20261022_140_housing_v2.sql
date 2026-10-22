@@ -66,3 +66,20 @@ ALTER TABLE housing_listings
     OR total_rooms IS NULL
     OR available_rooms <= total_rooms
   );
+
+
+-- Existing BDS places get an empty structured profile so Housing V2 can show
+-- an explicit "chua xac nhan" state without fabricating rent or amenities.
+INSERT INTO housing_listings (
+  place_id,
+  availability_status,
+  verification_source
+)
+SELECT
+  p.id,
+  'UNKNOWN',
+  'COMMUNITY'
+FROM places p
+JOIN categories c ON c.id = p.category_id
+WHERE c.slug = 'bat-dong-san'
+ON CONFLICT (place_id) DO NOTHING;
