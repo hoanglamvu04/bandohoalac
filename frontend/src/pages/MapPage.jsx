@@ -48,6 +48,7 @@ import {
   createContribution,
   getCategories,
   getDirections,
+  getHousingListings,
   getMapLayers,
   getNearbyPlaces,
   getPlace,
@@ -341,6 +342,55 @@ function placeDistanceLabel(place, placeScope) {
   return '';
 }
 
+function mergeUniquePlaces(items = []) {
+  const merged = new Map();
+  for (const place of items.flat()) {
+    if (!place?.id) continue;
+    const key = String(place.id);
+    if (!merged.has(key)) merged.set(key, place);
+  }
+  return Array.from(merged.values());
+}
+
+function formatHousingRent(value) {
+  if (value === null || value === undefined || value === '') return 'Chưa cập nhật giá';
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return 'Chưa cập nhật giá';
+  if (amount >= 1000000) {
+    return (amount / 1000000).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' triệu/tháng';
+  }
+  return new Intl.NumberFormat('vi-VN').format(amount) + 'đ/tháng';
+}
+
+function housingAvailabilityLabel(status) {
+  if (status === 'AVAILABLE') return 'Còn phòng';
+  if (status === 'LIMITED') return 'Sắp hết';
+  if (status === 'FULL') return 'Hết phòng';
+  return 'Chưa xác nhận';
+}
+
+function housingAmenityLabels(housing) {
+  if (!housing) return [];
+  return [
+    [housing.hasAirConditioner, 'Điều hòa'],
+    [housing.hasWaterHeater, 'Nóng lạnh'],
+    [housing.hasPrivateBathroom, 'Khép kín'],
+    [housing.hasLoft, 'Có gác'],
+    [housing.hasBalcony, 'Ban công'],
+    [housing.hasParking, 'Chỗ để xe'],
+    [housing.allowsPets, 'Thú cưng']
+  ].filter(([enabled]) => enabled === true).map(([, label]) => label);
+}
+
+function stripHousingIntent(value) {
+  return String(value || '')
+    .replace(/(?:phòng|phong)\s*(?:trọ|tro)/gi, ' ')
+    .replace(/(?:nhà|nha)\s*(?:trọ|tro)/gi, ' ')
+    .replace(/(?:phòng|phong|nhà|nha)\s*(?:cho\s*)?(?:thuê|thue)/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export default function MapPage() {
   const { isModerator, user } = useAuth();
   const { showToast } = useToast();
@@ -409,20 +459,86 @@ export default function MapPage() {
     () => CATEGORY_GROUPS.find((group) => group.slugs.includes(category)) || null,
     [category]
   );
-  const activeCategoryLabel = category === 'all'
-    ? 'Danh mục'
-    : categoryBySlug.get(category)?.name || activeCategoryGroup?.label || 'Danh mục';
+  const verticalMode = searchParams.get('vertical') || '';
+  const isHousingMode = verticalMode === 'housing';
+  const isFoodMode = verticalMode === 'food';
+  const housingMinRent = searchParams.get('minRent') || '';
+  const housingMaxRent = searchParams.get('maxRent') || '';
+  const housingMaxDistanceFpt = searchParams.get('maxDistanceFpt') || '';
+  const housingAvailability = searchParams.get('availability') || '';
+  const housingAvailableOnly = searchParams.get('availableOnly') === 'true';
+  const housingPartnerOnly = searchParams.get('partnerOnly') === 'true';
+  const housingPrivateBathroom = searchParams.get('privateBathroom') === 'true';
+  const housingParking = searchParams.get('parking') === 'true';
+  const housingFilterSignature = [
+    housingMinRent,
+    housingMaxRent,
+    housingMaxDistanceFpt,
+    housingAvailability,
+    housingAvailableOnly ? '1' : '0',
+    housingPartnerOnly ? '1' : '0',
+    housingPrivateBathroom ? '1' : '0',
+    housingParking ? '1' : '0'
+  ].join(':');
+  const activeCategoryLabel = isHousingMode
+    ? 'Phòng trọ'
+    : isFoodMode && category === 'all'
+      ? 'Ăn uống'
+      : category === 'all'
+        ? 'Danh mục'
+        : categoryBySlug.get(category)?.name || activeCategoryGroup?.label || 'Danh mục';
   const advancedFilterCount = [
-    category !== 'all',
+    category !== 'all' && !isHousingMode,
     Boolean(minRating),
-    sortMode !== 'relevant'
+    sortMode !== 'relevant',
+    isHousingMode && Boolean(housingMinRent),
+    isHousingMode && Boolean(housingMaxRent),
+    isHousingMode && Boolean(housingMaxDistanceFpt),
+    isHousingMode && Boolean(housingAvailability),
+    isHousingMode && housingAvailableOnly,
+    isHousingMode && housingPartnerOnly,
+    isHousingMode && housingPrivateBathroom,
+    isHousingMode && housingParking
   ].filter(Boolean).length;
   const hasActiveFilters = Boolean(
     query.trim() ||
-    category !== 'all' ||
+    (category !== 'all' && !isHousingMode) ||
     openNow ||
-    minRating
+    minRating ||
+    (isHousingMode && advancedFilterCount)
   );
+
+  function housingRequestParams({ includeQuery = true } = {}) {
+    const cleanQuery = includeQuery ? stripHousingIntent(query) : '';
+    const housingSort = sortMode === 'rent-asc'
+      ? 'rent_asc'
+      : sortMode === 'rent-desc'
+        ? 'rent_desc'
+        : sortMode === 'fpt-distance'
+          ? 'distance'
+          : sortMode === 'recent'
+            ? 'freshest'
+            : 'recommended';
+
+    return {
+      q: cleanQuery || undefined,
+      minRent: housingMinRent || undefined,
+      maxRent: housingMaxRent || undefined,
+      maxDistanceFpt: housingMaxDistanceFpt || undefined,
+      availability: housingAvailability || undefined,
+      availableOnly: housingAvailableOnly ? 'true' : undefined,
+      partnerOnly: housingPartnerOnly ? 'true' : undefined,
+      privateBathroom: housingPrivateBathroom ? 'true' : undefined,
+      parking: housingParking ? 'true' : undefined,
+      sort: housingSort,
+      limit: 100
+    };
+  }
+
+  function foodCategorySlugs() {
+    if (category === 'cafe' || category === 'an-uong') return [category];
+    return ['an-uong', 'cafe'];
+  }
 
   useEffect(() => {
     getCategories()
@@ -439,7 +555,13 @@ export default function MapPage() {
       .then((place) => {
         if (!active || !place?.id) return;
 
-        setPlaces((current) => mergeProgressivePlaces(current, [place]));
+        setPlaces((current) => {
+          const existing = current.find((item) => String(item.id) === String(place.id));
+          const mergedPlace = existing
+            ? { ...existing, ...place, housing: existing.housing || place.housing || null }
+            : place;
+          return mergeProgressivePlaces(current, [mergedPlace]);
+        });
         setSelectedId(place.id);
         setPlaceScope('viewport');
         setNearbyRadius(0);
@@ -471,7 +593,7 @@ export default function MapPage() {
     setPlaceScope('viewport');
     setNearbyRadius(0);
     setSelectedId(null);
-  }, [regionId, category, minRating]);
+  }, [regionId, category, minRating, verticalMode, housingFilterSignature]);
 
   useEffect(() => {
     const nextQuery = searchParams.get('q') || '';
@@ -501,6 +623,49 @@ export default function MapPage() {
     const normalizedViewport = normalizeViewport(viewport);
     const filterKey = ':category=' + category + ':rating=' + minRating;
 
+    // Housing is a first-class map vertical. Load its structured dataset once
+    // per filter/search state, then let the map viewport only control ordering.
+    if (isHousingMode) {
+      const requestKey =
+        'housing:' + stripHousingIntent(needle).toLowerCase() +
+        ':rating=' + minRating +
+        ':filters=' + housingFilterSignature +
+        ':sort=' + sortMode;
+
+      if (lastPlacesRequestKeyRef.current === requestKey) {
+        return () => controller.abort();
+      }
+
+      const timer = window.setTimeout(() => {
+        getHousingListings(housingRequestParams(), { signal: controller.signal })
+          .then((data) => {
+            if (!active) return;
+            lastPlacesRequestKeyRef.current = requestKey;
+            const items = Array.isArray(data?.items) ? data.items : [];
+            setPlaces(items);
+            setSelectedId(null);
+
+            if (
+              needle &&
+              typeof window !== 'undefined' &&
+              window.matchMedia('(max-width: 760px)').matches
+            ) {
+              setLeftOpen(true);
+            }
+          })
+          .catch((error) => {
+            if (!active || error?.name === 'AbortError') return;
+            console.warn('[Hola Maps] housing map request failed:', error);
+          });
+      }, 220);
+
+      return () => {
+        active = false;
+        window.clearTimeout(timer);
+        controller.abort();
+      };
+    }
+
     // Search is intentionally replacement-based because each query is a new
     // result set. Normal map exploration is progressive and cached.
     if (needle) {
@@ -510,15 +675,35 @@ export default function MapPage() {
       }
 
       const timer = window.setTimeout(() => {
-        getPlaces(
-          {
-            q: needle,
-            category,
-            minRating: minRating || undefined,
-            limit: 80
-          },
-          { signal: controller.signal }
-        )
+        const searchRequest = isFoodMode
+          ? Promise.all(
+              foodCategorySlugs().map((slug) =>
+                getPlaces(
+                  {
+                    q: needle,
+                    category: slug,
+                    minRating: minRating || undefined,
+                    limit: 80
+                  },
+                  { signal: controller.signal }
+                )
+              )
+            ).then((responses) => ({
+              items: mergeUniquePlaces(
+                responses.map((data) => Array.isArray(data?.items) ? data.items : [])
+              )
+            }))
+          : getPlaces(
+              {
+                q: needle,
+                category,
+                minRating: minRating || undefined,
+                limit: 80
+              },
+              { signal: controller.signal }
+            );
+
+        searchRequest
           .then((data) => {
             if (!active) return;
 
@@ -571,17 +756,39 @@ export default function MapPage() {
     }
 
     const timer = window.setTimeout(() => {
-      getPlacesInBounds(
-        {
-          west: requestViewport.west,
-          south: requestViewport.south,
-          east: requestViewport.east,
-          north: requestViewport.north,
-          category,
-          minRating: minRating || undefined
-        },
-        { signal: controller.signal }
-      )
+      const boundsRequest = isFoodMode
+        ? Promise.all(
+            foodCategorySlugs().map((slug) =>
+              getPlacesInBounds(
+                {
+                  west: requestViewport.west,
+                  south: requestViewport.south,
+                  east: requestViewport.east,
+                  north: requestViewport.north,
+                  category: slug,
+                  minRating: minRating || undefined
+                },
+                { signal: controller.signal }
+              )
+            )
+          ).then((responses) => ({
+            items: mergeUniquePlaces(
+              responses.map((data) => Array.isArray(data?.items) ? data.items : [])
+            )
+          }))
+        : getPlacesInBounds(
+            {
+              west: requestViewport.west,
+              south: requestViewport.south,
+              east: requestViewport.east,
+              north: requestViewport.north,
+              category,
+              minRating: minRating || undefined
+            },
+            { signal: controller.signal }
+          );
+
+      boundsRequest
         .then((data) => {
           if (!active) return;
 
@@ -612,7 +819,16 @@ export default function MapPage() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [viewport, query, placeScope, category, minRating]);
+  }, [
+    viewport,
+    query,
+    placeScope,
+    category,
+    minRating,
+    verticalMode,
+    housingFilterSignature,
+    sortMode
+  ]);
 
   useEffect(() => {
     if (!viewport || !activeLayers.length) {
@@ -689,6 +905,10 @@ export default function MapPage() {
           if (!haystack.includes(needle)) return false;
         }
 
+        if (minRating && Number(place.rating || 0) < Number(minRating)) {
+          return false;
+        }
+
         if (openNow && isPlaceOpenNow(place.openingHours) !== true) {
           return false;
         }
@@ -714,7 +934,7 @@ export default function MapPage() {
           )
         };
       });
-  }, [places, query, openNow, userLocation]);
+  }, [places, query, openNow, userLocation, minRating]);
 
   const viewportPlaceCount = useMemo(() => {
     if (!viewport || query.trim() || placeScope !== 'viewport') {
@@ -742,8 +962,29 @@ export default function MapPage() {
 
     if (sortMode === 'recent') {
       return items.sort((a, b) =>
-        new Date(b.updatedAt || b.createdAt || 0).getTime() -
-        new Date(a.updatedAt || a.createdAt || 0).getTime()
+        new Date(b.housing?.lastVerifiedAt || b.updatedAt || b.createdAt || 0).getTime() -
+        new Date(a.housing?.lastVerifiedAt || a.updatedAt || a.createdAt || 0).getTime()
+      );
+    }
+
+    if (sortMode === 'rent-asc') {
+      return items.sort((a, b) =>
+        Number(a.housing?.monthlyRent ?? Number.POSITIVE_INFINITY) -
+        Number(b.housing?.monthlyRent ?? Number.POSITIVE_INFINITY)
+      );
+    }
+
+    if (sortMode === 'rent-desc') {
+      return items.sort((a, b) =>
+        Number(b.housing?.monthlyRent ?? Number.NEGATIVE_INFINITY) -
+        Number(a.housing?.monthlyRent ?? Number.NEGATIVE_INFINITY)
+      );
+    }
+
+    if (sortMode === 'fpt-distance') {
+      return items.sort((a, b) =>
+        Number(a.distanceToFptM ?? Number.POSITIVE_INFINITY) -
+        Number(b.distanceToFptM ?? Number.POSITIVE_INFINITY)
       );
     }
 
@@ -902,6 +1143,41 @@ export default function MapPage() {
     };
   }
 
+  async function loadHousingForAnchor(anchor, radii) {
+    const data = await getHousingListings(housingRequestParams({ includeQuery: false }));
+    const allItems = Array.isArray(data?.items) ? data.items : [];
+
+    for (const radius of radii) {
+      const items = allItems
+        .map((place) => ({
+          ...place,
+          distanceFromUser: distanceMeters(anchor.lat, anchor.lng, place.lat, place.lng)
+        }))
+        .filter((place) => place.distanceFromUser <= radius);
+
+      if (items.length >= 6 || (items.length > 0 && radius >= radii[Math.min(1, radii.length - 1)])) {
+        return { items, radius };
+      }
+    }
+
+    return { items: [], radius: radii[radii.length - 1] || 0 };
+  }
+
+  async function loadFoodNearby(anchor, radius) {
+    const responses = await Promise.all(
+      foodCategorySlugs().map((slug) =>
+        getNearbyPlaces(anchor.lat, anchor.lng, radius, {
+          category: slug,
+          minRating: minRating || undefined
+        })
+      )
+    );
+
+    return mergeUniquePlaces(
+      responses.map((data) => Array.isArray(data?.items) ? data.items : [])
+    );
+  }
+
   async function showNearMePlaces() {
     if (placeScopeLoading) return;
 
@@ -927,14 +1203,24 @@ export default function MapPage() {
       let items = [];
       let resolvedRadius = 0;
 
-      for (const radius of [5000, 10000, 20000, 40000]) {
-        const data = await getNearbyPlaces(location.lat, location.lng, radius, {
-          category,
-          minRating: minRating || undefined
-        });
-        items = Array.isArray(data?.items) ? data.items : [];
-        resolvedRadius = radius;
-        if (items.length >= 8 || (items.length > 0 && radius >= 10000)) break;
+      if (isHousingMode) {
+        const result = await loadHousingForAnchor(location, [5000, 10000, 20000, 40000]);
+        items = result.items;
+        resolvedRadius = result.radius;
+      } else {
+        for (const radius of [5000, 10000, 20000, 40000]) {
+          if (isFoodMode) {
+            items = await loadFoodNearby(location, radius);
+          } else {
+            const data = await getNearbyPlaces(location.lat, location.lng, radius, {
+              category,
+              minRating: minRating || undefined
+            });
+            items = Array.isArray(data?.items) ? data.items : [];
+          }
+          resolvedRadius = radius;
+          if (items.length >= 8 || (items.length > 0 && radius >= 10000)) break;
+        }
       }
 
       setPlaces(items);
@@ -970,14 +1256,27 @@ export default function MapPage() {
 
       // Expand progressively so "nearby" is useful even in sparse zones
       // without immediately dumping every place in the whole service area.
-      for (const radius of [5000, 10000, 20000]) {
-        const data = await getNearbyPlaces(center.lat, center.lng, radius, {
-          category,
-          minRating: minRating || undefined
-        });
-        items = Array.isArray(data?.items) ? data.items : [];
-        resolvedRadius = radius;
-        if (items.length >= 6 || (items.length > 0 && radius >= 10000)) break;
+      if (isHousingMode) {
+        const result = await loadHousingForAnchor(center, [5000, 10000, 20000]);
+        items = result.items.map((place) => ({
+          ...place,
+          distance: place.distanceFromUser
+        }));
+        resolvedRadius = result.radius;
+      } else {
+        for (const radius of [5000, 10000, 20000]) {
+          if (isFoodMode) {
+            items = await loadFoodNearby(center, radius);
+          } else {
+            const data = await getNearbyPlaces(center.lat, center.lng, radius, {
+              category,
+              minRating: minRating || undefined
+            });
+            items = Array.isArray(data?.items) ? data.items : [];
+          }
+          resolvedRadius = radius;
+          if (items.length >= 6 || (items.length > 0 && radius >= 10000)) break;
+        }
       }
 
       setPlaces(items);
@@ -997,12 +1296,34 @@ export default function MapPage() {
     setSelectedId(null);
 
     try {
-      const data = await getPlaces({
-        category,
-        minRating: minRating || undefined,
-        limit: 100
-      });
-      setPlaces(Array.isArray(data?.items) ? data.items : []);
+      let items = [];
+
+      if (isHousingMode) {
+        const data = await getHousingListings(housingRequestParams({ includeQuery: false }));
+        items = Array.isArray(data?.items) ? data.items : [];
+      } else if (isFoodMode) {
+        const responses = await Promise.all(
+          foodCategorySlugs().map((slug) =>
+            getPlaces({
+              category: slug,
+              minRating: minRating || undefined,
+              limit: 100
+            })
+          )
+        );
+        items = mergeUniquePlaces(
+          responses.map((data) => Array.isArray(data?.items) ? data.items : [])
+        );
+      } else {
+        const data = await getPlaces({
+          category,
+          minRating: minRating || undefined,
+          limit: 100
+        });
+        items = Array.isArray(data?.items) ? data.items : [];
+      }
+
+      setPlaces(items);
       setPlaceScope('all');
       setNearbyRadius(0);
     } catch (error) {
@@ -1074,7 +1395,7 @@ export default function MapPage() {
     lastPlacesRequestKeyRef.current = '';
     loadedPlaceBoundsRef.current = [];
     setQuery('');
-    setCategory('all');
+    setCategory(isHousingMode ? 'bat-dong-san' : 'all');
     setOpenNow(false);
     setMinRating('');
     setSortMode('relevant');
@@ -1085,11 +1406,19 @@ export default function MapPage() {
     setPlaces([]);
     syncDiscoveryParams({
       q: null,
-      category: null,
+      category: isHousingMode ? 'bat-dong-san' : null,
       open: null,
       rating: null,
       sort: null,
-      place: null
+      place: null,
+      minRent: null,
+      maxRent: null,
+      maxDistanceFpt: null,
+      availability: null,
+      availableOnly: null,
+      partnerOnly: null,
+      privateBathroom: null,
+      parking: null
     });
   }
 
@@ -1151,10 +1480,29 @@ export default function MapPage() {
 
   function handleCategoryChange(value) {
     lastPlacesRequestKeyRef.current = '';
+    loadedPlaceBoundsRef.current = [];
     setSelectedId(null);
     setPlaceScope('viewport');
     setCategory(value);
-    syncDiscoveryParams({ category: value, place: null });
+
+    const keepFoodMode = isFoodMode && ['all', 'an-uong', 'cafe'].includes(value);
+    syncDiscoveryParams({
+      category: value,
+      vertical: keepFoodMode ? 'food' : isHousingMode && value === 'bat-dong-san' ? 'housing' : null,
+      place: null
+    });
+  }
+
+  function handleHousingFilterChange(key, value) {
+    lastPlacesRequestKeyRef.current = '';
+    loadedPlaceBoundsRef.current = [];
+    setSelectedId(null);
+    setPlaceScope('viewport');
+    setPlaces([]);
+    syncDiscoveryParams({
+      [key]: value,
+      place: null
+    });
   }
 
   function handleRatingChange(value) {
@@ -1184,13 +1532,21 @@ export default function MapPage() {
     loadedPlaceBoundsRef.current = [];
     setSelectedId(null);
     setPlaceScope('viewport');
-    setCategory('all');
+    setCategory(isHousingMode ? 'bat-dong-san' : 'all');
     setMinRating('');
     setSortMode('relevant');
     syncDiscoveryParams({
-      category: null,
+      category: isHousingMode ? 'bat-dong-san' : null,
       rating: null,
       sort: null,
+      minRent: null,
+      maxRent: null,
+      maxDistanceFpt: null,
+      availability: null,
+      availableOnly: null,
+      partnerOnly: null,
+      privateBathroom: null,
+      parking: null,
       place: null
     });
   }
@@ -1434,16 +1790,29 @@ export default function MapPage() {
             <span>{placeScope === 'near-me' ? 'Đang gần tôi' : 'Gần tôi'}</span>
           </button>
 
-          <button
-            type="button"
-            className={openNow ? 'hm-quick-filter active' : 'hm-quick-filter'}
-            onClick={handleOpenNowToggle}
-            aria-label={openNow ? 'Tắt bộ lọc đang mở' : 'Chỉ hiện địa điểm đang mở'}
-            title="Đang mở"
-          >
-            <Clock3 size={14} />
-            <span>Đang mở</span>
-          </button>
+          {isHousingMode ? (
+            <button
+              type="button"
+              className={housingAvailableOnly ? 'hm-quick-filter active hm-housing-available-filter' : 'hm-quick-filter hm-housing-available-filter'}
+              onClick={() => handleHousingFilterChange('availableOnly', housingAvailableOnly ? null : 'true')}
+              aria-label={housingAvailableOnly ? 'Hiện mọi phòng trọ' : 'Chỉ hiện phòng đang còn'}
+              title={housingAvailableOnly ? 'Đang lọc phòng còn' : 'Chỉ còn phòng'}
+            >
+              <House size={15} />
+              <span>Còn phòng</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={openNow ? 'hm-quick-filter active' : 'hm-quick-filter'}
+              onClick={handleOpenNowToggle}
+              aria-label={openNow ? 'Tắt bộ lọc đang mở' : 'Chỉ hiện địa điểm đang mở'}
+              title="Đang mở"
+            >
+              <Clock3 size={14} />
+              <span>Đang mở</span>
+            </button>
+          )}
 
           <div className="hm-filter-menu">
             <button
@@ -1478,18 +1847,103 @@ export default function MapPage() {
                   </button>
                 </div>
 
-                <label className="hm-filter-field">
-                  <span>Danh mục</span>
-                  <select
-                    value={category}
-                    onChange={(event) => handleCategoryChange(event.target.value)}
-                  >
-                    <option value="all">Tất cả danh mục</option>
-                    {categories.map((item) => (
-                      <option key={item.slug} value={item.slug}>{item.name}</option>
-                    ))}
-                  </select>
-                </label>
+                {isHousingMode ? (
+                  <div className="hm-filter-mode-card housing">
+                    <House size={18} />
+                    <span><b>Phòng trọ</b><small>Đang lọc riêng dữ liệu Housing trên bản đồ</small></span>
+                  </div>
+                ) : (
+                  <label className="hm-filter-field">
+                    <span>{isFoodMode ? 'Loại ăn uống' : 'Danh mục'}</span>
+                    <select
+                      value={category}
+                      onChange={(event) => handleCategoryChange(event.target.value)}
+                    >
+                      {isFoodMode ? (
+                        <>
+                          <option value="all">Tất cả ăn uống</option>
+                          <option value="an-uong">Quán ăn</option>
+                          <option value="cafe">Cafe</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="all">Tất cả danh mục</option>
+                          {categories.map((item) => (
+                            <option key={item.slug} value={item.slug}>{item.name}</option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                  </label>
+                )}
+
+                {isHousingMode && (
+                  <div className="hm-map-housing-filters">
+                    <div className="hm-filter-popover-grid housing-grid">
+                      <label className="hm-filter-field">
+                        <span>Giá từ</span>
+                        <select value={housingMinRent} onChange={(event) => handleHousingFilterChange('minRent', event.target.value)}>
+                          <option value="">Không giới hạn</option>
+                          <option value="1000000">1 triệu</option>
+                          <option value="1500000">1,5 triệu</option>
+                          <option value="2000000">2 triệu</option>
+                          <option value="2500000">2,5 triệu</option>
+                          <option value="3000000">3 triệu</option>
+                        </select>
+                      </label>
+                      <label className="hm-filter-field">
+                        <span>Giá tối đa</span>
+                        <select value={housingMaxRent} onChange={(event) => handleHousingFilterChange('maxRent', event.target.value)}>
+                          <option value="">Không giới hạn</option>
+                          <option value="1500000">1,5 triệu</option>
+                          <option value="2000000">2 triệu</option>
+                          <option value="2500000">2,5 triệu</option>
+                          <option value="3000000">3 triệu</option>
+                          <option value="4000000">4 triệu</option>
+                          <option value="5000000">5 triệu</option>
+                        </select>
+                      </label>
+                      <label className="hm-filter-field">
+                        <span>Tới ĐH FPT</span>
+                        <select value={housingMaxDistanceFpt} onChange={(event) => handleHousingFilterChange('maxDistanceFpt', event.target.value)}>
+                          <option value="">Mọi khoảng cách</option>
+                          <option value="1000">≤ 1 km</option>
+                          <option value="2000">≤ 2 km</option>
+                          <option value="3000">≤ 3 km</option>
+                          <option value="5000">≤ 5 km</option>
+                          <option value="10000">≤ 10 km</option>
+                        </select>
+                      </label>
+                      <label className="hm-filter-field">
+                        <span>Tình trạng</span>
+                        <select value={housingAvailability} onChange={(event) => handleHousingFilterChange('availability', event.target.value)}>
+                          <option value="">Tất cả</option>
+                          <option value="AVAILABLE">Còn phòng</option>
+                          <option value="LIMITED">Sắp hết</option>
+                          <option value="FULL">Hết phòng</option>
+                          <option value="UNKNOWN">Chưa xác nhận</option>
+                        </select>
+                      </label>
+                    </div>
+
+                    <div className="hm-map-housing-toggles">
+                      {[
+                        ['partnerOnly', 'HOLA Partner', housingPartnerOnly],
+                        ['privateBathroom', 'Khép kín', housingPrivateBathroom],
+                        ['parking', 'Chỗ để xe', housingParking]
+                      ].map(([key, label, checked]) => (
+                        <label key={key}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) => handleHousingFilterChange(key, event.target.checked ? 'true' : null)}
+                          />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="hm-filter-popover-grid">
                   <label className="hm-filter-field">
@@ -1511,7 +1965,10 @@ export default function MapPage() {
                       onChange={(event) => handleSortChange(event.target.value)}
                     >
                       <option value="relevant">Phù hợp</option>
-                      <option value="nearest" disabled={!userLocation}>Gần nhất</option>
+                      {isHousingMode && <option value="rent-asc">Giá thấp trước</option>}
+                      {isHousingMode && <option value="rent-desc">Giá cao trước</option>}
+                      {isHousingMode && <option value="fpt-distance">Gần ĐH FPT trước</option>}
+                      <option value="nearest" disabled={!userLocation}>Gần vị trí tôi</option>
                       <option value="rating">Đánh giá cao</option>
                       <option value="recent">Mới cập nhật</option>
                     </select>
@@ -1729,8 +2186,8 @@ export default function MapPage() {
         </button>
         <div className="hm-panel-heading">
           <div>
-            <span>HOLA MAPS ENGINE</span>
-            <h1>Bản đồ Hòa Lạc</h1>
+            <span>{isHousingMode ? 'HOLA HOUSING' : isFoodMode ? 'HOLA FOOD' : 'HOLA MAPS ENGINE'}</span>
+            <h1>{isHousingMode ? 'Phòng trọ trên bản đồ' : isFoodMode ? 'Ăn uống trên bản đồ' : 'Bản đồ Hòa Lạc'}</h1>
           </div>
           <button type="button" onClick={() => setLeftOpen(false)}><X size={17} /></button>
         </div>
@@ -1740,7 +2197,11 @@ export default function MapPage() {
             <span>
               {query.trim()
                 ? 'KẾT QUẢ TÌM KIẾM'
-                : placeScope === 'near-me'
+                : isHousingMode
+                  ? 'PHÒNG TRỌ'
+                  : isFoodMode
+                    ? 'ĂN UỐNG'
+                    : placeScope === 'near-me'
                   ? 'GẦN VỊ TRÍ CỦA BẠN'
                   : placeScope === 'nearby'
                     ? 'ĐỊA ĐIỂM LÂN CẬN'
@@ -1854,6 +2315,16 @@ export default function MapPage() {
                     )}
                   </span>
                   <em>{place.address || 'Hòa Lạc, Hà Nội'}</em>
+                  {isHousingMode && place.housing && (
+                    <span className="hm-housing-row">
+                      <strong>{formatHousingRent(place.housing.monthlyRent)}</strong>
+                      {place.housing.areaM2 && <i>{place.housing.areaM2} m²</i>}
+                      <i className={'availability ' + String(place.housing.availabilityStatus || 'UNKNOWN').toLowerCase()}>
+                        {housingAvailabilityLabel(place.housing.availabilityStatus)}
+                      </i>
+                      {Number(place.distanceToFptM) > 0 && <i>{formatDistance(place.distanceToFptM)} tới FPT</i>}
+                    </span>
+                  )}
                 </span>
               </button>
             ))}
@@ -2050,14 +2521,52 @@ export default function MapPage() {
                   <small>{Number(selectedPlace.reviews || 0)} đánh giá</small>
                 </span>
                 <span>
-                  <b>{selectedDistance || selectedPlace.priceLevel || '—'}</b>
-                  <small>{selectedDistance ? 'Khoảng cách' : 'Mức giá'}</small>
+                  <b>{isHousingMode && selectedPlace.housing
+                    ? formatHousingRent(selectedPlace.housing.monthlyRent)
+                    : selectedDistance || selectedPlace.priceLevel || '—'}</b>
+                  <small>{isHousingMode && selectedPlace.housing
+                    ? 'Giá thuê'
+                    : selectedDistance ? 'Khoảng cách' : 'Mức giá'}</small>
                 </span>
                 <span>
-                  <b>{selectedImages.length || 0}</b>
-                  <small>Ảnh địa điểm</small>
+                  <b>{isHousingMode && selectedPlace.housing?.areaM2
+                    ? selectedPlace.housing.areaM2 + ' m²'
+                    : selectedImages.length || 0}</b>
+                  <small>{isHousingMode && selectedPlace.housing?.areaM2 ? 'Diện tích' : 'Ảnh địa điểm'}</small>
                 </span>
               </div>
+
+              {isHousingMode && selectedPlace.housing && (
+                <div className="hm-inspector-housing">
+                  <div className="hm-inspector-housing-head">
+                    <span className={'status ' + String(selectedPlace.housing.availabilityStatus || 'UNKNOWN').toLowerCase()}>
+                      <House size={14} />
+                      {housingAvailabilityLabel(selectedPlace.housing.availabilityStatus)}
+                      {Number(selectedPlace.housing.availableRooms) > 0
+                        ? ' · ' + selectedPlace.housing.availableRooms + ' phòng'
+                        : ''}
+                    </span>
+                    {Number(selectedPlace.distanceToFptM) > 0 && (
+                      <b>{formatDistance(selectedPlace.distanceToFptM)} tới ĐH FPT</b>
+                    )}
+                  </div>
+                  {!!housingAmenityLabels(selectedPlace.housing).length && (
+                    <div className="hm-inspector-housing-amenities">
+                      {housingAmenityLabels(selectedPlace.housing).slice(0, 6).map((label) => (
+                        <span key={label}>{label}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="hm-inspector-housing-foot">
+                    <span>
+                      {selectedPlace.housing.lastVerifiedAt
+                        ? 'Xác minh ' + formatPlaceAge(selectedPlace.housing.lastVerifiedAt)
+                        : 'Chưa xác minh gần đây'}
+                    </span>
+                    {selectedPlace.housing.contactZalo && <b>Zalo: {selectedPlace.housing.contactZalo}</b>}
+                  </div>
+                </div>
+              )}
 
               {openStatus && (
                 <div className={openStatus.known ? (openStatus.open ? 'hm-inspector-open open' : 'hm-inspector-open closed') : 'hm-inspector-open'}>
