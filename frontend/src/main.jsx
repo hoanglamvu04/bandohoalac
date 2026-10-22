@@ -40,6 +40,7 @@ import './reputation-v2.css';
 import './reputation-v21.css';
 import './reputation-v22.css';
 import './reputation-v23.css';
+import './profile-readability-fix.css';
 import './community-verification.css';
 import './community-verification-admin.css';
 import './mobile-header-menu.css';
