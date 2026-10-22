@@ -26,7 +26,7 @@ const VERTICALS = {
     categories: [
       { slug: 'bat-dong-san', label: 'Phòng trọ & BĐS' }
     ],
-    quickQueries: ['gần Đại học FPT', 'Thạch Hòa', 'Hòa Lạc'],
+    quickQueries: ['phòng trọ gần Đại học FPT', 'phòng trọ Thạch Hòa', 'phòng trọ Hòa Lạc'],
     primaryMapHref: '/map?category=bat-dong-san',
     emptyTitle: 'Chưa có phòng trọ phù hợp',
     emptyText: 'Dữ liệu phòng trọ sẽ được bổ sung dần qua đối tác và cộng đồng địa phương.',
@@ -46,7 +46,7 @@ const VERTICALS = {
       { slug: 'an-uong', label: 'Quán ăn' },
       { slug: 'cafe', label: 'Cafe' }
     ],
-    quickQueries: ['gần Đại học FPT', 'ăn đêm', 'cafe làm việc'],
+    quickQueries: ['quán ăn gần Đại học FPT', 'ăn đêm', 'cafe làm việc'],
     primaryMapHref: '/map?category=an-uong',
     emptyTitle: 'Chưa có địa điểm phù hợp',
     emptyText: 'Thử từ khóa khác hoặc mở bản đồ để xem toàn bộ địa điểm quanh Hòa Lạc.',
