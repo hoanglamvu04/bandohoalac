@@ -453,64 +453,35 @@
 /* ---------- Article ---------- */
 
 .explore-article-hero{
-  position:relative;
-  min-height:390px;
-  overflow:hidden;
-  display:flex;
-  align-items:center;
-  color:var(--explore-text);
-  background:
-    radial-gradient(circle at 12% 8%,rgba(28,124,244,.08),transparent 30%),
-    linear-gradient(180deg,#fff 0%,#f6faff 100%);
+  padding:42px 0 38px;
   border-bottom:1px solid #e3edf8;
+  background:
+    radial-gradient(circle at 82% 14%,rgba(28,124,244,.08),transparent 26%),
+    linear-gradient(180deg,#fff 0%,#f7fbff 100%);
 }
 
-.explore-article-hero-bg{
-  position:absolute;
-  top:0;
-  right:0;
-  bottom:0;
-  left:56%;
-  overflow:hidden;
-  background:#edf5ff;
-  border-left:1px solid #dfeaf6;
+.explore-article-hero-inner{
+  display:block;
 }
 
-.explore-article-hero-bg img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-
-.explore-article-hero-bg>div{
-  width:100%;
-  height:100%;
+.explore-article-hero.has-cover .explore-article-hero-inner{
   display:grid;
-  place-items:center;
-  color:#4e8fdc;
-  background:linear-gradient(145deg,#e7f2ff,#f7fbff);
-}
-
-.explore-article-hero-bg::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:linear-gradient(90deg,rgba(255,255,255,.18),rgba(11,62,124,.05));
-  pointer-events:none;
+  grid-template-columns:minmax(0,1.05fr) minmax(360px,.72fr);
+  gap:48px;
+  align-items:center;
 }
 
 .explore-article-hero-content{
-  position:relative;
-  z-index:1;
-  width:100%;
-  padding:48px 46% 44px 0;
+  min-width:0;
+  max-width:860px;
 }
 
 .explore-back{
-  display:inline-flex;
+  width:max-content;
+  display:flex;
   align-items:center;
   gap:6px;
-  margin-bottom:24px;
+  margin:0 0 18px;
   color:var(--explore-blue);
   text-decoration:none;
   font-weight:800;
@@ -518,32 +489,35 @@
 }
 
 .explore-article-hero .explore-kicker{
+  width:max-content;
+  display:flex;
   color:var(--explore-blue);
 }
 
 .explore-article-hero h1{
-  max-width:650px;
-  margin:8px 0 12px;
+  max-width:840px;
+  margin:9px 0 13px;
   color:var(--explore-navy);
-  font-size:clamp(34px,4.2vw,52px);
-  line-height:1.07;
+  font-size:clamp(36px,4vw,54px);
+  line-height:1.06;
   letter-spacing:-.038em;
+  text-wrap:balance;
 }
 
 .explore-article-hero-content>p{
-  max-width:630px;
+  max-width:760px;
   margin:0;
   color:var(--explore-muted);
   font-size:15px;
-  line-height:1.7;
+  line-height:1.72;
 }
 
 .explore-article-meta{
   display:flex;
   align-items:center;
   flex-wrap:wrap;
-  gap:10px 16px;
-  margin-top:21px;
+  gap:9px 16px;
+  margin-top:22px;
   color:#75879c;
   font-size:12px;
 }
@@ -563,6 +537,23 @@
   background:#fff;
   font-weight:800;
   cursor:pointer;
+}
+
+.explore-article-hero-media{
+  min-width:0;
+  height:290px;
+  overflow:hidden;
+  border:1px solid #d8e5f2;
+  border-radius:18px;
+  background:#edf5ff;
+  box-shadow:0 14px 36px rgba(26,79,137,.09);
+}
+
+.explore-article-hero-media img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
 }
 
 .explore-article-layout{
@@ -803,12 +794,13 @@
     grid-template-columns:1fr;
   }
 
-  .explore-article-hero-bg{
-    left:58%;
+  .explore-article-hero.has-cover .explore-article-hero-inner{
+    grid-template-columns:minmax(0,1fr) 320px;
+    gap:30px;
   }
 
-  .explore-article-hero-content{
-    padding-right:44%;
+  .explore-article-hero-media{
+    height:250px;
   }
 
   .explore-article-layout{
@@ -938,29 +930,23 @@
   }
 
   .explore-article-hero{
-    min-height:0;
-    display:flex;
-    flex-direction:column;
-    align-items:stretch;
+    padding:26px 0 28px;
   }
 
-  .explore-article-hero-bg{
-    position:relative;
-    inset:auto;
-    order:0;
+  .explore-article-hero.has-cover .explore-article-hero-inner{
+    grid-template-columns:1fr;
+    gap:22px;
+  }
+
+  .explore-article-hero-media{
+    order:-1;
     width:100%;
-    height:225px;
-    border:0;
-    border-bottom:1px solid #e1ebf5;
-  }
-
-  .explore-article-hero-content{
-    order:1;
-    padding:26px 0 30px;
+    height:210px;
+    border-radius:13px;
   }
 
   .explore-back{
-    margin-bottom:18px;
+    margin-bottom:16px;
   }
 
   .explore-article-hero h1{
