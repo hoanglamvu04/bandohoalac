@@ -1502,10 +1502,17 @@ export default function MapPage() {
     setPlaceScope('viewport');
     setCategory(value);
 
-    const keepFoodMode = isFoodMode && ['all', 'an-uong', 'cafe'].includes(value);
+    const nextVertical = value === 'bat-dong-san'
+      ? 'housing'
+      : ['an-uong', 'cafe'].includes(value)
+        ? 'food'
+        : isFoodMode && value === 'all'
+          ? 'food'
+          : null;
+
     syncDiscoveryParams({
       category: value,
-      vertical: keepFoodMode ? 'food' : isHousingMode && value === 'bat-dong-san' ? 'housing' : null,
+      vertical: nextVertical,
       place: null
     });
   }
