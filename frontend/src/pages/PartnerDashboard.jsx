@@ -64,6 +64,58 @@ function statusLabel(status) {
   return status || 'Không xác định';
 }
 
+function triState(value) {
+  if (value === true) return 'true';
+  if (value === false) return 'false';
+  return '';
+}
+
+function nullableNumber(value) {
+  const raw = String(value ?? '').replace(/[.,\s]/g, '');
+  if (!raw) return null;
+  const number = Number(raw);
+  return Number.isFinite(number) ? number : null;
+}
+
+function nullableDecimal(value) {
+  const raw = String(value ?? '').trim().replace(',', '.');
+  if (!raw) return null;
+  const number = Number(raw);
+  return Number.isFinite(number) ? number : null;
+}
+
+function nullableBoolean(value) {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return null;
+}
+
+function housingFormFrom(place) {
+  const housing = place?.housing || {};
+  return {
+    monthlyRent: housing.monthlyRent ?? '',
+    depositAmount: housing.depositAmount ?? '',
+    areaM2: housing.areaM2 ?? '',
+    availabilityStatus: housing.availabilityStatus || 'UNKNOWN',
+    availableRooms: housing.availableRooms ?? '',
+    totalRooms: housing.totalRooms ?? '',
+    electricityPricePerKwh: housing.electricityPricePerKwh ?? '',
+    waterPricePerPersonMonth: housing.waterPricePerPersonMonth ?? '',
+    parkingFeeMonthly: housing.parkingFeeMonthly ?? '',
+    hasAirConditioner: triState(housing.hasAirConditioner),
+    hasWaterHeater: triState(housing.hasWaterHeater),
+    hasPrivateBathroom: triState(housing.hasPrivateBathroom),
+    hasLoft: triState(housing.hasLoft),
+    hasBalcony: triState(housing.hasBalcony),
+    hasParking: triState(housing.hasParking),
+    allowsPets: triState(housing.allowsPets),
+    curfewNote: housing.curfewNote || '',
+    availabilityNote: housing.availabilityNote || '',
+    contactZalo: housing.contactZalo || '',
+    availableFrom: housing.availableFrom ? String(housing.availableFrom).slice(0, 10) : ''
+  };
+}
+
 export default function PartnerDashboard() {
   const { showToast } = useToast();
   const videoRef = useRef(null);
@@ -100,7 +152,8 @@ export default function PartnerDashboard() {
     phone: '',
     website: '',
     openingHours: '',
-    description: ''
+    description: '',
+    housing: housingFormFrom(null)
   });
   const [placeSaving, setPlaceSaving] = useState(false);
 
@@ -532,7 +585,8 @@ export default function PartnerDashboard() {
       phone: place.phone || '',
       website: place.website || '',
       openingHours: place.openingHours || '',
-      description: place.description || ''
+      description: place.description || '',
+      housing: housingFormFrom(place)
     });
   }
 
@@ -540,15 +594,55 @@ export default function PartnerDashboard() {
     event.preventDefault();
     if (!editingPlace) return;
 
+    const housingEnabled = editingPlace.categorySlug === 'bat-dong-san';
+    const housing = housingEnabled ? {
+      monthlyRent: nullableNumber(placeForm.housing.monthlyRent),
+      depositAmount: nullableNumber(placeForm.housing.depositAmount),
+      areaM2: nullableDecimal(placeForm.housing.areaM2),
+      availabilityStatus: placeForm.housing.availabilityStatus || 'UNKNOWN',
+      availableRooms: nullableNumber(placeForm.housing.availableRooms),
+      totalRooms: nullableNumber(placeForm.housing.totalRooms),
+      electricityPricePerKwh: nullableNumber(placeForm.housing.electricityPricePerKwh),
+      waterPricePerPersonMonth: nullableNumber(placeForm.housing.waterPricePerPersonMonth),
+      parkingFeeMonthly: nullableNumber(placeForm.housing.parkingFeeMonthly),
+      hasAirConditioner: nullableBoolean(placeForm.housing.hasAirConditioner),
+      hasWaterHeater: nullableBoolean(placeForm.housing.hasWaterHeater),
+      hasPrivateBathroom: nullableBoolean(placeForm.housing.hasPrivateBathroom),
+      hasLoft: nullableBoolean(placeForm.housing.hasLoft),
+      hasBalcony: nullableBoolean(placeForm.housing.hasBalcony),
+      hasParking: nullableBoolean(placeForm.housing.hasParking),
+      allowsPets: nullableBoolean(placeForm.housing.allowsPets),
+      curfewNote: placeForm.housing.curfewNote.trim() || null,
+      availabilityNote: placeForm.housing.availabilityNote.trim() || null,
+      contactZalo: placeForm.housing.contactZalo.trim() || null,
+      availableFrom: placeForm.housing.availableFrom || null
+    } : undefined;
+
+    if (
+      housingEnabled
+      && housing.availableRooms !== null
+      && housing.totalRooms !== null
+      && housing.availableRooms > housing.totalRooms
+    ) {
+      showToast('Số phòng còn trống không thể lớn hơn tổng số phòng.', 'error');
+      return;
+    }
+
     setPlaceSaving(true);
     try {
       await updatePartnerManagedPlace(editingPlace.placeId, {
         phone: placeForm.phone.trim() || null,
         website: placeForm.website.trim() || null,
         openingHours: placeForm.openingHours.trim() || null,
-        description: placeForm.description.trim() || null
+        description: placeForm.description.trim() || null,
+        ...(housingEnabled ? { housing } : {})
       });
-      showToast('Đã cập nhật thông tin địa điểm.', 'success');
+      showToast(
+        housingEnabled
+          ? 'Đã cập nhật và xác minh lại thông tin phòng trọ.'
+          : 'Đã cập nhật thông tin địa điểm.',
+        'success'
+      );
       setEditingPlace(null);
       await load({ silent: true });
     } catch (error) {
@@ -1067,7 +1161,10 @@ export default function PartnerDashboard() {
 
       {editingPlace && (
         <div className="partner-edit-modal">
-          <form className="partner-edit-card" onSubmit={savePlace}>
+          <form
+            className={'partner-edit-card' + (editingPlace.categorySlug === 'bat-dong-san' ? ' housing-edit-card' : '')}
+            onSubmit={savePlace}
+          >
             <div className="partner-edit-head">
               <div>
                 <span className="eyebrow">BUSINESS DETAILS</span>
@@ -1085,6 +1182,87 @@ export default function PartnerDashboard() {
             <label>Website<input value={placeForm.website} onChange={(e) => setPlaceForm((v) => ({ ...v, website: e.target.value }))} placeholder="https://..." /></label>
             <label>Giờ mở cửa<textarea rows="3" value={placeForm.openingHours} onChange={(e) => setPlaceForm((v) => ({ ...v, openingHours: e.target.value }))} /></label>
             <label>Mô tả<textarea rows="5" value={placeForm.description} onChange={(e) => setPlaceForm((v) => ({ ...v, description: e.target.value }))} /></label>
+
+            {editingPlace.categorySlug === 'bat-dong-san' && (
+              <section className="partner-housing-editor">
+                <div className="partner-housing-editor-head">
+                  <span>HOLA HOUSING V2</span>
+                  <h3>Thông tin phòng trọ chuyên sâu</h3>
+                  <p>Lưu form này cũng đồng thời cập nhật mốc “xác minh gần nhất” từ HOLA Partner.</p>
+                </div>
+
+                <div className="partner-housing-grid">
+                  <label>Giá/tháng
+                    <input inputMode="numeric" value={placeForm.housing.monthlyRent} onChange={(e) => setPlaceForm((v) => ({ ...v, housing: { ...v.housing, monthlyRent: e.target.value } }))} placeholder="2500000" />
+                  </label>
+                  <label>Tiền cọc
+                    <input inputMode="numeric" value={placeForm.housing.depositAmount} onChange={(e) => setPlaceForm((v) => ({ ...v, housing: { ...v.housing, depositAmount: e.target.value } }))} placeholder="2500000" />
+                  </label>
+                  <label>Diện tích (m²)
+                    <input inputMode="decimal" value={placeForm.housing.areaM2} onChange={(e) => setPlaceForm((v) => ({ ...v, housing: { ...v.housing, areaM2: e.target.value } }))} placeholder="25" />
+                  </label>
+
+                  <label>Trạng thái phòng
+                    <select value={placeForm.housing.availabilityStatus} onChange={(e) => setPlaceForm((v) => ({ ...v, housing: { ...v.housing, availabilityStatus: e.target.value } }))}>
+                      <option value="AVAILABLE">Còn phòng</option>
+                      <option value="LIMITED">Sắp hết</option>
+                      <option value="FULL">Hết phòng</option>
+                      <option value="UNKNOWN">Chưa xác nhận</option>
+                    </select>
+                  </label>
+                  <label>Phòng còn trống
+                    <input inputMode="numeric" value={placeForm.housing.availableRooms} onChange={(e) => setPlaceForm((v) => ({ ...v, housing: { ...v.housing, availableRooms: e.target.value } }))} placeholder="2" />
+                  </label>
+                  <label>Tổng số phòng
+                    <input inputMode="numeric" value={placeForm.housing.totalRooms} onChange={(e) => setPlaceForm((v) => ({ ...v, housing: { ...v.housing, totalRooms: e.target.value } }))} placeholder="20" />
+                  </label>
+
+                  <label>Điện (đ/kWh)
+                    <input inputMode="numeric" value={placeForm.housing.electricityPricePerKwh} onChange={(e) => setPlaceForm((v) => ({ ...v, housing: { ...v.housing, electricityPricePerKwh: e.target.value } }))} placeholder="4000" />
+                  </label>
+                  <label>Nước (đ/người/tháng)
+                    <input inputMode="numeric" value={placeForm.housing.waterPricePerPersonMonth} onChange={(e) => setPlaceForm((v) => ({ ...v, housing: { ...v.housing, waterPricePerPersonMonth: e.target.value } }))} placeholder="100000" />
+                  </label>
+                  <label>Phí gửi xe/tháng
+                    <input inputMode="numeric" value={placeForm.housing.parkingFeeMonthly} onChange={(e) => setPlaceForm((v) => ({ ...v, housing: { ...v.housing, parkingFeeMonthly: e.target.value } }))} placeholder="0" />
+                  </label>
+
+                  {[
+                    ['hasAirConditioner', 'Điều hòa'],
+                    ['hasWaterHeater', 'Nóng lạnh'],
+                    ['hasPrivateBathroom', 'Khép kín'],
+                    ['hasLoft', 'Có gác'],
+                    ['hasBalcony', 'Ban công'],
+                    ['hasParking', 'Chỗ để xe'],
+                    ['allowsPets', 'Cho nuôi thú cưng']
+                  ].map(([key, label]) => (
+                    <label key={key}>{label}
+                      <select value={placeForm.housing[key]} onChange={(e) => setPlaceForm((v) => ({ ...v, housing: { ...v.housing, [key]: e.target.value } }))}>
+                        <option value="">Chưa xác nhận</option>
+                        <option value="true">Có</option>
+                        <option value="false">Không</option>
+                      </select>
+                    </label>
+                  ))}
+
+                  <label>Có phòng từ ngày
+                    <input type="date" value={placeForm.housing.availableFrom} onChange={(e) => setPlaceForm((v) => ({ ...v, housing: { ...v.housing, availableFrom: e.target.value } }))} />
+                  </label>
+                  <label>Zalo liên hệ
+                    <input value={placeForm.housing.contactZalo} onChange={(e) => setPlaceForm((v) => ({ ...v, housing: { ...v.housing, contactZalo: e.target.value } }))} placeholder="Số điện thoại / Zalo" />
+                  </label>
+                </div>
+
+                <div className="partner-housing-notes">
+                  <label>Giờ giấc / quy định
+                    <textarea value={placeForm.housing.curfewNote} onChange={(e) => setPlaceForm((v) => ({ ...v, housing: { ...v.housing, curfewNote: e.target.value } }))} placeholder="Ví dụ: không giới hạn giờ về..." />
+                  </label>
+                  <label>Ghi chú tình trạng phòng
+                    <textarea value={placeForm.housing.availabilityNote} onChange={(e) => setPlaceForm((v) => ({ ...v, housing: { ...v.housing, availabilityNote: e.target.value } }))} placeholder="Ví dụ: còn 2 phòng tầng 3, nhận phòng ngay..." />
+                  </label>
+                </div>
+              </section>
+            )}
 
             <button className="primary-action" type="submit" disabled={placeSaving}>
               <Save size={16} /> {placeSaving ? 'Đang lưu...' : 'Lưu thông tin'}
