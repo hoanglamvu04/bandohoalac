@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { partnerHousingSchema } from './housing.validators.js';
 
 export const createPlaceClaimSchema = z.object({
   placeId: z.coerce.number().int().positive(),
@@ -45,7 +46,8 @@ export const partnerUpdatePlaceSchema = z.object({
   phone: z.string().trim().max(80).nullable().optional(),
   website: z.string().trim().max(500).nullable().optional(),
   openingHours: z.string().trim().max(1000).nullable().optional(),
-  description: z.string().trim().max(3000).nullable().optional()
+  description: z.string().trim().max(3000).nullable().optional(),
+  housing: partnerHousingSchema.optional()
 });
 
 
