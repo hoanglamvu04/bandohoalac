@@ -167,3 +167,127 @@
     display: none !important;
   }
 }
+
+/* Map switcher dropdown: keep housing and food as focused map modes. */
+@media (min-width: 761px) {
+  .balanced-product-navbar .nav-map-switcher {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .balanced-product-navbar .nav-map-trigger {
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .balanced-product-navbar .nav-map-chevron {
+    margin-left: 1px;
+    transition: transform .16s ease;
+  }
+
+  .balanced-product-navbar .nav-map-trigger[aria-expanded="true"] .nav-map-chevron {
+    transform: rotate(180deg);
+  }
+
+  .balanced-product-navbar .nav-map-menu {
+    position: absolute;
+    z-index: 2200;
+    top: calc(100% + 12px);
+    left: 0;
+    width: 330px;
+    padding: 10px;
+    border: 1px solid #dce6e1;
+    border-radius: 17px;
+    background: rgba(255,255,255,.99);
+    box-shadow: 0 22px 58px rgba(18,52,43,.16);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .balanced-product-navbar .nav-map-menu-head {
+    display: grid;
+    gap: 3px;
+    padding: 8px 10px 10px;
+    border-bottom: 1px solid #edf2ef;
+  }
+
+  .balanced-product-navbar .nav-map-menu-head span {
+    color: #2b7a64;
+    font-size: 9px;
+    font-weight: 950;
+    letter-spacing: .11em;
+  }
+
+  .balanced-product-navbar .nav-map-menu-head b {
+    color: #173d32;
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .balanced-product-navbar .nav-map-option {
+    display: grid;
+    grid-template-columns: 40px minmax(0,1fr) 16px;
+    align-items: center;
+    gap: 10px;
+    min-height: 62px;
+    margin-top: 5px;
+    padding: 8px 9px;
+    border-radius: 12px;
+    color: #24473e;
+    text-decoration: none;
+    transition: background .15s ease, transform .15s ease;
+  }
+
+  .balanced-product-navbar .nav-map-option:hover {
+    background: #f4f8f6;
+    transform: translateX(1px);
+  }
+
+  .balanced-product-navbar .nav-map-option.active {
+    background: #edf5f1;
+  }
+
+  .balanced-product-navbar .nav-map-option-icon {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 11px;
+    color: #145b49;
+    background: #eaf4f0;
+  }
+
+  .balanced-product-navbar .nav-map-option-icon.housing {
+    color: #1767b2;
+    background: #edf5ff;
+  }
+
+  .balanced-product-navbar .nav-map-option-icon.food {
+    color: #9d5b12;
+    background: #fff4e8;
+  }
+
+  .balanced-product-navbar .nav-map-option-copy {
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+  }
+
+  .balanced-product-navbar .nav-map-option-copy b {
+    color: #173d32;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .balanced-product-navbar .nav-map-option-copy small {
+    color: #74877f;
+    font-size: 9.5px;
+    line-height: 1.35;
+  }
+
+  .balanced-product-navbar .nav-map-option > svg {
+    color: #91a39d;
+  }
+}
