@@ -24,3 +24,32 @@
 .contributor-loop{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;padding:0 0 52px}.contributor-loop>div{padding:20px;border:1px solid var(--hm-line);border-radius:14px}.contributor-loop h3{margin:12px 0 7px}.contributor-loop p{margin:0 0 12px;color:var(--hm-muted);line-height:1.6}.contributor-loop a{display:inline-flex;align-items:center;gap:5px;color:var(--hm-blue);font-weight:850;text-decoration:none}
 @media(max-width:980px){.local-market-hero-grid,.commercial-hero-grid{grid-template-columns:1fr}.local-market-hero-side,.commercial-hero-panel{max-width:680px}.local-market-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.commercial-benefit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.local-market-shell,.commercial-shell{width:min(100% - 28px,1180px)}.local-market-hero,.commercial-hero{padding:28px 0 24px}.local-market-hero h1,.commercial-hero h1{font-size:38px}.local-market-hero p,.commercial-hero p{font-size:14px}.local-market-search{grid-template-columns:auto 1fr;padding:8px 12px}.local-market-search button{grid-column:1/-1}.local-market-toolbar,.local-market-owner-inner,.commercial-cta-inner{align-items:flex-start;flex-direction:column}.local-market-grid,.commercial-benefit-grid,.commercial-steps,.contributor-loop{grid-template-columns:1fr}.local-market-card-media{height:210px}.commercial-section{padding:38px 0}.commercial-section-head h2{font-size:28px}.commercial-benefit-grid article{padding:18px 0}}
+
+@media(min-width:761px){
+  .balanced-product-navbar .nav-partner-entry{
+    min-height:44px;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:0 12px;
+    border:1px solid #cfe0f1;
+    border-radius:12px;
+    color:#1f5f9f;
+    background:#f8fbff;
+    font-size:12px;
+    font-weight:850;
+    text-decoration:none;
+    white-space:nowrap;
+  }
+  .balanced-product-navbar .nav-partner-entry:hover{
+    border-color:#bad3ec;
+    color:#0b5fc0;
+    background:#f0f7ff;
+  }
+}
+@media(min-width:761px) and (max-width:1180px){
+  .balanced-product-navbar .nav-partner-entry{display:none!important}
+}
+@media(max-width:760px){
+  .nav-partner-entry{display:none!important}
+}
