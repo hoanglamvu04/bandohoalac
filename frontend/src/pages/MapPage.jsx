@@ -547,6 +547,21 @@ export default function MapPage() {
   }, []);
 
   useEffect(() => {
+    // Vertical navigation should immediately reveal the discovery list instead
+    // of leaving Housing/Food hidden behind a previously closed side panel.
+    if (!verticalMode) return;
+
+    setFilterMenuOpen(false);
+    setLeftOpen(true);
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(max-width: 760px)').matches
+    ) {
+      setMobileSheetLevel('half');
+    }
+  }, [verticalMode]);
+
+  useEffect(() => {
     if (!requestedPlaceId) return undefined;
 
     let active = true;
@@ -891,7 +906,9 @@ export default function MapPage() {
   }, [viewport, activeLayers, statusRefreshKey]);
 
   const filteredPlaces = useMemo(() => {
-    const needle = query.trim().toLowerCase();
+    const needle = isHousingMode
+      ? stripHousingIntent(query).toLowerCase()
+      : query.trim().toLowerCase();
 
     return places
       .filter((place) => {
@@ -934,7 +951,7 @@ export default function MapPage() {
           )
         };
       });
-  }, [places, query, openNow, userLocation, minRating]);
+  }, [places, query, openNow, userLocation, minRating, isHousingMode]);
 
   const viewportPlaceCount = useMemo(() => {
     if (!viewport || query.trim() || placeScope !== 'viewport') {
