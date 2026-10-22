@@ -48,11 +48,11 @@ const FEATURE_CARDS = [
     to: '/an-uong'
   },
   {
-    icon: Compass,
-    title: 'Khám phá Hòa Lạc',
-    text: 'Cẩm nang địa phương, lịch trình và gợi ý kết nối trực tiếp với bản đồ.',
+    icon: Building2,
+    title: 'HOLA Partner',
+    text: 'Dành cho chủ phòng trọ, quán ăn và doanh nghiệp muốn quản lý địa điểm trên HOLA Maps.',
     tone: 'green',
-    to: '/kham-pha'
+    to: '/doi-tac'
   },
   {
     icon: UsersRound,
