@@ -65,6 +65,7 @@ import './desktop-map-header-restore.css';
 import './desktop-map-sidebar-compact.css';
 import './public-info.css';
 import './explore.css';
+import './marketplace.css';
 import './profile-readability-fix.css';
 /* Stability V3 must remain the final map stylesheet so legacy overrides cannot
    reintroduce the 100% browser zoom clipping/overlap bugs. */
