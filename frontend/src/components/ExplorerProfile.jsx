@@ -163,9 +163,6 @@ export default function ExplorerProfile({
         </div>
 
         <div className="explorer-score explorer-score-light reputation-v2-score">
-          <span className="explorer-score-orb reputation-orb">
-            <ShieldCheck size={29} />
-          </span>
           <div className="reputation-score-copy">
             <span className="reputation-score-main">
               <strong>{reputationScore}</strong>
