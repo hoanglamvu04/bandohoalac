@@ -75,6 +75,7 @@ const HOUSING_FILTER_KEYS = [
   'verifiedWithinDays',
   'availability',
   'availableOnly',
+  'partnerOnly',
   'airConditioner',
   'waterHeater',
   'privateBathroom',
@@ -286,6 +287,22 @@ function HousingFilters({ params, onSubmit, onReset }) {
         </label>
 
         <label>
+          <span>Diện tích đến</span>
+          <input name="maxArea" inputMode="decimal" defaultValue={params.get('maxArea') || ''} placeholder="40" />
+        </label>
+
+        <label>
+          <span>Phòng trống tối thiểu</span>
+          <select name="minAvailableRooms" defaultValue={params.get('minAvailableRooms') || ''}>
+            <option value="">Không yêu cầu</option>
+            <option value="1">Từ 1 phòng</option>
+            <option value="2">Từ 2 phòng</option>
+            <option value="3">Từ 3 phòng</option>
+            <option value="5">Từ 5 phòng</option>
+          </select>
+        </label>
+
+        <label>
           <span>Tối đa tới FPT</span>
           <select name="maxDistanceFpt" defaultValue={params.get('maxDistanceFpt') || ''}>
             <option value="">Mọi khoảng cách</option>
@@ -335,6 +352,7 @@ function HousingFilters({ params, onSubmit, onReset }) {
       <div className="housing-filter-toggles">
         {[
           ['availableOnly', 'Chỉ còn phòng'],
+          ['partnerOnly', 'HOLA Partner'],
           ['airConditioner', 'Điều hòa'],
           ['waterHeater', 'Nóng lạnh'],
           ['privateBathroom', 'Khép kín'],
