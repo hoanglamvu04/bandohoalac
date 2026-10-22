@@ -1,0 +1,339 @@
+/* Contribution form polish v3
+   Replaces browser-native category dropdown with a compact HOLA picker and
+   harmonizes the Step 2 field controls across desktop and mobile. */
+
+.contribution-form .form-grid{
+  position:relative;
+}
+
+.contribution-form .form-grid label,
+.contribution-form .contribution-category-field{
+  min-width:0;
+}
+
+.contribution-form .contribution-field-label{
+  display:block;
+  margin-bottom:6px;
+  color:#173f36;
+  font-size:12px;
+  font-weight:850;
+}
+
+.contribution-form .form-grid input,
+.contribution-form .form-grid textarea{
+  min-height:48px;
+  border:1px solid #dce5e1;
+  border-radius:12px;
+  padding:12px 13px;
+  color:#173f36;
+  background:#fff;
+  box-shadow:0 1px 0 rgba(16,47,41,.02);
+}
+
+.contribution-form .form-grid textarea{
+  min-height:118px;
+}
+
+.contribution-form .form-grid input::placeholder,
+.contribution-form .form-grid textarea::placeholder{
+  color:#98a7a1;
+}
+
+.contribution-form .form-grid input:focus,
+.contribution-form .form-grid textarea:focus{
+  border-color:#8fb3a8;
+  box-shadow:0 0 0 4px rgba(33,102,83,.08);
+}
+
+.contribution-category-picker{
+  position:relative;
+}
+
+.category-picker-trigger{
+  width:100%;
+  min-height:48px;
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr) 18px;
+  align-items:center;
+  gap:10px;
+  border:1px solid #dce5e1;
+  border-radius:12px;
+  padding:6px 11px 6px 8px;
+  color:#173f36;
+  background:#fff;
+  text-align:left;
+  cursor:pointer;
+  box-shadow:0 1px 0 rgba(16,47,41,.02);
+}
+
+.category-picker-trigger:hover{
+  border-color:#c5d7d0;
+  background:#fbfdfc;
+}
+
+.category-picker-trigger.open{
+  border-color:#7fa99d;
+  box-shadow:0 0 0 4px rgba(33,102,83,.08);
+}
+
+.category-picker-trigger>svg{
+  color:#6f857d;
+  transition:transform .16s ease;
+}
+
+.category-picker-trigger.open>svg{
+  transform:rotate(180deg);
+}
+
+.category-picker-initial{
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+  color:#155947;
+  background:#eaf4ef;
+  font-size:12px;
+  font-weight:950;
+}
+
+.category-picker-selected{
+  min-width:0;
+  display:grid;
+  gap:1px;
+}
+
+.category-picker-selected strong,
+.category-picker-selected small{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.category-picker-selected strong{
+  color:#153f34;
+  font-size:13px;
+}
+
+.category-picker-selected small{
+  color:#85958f;
+  font-size:9.5px;
+  font-weight:650;
+}
+
+.category-picker-menu{
+  position:absolute;
+  z-index:160;
+  top:calc(100% + 8px);
+  left:0;
+  width:min(520px,calc(100vw - 48px));
+  overflow:hidden;
+  border:1px solid #d9e5df;
+  border-radius:16px;
+  background:rgba(255,255,255,.995);
+  box-shadow:0 24px 60px rgba(19,55,45,.18);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+
+.category-picker-search{
+  display:grid;
+  grid-template-columns:18px minmax(0,1fr);
+  align-items:center;
+  gap:8px;
+  margin:10px;
+  padding:0 11px;
+  border:1px solid #dfe8e4;
+  border-radius:11px;
+  color:#6c837b;
+  background:#f7faf8;
+}
+
+.category-picker-search input{
+  min-height:42px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  outline:0;
+  color:#173f36;
+  background:transparent!important;
+  box-shadow:none!important;
+  font-size:13px!important;
+}
+
+.category-picker-popular{
+  padding:0 10px 10px;
+}
+
+.category-picker-popular>span{
+  display:block;
+  margin:0 2px 7px;
+  color:#889891;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.category-picker-popular>div{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+
+.category-picker-popular button{
+  min-height:30px;
+  padding:0 10px;
+  border:1px solid #dce7e2;
+  border-radius:999px;
+  color:#527068;
+  background:#fff;
+  font-size:10px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.category-picker-popular button:hover,
+.category-picker-popular button.active{
+  border-color:#a9ccbf;
+  color:#155947;
+  background:#edf7f2;
+}
+
+.category-picker-list{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:4px;
+  max-height:290px;
+  overflow:auto;
+  padding:8px 10px 10px;
+  border-top:1px solid #edf2ef;
+  scrollbar-width:thin;
+  scrollbar-color:#cbd9d3 transparent;
+}
+
+.category-picker-option{
+  min-width:0;
+  min-height:50px;
+  display:grid;
+  grid-template-columns:32px minmax(0,1fr) 16px;
+  align-items:center;
+  gap:8px;
+  border:1px solid transparent;
+  border-radius:11px;
+  padding:7px 8px;
+  color:#294a41;
+  background:transparent;
+  text-align:left;
+  cursor:pointer;
+}
+
+.category-picker-option:hover{
+  border-color:#e0e9e5;
+  background:#f6f9f7;
+}
+
+.category-picker-option.active{
+  border-color:#c4ded3;
+  background:#edf7f2;
+}
+
+.category-picker-option-icon{
+  width:32px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  border-radius:9px;
+  color:#285f51;
+  background:#edf3f0;
+  font-size:10px;
+  font-weight:950;
+}
+
+.category-picker-option>span:nth-child(2){
+  min-width:0;
+  display:grid;
+  gap:2px;
+}
+
+.category-picker-option strong,
+.category-picker-option small{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.category-picker-option strong{
+  color:#1f473c;
+  font-size:11px;
+}
+
+.category-picker-option small{
+  color:#8b9a94;
+  font-size:8px;
+  font-weight:650;
+  text-transform:capitalize;
+}
+
+.category-picker-option>svg{
+  color:#218362;
+}
+
+.category-picker-empty{
+  grid-column:1/-1;
+  padding:24px 12px;
+  color:#84958e;
+  text-align:center;
+  font-size:11px;
+}
+
+@media(min-width:761px){
+  .contribution-form .form-section{
+    border-top-color:#e7ece9;
+  }
+
+  .contribution-form .form-grid{
+    gap:16px 14px;
+  }
+}
+
+@media(max-width:760px){
+  .contribution-form .contribution-field-label{
+    margin-bottom:5px;
+    font-size:12px;
+  }
+
+  .category-picker-trigger{
+    min-height:48px;
+    grid-template-columns:32px minmax(0,1fr) 17px;
+    padding:6px 10px 6px 8px;
+  }
+
+  .category-picker-initial{
+    width:32px;
+    height:32px;
+  }
+
+  .category-picker-menu{
+    width:100%;
+    max-width:100%;
+    border-radius:14px;
+  }
+
+  .category-picker-list{
+    grid-template-columns:1fr;
+    max-height:44vh;
+  }
+
+  .category-picker-option{
+    min-height:48px;
+  }
+
+  .category-picker-selected strong{
+    font-size:13px;
+  }
+
+  .category-picker-selected small{
+    font-size:9px;
+  }
+}
