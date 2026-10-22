@@ -126,6 +126,15 @@ export default function MapSearchV2() {
   const activeVertical = params.get('vertical') || '';
 
   useEffect(() => {
+    if (params.get('q')) return;
+    setQuery('');
+    setResults([]);
+    setMeta(null);
+    setError('');
+    setOpen(false);
+  }, [activeVertical]);
+
+  useEffect(() => {
     const needle = query.trim();
     if (needle.length < 2) {
       setResults([]);
