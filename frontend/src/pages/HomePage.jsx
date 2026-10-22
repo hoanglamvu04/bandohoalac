@@ -38,14 +38,14 @@ const FEATURE_CARDS = [
     title: 'Tìm phòng trọ',
     text: 'Phòng trọ và nhà ở quanh Hòa Lạc, ưu tiên dữ liệu có thể xác minh.',
     tone: 'blue',
-    to: '/phong-tro'
+    to: '/map?vertical=housing&category=bat-dong-san'
   },
   {
     icon: UtensilsCrossed,
     title: 'Ăn uống',
     text: 'Quán ăn, cafe và địa điểm phù hợp cho sinh viên, gia đình và nhóm bạn.',
     tone: 'orange',
-    to: '/an-uong'
+    to: '/map?vertical=food'
   },
   {
     icon: Building2,
@@ -321,12 +321,12 @@ export default function HomePage() {
             </p>
 
             <div className="home-info-actions">
-              <Link className="home-info-primary" to="/phong-tro">
+              <Link className="home-info-primary" to="/map?vertical=housing&category=bat-dong-san">
                 <Home size={16} />
                 Tìm phòng trọ
                 <ArrowRight size={15} />
               </Link>
-              <Link className="home-info-secondary" to="/an-uong">
+              <Link className="home-info-secondary" to="/map?vertical=food">
                 <UtensilsCrossed size={16} />
                 Tìm quán ăn
               </Link>
