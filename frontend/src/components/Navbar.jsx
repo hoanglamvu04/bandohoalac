@@ -8,11 +8,13 @@ import {
   Download,
   LogOut,
   MapPinned,
+  Home,
   Plus,
   Search,
   ShieldCheck,
   Trophy,
-  UserRound
+  UserRound,
+  UtensilsCrossed
 } from 'lucide-react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -25,9 +27,10 @@ import {
 
 const navItems = [
   { to: '/map', label: 'Bản đồ', icon: MapPinned },
+  { to: '/phong-tro', label: 'Phòng trọ', icon: Home },
+  { to: '/an-uong', label: 'Ăn uống', icon: UtensilsCrossed },
   { to: '/kham-pha', label: 'Khám phá', icon: Compass },
-  { to: '/leaderboard', label: 'Cộng đồng', icon: Trophy },
-  { to: '/profile', label: 'Trang cá nhân', icon: UserRound }
+  { to: '/leaderboard', label: 'Cộng đồng', icon: Trophy }
 ];
 
 function notificationTarget(item) {
@@ -302,6 +305,7 @@ export default function Navbar() {
       </nav>
 
       <div className="nav-actions premium-nav-actions compact-nav-actions">
+        <Link className="nav-partner-entry" to="/doi-tac"><Building2 size={16}/>Đối tác</Link>
         <Link className="nav-cta" to="/contribute"><Plus size={17}/>Đóng góp</Link>
 
         {!installed && installPrompt && (
