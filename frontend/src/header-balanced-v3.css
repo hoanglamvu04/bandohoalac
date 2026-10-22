@@ -163,7 +163,7 @@
 }
 
 @media (min-width: 761px) and (max-width: 1040px) {
-  .balanced-product-navbar .compact-primary-nav .nav-link:nth-child(3) {
+  .balanced-product-navbar .compact-primary-nav .nav-link:nth-child(5) {
     display: none !important;
   }
 }
