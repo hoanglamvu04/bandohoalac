@@ -76,6 +76,19 @@ export function getPlaces(params = {}, options = {}) {
   }));
 }
 
+export function getHousingListings(params = {}, options = {}) {
+  return unwrap(client.get('/housing', {
+    params: cleanParams(params),
+    signal: options.signal
+  }));
+}
+
+export function getHousingListing(placeId, options = {}) {
+  return unwrap(client.get('/housing/' + encodeURIComponent(placeId), {
+    signal: options.signal
+  }));
+}
+
 export function getHomePlaceSections(limit = 8) {
   return unwrap(client.get('/places/home-sections', {
     params: { limit }
