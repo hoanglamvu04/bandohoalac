@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { createBrowserRouter } from 'react-router-dom';
+import { Navigate, createBrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import RequireRole from './components/RequireRole.jsx';
 import './route-error.css';
@@ -147,8 +147,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: withSuspense(HomePage) },
       { path: 'map', element: withSuspense(MapPage) },
-      { path: 'phong-tro', element: withSuspense(LocalMarketplacePage) },
-      { path: 'an-uong', element: withSuspense(LocalMarketplacePage) },
+      { path: 'phong-tro', element: <Navigate to="/map?vertical=housing&category=bat-dong-san" replace /> },
+      { path: 'an-uong', element: <Navigate to="/map?vertical=food" replace /> },
       { path: 'doi-tac', element: withSuspense(PartnerLandingPage) },
       { path: 'cong-tac-vien', element: withSuspense(ContributorHubPage) },
       { path: 'kham-pha', element: withSuspense(ExplorePage) },
