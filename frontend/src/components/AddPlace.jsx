@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Camera,
+  Check,
   CheckCircle2,
+  ChevronDown,
   CircleAlert,
   Database,
   LocateFixed,
   LogIn,
   MapPin,
+  Search,
   Send
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -35,6 +38,15 @@ const initialForm = {
   phone: ''
 };
 
+function foldCategoryText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .toLowerCase()
+    .trim();
+}
+
 function formatNearbyDistance(place) {
   const distance = Number(
     place?.distanceMeters ??
@@ -53,6 +65,8 @@ export default function AddPlace() {
   const { showToast } = useToast();
 
   const [categories, setCategories] = useState([]);
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
+  const [categoryQuery, setCategoryQuery] = useState('');
   const [form, setForm] = useState(initialForm);
   const [location, setLocation] = useState(null);
   const [locationContext, setLocationContext] = useState({
@@ -68,6 +82,7 @@ export default function AddPlace() {
 
   const addressDirtyRef = useRef(false);
   const lookupIdRef = useRef(0);
+  const categoryMenuRef = useRef(null);
 
   useEffect(() => {
     getCategories()
@@ -81,6 +96,27 @@ export default function AddPlace() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    function closeCategoryMenu(event) {
+      if (categoryMenuRef.current && !categoryMenuRef.current.contains(event.target)) {
+        setCategoryMenuOpen(false);
+        setCategoryQuery('');
+      }
+    }
+
+    document.addEventListener('pointerdown', closeCategoryMenu);
+    return () => document.removeEventListener('pointerdown', closeCategoryMenu);
+  }, []);
+
+  function selectCategory(categorySlug) {
+    setForm((current) => ({
+      ...current,
+      categorySlug
+    }));
+    setCategoryMenuOpen(false);
+    setCategoryQuery('');
+  }
 
   function updateField(event) {
     if (event.target.name === 'address') {
@@ -326,6 +362,18 @@ export default function AddPlace() {
       ? 'GPS ±' + Math.round(location.accuracy) + ' m'
       : 'GPS');
 
+  const selectedCategory = categories.find((category) => category.slug === form.categorySlug) || null;
+  const foldedCategoryQuery = foldCategoryText(categoryQuery);
+  const filteredCategories = categories.filter((category) =>
+    !foldedCategoryQuery ||
+    foldCategoryText(category.name).includes(foldedCategoryQuery) ||
+    foldCategoryText(category.slug).includes(foldedCategoryQuery)
+  );
+  const popularCategorySlugs = ['an-uong', 'cafe', 'bat-dong-san', 'homestay', 'check-in', 'dich-vu'];
+  const popularCategories = popularCategorySlugs
+    .map((slug) => categories.find((category) => category.slug === slug))
+    .filter(Boolean);
+
   return (
     <form className="contribution-form" onSubmit={submit}>
       <div className="form-heading">
@@ -465,20 +513,92 @@ export default function AddPlace() {
             />
           </label>
 
-          <label>
-            Danh mục
-            <select
-              name="categorySlug"
-              value={form.categorySlug}
-              onChange={updateField}
-            >
-              {categories.map((category) => (
-                <option key={category.slug} value={category.slug}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="contribution-category-field">
+            <span className="contribution-field-label">Danh mục</span>
+
+            <div className="contribution-category-picker" ref={categoryMenuRef}>
+              <button
+                type="button"
+                className={categoryMenuOpen ? 'category-picker-trigger open' : 'category-picker-trigger'}
+                onClick={() => setCategoryMenuOpen((value) => !value)}
+                aria-expanded={categoryMenuOpen}
+                aria-haspopup="listbox"
+              >
+                <span className="category-picker-initial">
+                  {(selectedCategory?.name || 'D').trim().charAt(0).toUpperCase()}
+                </span>
+                <span className="category-picker-selected">
+                  <strong>{selectedCategory?.name || 'Chọn danh mục'}</strong>
+                  <small>Chọn nhóm phù hợp nhất với địa điểm</small>
+                </span>
+                <ChevronDown size={17} />
+              </button>
+
+              {categoryMenuOpen && (
+                <div className="category-picker-menu">
+                  <div className="category-picker-search">
+                    <Search size={16} />
+                    <input
+                      value={categoryQuery}
+                      onChange={(event) => setCategoryQuery(event.target.value)}
+                      placeholder="Tìm danh mục..."
+                      autoFocus
+                      aria-label="Tìm danh mục"
+                    />
+                  </div>
+
+                  {!categoryQuery && popularCategories.length > 0 && (
+                    <div className="category-picker-popular">
+                      <span>Phổ biến</span>
+                      <div>
+                        {popularCategories.map((category) => (
+                          <button
+                            key={category.slug}
+                            type="button"
+                            className={form.categorySlug === category.slug ? 'active' : ''}
+                            onClick={() => selectCategory(category.slug)}
+                          >
+                            {category.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="category-picker-list" role="listbox" aria-label="Danh sách danh mục">
+                    {filteredCategories.map((category) => {
+                      const active = form.categorySlug === category.slug;
+                      return (
+                        <button
+                          key={category.slug}
+                          type="button"
+                          role="option"
+                          aria-selected={active}
+                          className={active ? 'category-picker-option active' : 'category-picker-option'}
+                          onClick={() => selectCategory(category.slug)}
+                        >
+                          <span className="category-picker-option-icon">
+                            {category.name.trim().charAt(0).toUpperCase()}
+                          </span>
+                          <span>
+                            <strong>{category.name}</strong>
+                            <small>{category.slug.replaceAll('-', ' ')}</small>
+                          </span>
+                          {active && <Check size={16} />}
+                        </button>
+                      );
+                    })}
+
+                    {!filteredCategories.length && (
+                      <div className="category-picker-empty">
+                        Không tìm thấy danh mục phù hợp.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
           <label>
             Mức giá
