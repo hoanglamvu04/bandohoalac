@@ -54,3 +54,15 @@ CREATE INDEX IF NOT EXISTS housing_listings_amenities_idx
     has_private_bathroom,
     has_parking
   );
+
+
+ALTER TABLE housing_listings
+  DROP CONSTRAINT IF EXISTS housing_listings_room_count_check;
+
+ALTER TABLE housing_listings
+  ADD CONSTRAINT housing_listings_room_count_check
+  CHECK (
+    available_rooms IS NULL
+    OR total_rooms IS NULL
+    OR available_rooms <= total_rooms
+  );
