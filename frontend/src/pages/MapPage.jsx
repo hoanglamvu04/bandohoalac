@@ -4,6 +4,7 @@ import {
   Building2,
   CalendarDays,
   Camera,
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -240,6 +241,87 @@ function normalizePlaceCategory(value) {
     .replace(/[-_/]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function MapFilterSelect({
+  label,
+  value,
+  options,
+  onChange,
+  searchable = false,
+  searchPlaceholder = 'Tìm lựa chọn...'
+}) {
+  const detailsRef = useRef(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const selected = options.find((option) => String(option.value) === String(value)) || options[0] || null;
+  const needle = normalizePlaceCategory(searchQuery);
+  const visibleOptions = needle
+    ? options.filter((option) => normalizePlaceCategory(option.label).includes(needle))
+    : options;
+
+  function choose(option) {
+    if (option.disabled) return;
+    onChange(option.value);
+    setSearchQuery('');
+    detailsRef.current?.removeAttribute('open');
+  }
+
+  return (
+    <div className="hm-filter-field hm-filter-select-field">
+      <span>{label}</span>
+      <details
+        className="hm-filter-select"
+        ref={detailsRef}
+        onToggle={(event) => {
+          if (!event.currentTarget.open) setSearchQuery('');
+        }}
+      >
+        <summary>
+          <strong>{selected?.label || 'Chọn'}</strong>
+          <ChevronDown size={14} />
+        </summary>
+
+        <div className="hm-filter-select-menu">
+          {searchable && (
+            <div className="hm-filter-select-search">
+              <Search size={14} />
+              <input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder={searchPlaceholder}
+                onClick={(event) => event.stopPropagation()}
+                aria-label={searchPlaceholder}
+              />
+            </div>
+          )}
+
+          <div className="hm-filter-select-options" role="listbox" aria-label={label}>
+            {visibleOptions.map((option) => {
+              const active = String(option.value) === String(value);
+              return (
+                <button
+                  key={String(option.value)}
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  className={active ? 'active' : ''}
+                  disabled={option.disabled}
+                  onClick={() => choose(option)}
+                >
+                  <span>{option.label}</span>
+                  {active && <Check size={14} />}
+                </button>
+              );
+            })}
+
+            {!visibleOptions.length && (
+              <div className="hm-filter-select-empty">Không tìm thấy lựa chọn phù hợp.</div>
+            )}
+          </div>
+        </div>
+      </details>
+    </div>
+  );
 }
 
 function getPlaceCategoryVisual(place) {
@@ -1877,77 +1959,83 @@ export default function MapPage() {
                     <span><b>Phòng trọ</b><small>Đang lọc riêng dữ liệu Housing trên bản đồ</small></span>
                   </div>
                 ) : (
-                  <label className="hm-filter-field">
-                    <span>{isFoodMode ? 'Loại ăn uống' : 'Danh mục'}</span>
-                    <select
-                      value={category}
-                      onChange={(event) => handleCategoryChange(event.target.value)}
-                    >
-                      {isFoodMode ? (
-                        <>
-                          <option value="all">Tất cả ăn uống</option>
-                          <option value="an-uong">Quán ăn</option>
-                          <option value="cafe">Cafe</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="all">Tất cả danh mục</option>
-                          {categories.map((item) => (
-                            <option key={item.slug} value={item.slug}>{item.name}</option>
-                          ))}
-                        </>
-                      )}
-                    </select>
-                  </label>
+                  <MapFilterSelect
+                    label={isFoodMode ? 'Loại ăn uống' : 'Danh mục'}
+                    value={category}
+                    searchable={!isFoodMode}
+                    searchPlaceholder="Tìm danh mục..."
+                    options={isFoodMode
+                      ? [
+                          { value: 'all', label: 'Tất cả ăn uống' },
+                          { value: 'an-uong', label: 'Quán ăn' },
+                          { value: 'cafe', label: 'Cafe' }
+                        ]
+                      : [
+                          { value: 'all', label: 'Tất cả danh mục' },
+                          ...categories.map((item) => ({
+                            value: item.slug,
+                            label: item.name
+                          }))
+                        ]}
+                    onChange={handleCategoryChange}
+                  />
                 )}
 
                 {isHousingMode && (
                   <div className="hm-map-housing-filters">
                     <div className="hm-filter-popover-grid housing-grid">
-                      <label className="hm-filter-field">
-                        <span>Giá từ</span>
-                        <select value={housingMinRent} onChange={(event) => handleHousingFilterChange('minRent', event.target.value)}>
-                          <option value="">Không giới hạn</option>
-                          <option value="1000000">1 triệu</option>
-                          <option value="1500000">1,5 triệu</option>
-                          <option value="2000000">2 triệu</option>
-                          <option value="2500000">2,5 triệu</option>
-                          <option value="3000000">3 triệu</option>
-                        </select>
-                      </label>
-                      <label className="hm-filter-field">
-                        <span>Giá tối đa</span>
-                        <select value={housingMaxRent} onChange={(event) => handleHousingFilterChange('maxRent', event.target.value)}>
-                          <option value="">Không giới hạn</option>
-                          <option value="1500000">1,5 triệu</option>
-                          <option value="2000000">2 triệu</option>
-                          <option value="2500000">2,5 triệu</option>
-                          <option value="3000000">3 triệu</option>
-                          <option value="4000000">4 triệu</option>
-                          <option value="5000000">5 triệu</option>
-                        </select>
-                      </label>
-                      <label className="hm-filter-field">
-                        <span>Tới ĐH FPT</span>
-                        <select value={housingMaxDistanceFpt} onChange={(event) => handleHousingFilterChange('maxDistanceFpt', event.target.value)}>
-                          <option value="">Mọi khoảng cách</option>
-                          <option value="1000">≤ 1 km</option>
-                          <option value="2000">≤ 2 km</option>
-                          <option value="3000">≤ 3 km</option>
-                          <option value="5000">≤ 5 km</option>
-                          <option value="10000">≤ 10 km</option>
-                        </select>
-                      </label>
-                      <label className="hm-filter-field">
-                        <span>Tình trạng</span>
-                        <select value={housingAvailability} onChange={(event) => handleHousingFilterChange('availability', event.target.value)}>
-                          <option value="">Tất cả</option>
-                          <option value="AVAILABLE">Còn phòng</option>
-                          <option value="LIMITED">Sắp hết</option>
-                          <option value="FULL">Hết phòng</option>
-                          <option value="UNKNOWN">Chưa xác nhận</option>
-                        </select>
-                      </label>
+                      <MapFilterSelect
+                        label="Giá từ"
+                        value={housingMinRent}
+                        options={[
+                          { value: '', label: 'Không giới hạn' },
+                          { value: '1000000', label: '1 triệu' },
+                          { value: '1500000', label: '1,5 triệu' },
+                          { value: '2000000', label: '2 triệu' },
+                          { value: '2500000', label: '2,5 triệu' },
+                          { value: '3000000', label: '3 triệu' }
+                        ]}
+                        onChange={(value) => handleHousingFilterChange('minRent', value)}
+                      />
+                      <MapFilterSelect
+                        label="Giá tối đa"
+                        value={housingMaxRent}
+                        options={[
+                          { value: '', label: 'Không giới hạn' },
+                          { value: '1500000', label: '1,5 triệu' },
+                          { value: '2000000', label: '2 triệu' },
+                          { value: '2500000', label: '2,5 triệu' },
+                          { value: '3000000', label: '3 triệu' },
+                          { value: '4000000', label: '4 triệu' },
+                          { value: '5000000', label: '5 triệu' }
+                        ]}
+                        onChange={(value) => handleHousingFilterChange('maxRent', value)}
+                      />
+                      <MapFilterSelect
+                        label="Tới ĐH FPT"
+                        value={housingMaxDistanceFpt}
+                        options={[
+                          { value: '', label: 'Mọi khoảng cách' },
+                          { value: '1000', label: '≤ 1 km' },
+                          { value: '2000', label: '≤ 2 km' },
+                          { value: '3000', label: '≤ 3 km' },
+                          { value: '5000', label: '≤ 5 km' },
+                          { value: '10000', label: '≤ 10 km' }
+                        ]}
+                        onChange={(value) => handleHousingFilterChange('maxDistanceFpt', value)}
+                      />
+                      <MapFilterSelect
+                        label="Tình trạng"
+                        value={housingAvailability}
+                        options={[
+                          { value: '', label: 'Tất cả' },
+                          { value: 'AVAILABLE', label: 'Còn phòng' },
+                          { value: 'LIMITED', label: 'Sắp hết' },
+                          { value: 'FULL', label: 'Hết phòng' },
+                          { value: 'UNKNOWN', label: 'Chưa xác nhận' }
+                        ]}
+                        onChange={(value) => handleHousingFilterChange('availability', value)}
+                      />
                     </div>
 
                     <div className="hm-map-housing-toggles">
@@ -1970,33 +2058,35 @@ export default function MapPage() {
                 )}
 
                 <div className="hm-filter-popover-grid">
-                  <label className="hm-filter-field">
-                    <span>Đánh giá</span>
-                    <select
-                      value={minRating}
-                      onChange={(event) => handleRatingChange(event.target.value)}
-                    >
-                      <option value="">Mọi đánh giá</option>
-                      <option value="4">★ 4.0+</option>
-                      <option value="4.5">★ 4.5+</option>
-                    </select>
-                  </label>
+                  <MapFilterSelect
+                    label="Đánh giá"
+                    value={minRating}
+                    options={[
+                      { value: '', label: 'Mọi đánh giá' },
+                      { value: '4', label: '★ 4.0+' },
+                      { value: '4.5', label: '★ 4.5+' }
+                    ]}
+                    onChange={handleRatingChange}
+                  />
 
-                  <label className="hm-filter-field">
-                    <span>Sắp xếp</span>
-                    <select
-                      value={sortMode}
-                      onChange={(event) => handleSortChange(event.target.value)}
-                    >
-                      <option value="relevant">Phù hợp</option>
-                      {isHousingMode && <option value="rent-asc">Giá thấp trước</option>}
-                      {isHousingMode && <option value="rent-desc">Giá cao trước</option>}
-                      {isHousingMode && <option value="fpt-distance">Gần ĐH FPT trước</option>}
-                      <option value="nearest" disabled={!userLocation}>Gần vị trí tôi</option>
-                      <option value="rating">Đánh giá cao</option>
-                      <option value="recent">Mới cập nhật</option>
-                    </select>
-                  </label>
+                  <MapFilterSelect
+                    label="Sắp xếp"
+                    value={sortMode}
+                    options={[
+                      { value: 'relevant', label: 'Phù hợp' },
+                      ...(isHousingMode
+                        ? [
+                            { value: 'rent-asc', label: 'Giá thấp trước' },
+                            { value: 'rent-desc', label: 'Giá cao trước' },
+                            { value: 'fpt-distance', label: 'Gần ĐH FPT trước' }
+                          ]
+                        : []),
+                      { value: 'nearest', label: 'Gần vị trí tôi', disabled: !userLocation },
+                      { value: 'rating', label: 'Đánh giá cao' },
+                      { value: 'recent', label: 'Mới cập nhật' }
+                    ]}
+                    onChange={handleSortChange}
+                  />
                 </div>
 
                 <div className="hm-filter-popover-footer">
