@@ -204,6 +204,12 @@ export async function listHousingListings(filters = {}) {
     conditions.push('COALESCE(hl.available_rooms, 1) > 0');
   }
 
+  if (booleanValue(filters.partnerOnly) === true) {
+    conditions.push(
+      "EXISTS (SELECT 1 FROM place_partners pp WHERE pp.place_id = p.id AND pp.status = 'ACTIVE')"
+    );
+  }
+
   const booleanFilters = [
     ['airConditioner', 'hl.has_air_conditioner'],
     ['waterHeater', 'hl.has_water_heater'],
