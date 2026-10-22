@@ -171,26 +171,32 @@ export default function ExploreArticlePage() {
         jsonLd={jsonLd}
       />
 
-      <header className="explore-article-hero">
-        <div className="explore-article-hero-bg">
-          {article.coverImage
-            ? <img src={article.coverImage} alt="" />
-            : <div><Compass size={54} /></div>}
-        </div>
+      <header className={article.coverImage ? 'explore-article-hero has-cover' : 'explore-article-hero'}>
+        <div className="explore-shell explore-article-hero-inner">
+          <div className="explore-article-hero-content">
+            <Link className="explore-back" to="/kham-pha">
+              <ArrowLeft size={16} />
+              <span>Khám phá</span>
+            </Link>
 
-        <div className="explore-shell explore-article-hero-content">
-          <Link className="explore-back" to="/kham-pha"><ArrowLeft size={17} /> Khám phá</Link>
-          <span className="explore-kicker">{article.eyebrow}</span>
-          <h1>{article.title}</h1>
-          <p>{article.excerpt}</p>
+            <span className="explore-kicker">{article.eyebrow}</span>
+            <h1>{article.title}</h1>
+            <p>{article.excerpt}</p>
 
-          <div className="explore-article-meta">
-            <span><CalendarDays size={15} /> {formatDate(article.publishedAt)}</span>
-            <span><Clock3 size={15} /> {article.readingMinutes} phút đọc</span>
-            <button type="button" onClick={shareArticle}>
-              <Share2 size={15} /> {shared ? 'Đã sao chép' : 'Chia sẻ'}
-            </button>
+            <div className="explore-article-meta">
+              <span><CalendarDays size={15} /> {formatDate(article.publishedAt)}</span>
+              <span><Clock3 size={15} /> {article.readingMinutes} phút đọc</span>
+              <button type="button" onClick={shareArticle}>
+                <Share2 size={15} /> {shared ? 'Đã sao chép' : 'Chia sẻ'}
+              </button>
+            </div>
           </div>
+
+          {article.coverImage && (
+            <div className="explore-article-hero-media">
+              <img src={article.coverImage} alt={article.title} />
+            </div>
+          )}
         </div>
       </header>
 
