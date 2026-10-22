@@ -34,32 +34,32 @@ import AdvertisementCarousel from '../components/AdvertisementCarousel.jsx';
 
 const FEATURE_CARDS = [
   {
-    icon: MapPin,
-    title: 'Địa điểm nổi bật',
-    text: 'Khám phá các địa điểm quan trọng, tiện ích xung quanh Hòa Lạc.',
+    icon: Home,
+    title: 'Tìm phòng trọ',
+    text: 'Phòng trọ và nhà ở quanh Hòa Lạc, ưu tiên dữ liệu có thể xác minh.',
     tone: 'blue',
-    to: '/map'
+    to: '/phong-tro'
   },
   {
-    icon: Layers3,
-    title: 'Lớp dữ liệu',
-    text: 'Xem bản đồ theo nhiều lớp dữ liệu: địa hình, công trình, sông hồ, quy hoạch...',
+    icon: UtensilsCrossed,
+    title: 'Ăn uống',
+    text: 'Quán ăn, cafe và địa điểm phù hợp cho sinh viên, gia đình và nhóm bạn.',
+    tone: 'orange',
+    to: '/an-uong'
+  },
+  {
+    icon: Compass,
+    title: 'Khám phá Hòa Lạc',
+    text: 'Cẩm nang địa phương, lịch trình và gợi ý kết nối trực tiếp với bản đồ.',
     tone: 'green',
-    to: '/map'
+    to: '/kham-pha'
   },
   {
     icon: UsersRound,
-    title: 'Cộng đồng đóng góp',
-    text: 'Kết nối những người cùng quan tâm và xây dựng Hòa Lạc tốt hơn.',
-    tone: 'orange',
-    to: '/leaderboard'
-  },
-  {
-    icon: Navigation,
-    title: 'Dẫn đường thông minh',
-    text: 'Tìm đường nhanh chóng với thông tin giao thông cập nhật.',
+    title: 'HOLA Contributor',
+    text: 'Cùng cập nhật địa điểm, ảnh và dữ liệu thực tế để nhận điểm và phần thưởng.',
     tone: 'purple',
-    to: '/map'
+    to: '/cong-tac-vien'
   }
 ];
 
@@ -313,22 +313,22 @@ export default function HomePage() {
               Giới thiệu nhanh
             </span>
 
-            <h3>Hola Maps – bản đồ cộng đồng dành riêng cho Hòa Lạc.</h3>
+            <h3>HOLA Maps – mọi thứ bạn cần ở Hòa Lạc.</h3>
             <p>
-              Tập trung địa điểm, tuyến đường, lớp dữ liệu và thông tin thực tế
-              tại Hòa Lạc và 8 xã lân cận trong một trải nghiệm dễ tra cứu,
-              dễ đóng góp và luôn được cộng đồng cập nhật.
+              Tìm phòng trọ, quán ăn, cafe, dịch vụ và những nơi đáng đi;
+              sau đó mở thẳng trên bản đồ, xem dữ liệu cộng đồng và kết nối với
+              các HOLA Partner địa phương.
             </p>
 
             <div className="home-info-actions">
-              <Link className="home-info-primary" to="/map">
-                <Map size={16} />
-                Mở bản đồ
+              <Link className="home-info-primary" to="/phong-tro">
+                <Home size={16} />
+                Tìm phòng trọ
                 <ArrowRight size={15} />
               </Link>
-              <Link className="home-info-secondary" to="/contribute">
-                <Plus size={16} />
-                Đóng góp địa điểm
+              <Link className="home-info-secondary" to="/an-uong">
+                <UtensilsCrossed size={16} />
+                Tìm quán ăn
               </Link>
             </div>
           </div>
