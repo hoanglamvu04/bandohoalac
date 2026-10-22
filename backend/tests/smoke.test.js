@@ -62,6 +62,13 @@ test('GET /api/housing validates structured filters', async () => {
   assert.equal(res.status, 400);
 });
 
+test('GET /api/housing accepts the partner-only Housing V2 filter', async () => {
+  const res = await fetch(url('/api/housing?partnerOnly=true&minAvailableRooms=1&maxArea=40'));
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body.items));
+});
+
 test('GET /api/housing supports distance and amenity filters', async () => {
   const res = await fetch(url('/api/housing?maxDistanceFpt=3000&parking=true&sort=distance'));
   assert.equal(res.status, 200);
