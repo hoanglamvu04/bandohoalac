@@ -148,7 +148,7 @@ export async function listManagedPlaces(userId, client = pool) {
          pp.partner_name,
          pp.status AS partner_status,
          prm.role AS partner_role,
-         FALSE AS can_edit_place,
+         (prm.role = 'OWNER') AS can_edit_place,
          (prm.role = 'OWNER') AS can_manage_staff,
          (
            SELECT pi.url
@@ -904,12 +904,30 @@ export async function updatePartnerStaffStatus({
 export async function updateManagedPlace({ userId, placeId, values }) {
   return withTransaction(async (client) => {
     const access = await client.query(
-      `SELECT pm.role, c.slug AS category_slug
-       FROM place_managers pm
-       JOIN places p ON p.id = pm.place_id
+      `SELECT
+         p.id,
+         c.slug AS category_slug,
+         COALESCE(
+           pm.role,
+           CASE WHEN prm.role = 'OWNER' THEN 'OWNER' ELSE NULL END
+         ) AS role
+       FROM places p
        LEFT JOIN categories c ON c.id = p.category_id
-       WHERE pm.place_id = $1
-         AND pm.user_id = $2
+       LEFT JOIN place_managers pm
+         ON pm.place_id = p.id
+        AND pm.user_id = $2
+       LEFT JOIN place_partners pp
+         ON pp.place_id = p.id
+       LEFT JOIN partner_memberships prm
+         ON prm.partner_id = pp.id
+        AND prm.user_id = $2
+        AND prm.status = 'ACTIVE'
+       WHERE p.id = $1
+         AND (
+           pm.user_id IS NOT NULL
+           OR prm.role = 'OWNER'
+         )
+       ORDER BY CASE WHEN pm.user_id IS NOT NULL THEN 0 ELSE 1 END
        LIMIT 1
        FOR UPDATE OF p`,
       [placeId, userId]
