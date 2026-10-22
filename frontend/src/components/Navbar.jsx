@@ -26,11 +26,32 @@ import {
 } from '../services/api.js';
 
 const navItems = [
-  { to: '/map', label: 'Bản đồ', icon: MapPinned, mapMode: 'default' },
-  { to: '/map?vertical=housing&category=bat-dong-san', label: 'Phòng trọ', icon: Home, mapMode: 'housing' },
-  { to: '/map?vertical=food', label: 'Ăn uống', icon: UtensilsCrossed, mapMode: 'food' },
   { to: '/kham-pha', label: 'Khám phá', icon: Compass },
   { to: '/leaderboard', label: 'Cộng đồng', icon: Trophy }
+];
+
+const mapNavItems = [
+  {
+    to: '/map',
+    label: 'Bản đồ chung',
+    description: 'Tất cả địa điểm và lớp dữ liệu Hòa Lạc',
+    icon: MapPinned,
+    mode: 'default'
+  },
+  {
+    to: '/map?vertical=housing&category=bat-dong-san',
+    label: 'Bản đồ phòng trọ',
+    description: 'Giá thuê, còn phòng, tiện ích và khoảng cách FPT',
+    icon: Home,
+    mode: 'housing'
+  },
+  {
+    to: '/map?vertical=food',
+    label: 'Bản đồ ăn uống',
+    description: 'Quán ăn, cafe, đang mở và địa điểm gần bạn',
+    icon: UtensilsCrossed,
+    mode: 'food'
+  }
 ];
 
 function notificationTarget(item) {
@@ -46,6 +67,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [mapMenuOpen, setMapMenuOpen] = useState(false);
   const [mobileAccountOpen, setMobileAccountOpen] = useState(false);
   const [homeSearch, setHomeSearch] = useState('');
   const [homeHeaderScrolled, setHomeHeaderScrolled] = useState(false);
@@ -59,6 +81,7 @@ export default function Navbar() {
     )
   );
   const notificationRef = useRef(null);
+  const mapMenuRef = useRef(null);
   const mobileAccountRef = useRef(null);
   const desktopAccountRef = useRef(null);
 
@@ -147,6 +170,10 @@ export default function Navbar() {
         setNotificationsOpen(false);
       }
 
+      if (mapMenuRef.current && !mapMenuRef.current.contains(event.target)) {
+        setMapMenuOpen(false);
+      }
+
       const insideMobileAccount = mobileAccountRef.current?.contains(event.target);
       const insideDesktopAccount = desktopAccountRef.current?.contains(event.target);
       if (!insideMobileAccount && !insideDesktopAccount) {
@@ -159,8 +186,9 @@ export default function Navbar() {
 
   useEffect(() => {
     setNotificationsOpen(false);
+    setMapMenuOpen(false);
     setMobileAccountOpen(false);
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   function submitHomeHeaderSearch(event) {
     event.preventDefault();
@@ -293,29 +321,66 @@ export default function Navbar() {
       )}
 
       <nav className="desktop-nav premium-desktop-nav compact-primary-nav">
-        {navItems.map(({to,label,icon:Icon,mapMode}) => {
-          const vertical = new URLSearchParams(location.search).get('vertical') || '';
-          const mapActive = location.pathname === '/map' && (
-            mapMode === 'housing'
-              ? vertical === 'housing'
-              : mapMode === 'food'
-                ? vertical === 'food'
-                : mapMode === 'default'
-                  ? !vertical
-                  : false
-          );
-          const normalActive = !mapMode && location.pathname === to;
+        <div className="nav-map-switcher" ref={mapMenuRef}>
+          <button
+            type="button"
+            className={location.pathname === '/map' ? 'nav-link nav-map-trigger active' : 'nav-link nav-map-trigger'}
+            onClick={() => setMapMenuOpen((value) => !value)}
+            aria-expanded={mapMenuOpen}
+            aria-haspopup="menu"
+          >
+            <MapPinned size={16}/>
+            Bản đồ
+            <ChevronDown className="nav-map-chevron" size={13}/>
+          </button>
 
-          return (
-            <NavLink
-              key={to}
-              to={to}
-              className={mapActive || normalActive ? 'nav-link active' : 'nav-link'}
-            >
-              <Icon size={16}/>{label}
-            </NavLink>
-          );
-        })}
+          {mapMenuOpen && (
+            <div className="nav-map-menu" role="menu">
+              <div className="nav-map-menu-head">
+                <span>CHỌN BẢN ĐỒ</span>
+                <b>Khám phá Hòa Lạc theo nhu cầu</b>
+              </div>
+
+              {mapNavItems.map(({to,label,description,icon:Icon,mode}) => {
+                const vertical = new URLSearchParams(location.search).get('vertical') || '';
+                const active = location.pathname === '/map' && (
+                  mode === 'housing'
+                    ? vertical === 'housing'
+                    : mode === 'food'
+                      ? vertical === 'food'
+                      : !vertical
+                );
+
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    role="menuitem"
+                    className={active ? 'nav-map-option active' : 'nav-map-option'}
+                    onClick={() => setMapMenuOpen(false)}
+                  >
+                    <span className={'nav-map-option-icon ' + mode}><Icon size={18}/></span>
+                    <span className="nav-map-option-copy">
+                      <b>{label}</b>
+                      <small>{description}</small>
+                    </span>
+                    <ChevronRight size={15}/>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {navItems.map(({to,label,icon:Icon}) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'}
+          >
+            <Icon size={16}/>{label}
+          </NavLink>
+        ))}
       </nav>
 
       <div className="nav-actions premium-nav-actions compact-nav-actions">
