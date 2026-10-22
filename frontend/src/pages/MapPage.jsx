@@ -1849,7 +1849,7 @@ export default function MapPage() {
             </button>
 
             {filterMenuOpen && (
-              <div className="hm-filter-popover">
+              <div className={isHousingMode ? 'hm-filter-popover housing-mode' : isFoodMode ? 'hm-filter-popover food-mode' : 'hm-filter-popover'}>
                 <div className="hm-filter-popover-head">
                   <div>
                     <small>TÙY CHỈNH HIỂN THỊ</small>
