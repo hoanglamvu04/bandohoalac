@@ -40,7 +40,6 @@ import './reputation-v2.css';
 import './reputation-v21.css';
 import './reputation-v22.css';
 import './reputation-v23.css';
-import './profile-readability-fix.css';
 import './community-verification.css';
 import './community-verification-admin.css';
 import './mobile-header-menu.css';
@@ -66,6 +65,7 @@ import './desktop-map-header-restore.css';
 import './desktop-map-sidebar-compact.css';
 import './public-info.css';
 import './explore.css';
+import './profile-readability-fix.css';
 /* Stability V3 must remain the final map stylesheet so legacy overrides cannot
    reintroduce the 100% browser zoom clipping/overlap bugs. */
 import './map-stability-v3.css';
