@@ -16,7 +16,7 @@ const CATEGORY_ALIASES = [
   { slug: 'nhien-lieu-sac', aliases: ['tram sac', 'cay xang', 'tram xang', 'nhien lieu'] },
   { slug: 'the-thao', aliases: ['gym', 'the thao', 'san bong', 'fitness'] },
   { slug: 'dich-vu', aliases: ['dich vu', 'spa', 'salon', 'sua xe'] },
-  { slug: 'bat-dong-san', aliases: ['bat dong san', 'nha dat', 'dat', 'dat nen', 'du an'] }
+  { slug: 'bat-dong-san', aliases: ['bat dong san', 'nha dat', 'dat', 'dat nen', 'du an', 'phong tro', 'nha tro', 'cho thue', 'phong cho thue'] }
 ];
 
 const LANDMARK_ALIASES = [
