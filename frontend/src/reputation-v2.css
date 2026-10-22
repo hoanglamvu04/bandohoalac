@@ -24,20 +24,25 @@
 }
 
 .profile-white-dashboard .reputation-score-main{
+  width:100%;
   display:flex;
   align-items:baseline;
-  gap:6px;
+  gap:7px;
+  white-space:nowrap;
 }
 
 .profile-white-dashboard .reputation-score-main strong{
+  flex:0 0 auto;
   color:#123e34!important;
-  font-size:34px!important;
+  font-size:30px!important;
 }
 
 .profile-white-dashboard .reputation-score-main>span{
+  min-width:0;
   color:#4e776c!important;
   font-size:12px!important;
   font-weight:850;
+  white-space:nowrap;
 }
 
 .profile-white-dashboard .reputation-reward-points{
@@ -45,15 +50,16 @@
   align-items:center!important;
   gap:5px!important;
   color:#8b6b22!important;
-  font-size:11px!important;
+  font-size:11.5px!important;
   font-weight:850!important;
+  white-space:nowrap;
 }
 
 .profile-white-dashboard .explorer-reputation-strip{
   position:relative;
   z-index:1;
-  margin:0 28px 14px;
-  padding:14px 16px;
+  margin:0 28px 16px;
+  padding:17px 18px;
   border:1px solid #dce8e3;
   border-radius:17px;
   background:rgba(248,252,250,.95);
@@ -72,19 +78,19 @@
   align-items:center;
   gap:6px;
   color:#174d41;
-  font-size:12px;
+  font-size:13.5px;
 }
 
 .profile-white-dashboard .explorer-reputation-heading em{
   color:#607d75;
-  font-size:11px;
+  font-size:12px;
   font-style:normal;
   font-weight:800;
 }
 
 .profile-white-dashboard .explorer-reputation-track{
-  height:8px;
-  margin:10px 0 9px;
+  height:9px;
+  margin:13px 0 10px;
   overflow:hidden;
   border-radius:999px;
   background:#e2ece8;
@@ -99,8 +105,8 @@
 }
 
 .profile-white-dashboard .explorer-reputation-foot>span{
-  color:#6d817b;
-  font-size:10px;
+  color:#5f7770;
+  font-size:11.5px;
   font-weight:850;
   white-space:nowrap;
 }
@@ -118,7 +124,7 @@
   border-radius:999px;
   color:#526f66!important;
   background:#edf4f1;
-  font-size:9px!important;
+  font-size:10.5px!important;
   font-weight:850!important;
 }
 
