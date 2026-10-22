@@ -34,13 +34,10 @@ import { getBestBrowserLocation } from '../utils/geolocation.js';
 const DATA_SOURCE_ID = 'hola-data-layers';
 const ROUTE_SOURCE_ID = 'hola-route-source';
 const COVERAGE_SOURCE_ID = 'hola-service-areas';
-const PLACE_SOURCE_ID = 'hola-place-clusters';
-const PLACE_CLUSTER_LAYER_ID = 'hm-place-clusters';
-const PLACE_CLUSTER_COUNT_LAYER_ID = 'hm-place-cluster-count';
-const PLACE_POINT_LAYER_ID = 'hm-place-cluster-point';
-const PLACE_POINT_LABEL_LAYER_ID = 'hm-place-cluster-point-label';
+const PLACE_SOURCE_ID = 'hola-place-points';
+const PLACE_POINT_LAYER_ID = 'hm-place-point';
+const PLACE_POINT_LABEL_LAYER_ID = 'hm-place-point-label';
 const PLACE_NAME_LABEL_LAYER_ID = 'hm-place-name-label';
-const PLACE_CLUSTER_MAX_ZOOM = 13;
 
 const BUILDING_2D_LAYER_IDS = [
   'hola-overture-building',
@@ -338,7 +335,7 @@ function applyPlaceInteractionState(map, selectedPlaceId, hoveredPlaceId) {
   }
 }
 
-function addPlaceClusterLayers(map, places = []) {
+function addPlaceLayers(map, places = []) {
   if (!map?.isStyleLoaded()) return;
 
   ensurePlaceMarkerImages(map);
@@ -351,56 +348,7 @@ function addPlaceClusterLayers(map, places = []) {
   } else {
     map.addSource(PLACE_SOURCE_ID, {
       type: 'geojson',
-      data,
-      cluster: true,
-      clusterMaxZoom: PLACE_CLUSTER_MAX_ZOOM,
-      clusterRadius: 54
-    });
-  }
-
-  if (!map.getLayer(PLACE_CLUSTER_LAYER_ID)) {
-    map.addLayer({
-      id: PLACE_CLUSTER_LAYER_ID,
-      type: 'circle',
-      source: PLACE_SOURCE_ID,
-      maxzoom: 14,
-      filter: ['has', 'point_count'],
-      paint: {
-        'circle-color': [
-          'step',
-          ['get', 'point_count'],
-          '#174d41',
-          20, '#0f6a57',
-          60, '#0b7c64'
-        ],
-        'circle-radius': [
-          'step',
-          ['get', 'point_count'],
-          18,
-          20, 22,
-          60, 27
-        ],
-        'circle-stroke-width': 3,
-        'circle-stroke-color': 'rgba(255,255,255,.92)'
-      }
-    });
-  }
-
-  if (!map.getLayer(PLACE_CLUSTER_COUNT_LAYER_ID)) {
-    map.addLayer({
-      id: PLACE_CLUSTER_COUNT_LAYER_ID,
-      type: 'symbol',
-      source: PLACE_SOURCE_ID,
-      maxzoom: 14,
-      filter: ['has', 'point_count'],
-      layout: {
-        'text-field': ['get', 'point_count_abbreviated'],
-        'text-size': 11,
-        'text-font': ['Noto Sans Regular']
-      },
-      paint: {
-        'text-color': '#ffffff'
-      }
+      data
     });
   }
 
@@ -411,7 +359,6 @@ function addPlaceClusterLayers(map, places = []) {
       id: PLACE_POINT_LAYER_ID,
       type: 'circle',
       source: PLACE_SOURCE_ID,
-      filter: ['!', ['has', 'point_count']],
       paint: {
         'circle-radius': [
           'interpolate',
@@ -464,7 +411,6 @@ function addPlaceClusterLayers(map, places = []) {
       id: PLACE_POINT_LABEL_LAYER_ID,
       type: 'symbol',
       source: PLACE_SOURCE_ID,
-      filter: ['!', ['has', 'point_count']],
       layout: {
         'icon-image': ['coalesce', ['get', 'markerIcon'], 'hm-marker-default'],
         'icon-size': [
@@ -496,7 +442,6 @@ function addPlaceClusterLayers(map, places = []) {
       type: 'symbol',
       source: PLACE_SOURCE_ID,
       minzoom: 15.4,
-      filter: ['!', ['has', 'point_count']],
       layout: {
         'text-field': ['get', 'name'],
         'text-font': ['Noto Sans Regular'],
@@ -1014,7 +959,7 @@ export default function MapView({
         map.on('load', () => {
           addCoverage(map);
           addDataLayers(map, mapData);
-          addPlaceClusterLayers(map, validPlaces);
+          addPlaceLayers(map, validPlaces);
           applyPlaceInteractionState(
             map,
             latestSelectedPlaceIdRef.current,
@@ -1049,35 +994,7 @@ export default function MapView({
 
         map.on('moveend', notifyViewport);
 
-        const zoomToCluster = (event) => {
-          const feature = event.features?.[0];
-          const clusterId = feature?.properties?.cluster_id;
-          if (clusterId === undefined || clusterId === null) return;
-
-          const source = map.getSource(PLACE_SOURCE_ID);
-          if (!source?.getClusterExpansionZoom) return;
-
-          const go = (zoom) => {
-            if (!Number.isFinite(Number(zoom))) return;
-            map.easeTo({
-              center: feature.geometry.coordinates,
-              zoom: Math.min(Number(zoom) + 0.15, 15),
-              duration: 450
-            });
-          };
-
-          if (source.getClusterExpansionZoom.length >= 2) {
-            source.getClusterExpansionZoom(clusterId, (error, zoom) => {
-              if (!error) go(zoom);
-            });
-          } else {
-            Promise.resolve(source.getClusterExpansionZoom(clusterId))
-              .then(go)
-              .catch(() => {});
-          }
-        };
-
-        const selectClusterPoint = (event) => {
+        const selectPlacePoint = (event) => {
           const feature = event.features?.[0];
           const placeId = feature?.properties?.placeId;
           if (!placeId) return;
@@ -1088,7 +1005,7 @@ export default function MapView({
           if (place) latestSelectPlaceRef.current?.(place);
         };
 
-        const hoverClusterPoint = (event) => {
+        const hoverPlacePoint = (event) => {
           const placeId = event.features?.[0]?.properties?.placeId;
           if (!placeId || String(hoveredPointerPlaceIdRef.current) === String(placeId)) {
             return;
@@ -1098,23 +1015,16 @@ export default function MapView({
           latestHoverPlaceRef.current?.(String(placeId));
         };
 
-        const clearClusterPointHover = () => {
+        const clearPlacePointHover = () => {
           if (hoveredPointerPlaceIdRef.current === null) return;
           hoveredPointerPlaceIdRef.current = null;
           latestHoverPlaceRef.current?.(null);
         };
 
-        map.on('click', PLACE_CLUSTER_LAYER_ID, zoomToCluster);
-        map.on('click', PLACE_POINT_LABEL_LAYER_ID, selectClusterPoint);
-        map.on('mousemove', PLACE_POINT_LABEL_LAYER_ID, hoverClusterPoint);
-        map.on('mouseleave', PLACE_POINT_LABEL_LAYER_ID, clearClusterPointHover);
+        map.on('click', PLACE_POINT_LABEL_LAYER_ID, selectPlacePoint);
+        map.on('mousemove', PLACE_POINT_LABEL_LAYER_ID, hoverPlacePoint);
+        map.on('mouseleave', PLACE_POINT_LABEL_LAYER_ID, clearPlacePointHover);
 
-        map.on('mouseenter', PLACE_CLUSTER_LAYER_ID, () => {
-          map.getCanvas().style.cursor = 'pointer';
-        });
-        map.on('mouseleave', PLACE_CLUSTER_LAYER_ID, () => {
-          map.getCanvas().style.cursor = '';
-        });
         map.on('mouseenter', PLACE_POINT_LABEL_LAYER_ID, () => {
           map.getCanvas().style.cursor = 'pointer';
         });
@@ -1323,7 +1233,7 @@ export default function MapView({
 
         addCoverage(map);
         addDataLayers(map, latestMapDataRef.current);
-        addPlaceClusterLayers(map, latestPlacesRef.current);
+        addPlaceLayers(map, latestPlacesRef.current);
         applyPlaceInteractionState(
           map,
           latestSelectedPlaceIdRef.current,
@@ -1389,7 +1299,7 @@ export default function MapView({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !interactiveReady) return;
-    addPlaceClusterLayers(map, validPlaces);
+    addPlaceLayers(map, validPlaces);
   }, [validPlaces, interactiveReady]);
 
 
