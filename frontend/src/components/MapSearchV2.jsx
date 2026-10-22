@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   GraduationCap,
+  House,
   Landmark,
   LocateFixed,
   MapPin,
   Navigation,
   Route,
   Search,
+  UtensilsCrossed,
   X
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { getNearbyPlaces, getPlaces } from '../services/api.js';
+import { getHousingListings, getNearbyPlaces, getPlaces } from '../services/api.js';
 import { getBestBrowserLocation } from '../utils/geolocation.js';
 import { focusHolaMapPoint } from '../mapInteractionBridge.js';
 
@@ -28,6 +30,23 @@ function fold(value) {
 function requiresUserLocation(query) {
   const value = fold(query);
   return value.includes('gan toi') || value.includes('quanh toi') || value.includes('vi tri cua toi');
+}
+
+function inferVerticalIntent(query) {
+  const value = fold(query);
+  if (/(phong tro|nha tro|phong cho thue|nha cho thue|tim tro)/.test(value)) return 'housing';
+  if (/(an uong|quan an|nha hang|cafe|coffee|ca phe|an dem|do an)/.test(value)) return 'food';
+  return '';
+}
+
+function stripHousingIntent(query) {
+  return String(query || '')
+    .replace(/(?:phòng|phong)\s*(?:trọ|tro)/gi, ' ')
+    .replace(/(?:nhà|nha)\s*(?:trọ|tro)/gi, ' ')
+    .replace(/(?:phòng|phong|nhà|nha)\s*(?:cho\s*)?(?:thuê|thue)/gi, ' ')
+    .replace(/(?:tìm|tim)\s*(?:trọ|tro)/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function inferNearbyCategory(query) {
@@ -103,6 +122,8 @@ export default function MapSearchV2() {
   const requestRef = useRef(0);
 
   const topResults = useMemo(() => results.slice(0, 8), [results]);
+  const verticalIntent = useMemo(() => inferVerticalIntent(query), [query]);
+  const activeVertical = params.get('vertical') || '';
 
   useEffect(() => {
     const needle = query.trim();
@@ -126,6 +147,12 @@ export default function MapSearchV2() {
         if (requiresUserLocation(needle)) {
           const location = await getBestBrowserLocation({ timeout: 9000, targetAccuracy: 80 });
           data = await nearbySearch(needle, location);
+        } else if (inferVerticalIntent(needle) === 'housing') {
+          const housingQuery = stripHousingIntent(needle);
+          data = await getHousingListings(
+            { q: housingQuery || undefined, limit: 40 },
+            { signal: controller.signal }
+          );
         } else {
           data = await getPlaces({ q: needle, limit: 40 }, { signal: controller.signal });
         }
@@ -161,6 +188,28 @@ export default function MapSearchV2() {
     setOpen(false);
   }
 
+  function openVertical(intent = verticalIntent) {
+    if (!intent) return;
+
+    const next = new URLSearchParams(params);
+    next.delete('place');
+    next.delete('q');
+
+    if (intent === 'housing') {
+      next.set('vertical', 'housing');
+      next.set('category', 'bat-dong-san');
+    } else if (intent === 'food') {
+      next.set('vertical', 'food');
+      next.delete('category');
+    }
+
+    setQuery('');
+    setResults([]);
+    setMeta(null);
+    setOpen(false);
+    setParams(next, { replace: true });
+  }
+
   function chooseResult(item) {
     if (!item) return;
     setOpen(false);
@@ -182,6 +231,16 @@ export default function MapSearchV2() {
     const next = new URLSearchParams(params);
     next.set('place', String(item.id));
     next.delete('q');
+
+    if (verticalIntent === 'housing') {
+      next.set('vertical', 'housing');
+      next.set('category', 'bat-dong-san');
+    } else if (verticalIntent === 'food') {
+      next.set('vertical', 'food');
+      if (item?.categorySlug === 'cafe') next.set('category', 'cafe');
+      else if (item?.categorySlug === 'an-uong') next.set('category', 'an-uong');
+    }
+
     setParams(next, { replace: true });
   }
 
@@ -193,7 +252,17 @@ export default function MapSearchV2() {
           value={query}
           onFocus={() => query.trim().length >= 2 && setOpen(true)}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Tìm địa điểm..."
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && verticalIntent) {
+              event.preventDefault();
+              openVertical(verticalIntent);
+            }
+          }}
+          placeholder={activeVertical === 'housing'
+            ? 'Tìm phòng trọ, khu vực...'
+            : activeVertical === 'food'
+              ? 'Tìm quán ăn, cafe...'
+              : 'Tìm địa điểm...'}
           aria-label="Tìm kiếm Hola Maps"
         />
         {loading && <span className="hm-search-v2-loading" />}
@@ -204,6 +273,31 @@ export default function MapSearchV2() {
 
       {open && query.trim().length >= 2 && (
         <div className="hm-search-v2-dropdown">
+          {verticalIntent && (
+            <button
+              className={'hm-search-v2-vertical hm-search-v2-vertical-' + verticalIntent}
+              type="button"
+              onClick={() => openVertical(verticalIntent)}
+            >
+              <span className="hm-search-v2-icon">
+                {verticalIntent === 'housing' ? <House size={18} /> : <UtensilsCrossed size={18} />}
+              </span>
+              <span className="hm-search-v2-copy">
+                <strong>
+                  {verticalIntent === 'housing'
+                    ? 'Xem phòng trọ trực tiếp trên bản đồ'
+                    : 'Xem ăn uống trực tiếp trên bản đồ'}
+                </strong>
+                <small>
+                  {verticalIntent === 'housing'
+                    ? 'Giá · còn phòng · khoảng cách FPT · tiện ích'
+                    : 'Quán ăn · cafe · đang mở · gần bạn'}
+                </small>
+              </span>
+              <Navigation size={16} />
+            </button>
+          )}
+
           {meta?.mode === 'near-anchor' && meta?.anchor?.name && (
             <div className="hm-search-v2-context">
               <Navigation size={14} />
