@@ -9,9 +9,9 @@
   display:inline-flex;
   align-items:center;
   gap:5px;
-  padding:5px 8px;
+  padding:6px 9px;
   border-radius:999px;
-  font-size:9px;
+  font-size:10.5px;
   font-weight:850;
 }
 .profile-white-dashboard .explorer-reputation-v22-meta .confidence.high{color:#17684f;background:#e9f7f1}
