@@ -4,6 +4,7 @@ import {
   Bell,
   Building2,
   ChevronDown,
+  ChevronRight,
   Compass,
   Download,
   LogOut,
