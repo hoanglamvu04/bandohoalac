@@ -175,23 +175,104 @@ export async function listManagedPlaces(userId, client = pool) {
     [userId]
   );
 
-  return rows.map((row) => ({
-    placeId: String(row.place_id),
-    name: row.name,
-    address: row.address,
-    phone: row.phone,
-    website: row.website,
-    openingHours: row.opening_hours,
-    description: row.description,
-    image: row.image || null,
-    managerRole: row.manager_role || null,
-    partnerId: row.partner_id ? String(row.partner_id) : null,
-    partnerName: row.partner_name || null,
-    partnerStatus: row.partner_status || null,
-    partnerRole: row.partner_role || null,
-    canEditPlace: Boolean(row.can_edit_place),
-    canManageStaff: Boolean(row.can_manage_staff)
-  }));
+  const placeIds = rows
+    .map((row) => Number(row.place_id))
+    .filter(Number.isFinite);
+
+  let housingRows = [];
+  if (placeIds.length) {
+    const result = await client.query(
+      `SELECT
+         p.id AS place_id,
+         c.slug AS category_slug,
+         hl.place_id AS housing_place_id,
+         hl.monthly_rent,
+         hl.deposit_amount,
+         hl.area_m2,
+         hl.availability_status,
+         hl.available_rooms,
+         hl.total_rooms,
+         hl.electricity_price_per_kwh,
+         hl.water_price_per_person_month,
+         hl.parking_fee_monthly,
+         hl.has_air_conditioner,
+         hl.has_water_heater,
+         hl.has_private_bathroom,
+         hl.has_loft,
+         hl.has_balcony,
+         hl.has_parking,
+         hl.allows_pets,
+         hl.curfew_note,
+         hl.availability_note,
+         hl.contact_zalo,
+         hl.available_from,
+         hl.last_verified_at,
+         hl.verification_source
+       FROM places p
+       LEFT JOIN categories c ON c.id = p.category_id
+       LEFT JOIN housing_listings hl ON hl.place_id = p.id
+       WHERE p.id = ANY($1::bigint[])`,
+      [placeIds]
+    );
+    housingRows = result.rows;
+  }
+
+  const housingByPlace = new Map(
+    housingRows.map((row) => [
+      String(row.place_id),
+      {
+        categorySlug: row.category_slug || null,
+        housing: row.housing_place_id ? {
+          monthlyRent: row.monthly_rent === null ? null : Number(row.monthly_rent),
+          depositAmount: row.deposit_amount === null ? null : Number(row.deposit_amount),
+          areaM2: row.area_m2 === null ? null : Number(row.area_m2),
+          availabilityStatus: row.availability_status || 'UNKNOWN',
+          availableRooms: row.available_rooms === null ? null : Number(row.available_rooms),
+          totalRooms: row.total_rooms === null ? null : Number(row.total_rooms),
+          electricityPricePerKwh: row.electricity_price_per_kwh === null ? null : Number(row.electricity_price_per_kwh),
+          waterPricePerPersonMonth: row.water_price_per_person_month === null ? null : Number(row.water_price_per_person_month),
+          parkingFeeMonthly: row.parking_fee_monthly === null ? null : Number(row.parking_fee_monthly),
+          hasAirConditioner: row.has_air_conditioner,
+          hasWaterHeater: row.has_water_heater,
+          hasPrivateBathroom: row.has_private_bathroom,
+          hasLoft: row.has_loft,
+          hasBalcony: row.has_balcony,
+          hasParking: row.has_parking,
+          allowsPets: row.allows_pets,
+          curfewNote: row.curfew_note || null,
+          availabilityNote: row.availability_note || null,
+          contactZalo: row.contact_zalo || null,
+          availableFrom: row.available_from || null,
+          lastVerifiedAt: row.last_verified_at || null,
+          verificationSource: row.verification_source || 'COMMUNITY'
+        } : null
+      }
+    ])
+  );
+
+  return rows.map((row) => {
+    const meta = housingByPlace.get(String(row.place_id)) || {};
+
+    return {
+      placeId: String(row.place_id),
+      name: row.name,
+      address: row.address,
+      phone: row.phone,
+      website: row.website,
+      openingHours: row.opening_hours,
+      description: row.description,
+      image: row.image || null,
+      managerRole: row.manager_role || null,
+      partnerId: row.partner_id ? String(row.partner_id) : null,
+      partnerName: row.partner_name || null,
+      partnerStatus: row.partner_status || null,
+      partnerRole: row.partner_role || null,
+      canEditPlace: Boolean(row.can_edit_place),
+      canManageStaff: Boolean(row.can_manage_staff),
+      categorySlug: meta.categorySlug || null,
+      housing: meta.housing || null
+    };
+  });
 }
 
 async function listOwnerStaff(userId, partnerIds, client = pool) {
@@ -821,45 +902,124 @@ export async function updatePartnerStaffStatus({
 }
 
 export async function updateManagedPlace({ userId, placeId, values }) {
-  const access = await pool.query(
-    `SELECT pm.role
-     FROM place_managers pm
-     WHERE pm.place_id = $1 AND pm.user_id = $2
-     LIMIT 1`,
-    [placeId, userId]
-  );
+  return withTransaction(async (client) => {
+    const access = await client.query(
+      `SELECT pm.role, c.slug AS category_slug
+       FROM place_managers pm
+       JOIN places p ON p.id = pm.place_id
+       LEFT JOIN categories c ON c.id = p.category_id
+       WHERE pm.place_id = $1
+         AND pm.user_id = $2
+       LIMIT 1
+       FOR UPDATE OF p`,
+      [placeId, userId]
+    );
 
-  if (!access.rows[0]) {
-    throw new AppError('Bạn không có quyền quản lý thông tin địa điểm này.', 403);
-  }
+    const accessRow = access.rows[0];
+    if (!accessRow) {
+      throw new AppError('Bạn không có quyền quản lý thông tin địa điểm này.', 403);
+    }
 
-  const columnMap = {
-    phone: 'phone',
-    website: 'website',
-    openingHours: 'opening_hours',
-    description: 'description'
-  };
+    const input = values || {};
+    const housing = input.housing;
+    const columnMap = {
+      phone: 'phone',
+      website: 'website',
+      openingHours: 'opening_hours',
+      description: 'description'
+    };
 
-  const params = [];
-  const sets = [];
-  for (const [key, value] of Object.entries(values || {})) {
-    const column = columnMap[key];
-    if (!column) continue;
-    params.push(value || null);
-    sets.push(column + ' = $' + params.length);
-  }
+    const params = [];
+    const sets = [];
 
-  if (!sets.length) {
-    const current = await listManagedPlaces(userId);
+    for (const [key, column] of Object.entries(columnMap)) {
+      if (!Object.prototype.hasOwnProperty.call(input, key)) continue;
+      params.push(input[key] || null);
+      sets.push(column + ' = $' + params.length);
+    }
+
+    if (housing && Object.prototype.hasOwnProperty.call(housing, 'monthlyRent')) {
+      params.push(housing.monthlyRent);
+      const ref = '$' + params.length;
+      sets.push(
+        'price_level = CASE WHEN ' + ref + '::int IS NULL THEN NULL ELSE (' +
+        ref + '::int)::text || \'đ/tháng\' END'
+      );
+    }
+
+    if (sets.length || housing) {
+      sets.push('last_verified_at = NOW()');
+      sets.push('updated_at = NOW()');
+      params.push(placeId);
+      await client.query(
+        'UPDATE places SET ' + sets.join(', ') + ' WHERE id = $' + params.length,
+        params
+      );
+    }
+
+    if (housing) {
+      if (accessRow.category_slug !== 'bat-dong-san') {
+        throw new AppError('Chỉ địa điểm Bất động sản mới có dữ liệu Housing.', 409);
+      }
+
+      await client.query(
+        `INSERT INTO housing_listings (
+           place_id, last_verified_at, verified_by, verification_source
+         )
+         VALUES ($1, NOW(), $2, 'PARTNER')
+         ON CONFLICT (place_id) DO NOTHING`,
+        [placeId, userId]
+      );
+
+      const housingColumnMap = {
+        monthlyRent: 'monthly_rent',
+        depositAmount: 'deposit_amount',
+        areaM2: 'area_m2',
+        availabilityStatus: 'availability_status',
+        availableRooms: 'available_rooms',
+        totalRooms: 'total_rooms',
+        electricityPricePerKwh: 'electricity_price_per_kwh',
+        waterPricePerPersonMonth: 'water_price_per_person_month',
+        parkingFeeMonthly: 'parking_fee_monthly',
+        hasAirConditioner: 'has_air_conditioner',
+        hasWaterHeater: 'has_water_heater',
+        hasPrivateBathroom: 'has_private_bathroom',
+        hasLoft: 'has_loft',
+        hasBalcony: 'has_balcony',
+        hasParking: 'has_parking',
+        allowsPets: 'allows_pets',
+        curfewNote: 'curfew_note',
+        availabilityNote: 'availability_note',
+        contactZalo: 'contact_zalo',
+        availableFrom: 'available_from'
+      };
+
+      const housingParams = [];
+      const housingSets = [];
+
+      for (const [key, column] of Object.entries(housingColumnMap)) {
+        if (!Object.prototype.hasOwnProperty.call(housing, key)) continue;
+        housingParams.push(housing[key] === '' ? null : housing[key]);
+        housingSets.push(column + ' = $' + housingParams.length);
+      }
+
+      housingParams.push(userId);
+      housingSets.push('verified_by = $' + housingParams.length);
+      housingSets.push("verification_source = 'PARTNER'");
+      housingSets.push('last_verified_at = NOW()');
+      housingSets.push('updated_at = NOW()');
+
+      housingParams.push(placeId);
+      await client.query(
+        'UPDATE housing_listings SET ' +
+          housingSets.join(', ') +
+          ' WHERE place_id = $' + housingParams.length,
+        housingParams
+      );
+    }
+
+    const current = await listManagedPlaces(userId, client);
     return current.find((item) => String(item.placeId) === String(placeId)) || null;
-  }
-
-  params.push(placeId);
-  await pool.query(
-    'UPDATE places SET ' + sets.join(', ') + ', updated_at = NOW() WHERE id = $' + params.length,
-    params
-  );
-
-  const current = await listManagedPlaces(userId);
-  return current.find((item) => String(item.placeId) === String(placeId)) || null;
+  });
 }
+
