@@ -4,6 +4,9 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-/var/www/bandohoalac}"
 MARKER="# HOLA_MAPS_NIGHTLY_BACKUP"
 
+mkdir -p "$APP_DIR/backend/backups"
+chmod 700 "$APP_DIR/backend/backups" || true
+
 if ! command -v crontab >/dev/null 2>&1; then
   echo "[backup] crontab is unavailable; skipped." >&2
   exit 0
