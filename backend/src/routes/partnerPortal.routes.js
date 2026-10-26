@@ -14,7 +14,9 @@ import {
 } from '../controllers/partnerPortal.controller.js';
 import { authenticate } from '../middleware/auth.js';
 import { partnerScanRateLimiter } from '../middleware/rateLimit.js';
-import { validateBody } from '../validators/validate.js';
+import { validateBody, validateQuery } from '../validators/validate.js';
+import { getAnalytics } from '../controllers/partnerAnalytics.controller.js';
+import { partnerAnalyticsQuerySchema } from '../validators/partnerAnalytics.validators.js';
 import {
   partnerRedeemCodeSchema,
   partnerShiftStartSchema,
@@ -30,6 +32,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/dashboard', getDashboard);
+router.get('/analytics', validateQuery(partnerAnalyticsQuerySchema), getAnalytics);
 
 router.get('/scanner', getScannerState);
 
