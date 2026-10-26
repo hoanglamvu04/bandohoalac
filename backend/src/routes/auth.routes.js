@@ -26,6 +26,12 @@ import {
 
 const router = Router();
 
+router.use((_req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  res.set('Pragma', 'no-cache');
+  next();
+});
+
 router.post('/register', requireTrustedBrowserOrigin, authRateLimiter, validateBody(registerSchema), register);
 router.post('/login', requireTrustedBrowserOrigin, authRateLimiter, validateBody(loginSchema), login);
 router.post('/refresh', requireTrustedBrowserOrigin, authSessionRateLimiter, refresh);
