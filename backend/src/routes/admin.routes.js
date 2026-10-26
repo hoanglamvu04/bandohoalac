@@ -137,6 +137,16 @@ import {
   rollbackPlaceRevisionAdmin,
   verifyPlaceQualityAdmin
 } from '../controllers/adminDataTrust.controller.js';
+import {
+  getIngestionOverviewAdmin,
+  listIngestionJobsAdmin,
+  listIngestionSourcesAdmin,
+  runAllIngestionAdmin,
+  runFreshnessSweepAdmin,
+  runIngestionSourceAdmin,
+  updateIngestionSourceAdmin
+} from '../controllers/adminIngestion.controller.js';
+import { updateIngestionSourceSchema } from '../validators/ingestion.validators.js';
 
 const router = Router();
 const ctvStaff = authorize('CTV', 'MODERATOR', 'ADMIN');
@@ -152,6 +162,15 @@ router.post('/contributions/:id/reject', ctvStaff, validateBody(rejectContributi
 router.post('/contributions/:id/ctv-audit', adminOnly, auditCtvModerationAdmin);
 
 router.get('/data-quality', ctvStaff, getDataQualityAdmin);
+
+router.get('/ingestion', adminOnly, getIngestionOverviewAdmin);
+router.get('/ingestion/sources', adminOnly, listIngestionSourcesAdmin);
+router.get('/ingestion/jobs', adminOnly, listIngestionJobsAdmin);
+router.patch('/ingestion/sources/:key', adminOnly, validateBody(updateIngestionSourceSchema), updateIngestionSourceAdmin);
+router.post('/ingestion/sources/:key/run', adminOnly, runIngestionSourceAdmin);
+router.post('/ingestion/run-all', adminOnly, runAllIngestionAdmin);
+router.post('/ingestion/freshness/run', adminOnly, runFreshnessSweepAdmin);
+
 router.get('/places/:id/revisions', ctvStaff, listPlaceRevisionsAdmin);
 router.post('/places/:id/verify-quality', ctvStaff, requireCtvLevel(2), verifyPlaceQualityAdmin);
 router.post('/places/:id/revisions/:revisionId/rollback', dataStaff, rollbackPlaceRevisionAdmin);
