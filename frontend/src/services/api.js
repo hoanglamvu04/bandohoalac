@@ -1,9 +1,15 @@
 import axios from 'axios';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5003/api').replace(/\/$/, '');
-const TOKEN_STORAGE_KEY = 'hola_maps_token';
+let accessToken = null;
 
-export const client = axios.create({ baseURL: API_URL });
+export const client = axios.create({ baseURL: API_URL, withCredentials: true });
+
+try {
+  localStorage.removeItem('hola_maps_token');
+} catch {
+  // Legacy token cleanup is best-effort only.
+}
 
 client.interceptors.request.use((config) => {
   const token = getToken();
@@ -15,20 +21,11 @@ client.interceptors.request.use((config) => {
 });
 
 export function getToken() {
-  try {
-    return localStorage.getItem(TOKEN_STORAGE_KEY);
-  } catch {
-    return null;
-  }
+  return accessToken;
 }
 
 export function setToken(token) {
-  try {
-    if (token) localStorage.setItem(TOKEN_STORAGE_KEY, token);
-    else localStorage.removeItem(TOKEN_STORAGE_KEY);
-  } catch {
-    // Ignore storage errors (private mode, blocked storage, etc.)
-  }
+  accessToken = token || null;
 }
 
 function unwrap(promise) {
