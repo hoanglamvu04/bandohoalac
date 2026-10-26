@@ -175,10 +175,17 @@ test('contribution permissions: a plain USER cannot reach admin moderation route
 });
 
 test('admin: ADMIN without 2FA is directed to security setup', async () => {
+  const email = `security-admin-${Date.now()}@holamaps.vn`;
+  await pool.query(
+    `INSERT INTO users (name, email, password_hash, role)
+     VALUES ('Security Admin', $1, crypt('Admin@12345', gen_salt('bf', 10)), 'ADMIN')`,
+    [email]
+  );
+
   const loginRes = await fetch(url('/api/auth/login'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'admin@holamaps.vn', password: 'Admin@123' })
+    body: JSON.stringify({ email, password: 'Admin@12345' })
   });
   assert.equal(loginRes.status, 200);
   const { token } = await loginRes.json();
