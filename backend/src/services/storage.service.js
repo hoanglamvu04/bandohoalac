@@ -191,6 +191,10 @@ async function uploadCloudinaryFile(file, {
   };
 
   if (scope === 'places') {
+    asset.url = cloudinaryVariantUrl(
+      payload.secure_url,
+      'c_limit,w_2000,h_2000,f_auto,q_auto:good'
+    );
     asset.thumbnailUrl = cloudinaryVariantUrl(
       payload.secure_url,
       'c_fill,g_auto,w_320,h_220,f_webp,q_auto:eco'
