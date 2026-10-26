@@ -60,7 +60,7 @@ jobs:
             fi
 
             bash scripts/ensure-production-security-env.sh
-            bash scripts/harden-production-security.sh || true
+            bash scripts/harden-production-security.sh
 
             echo "==> Canonical domain check"
             DOMAIN_MARKER="$APP_DIR/.maps-domain-migrated"
@@ -91,7 +91,7 @@ jobs:
             fi
 
             echo "==> Recheck production headers"
-            bash scripts/harden-production-security.sh || true
+            bash scripts/harden-production-security.sh
 
             echo "==> Ensure image/search runtime tools"
             if command -v apt-get >/dev/null 2>&1; then
