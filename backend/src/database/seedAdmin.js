@@ -14,15 +14,38 @@ function required(name) {
   return value;
 }
 
+function strongAdminPassword(password) {
+  const groups = [
+    /[a-z]/.test(password),
+    /[A-Z]/.test(password),
+    /\d/.test(password),
+    /[^A-Za-z0-9]/.test(password)
+  ].filter(Boolean).length;
+
+  return password.length >= 12 && groups >= 3;
+}
+
 async function run() {
+  const production = String(process.env.NODE_ENV || '').trim() === 'production';
+  if (
+    production &&
+    String(process.env.ALLOW_ADMIN_SEED_IN_PRODUCTION || '').trim().toLowerCase() !== 'true'
+  ) {
+    throw new Error(
+      'Refusing to create or reset an admin in production without ALLOW_ADMIN_SEED_IN_PRODUCTION=true.'
+    );
+  }
+
   const email = (process.env.ADMIN_SEED_EMAIL || 'admin@holamaps.vn')
     .trim()
     .toLowerCase();
   const name = (process.env.ADMIN_SEED_NAME || 'Hola Admin').trim();
   const password = required('ADMIN_SEED_PASSWORD');
 
-  if (password.length < 8) {
-    throw new Error('ADMIN_SEED_PASSWORD must be at least 8 characters.');
+  if (!strongAdminPassword(password)) {
+    throw new Error(
+      'ADMIN_SEED_PASSWORD must be at least 12 characters and use at least 3 groups: lowercase, uppercase, number, symbol.'
+    );
   }
 
   const passwordHash = await hashPassword(password);
@@ -65,6 +88,9 @@ async function run() {
   console.log('Role:  ' + admin.role);
   console.log('');
   console.log('Password was read from ADMIN_SEED_PASSWORD and is not printed.');
+  if (production) {
+    console.log('Production admin seed was explicitly authorized for this run.');
+  }
   console.log('You can now sign in through the normal Hola Maps login page.');
 }
 
