@@ -107,7 +107,10 @@ jobs:
                 }
               fi
             fi
-            command -v cwebp >/dev/null 2>&1 || echo "WARN: cwebp missing; local image variants will fall back to originals"
+            command -v cwebp >/dev/null 2>&1 || {
+              echo "ERROR: cwebp is required to strip metadata from user-uploaded images." >&2
+              exit 1
+            }
 
             echo "==> Install dependencies"
             npm ci
