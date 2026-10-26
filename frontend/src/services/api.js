@@ -640,4 +640,38 @@ export function getExploreArticle(slug, options = {}) {
 }
 
 
+export function getAdminIngestionOverview() {
+  return unwrap(client.get('/admin/ingestion'));
+}
+
+export function getAdminIngestionSources() {
+  return unwrap(client.get('/admin/ingestion/sources'));
+}
+
+export function getAdminIngestionJobs(params = {}) {
+  return unwrap(client.get('/admin/ingestion/jobs', { params: cleanParams(params) }));
+}
+
+export function updateAdminIngestionSource(key, payload) {
+  return unwrap(client.patch(
+    '/admin/ingestion/sources/' + encodeURIComponent(key),
+    payload
+  ));
+}
+
+export function runAdminIngestionSource(key) {
+  return unwrap(client.post(
+    '/admin/ingestion/sources/' + encodeURIComponent(key) + '/run'
+  ));
+}
+
+export function runAdminIngestionCycle() {
+  return unwrap(client.post('/admin/ingestion/run-all'));
+}
+
+export function runAdminFreshnessSweep(payload = {}) {
+  return unwrap(client.post('/admin/ingestion/freshness/run', payload));
+}
+
+
 export { API_URL };
