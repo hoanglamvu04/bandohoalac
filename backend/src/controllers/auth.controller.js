@@ -20,6 +20,7 @@ import {
   recordFailedLogin,
   recordSecurityEvent,
   revokeRefreshToken,
+  revokeSession,
   rotateRefreshSession,
   setRefreshCookie
 } from '../services/authSession.service.js';
@@ -196,12 +197,23 @@ export const refresh = asyncHandler(async (req, res) => {
 export const logout = asyncHandler(async (req, res) => {
   const refreshToken = readCookie(req, getRefreshCookieName());
   const revoked = await revokeRefreshToken(refreshToken, 'LOGOUT');
+
+  if (req.user?.id && req.user?.sessionId) {
+    await revokeSession({
+      userId: req.user.id,
+      sessionId: req.user.sessionId,
+      reason: 'LOGOUT'
+    });
+  }
+
   clearRefreshCookie(res);
 
-  if (revoked) {
+  const eventUserId = revoked?.user_id || req.user?.id || null;
+  const eventSessionId = revoked?.id || req.user?.sessionId || null;
+  if (eventUserId) {
     await recordSecurityEvent({
-      userId: revoked.user_id,
-      sessionId: revoked.id,
+      userId: eventUserId,
+      sessionId: eventSessionId,
       type: 'LOGOUT',
       ...requestContext(req)
     });
