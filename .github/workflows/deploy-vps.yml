@@ -95,7 +95,7 @@ jobs:
             echo "==> Install dependencies"
             npm ci
             npm ci --prefix backend
-            npm install --prefix frontend --no-audit --no-fund
+            npm ci --prefix frontend --no-audit --no-fund
 
             echo "==> Apply database schema"
             npm run db:migrate
