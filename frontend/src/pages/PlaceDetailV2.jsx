@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import '../housing-rank-v3.css';
 import {
   ArrowLeft,
   BadgeCheck,
@@ -94,6 +95,8 @@ export default function PlaceDetailV2() {
   const [favorite, setFavorite] = useState(false);
   const [favoriteBusy, setFavoriteBusy] = useState(false);
   const [housingDetail, setHousingDetail] = useState(null);
+  const housingAvailability = housingDetail?.housing?.effectiveAvailabilityStatus
+    || housingDetail?.housing?.availabilityStatus || 'UNKNOWN';
 
   useEffect(() => {
     let active = true;
@@ -339,18 +342,18 @@ export default function PlaceDetailV2() {
             <h2>Thông tin phòng trọ</h2>
             <span className={
               'place-v2-housing-status ' +
-              (housingDetail?.housing?.availabilityStatus === 'FULL'
+              (housingAvailability === 'FULL'
                 ? 'full'
-                : housingDetail?.housing?.availabilityStatus === 'UNKNOWN' || !housingDetail?.housing
+                : housingAvailability === 'UNKNOWN' || !housingDetail?.housing
                   ? 'unknown'
                   : '')
             }>
               <BadgeCheck size={13} />
-              {housingDetail?.housing?.availabilityStatus === 'AVAILABLE'
+              {housingAvailability === 'AVAILABLE'
                 ? 'Còn phòng'
-                : housingDetail?.housing?.availabilityStatus === 'LIMITED'
+                : housingAvailability === 'LIMITED'
                   ? 'Sắp hết'
-                  : housingDetail?.housing?.availabilityStatus === 'FULL'
+                  : housingAvailability === 'FULL'
                     ? 'Hết phòng'
                     : 'Chưa xác nhận'}
             </span>
@@ -358,6 +361,34 @@ export default function PlaceDetailV2() {
 
           {housingDetail?.housing ? (
             <>
+              {housingDetail.holaRank && (
+                <div className="place-v2-hola-rank" aria-label="Điểm xếp hạng phòng trọ">
+                  <div className="place-v2-hola-rank-head">
+                    <span><ShieldCheck size={17} /> HOLA Rank · Housing V3</span>
+                    <strong>{housingDetail.holaRank.score}<small>/100</small></strong>
+                  </div>
+                  <p>Thứ hạng tự nhiên ưu tiên tình trạng phòng được xác minh gần đây.
+                    Điểm số xét thêm độ đầy đủ, khoảng cách tới FPT và nguồn dữ liệu;
+                    không có ưu tiên do trả phí.</p>
+                  <details>
+                    <summary>Xem lý do chấm điểm</summary>
+                    <ul>
+                      {(housingDetail.holaRank.signals || []).map((signal) => (
+                        <li key={signal}>{signal}</li>
+                      ))}
+                    </ul>
+                    <small>Điểm tham khảo để tìm tin; không đảm bảo giao dịch hay tình trạng còn phòng.</small>
+                  </details>
+                </div>
+              )}
+
+              {!housingDetail.housing.availabilityFresh && (
+                <p className="place-v2-housing-stale" role="note">
+                  <Clock3 size={17} /> Tình trạng phòng chưa được xác minh trong 30 ngày.
+                  Hãy liên hệ chủ trọ trước khi đi xem phòng.
+                </p>
+              )}
+
               <div className="place-v2-housing-summary">
                 <div>
                   <small>Giá thuê</small>
@@ -407,13 +438,19 @@ export default function PlaceDetailV2() {
               </div>
 
               <div className="place-v2-housing-verified">
-                <ShieldCheck size={14} /> {housingFreshness(housingDetail.housing.lastVerifiedAt)}
-                {housingDetail.housing.verificationSource === 'PARTNER' ? ' · HOLA Partner xác minh' : ''}
+                {housingDetail.housing.availabilityFresh
+                  ? <ShieldCheck size={14} />
+                  : <Clock3 size={14} />}
+                {housingDetail.housing.availabilityFresh
+                  ? housingFreshness(housingDetail.housing.lastVerifiedAt)
+                  : 'Cần xác minh lại tình trạng phòng'}
+                {housingDetail.housing.availabilityFresh &&
+                  housingDetail.housing.verificationSource === 'PARTNER' ? ' · HOLA Partner cập nhật' : ''}
               </div>
             </>
           ) : (
             <p>
-              Địa điểm này đã thuộc danh mục Bất động sản nhưng chưa có hồ sơ Housing V2.
+              Địa điểm này đã thuộc danh mục Bất động sản nhưng chưa có hồ sơ Housing.
               Chủ trọ hoặc cộng đồng có thể tiếp tục bổ sung giá, tình trạng phòng và tiện ích.
             </p>
           )}
