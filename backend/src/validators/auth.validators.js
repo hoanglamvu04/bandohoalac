@@ -42,3 +42,15 @@ export const twoFactorDisableSchema = z.object({
   password: z.string().min(1).max(128),
   code: z.string().trim().regex(/^\d{6}$/, 'Mã xác thực phải gồm 6 chữ số.')
 });
+
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(128),
+  newPassword: strongPassword
+}).refine(
+  (value) => value.currentPassword !== value.newPassword,
+  {
+    message: 'Mật khẩu mới phải khác mật khẩu hiện tại.',
+    path: ['newPassword']
+  }
+);
