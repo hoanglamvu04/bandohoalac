@@ -45,7 +45,7 @@ export default function Register() {
           <input type="email" name="email" required value={form.email} onChange={updateField} placeholder="you@example.com" />
         </label>
         <label>Mật khẩu
-          <input type="password" name="password" required minLength={8} value={form.password} onChange={updateField} placeholder="Ít nhất 8 ký tự" />
+          <input type="password" name="password" required minLength={10} value={form.password} onChange={updateField} placeholder="Ít nhất 10 ký tự" />
         </label>
 
         {error && <div className="form-status error">{error}</div>}
