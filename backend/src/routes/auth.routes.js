@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { register, login, me, refresh, logout } from '../controllers/auth.controller.js';
 import {
+  changePassword,
   confirmTwoFactor,
   removeTwoFactor,
   revokeAllSecuritySessions,
@@ -14,6 +15,7 @@ import { requireTrustedBrowserOrigin } from '../middleware/trustedOrigin.js';
 import { validateBody } from '../validators/validate.js';
 import {
   registerSchema,
+  changePasswordSchema,
   loginSchema,
   twoFactorSetupSchema,
   twoFactorConfirmSchema,
@@ -28,6 +30,7 @@ router.post('/refresh', requireTrustedBrowserOrigin, authSessionRateLimiter, ref
 router.post('/logout', requireTrustedBrowserOrigin, authSessionRateLimiter, logout);
 router.get('/me', authenticate, me);
 router.get('/security', authenticate, securityOverview);
+router.post('/security/password', authenticate, securityActionRateLimiter, validateBody(changePasswordSchema), changePassword);
 router.post('/security/2fa/setup', authenticate, securityActionRateLimiter, validateBody(twoFactorSetupSchema), startTwoFactorSetup);
 router.post('/security/2fa/confirm', authenticate, securityActionRateLimiter, validateBody(twoFactorConfirmSchema), confirmTwoFactor);
 router.delete('/security/2fa', authenticate, securityActionRateLimiter, validateBody(twoFactorDisableSchema), removeTwoFactor);
