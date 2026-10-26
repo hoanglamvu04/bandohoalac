@@ -8,14 +8,15 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = api.getToken();
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    api.getMe()
-      .then(({ user: me }) => setUser(me))
-      .catch(() => api.setToken(null))
+    api.refreshSession()
+      .then(({ token, user: me }) => {
+        api.setToken(token);
+        setUser(me);
+      })
+      .catch(() => {
+        api.setToken(null);
+        setUser(null);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -33,9 +34,16 @@ export function AuthProvider({ children }) {
     return newUser;
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const { user: me } = await api.getMe();
+    setUser(me);
+    return me;
+  }, []);
+
   const logout = useCallback(() => {
     api.setToken(null);
     setUser(null);
+    api.logoutSession().catch(() => {});
   }, []);
 
   const isModerator = ['CTV', 'MODERATOR', 'ADMIN'].includes(user?.role);
@@ -43,8 +51,8 @@ export function AuthProvider({ children }) {
   const ctvLevel = Number(user?.ctvLevel || 1);
 
   const value = useMemo(
-    () => ({ user, loading, login, register, logout, isModerator, isCtv, ctvLevel, setUser }),
-    [user, loading, login, register, logout, isModerator, isCtv, ctvLevel]
+    () => ({ user, loading, login, register, logout, refreshUser, isModerator, isCtv, ctvLevel, setUser }),
+    [user, loading, login, register, logout, refreshUser, isModerator, isCtv, ctvLevel]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
