@@ -97,9 +97,10 @@ test('auth: register, login, and me flow', async () => {
   assert.equal(user.role, 'USER');
 });
 
-test('auth: /me without a token is rejected', async () => {
+test('auth: /me without a token is rejected and auth responses are not cached', async () => {
   const res = await fetch(url('/api/auth/me'));
   assert.equal(res.status, 401);
+  assert.match(res.headers.get('cache-control') || '', /no-store/i);
 });
 
 
