@@ -2703,7 +2703,9 @@ export default function MapPage() {
                     <span className={'status ' + String(selectedPlace.housing.effectiveAvailabilityStatus || selectedPlace.housing.availabilityStatus || 'UNKNOWN').toLowerCase()}>
                       <House size={14} />
                       {housingAvailabilityLabel(selectedPlace.housing.effectiveAvailabilityStatus || selectedPlace.housing.availabilityStatus)}
-                      {Number(selectedPlace.housing.availableRooms) > 0
+                      {selectedPlace.housing.availabilityFresh &&
+                        (selectedPlace.housing.effectiveAvailabilityStatus || selectedPlace.housing.availabilityStatus) !== 'UNKNOWN' &&
+                        Number(selectedPlace.housing.availableRooms) > 0
                         ? ' · ' + selectedPlace.housing.availableRooms + ' phòng'
                         : ''}
                     </span>
@@ -2720,7 +2722,8 @@ export default function MapPage() {
                   )}
                   <div className="hm-inspector-housing-foot">
                     <span>
-                      {selectedPlace.housing.availabilityFresh && selectedPlace.housing.lastVerifiedAt
+                      {selectedPlace.housing.availabilityFresh && selectedPlace.housing.lastVerifiedAt &&
+                        (selectedPlace.housing.effectiveAvailabilityStatus || selectedPlace.housing.availabilityStatus) !== 'UNKNOWN'
                         ? 'Xác minh ' + formatPlaceAge(selectedPlace.housing.lastVerifiedAt)
                         : 'Tình trạng phòng cần xác minh lại'}
                     </span>
