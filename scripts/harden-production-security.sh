@@ -26,10 +26,12 @@ mkdir -p /etc/nginx/snippets
 cat > "$SNIPPET" <<'EOF'
 add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "DENY" always;
+add_header X-Permitted-Cross-Domain-Policies "none" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 add_header Permissions-Policy "camera=(self), geolocation=(self), microphone=(), payment=(), usb=()" always;
 add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
-add_header Content-Security-Policy-Report-Only "default-src 'self' https: data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; font-src 'self' data: https:; worker-src 'self' blob:; frame-src 'self' https:;" always;
+add_header Content-Security-Policy-Report-Only "default-src 'self' https: data: blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; font-src 'self' data: https:; worker-src 'self' blob:; frame-src 'self' https:;" always;
 EOF
 
 if grep -Fq "$SNIPPET" "$TARGET"; then
