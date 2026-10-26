@@ -42,9 +42,23 @@ export function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
-  app.use(helmet());
+  if (env.nodeEnv === 'production') {
+    app.set('trust proxy', 1);
+  }
 
-  const appCors = cors({ origin: resolveCorsOrigin });
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+  }));
+  app.use((_req, res, next) => {
+    res.setHeader(
+      'Permissions-Policy',
+      'camera=(self), geolocation=(self), microphone=(), payment=(), usb=(), interest-cohort=()'
+    );
+    next();
+  });
+
+  const appCors = cors({ origin: resolveCorsOrigin, credentials: true });
   const publicApiCors = cors({
     origin: resolvePublicApiCorsOrigin,
     exposedHeaders: ['X-Hola-API-Version', 'X-Hola-Cache', 'X-Hola-Client', 'X-Hola-RateLimit-Limit', 'X-Hola-RateLimit-Remaining', 'X-Hola-RateLimit-Reset', 'RateLimit', 'RateLimit-Policy']
