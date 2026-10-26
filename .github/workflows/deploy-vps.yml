@@ -1,9 +1,10 @@
 name: Deploy Hola Maps to VPS
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["Hola Maps CI"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -16,8 +17,11 @@ concurrency:
 jobs:
   deploy:
     name: Deploy production
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || '' }}
 
     steps:
       - name: Configure SSH
@@ -33,7 +37,7 @@ jobs:
       - name: Pull, build and restart
         shell: bash
         run: |
-          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" 'bash -se' <<'REMOTE'
+          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "DEPLOY_SHA='$DEPLOY_SHA' bash -se" <<'REMOTE'
             set -euo pipefail
 
             APP_DIR=/var/www/bandohoalac
@@ -43,7 +47,17 @@ jobs:
             echo "==> Sync source"
             git fetch origin main
             git checkout main
-            git reset --hard origin/main
+
+            if [ -n "${DEPLOY_SHA:-}" ]; then
+              MAIN_SHA="$(git rev-parse origin/main)"
+              if [ "$MAIN_SHA" != "$DEPLOY_SHA" ]; then
+                echo "CI result is stale because main moved to $MAIN_SHA; skipping this deploy."
+                exit 0
+              fi
+              git reset --hard "$DEPLOY_SHA"
+            else
+              git reset --hard origin/main
+            fi
 
             bash scripts/ensure-production-security-env.sh
             bash scripts/harden-production-security.sh || true
