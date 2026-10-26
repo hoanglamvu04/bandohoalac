@@ -1,0 +1,145 @@
+
+/* Housing V3: transparent, organic quality signals for map and listing detail. */
+.hm-housing-organic-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 8px 10px 14px;
+  padding: 12px 13px;
+  border: 1px solid #cde3ef;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #f2faff 0%, #f6fcfa 100%);
+  color: #526e80;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.hm-housing-organic-note > svg { flex: 0 0 auto; color: #1379a7; margin-top: 2px; }
+.hm-housing-organic-note strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #13516f;
+  font-size: 12px;
+}
+
+.hm-housing-rank-mini {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-self: flex-start;
+  padding: 3px 7px;
+  border: 1px solid #c7e6e5;
+  border-radius: 7px;
+  background: #eaf8f5;
+  color: #147c73;
+  font-size: 10px;
+  font-weight: 750;
+  font-style: normal;
+}
+.hm-housing-rank-mini i {
+  font-weight: 600;
+  font-style: normal;
+  color: #9b601b;
+  border-left: 1px solid #d4dfe4;
+  padding-left: 6px;
+}
+
+.hm-housing-rank-explanation {
+  display: grid;
+  gap: 5px;
+  padding: 12px 13px;
+  margin-bottom: 12px;
+  border: 1px solid #cde7e2;
+  border-radius: 11px;
+  background: #f1fbf8;
+  line-height: 1.45;
+}
+.hm-housing-rank-explanation b { font-size: 14px; color: #11786e; }
+.hm-housing-rank-explanation small { font-size: 11px; color: #526f7a; }
+.hm-housing-rank-explanation em {
+  font-size: 10px;
+  color: #617a88;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.place-v2-hola-rank {
+  margin: 10px 0 19px;
+  padding: 17px 18px;
+  border-radius: 15px;
+  border: 1px solid #cde9e1;
+  background: linear-gradient(130deg, #f1fbf8, #f5fbff);
+}
+.place-v2-hola-rank-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.place-v2-hola-rank-head > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #126e6d;
+  font-weight: 800;
+}
+.place-v2-hola-rank-head > strong {
+  font-variant-numeric: tabular-nums;
+  color: #0f716a;
+  font-size: 30px;
+  line-height: 1;
+}
+.place-v2-hola-rank-head > strong small {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6d8b8d;
+}
+.place-v2-hola-rank p {
+  margin: 10px 0;
+  color: #547380;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.place-v2-hola-rank details {
+  border-top: 1px solid #d5e7e4;
+  padding-top: 10px;
+}
+.place-v2-hola-rank summary {
+  color: #176c79;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.place-v2-hola-rank details ul {
+  margin: 10px 0;
+  padding-left: 22px;
+  color: #466d72;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.place-v2-hola-rank details > small {
+  color: #72848d;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.place-v2-housing-stale {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 13px;
+  margin: 11px 0 19px;
+  border: 1px solid #f3dbaf;
+  border-radius: 10px;
+  background: #fff8eb;
+  color: #815716;
+  font-size: 12px;
+  line-height: 1.65;
+}
+.place-v2-housing-stale > svg { flex: 0 0 17px; margin-top: 2px; }
+
+@media (max-width: 680px) {
+  .hm-housing-organic-note { margin: 8px 8px 13px; }
+  .place-v2-hola-rank { padding: 14px; }
+}
