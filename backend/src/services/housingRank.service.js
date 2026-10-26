@@ -64,7 +64,7 @@ export const HOUSING_RANK_LATERAL_SQL = String.raw`
       + CASE WHEN availability.is_recent THEN
           CASE hl.verification_source
             WHEN 'ADMIN' THEN 2
-            WHEN 'PARTNER' THEN 2
+            WHEN 'PARTNER' THEN 1
             WHEN 'COMMUNITY' THEN 1
             ELSE 0
           END
