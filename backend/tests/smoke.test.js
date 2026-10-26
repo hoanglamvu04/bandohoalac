@@ -149,6 +149,7 @@ test('privacy: public profile does not expose private account fields', async () 
   assert.equal(profile.user.id, registered.user.id);
   assert.equal(profile.user.name, 'Private Profile User');
   assert.equal('email' in profile.user, false);
+  assert.equal('role' in profile.user, false);
   assert.equal('pointsBalance' in profile.user, false);
   assert.equal('trustScore' in profile.user, false);
   assert.equal('ctvTrustScore' in profile.user, false);
