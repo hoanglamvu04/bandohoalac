@@ -1,6 +1,7 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { pool } from '../database/pool.js';
 import { AppError } from '../utils/AppError.js';
-import { comparePassword } from '../utils/password.js';
+import { comparePassword, hashPassword } from '../utils/password.js';
 import { findUserById } from '../services/user.service.js';
 import {
   clearRefreshCookie,
