@@ -72,6 +72,9 @@ jobs:
               echo "Legacy domain 301 redirect already configured"
             fi
 
+            echo "==> Recheck production headers"
+            bash scripts/harden-production-security.sh || true
+
             echo "==> Ensure image/search runtime tools"
             if command -v apt-get >/dev/null 2>&1; then
               if [ "$(id -u)" -eq 0 ]; then
