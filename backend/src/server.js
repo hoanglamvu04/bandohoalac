@@ -1,6 +1,10 @@
 import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { listenWithFallback } from './utils/listen.js';
+import {
+  startIngestionScheduler,
+  stopIngestionScheduler
+} from './services/ingestionScheduler.service.js';
 
 const app = createApp();
 
@@ -15,5 +19,9 @@ listenWithFallback(app, env.port, {
     }
     console.log(`Hola Maps API listening on port ${port} (${env.nodeEnv})`);
     console.log(`Server running at: http://localhost:${port}`);
+    startIngestionScheduler();
   }
 });
+
+process.once('SIGTERM', stopIngestionScheduler);
+process.once('SIGINT', stopIngestionScheduler);
