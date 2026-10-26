@@ -9,7 +9,7 @@ import {
   securityOverview,
   startTwoFactorSetup
 } from '../controllers/authSecurity.controller.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, optionalAuthenticate } from '../middleware/auth.js';
 import { authRateLimiter, authSessionRateLimiter, securityActionRateLimiter } from '../middleware/rateLimit.js';
 import { requireTrustedBrowserOrigin } from '../middleware/trustedOrigin.js';
 import { validateBody } from '../validators/validate.js';
@@ -27,7 +27,7 @@ const router = Router();
 router.post('/register', authRateLimiter, validateBody(registerSchema), register);
 router.post('/login', authRateLimiter, validateBody(loginSchema), login);
 router.post('/refresh', requireTrustedBrowserOrigin, authSessionRateLimiter, refresh);
-router.post('/logout', requireTrustedBrowserOrigin, authSessionRateLimiter, logout);
+router.post('/logout', requireTrustedBrowserOrigin, authSessionRateLimiter, optionalAuthenticate, logout);
 router.get('/me', authenticate, me);
 router.get('/security', authenticate, securityOverview);
 router.post('/security/password', authenticate, securityActionRateLimiter, validateBody(changePasswordSchema), changePassword);
