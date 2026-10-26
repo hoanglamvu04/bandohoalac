@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import '../housing-rank-v3.css';
 import {
   BadgeCheck,
   Building2,
@@ -547,6 +548,7 @@ export default function MapPage() {
   const housingMinRent = searchParams.get('minRent') || '';
   const housingMaxRent = searchParams.get('maxRent') || '';
   const housingMaxDistanceFpt = searchParams.get('maxDistanceFpt') || '';
+  const housingVerifiedWithinDays = searchParams.get('verifiedWithinDays') || '';
   const housingAvailability = searchParams.get('availability') || '';
   const housingAvailableOnly = searchParams.get('availableOnly') === 'true';
   const housingPartnerOnly = searchParams.get('partnerOnly') === 'true';
@@ -556,6 +558,7 @@ export default function MapPage() {
     housingMinRent,
     housingMaxRent,
     housingMaxDistanceFpt,
+    housingVerifiedWithinDays,
     housingAvailability,
     housingAvailableOnly ? '1' : '0',
     housingPartnerOnly ? '1' : '0',
@@ -576,6 +579,7 @@ export default function MapPage() {
     isHousingMode && Boolean(housingMinRent),
     isHousingMode && Boolean(housingMaxRent),
     isHousingMode && Boolean(housingMaxDistanceFpt),
+    isHousingMode && Boolean(housingVerifiedWithinDays),
     isHousingMode && Boolean(housingAvailability),
     isHousingMode && housingAvailableOnly,
     isHousingMode && housingPartnerOnly,
@@ -607,6 +611,7 @@ export default function MapPage() {
       minRent: housingMinRent || undefined,
       maxRent: housingMaxRent || undefined,
       maxDistanceFpt: housingMaxDistanceFpt || undefined,
+      verifiedWithinDays: housingVerifiedWithinDays || undefined,
       availability: housingAvailability || undefined,
       availableOnly: housingAvailableOnly ? 'true' : undefined,
       partnerOnly: housingPartnerOnly ? 'true' : undefined,
@@ -1045,6 +1050,12 @@ export default function MapPage() {
   const sidebarPlaces = useMemo(() => {
     const items = [...filteredPlaces];
 
+    // Housing has server-side relevance ranking across the entire result set.
+    // Do not overwrite it with a viewport-distance sort on the first page.
+    if (isHousingMode && ['relevant', 'recent', 'rent-asc', 'rent-desc', 'fpt-distance'].includes(sortMode)) {
+      return items;
+    }
+
     if (sortMode === 'nearest') {
       return items.sort((a, b) =>
         Number(a.distanceFromUser ?? a.distance ?? Number.POSITIVE_INFINITY) -
@@ -1107,7 +1118,7 @@ export default function MapPage() {
       const bDistance = ((bLng - centerLng) ** 2) + ((bLat - centerLat) ** 2);
       return aDistance - bDistance;
     });
-  }, [filteredPlaces, viewport, query, placeScope, sortMode]);
+  }, [filteredPlaces, viewport, query, placeScope, sortMode, isHousingMode]);
 
   const selectedPlace = useMemo(
     () => places.find((place) => place.id === selectedId) || null,
@@ -1513,6 +1524,7 @@ export default function MapPage() {
       minRent: null,
       maxRent: null,
       maxDistanceFpt: null,
+      verifiedWithinDays: null,
       availability: null,
       availableOnly: null,
       partnerOnly: null,
@@ -1648,6 +1660,7 @@ export default function MapPage() {
       minRent: null,
       maxRent: null,
       maxDistanceFpt: null,
+      verifiedWithinDays: null,
       availability: null,
       availableOnly: null,
       partnerOnly: null,
@@ -2025,6 +2038,16 @@ export default function MapPage() {
                         onChange={(value) => handleHousingFilterChange('maxDistanceFpt', value)}
                       />
                       <MapFilterSelect
+                        label="Xác minh trong"
+                        value={housingVerifiedWithinDays}
+                        options={[
+                          { value: '', label: 'Không giới hạn' },
+                          { value: '7', label: '7 ngày qua' },
+                          { value: '30', label: '30 ngày qua' }
+                        ]}
+                        onChange={(value) => handleHousingFilterChange('verifiedWithinDays', value)}
+                      />
+                      <MapFilterSelect
                         label="Tình trạng"
                         value={housingAvailability}
                         options={[
@@ -2073,7 +2096,7 @@ export default function MapPage() {
                     label="Sắp xếp"
                     value={sortMode}
                     options={[
-                      { value: 'relevant', label: 'Phù hợp' },
+                      { value: 'relevant', label: isHousingMode ? 'HOLA Rank · đề xuất' : 'Phù hợp' },
                       ...(isHousingMode
                         ? [
                             { value: 'rent-asc', label: 'Giá thấp trước' },
@@ -2351,6 +2374,15 @@ export default function MapPage() {
           )}
 
           <div className="hm-place-list">
+            {isHousingMode && (
+              <div className="hm-housing-organic-note" role="note">
+                <BadgeCheck size={15} />
+                <span><strong>HOLA Rank · Gợi ý tự nhiên</strong>
+                  Ưu tiên phòng còn được xác minh trong 30 ngày, rồi xét độ đầy đủ và khoảng cách FPT.
+                  Đối tác không được mua vị trí xếp hạng.
+                </span>
+              </div>
+            )}
             {sidebarPlaces.slice(0, 80).map((place) => (
               <button
                 key={place.id}
@@ -2411,6 +2443,14 @@ export default function MapPage() {
                     )}
                   </span>
                   <b>{place.name}</b>
+                  {isHousingMode && place.holaRank && (
+                    <span className="hm-housing-rank-mini"
+                      title={place.holaRank.signals?.join(' · ') || ''}>
+                      <BadgeCheck size={12} />
+                      HOLA Rank {place.holaRank.score}/100
+                      {!place.housing?.availabilityFresh && <i>Chờ xác minh</i>}
+                    </span>
+                  )}
                   <span className="hm-place-inline-meta">
                     <i className={Number(place.rating || 0) > 0 ? 'rating' : 'new-place'}>
                       <Star size={11} fill={Number(place.rating || 0) > 0 ? 'currentColor' : 'none'} />
@@ -2433,8 +2473,8 @@ export default function MapPage() {
                     <span className="hm-housing-row">
                       <strong>{formatHousingRent(place.housing.monthlyRent)}</strong>
                       {place.housing.areaM2 && <i>{place.housing.areaM2} m²</i>}
-                      <i className={'availability ' + String(place.housing.availabilityStatus || 'UNKNOWN').toLowerCase()}>
-                        {housingAvailabilityLabel(place.housing.availabilityStatus)}
+                      <i className={'availability ' + String(place.housing.effectiveAvailabilityStatus || place.housing.availabilityStatus || 'UNKNOWN').toLowerCase()}>
+                        {housingAvailabilityLabel(place.housing.effectiveAvailabilityStatus || place.housing.availabilityStatus)}
                       </i>
                       {Number(place.distanceToFptM) > 0 && <i>{formatDistance(place.distanceToFptM)} tới FPT</i>}
                     </span>
@@ -2652,11 +2692,20 @@ export default function MapPage() {
 
               {isHousingMode && selectedPlace.housing && (
                 <div className="hm-inspector-housing">
+                  {selectedPlace.holaRank && (
+                    <div className="hm-housing-rank-explanation">
+                      <b>HOLA Rank {selectedPlace.holaRank.score}/100</b>
+                      <small>{selectedPlace.holaRank.signals?.slice(0, 3).join(' · ')}</small>
+                      <em>Thứ hạng tự nhiên · Không ưu tiên trả phí</em>
+                    </div>
+                  )}
                   <div className="hm-inspector-housing-head">
-                    <span className={'status ' + String(selectedPlace.housing.availabilityStatus || 'UNKNOWN').toLowerCase()}>
+                    <span className={'status ' + String(selectedPlace.housing.effectiveAvailabilityStatus || selectedPlace.housing.availabilityStatus || 'UNKNOWN').toLowerCase()}>
                       <House size={14} />
-                      {housingAvailabilityLabel(selectedPlace.housing.availabilityStatus)}
-                      {Number(selectedPlace.housing.availableRooms) > 0
+                      {housingAvailabilityLabel(selectedPlace.housing.effectiveAvailabilityStatus || selectedPlace.housing.availabilityStatus)}
+                      {selectedPlace.housing.availabilityFresh &&
+                        (selectedPlace.housing.effectiveAvailabilityStatus || selectedPlace.housing.availabilityStatus) !== 'UNKNOWN' &&
+                        Number(selectedPlace.housing.availableRooms) > 0
                         ? ' · ' + selectedPlace.housing.availableRooms + ' phòng'
                         : ''}
                     </span>
@@ -2673,9 +2722,10 @@ export default function MapPage() {
                   )}
                   <div className="hm-inspector-housing-foot">
                     <span>
-                      {selectedPlace.housing.lastVerifiedAt
+                      {selectedPlace.housing.availabilityFresh && selectedPlace.housing.lastVerifiedAt &&
+                        (selectedPlace.housing.effectiveAvailabilityStatus || selectedPlace.housing.availabilityStatus) !== 'UNKNOWN'
                         ? 'Xác minh ' + formatPlaceAge(selectedPlace.housing.lastVerifiedAt)
-                        : 'Chưa xác minh gần đây'}
+                        : 'Tình trạng phòng cần xác minh lại'}
                     </span>
                     {selectedPlace.housing.contactZalo && <b>Zalo: {selectedPlace.housing.contactZalo}</b>}
                   </div>
