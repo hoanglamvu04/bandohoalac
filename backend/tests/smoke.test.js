@@ -102,6 +102,32 @@ test('auth: /me without a token is rejected', async () => {
   assert.equal(res.status, 401);
 });
 
+
+test('auth: refresh cookie rotates and returns a new access token', async () => {
+  const email = `smoke-refresh-${Date.now()}@holamaps.vn`;
+  const registerRes = await fetch(url('/api/auth/register'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Refresh User', email, password: 'Smoke@1234' })
+  });
+  assert.equal(registerRes.status, 201);
+  const cookie = registerRes.headers.get('set-cookie');
+  assert.ok(cookie && cookie.includes('hola_refresh='));
+
+  const refreshRes = await fetch(url('/api/auth/refresh'), {
+    method: 'POST',
+    headers: {
+      Cookie: cookie.split(';')[0],
+      Origin: 'http://localhost:5175'
+    }
+  });
+  assert.equal(refreshRes.status, 200);
+  const body = await refreshRes.json();
+  assert.ok(body.token);
+  assert.equal(body.user.email, email);
+  assert.ok(refreshRes.headers.get('set-cookie')?.includes('hola_refresh='));
+});
+
 test('auth: login with wrong password is rejected', async () => {
   const res = await fetch(url('/api/auth/login'), {
     method: 'POST',
@@ -146,6 +172,23 @@ test('contribution permissions: a plain USER cannot reach admin moderation route
     headers: { Authorization: `Bearer ${token}` }
   });
   assert.equal(res.status, 403);
+});
+
+test('admin: ADMIN without 2FA is directed to security setup', async () => {
+  const loginRes = await fetch(url('/api/auth/login'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'admin@holamaps.vn', password: 'Admin@123' })
+  });
+  assert.equal(loginRes.status, 200);
+  const { token } = await loginRes.json();
+
+  const res = await fetch(url('/api/admin/contributions'), {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  assert.equal(res.status, 403);
+  const body = await res.json();
+  assert.equal(body.details?.code, 'ADMIN_2FA_SETUP_REQUIRED');
 });
 
 test('admin: MODERATOR role can list contributions', async () => {
