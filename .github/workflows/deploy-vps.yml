@@ -97,6 +97,9 @@ jobs:
             npm ci --prefix backend
             npm install --prefix frontend --no-audit --no-fund
 
+            echo "==> Pre-migration verified backup"
+            npm --prefix backend run db:backup -- --optional
+
             echo "==> Apply database schema"
             npm run db:migrate
 
