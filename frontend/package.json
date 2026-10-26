@@ -27,7 +27,7 @@
     "follow-redirects": "1.16.1"
   },
   "devDependencies": {
-    "@playwright/test": "1.48.2",
+    "@playwright/test": "1.64.1",
     "@vitejs/plugin-react": "^4.3.4",
     "vite": "^5.4.19"
   }
