@@ -226,6 +226,32 @@ export async function rotateRefreshSession(refreshToken, {
       throw new AppError('Phiên đăng nhập đã bị thu hồi.', 401);
     }
 
+    if (
+      session.role === 'ADMIN' &&
+      session.user_agent &&
+      userAgent &&
+      session.user_agent !== normalizeUserAgent(userAgent)
+    ) {
+      await client.query(
+        `UPDATE auth_sessions
+         SET revoked_at = NOW(), revoke_reason = 'ADMIN_CONTEXT_CHANGED'
+         WHERE id = $1`,
+        [session.id]
+      );
+      await client.query('COMMIT');
+
+      await recordSecurityEvent({
+        userId: session.user_id,
+        sessionId: session.id,
+        type: 'ADMIN_SESSION_CONTEXT_CHANGED',
+        severity: 'CRITICAL',
+        ip,
+        userAgent
+      });
+
+      throw new AppError('Phiên quản trị đã bị thu hồi vì thiết bị xác thực thay đổi.', 401);
+    }
+
     if (new Date(session.expires_at).getTime() <= Date.now()) {
       await client.query(
         `UPDATE auth_sessions
