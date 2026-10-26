@@ -79,6 +79,13 @@ const moderatorModules = [
 
 const adminModules = [
   {
+    to: '/admin/ingestion',
+    title: 'Auto Ingestion',
+    description: 'Tự thu thập địa điểm, ảnh, provenance và tạo hàng đợi xác minh theo lịch.',
+    icon: Database,
+    tone: 'cyan'
+  },
+  {
     to: '/admin/coverage-cleanup',
     title: 'Dọn địa điểm ngoài vùng',
     description: 'Quét và ẩn hàng loạt POI nằm ngoài 9 xã đang phục vụ.',
