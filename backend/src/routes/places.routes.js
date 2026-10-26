@@ -14,6 +14,9 @@ import {
   unfavorite
 } from '../controllers/placeEngagement.controller.js';
 import { reviewSchema } from '../validators/review.validators.js';
+import { placeEngagementEventSchema } from '../validators/partnerAnalytics.validators.js';
+import { postPlaceEngagement } from '../controllers/partnerAnalytics.controller.js';
+import { placeEngagementRateLimiter } from '../middleware/rateLimit.js';
 import { nearbyQuerySchema, boundsQuerySchema, listPlacesQuerySchema } from '../validators/place.validators.js';
 
 const router = Router();
@@ -24,6 +27,13 @@ router.get('/favorites/me', authenticate, getFavorites);
 router.get('/home-sections', getHomeSections);
 router.get('/featured', getFeatured);
 router.get('/slug/:slug', getPlaceBySlugHandler);
+
+router.post(
+  '/:id/engagement',
+  placeEngagementRateLimiter,
+  validateBody(placeEngagementEventSchema),
+  postPlaceEngagement
+);
 
 router.get('/:id/reviews', getReviews);
 router.get('/:id/me', authenticate, getMine);
