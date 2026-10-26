@@ -91,6 +91,40 @@ export function authorize(...allowedRoles) {
   };
 }
 
+export async function requireAdminSecurity(req, _res, next) {
+  if (!req.user || req.user.role !== 'ADMIN') return next();
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT two_factor_enabled
+       FROM user_security
+       WHERE user_id = $1
+       LIMIT 1`,
+      [req.user.id]
+    );
+
+    if (!rows[0]?.two_factor_enabled) {
+      return next(new AppError(
+        'Quản trị viên phải bật xác thực hai lớp trước khi sử dụng Admin.',
+        403,
+        { code: 'ADMIN_2FA_SETUP_REQUIRED' }
+      ));
+    }
+
+    if (!req.user.twoFactorVerified) {
+      return next(new AppError(
+        'Phiên quản trị này chưa được xác thực hai lớp.',
+        403,
+        { code: 'ADMIN_2FA_REQUIRED' }
+      ));
+    }
+
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+}
+
 export function requireCtvLevel(minimumLevel = 1) {
   return function requireCtvLevelMiddleware(req, _res, next) {
     if (!req.user) return next(new AppError('Authentication required.', 401));
