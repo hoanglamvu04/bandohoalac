@@ -38,6 +38,8 @@ export const env = {
   photoScanWikimediaRadiusM: Math.min(Math.max(Number(process.env.PHOTO_SCAN_WIKIMEDIA_RADIUS_M) || 350, 50), 1000),
   photoScanCandidatesPerProvider: Math.min(Math.max(Number(process.env.PHOTO_SCAN_CANDIDATES_PER_PROVIDER) || 8, 1), 20),
   photoScanMaxCandidatesPerPlace: Math.min(Math.max(Number(process.env.PHOTO_SCAN_MAX_CANDIDATES_PER_PLACE) || 8, 1), 20),
+  ingestionAutomationEnabled: String(process.env.INGESTION_AUTOMATION_ENABLED || 'true').trim().toLowerCase() !== 'false',
+  ingestionSchedulerIntervalMs: Math.max(Number(process.env.INGESTION_SCHEDULER_INTERVAL_MS) || 300000, 60000),
   placeBoundsCacheTtlMs: Math.max(Number(process.env.PLACE_BOUNDS_CACHE_TTL_MS) || 30000, 1000),
   placeBoundsCacheMaxEntries: Math.max(Number(process.env.PLACE_BOUNDS_CACHE_MAX_ENTRIES) || 400, 20)
 };
