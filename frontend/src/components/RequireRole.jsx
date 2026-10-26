@@ -17,5 +17,13 @@ export default function RequireRole({ roles, children }) {
     return <Navigate to="/" replace />;
   }
 
+  if (
+    user.role === 'ADMIN' &&
+    user.security?.adminTwoFactorSetupRequired &&
+    location.pathname.startsWith('/admin')
+  ) {
+    return <Navigate to="/security" replace />;
+  }
+
   return children;
 }
