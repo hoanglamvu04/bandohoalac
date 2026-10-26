@@ -125,6 +125,14 @@ async function createLocalPlaceVariants(file) {
       unlink(cardPath).catch(() => {})
     ]);
 
+    if (env.nodeEnv === 'production') {
+      await unlink(sourcePath).catch(() => {});
+      throw new AppError(
+        'Không thể xử lý ảnh an toàn lúc này. Vui lòng thử lại sau.',
+        503
+      );
+    }
+
     if (error?.code === 'ENOENT' && !warnedMissingCwebp) {
       warnedMissingCwebp = true;
       console.warn(
