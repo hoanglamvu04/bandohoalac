@@ -5,8 +5,8 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { env } from '../config/env.js';
 
-const backupDir = process.env.BACKUP_DIR ||
-  (env.nodeEnv === 'production' ? '/var/backups/hola-maps' : path.resolve('backups'));
+const backupDir = process.env.BACKUP_DIR || path.resolve('backups');
+const optional = process.argv.includes('--optional');
 const retentionDays = Math.min(Math.max(Number(process.env.BACKUP_RETENTION_DAYS) || 14, 1), 90);
 
 function run(command, args) {
@@ -78,6 +78,10 @@ async function main() {
 }
 
 main().catch((error) => {
+  if (optional) {
+    console.warn('[backup] skipped:', error.message);
+    return;
+  }
   console.error('[backup]', error.message);
   process.exitCode = 1;
 });
