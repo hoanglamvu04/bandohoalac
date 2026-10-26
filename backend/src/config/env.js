@@ -15,7 +15,11 @@ export const env = {
   port: Number(process.env.PORT) || 5000,
   databaseUrl: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/hola_maps',
   jwtSecret: requireInProduction('JWT_SECRET', process.env.JWT_SECRET, 'dev-only-insecure-secret-change-me'),
-  jwtExpiresIn: process.env.JWT_EXPIRES || process.env.JWT_EXPIRES_IN || '7d',
+  jwtExpiresIn: process.env.JWT_EXPIRES || process.env.JWT_EXPIRES_IN || '15m',
+  refreshTokenDays: Math.min(Math.max(Number(process.env.REFRESH_TOKEN_DAYS) || 30, 1), 90),
+  securityEncryptionKey: (process.env.SECURITY_ENCRYPTION_KEY || '').trim(),
+  loginLockThreshold: Math.min(Math.max(Number(process.env.LOGIN_LOCK_THRESHOLD) || 8, 4), 20),
+  loginLockMinutes: Math.min(Math.max(Number(process.env.LOGIN_LOCK_MINUTES) || 15, 5), 1440),
   corsOrigin: (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',').map((origin) => origin.trim()),
   publicApiCorsOrigin: (process.env.PUBLIC_API_CORS_ORIGIN || '')
     .split(',')
@@ -26,7 +30,9 @@ export const env = {
   cloudinaryUrl: (process.env.CLOUDINARY_URL || '').trim(),
   cloudinaryFolder: (process.env.CLOUDINARY_FOLDER || 'hola-maps').trim(),
   maxUploadFileSizeMb: Number(process.env.MAX_UPLOAD_FILE_SIZE_MB) || 5,
-  maxUploadFileCount: Math.max(Number(process.env.MAX_UPLOAD_FILE_COUNT) || 20, 20),
+  maxUploadFileCount: Math.min(Math.max(Number(process.env.MAX_UPLOAD_FILE_COUNT) || 20, 1), 30),
+  maxUploadMegapixels: Math.min(Math.max(Number(process.env.MAX_UPLOAD_MEGAPIXELS) || 40, 4), 100),
+  maxUploadDimension: Math.min(Math.max(Number(process.env.MAX_UPLOAD_DIMENSION) || 12000, 2048), 20000),
   publicBaseUrl: process.env.PUBLIC_BASE_URL || `http://localhost:${Number(process.env.PORT) || 5000}`,
   holaMapsWebUrl: (process.env.HOLA_MAPS_WEB_URL || '').trim(),
   routingBaseUrl: process.env.ROUTING_BASE_URL || 'https://router.project-osrm.org',
