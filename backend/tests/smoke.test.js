@@ -103,6 +103,36 @@ test('auth: /me without a token is rejected', async () => {
 });
 
 
+test('security: cross-site browser auth mutations are blocked', async () => {
+  const headers = {
+    'Content-Type': 'application/json',
+    'Origin': 'https://evil.example',
+    'Sec-Fetch-Site': 'cross-site'
+  };
+
+  const registerRes = await fetch(url('/api/auth/register'), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      name: 'Blocked Cross Site',
+      email: `blocked-${Date.now()}@example.com`,
+      password: 'Blocked@1234'
+    })
+  });
+  assert.equal(registerRes.status, 403);
+
+  const loginRes = await fetch(url('/api/auth/login'), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      email: 'nobody@example.com',
+      password: 'Blocked@1234'
+    })
+  });
+  assert.equal(loginRes.status, 403);
+});
+
+
 test('auth: browser login accepts empty optional 2FA fields', async () => {
   const email = `smoke-browser-login-${Date.now()}@holamaps.vn`;
   const password = 'Smoke@1234';
