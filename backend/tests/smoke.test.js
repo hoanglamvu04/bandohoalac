@@ -432,3 +432,109 @@ test('Developer API admin routes reject unauthenticated users', async () => {
   const res = await fetch(url('/api/admin/developer-api/overview'));
   assert.equal(res.status, 401);
 });
+
+test('Housing V3: organic HOLA Rank ignores partner flags and never presents stale rooms as available', async () => {
+  const category = await pool.query("SELECT id FROM categories WHERE slug = 'bat-dong-san'");
+  assert.ok(category.rows[0], 'Housing category must be seeded.');
+
+  const marker = 'rankv3' + Date.now() + Math.random().toString(36).slice(2, 8);
+  const createdIds = [];
+
+  async function createFixture(label, { availability, rooms, ageDays, partner = false, rating = 0 }) {
+    const result = await pool.query(
+      [
+        'INSERT INTO places',
+        '(name, slug, description, category_id, address, location, phone, status, rating_avg)',
+        "VALUES ($1, $2, 'Phòng trọ có mô tả', $3, 'ĐH FPT Hòa Lạc',",
+        "ST_SetSRID(ST_MakePoint(105.52522, 21.01354), 4326), '0900000000', 'PUBLISHED', $4)",
+        'RETURNING id'
+      ].join(' '),
+      ['Phòng trọ ' + marker + ' ' + label, marker + '-' + label, category.rows[0].id, rating]
+    );
+    const id = result.rows[0].id;
+    createdIds.push(id);
+
+    await pool.query(
+      [
+        'INSERT INTO housing_listings',
+        '(place_id, monthly_rent, area_m2, availability_status, available_rooms,',
+        'total_rooms, last_verified_at, verification_source)',
+        "VALUES ($1, 2000000, 25, $2, $3, 3, NOW() - $4::int * INTERVAL '1 day', 'COMMUNITY')"
+      ].join(' '),
+      [id, availability, rooms, ageDays]
+    );
+
+    if (partner) {
+      await pool.query(
+        "INSERT INTO place_partners (place_id, status, partner_name) VALUES ($1, 'ACTIVE', 'Rank Test Partner')",
+        [id]
+      );
+    }
+
+    return String(id);
+  }
+
+  try {
+    const organic = await createFixture('organic', {
+      availability: 'AVAILABLE', rooms: 2, ageDays: 1, rating: 1
+    });
+    const partner = await createFixture('partner', {
+      availability: 'AVAILABLE', rooms: 2, ageDays: 1, partner: true, rating: 5
+    });
+    const stale = await createFixture('stale', {
+      availability: 'AVAILABLE', rooms: 1, ageDays: 90
+    });
+    const full = await createFixture('full', {
+      availability: 'FULL', rooms: 0, ageDays: 1, partner: true
+    });
+
+    const base = '/api/housing?q=' + encodeURIComponent(marker) + '&sort=recommended';
+    const response = await fetch(url(base));
+    assert.equal(response.status, 200);
+    const report = await response.json();
+    assert.equal(report.meta.rank.mode, 'organic');
+    assert.equal(report.meta.rank.paidBoost, false);
+    assert.equal(report.meta.rank.freshnessDays, 30);
+    assert.equal(report.items.length, 4);
+
+    const byId = new Map(report.items.map((item) => [item.id, item]));
+    assert.equal(byId.get(organic).isPartner, false);
+    assert.equal(byId.get(partner).isPartner, true);
+    assert.equal(byId.get(organic).holaRank.score, byId.get(partner).holaRank.score);
+    assert.equal(byId.get(organic).housing.effectiveAvailabilityStatus, 'AVAILABLE');
+    assert.equal(byId.get(stale).housing.availabilityStatus, 'AVAILABLE');
+    assert.equal(byId.get(stale).housing.effectiveAvailabilityStatus, 'UNKNOWN');
+    assert.equal(byId.get(stale).housing.availabilityFresh, false);
+    assert.equal(byId.get(full).housing.effectiveAvailabilityStatus, 'FULL');
+
+    const rankedIds = report.items.map((item) => item.id);
+    assert.ok(rankedIds.indexOf(organic) < rankedIds.indexOf(stale));
+    assert.ok(rankedIds.indexOf(partner) < rankedIds.indexOf(stale));
+    assert.ok(rankedIds.indexOf(stale) < rankedIds.indexOf(full));
+
+    const availableRes = await fetch(url(base + '&availableOnly=true'));
+    assert.equal(availableRes.status, 200);
+    const available = (await availableRes.json()).items.map((item) => item.id);
+    assert.equal(available.length, 2);
+    assert.ok(available.includes(organic));
+    assert.ok(available.includes(partner));
+    assert.equal(available.includes(stale), false);
+
+    const minRoomsRes = await fetch(url(base + '&minAvailableRooms=1'));
+    assert.equal(minRoomsRes.status, 200);
+    const minRooms = (await minRoomsRes.json()).items.map((item) => item.id);
+    assert.equal(minRooms.includes(stale), false);
+
+    const unknownRes = await fetch(url(base + '&availability=UNKNOWN'));
+    assert.equal(unknownRes.status, 200);
+    assert.deepEqual((await unknownRes.json()).items.map((item) => item.id), [stale]);
+
+    const recentRes = await fetch(url(base + '&verifiedWithinDays=7'));
+    assert.equal(recentRes.status, 200);
+    assert.equal((await recentRes.json()).items.length, 3);
+  } finally {
+    if (createdIds.length) {
+      await pool.query('DELETE FROM places WHERE id = ANY($1::bigint[])', [createdIds]);
+    }
+  }
+});
