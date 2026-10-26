@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import '../housing-rank-v3.css';
 import {
   BadgeCheck,
   Building2,
@@ -547,6 +548,7 @@ export default function MapPage() {
   const housingMinRent = searchParams.get('minRent') || '';
   const housingMaxRent = searchParams.get('maxRent') || '';
   const housingMaxDistanceFpt = searchParams.get('maxDistanceFpt') || '';
+  const housingVerifiedWithinDays = searchParams.get('verifiedWithinDays') || '';
   const housingAvailability = searchParams.get('availability') || '';
   const housingAvailableOnly = searchParams.get('availableOnly') === 'true';
   const housingPartnerOnly = searchParams.get('partnerOnly') === 'true';
@@ -556,6 +558,7 @@ export default function MapPage() {
     housingMinRent,
     housingMaxRent,
     housingMaxDistanceFpt,
+    housingVerifiedWithinDays,
     housingAvailability,
     housingAvailableOnly ? '1' : '0',
     housingPartnerOnly ? '1' : '0',
@@ -576,6 +579,7 @@ export default function MapPage() {
     isHousingMode && Boolean(housingMinRent),
     isHousingMode && Boolean(housingMaxRent),
     isHousingMode && Boolean(housingMaxDistanceFpt),
+    isHousingMode && Boolean(housingVerifiedWithinDays),
     isHousingMode && Boolean(housingAvailability),
     isHousingMode && housingAvailableOnly,
     isHousingMode && housingPartnerOnly,
@@ -607,6 +611,7 @@ export default function MapPage() {
       minRent: housingMinRent || undefined,
       maxRent: housingMaxRent || undefined,
       maxDistanceFpt: housingMaxDistanceFpt || undefined,
+      verifiedWithinDays: housingVerifiedWithinDays || undefined,
       availability: housingAvailability || undefined,
       availableOnly: housingAvailableOnly ? 'true' : undefined,
       partnerOnly: housingPartnerOnly ? 'true' : undefined,
@@ -1045,6 +1050,12 @@ export default function MapPage() {
   const sidebarPlaces = useMemo(() => {
     const items = [...filteredPlaces];
 
+    // Housing has server-side relevance ranking across the entire result set.
+    // Do not overwrite it with a viewport-distance sort on the first page.
+    if (isHousingMode && ['relevant', 'recent', 'rent-asc', 'rent-desc', 'fpt-distance'].includes(sortMode)) {
+      return items;
+    }
+
     if (sortMode === 'nearest') {
       return items.sort((a, b) =>
         Number(a.distanceFromUser ?? a.distance ?? Number.POSITIVE_INFINITY) -
@@ -1107,7 +1118,7 @@ export default function MapPage() {
       const bDistance = ((bLng - centerLng) ** 2) + ((bLat - centerLat) ** 2);
       return aDistance - bDistance;
     });
-  }, [filteredPlaces, viewport, query, placeScope, sortMode]);
+  }, [filteredPlaces, viewport, query, placeScope, sortMode, isHousingMode]);
 
   const selectedPlace = useMemo(
     () => places.find((place) => place.id === selectedId) || null,
