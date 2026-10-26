@@ -121,7 +121,7 @@ jobs:
             npm run db:migrate
 
             echo "==> Nightly database backup schedule"
-            bash scripts/install-backup-cron.sh || echo "WARN: backup schedule skipped"
+            bash scripts/install-backup-cron.sh
 
             echo "==> Backfill optimized place images"
             npm run images:backfill-variants --prefix backend -- --limit=250 || true
