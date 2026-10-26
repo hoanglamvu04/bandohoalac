@@ -3,25 +3,53 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 function requireInProduction(name, value, fallback) {
-  if (value) return value;
+  const normalized = String(value || '').trim();
+  if (normalized) return normalized;
   if (process.env.NODE_ENV === 'production') {
     throw new Error(`Missing required environment variable: ${name}`);
   }
   return fallback;
 }
 
+function requireStrongSecretInProduction(name, value, fallback, minLength = 32) {
+  const resolved = requireInProduction(name, value, fallback);
+  if (
+    process.env.NODE_ENV === 'production' &&
+    String(resolved || '').length < minLength
+  ) {
+    throw new Error(`${name} must contain at least ${minLength} characters in production.`);
+  }
+  return resolved;
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT) || 5000,
   host: process.env.HOST || (process.env.NODE_ENV === 'production' ? '127.0.0.1' : '0.0.0.0'),
-  databaseUrl: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/hola_maps',
-  jwtSecret: requireInProduction('JWT_SECRET', process.env.JWT_SECRET, 'dev-only-insecure-secret-change-me'),
-  jwtExpiresIn: process.env.JWT_EXPIRES || process.env.JWT_EXPIRES_IN || '15m',
+  databaseUrl: requireInProduction(
+    'DATABASE_URL',
+    process.env.DATABASE_URL,
+    'postgresql://postgres:postgres@localhost:5432/hola_maps'
+  ),
+  jwtSecret: requireStrongSecretInProduction(
+    'JWT_SECRET',
+    process.env.JWT_SECRET,
+    'dev-only-insecure-secret-change-me'
+  ),
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || process.env.JWT_EXPIRES || '15m',
   refreshTokenDays: Math.min(Math.max(Number(process.env.REFRESH_TOKEN_DAYS) || 30, 1), 90),
-  securityEncryptionKey: (process.env.SECURITY_ENCRYPTION_KEY || '').trim(),
+  securityEncryptionKey: requireStrongSecretInProduction(
+    'SECURITY_ENCRYPTION_KEY',
+    process.env.SECURITY_ENCRYPTION_KEY,
+    'dev-only-security-encryption-key-change-me'
+  ),
   loginLockThreshold: Math.min(Math.max(Number(process.env.LOGIN_LOCK_THRESHOLD) || 8, 4), 20),
   loginLockMinutes: Math.min(Math.max(Number(process.env.LOGIN_LOCK_MINUTES) || 15, 5), 1440),
-  corsOrigin: (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',').map((origin) => origin.trim()),
+  corsOrigin: requireInProduction(
+    'CORS_ORIGIN',
+    process.env.CORS_ORIGIN,
+    'http://localhost:5173'
+  ).split(',').map((origin) => origin.trim()).filter(Boolean),
   publicApiCorsOrigin: (process.env.PUBLIC_API_CORS_ORIGIN || '')
     .split(',')
     .map((origin) => origin.trim())
@@ -34,7 +62,11 @@ export const env = {
   maxUploadFileCount: Math.min(Math.max(Number(process.env.MAX_UPLOAD_FILE_COUNT) || 20, 1), 30),
   maxUploadMegapixels: Math.min(Math.max(Number(process.env.MAX_UPLOAD_MEGAPIXELS) || 40, 4), 100),
   maxUploadDimension: Math.min(Math.max(Number(process.env.MAX_UPLOAD_DIMENSION) || 12000, 2048), 20000),
-  publicBaseUrl: process.env.PUBLIC_BASE_URL || `http://localhost:${Number(process.env.PORT) || 5000}`,
+  publicBaseUrl: requireInProduction(
+    'PUBLIC_BASE_URL',
+    process.env.PUBLIC_BASE_URL,
+    `http://localhost:${Number(process.env.PORT) || 5000}`
+  ),
   holaMapsWebUrl: (process.env.HOLA_MAPS_WEB_URL || '').trim(),
   routingBaseUrl: process.env.ROUTING_BASE_URL || 'https://router.project-osrm.org',
   routingTimeoutMs: Number(process.env.ROUTING_TIMEOUT_MS) || 10000,
