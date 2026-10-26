@@ -4,6 +4,15 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-/var/www/bandohoalac}"
 ENV_FILE="$APP_DIR/backend/.env"
 
+upsert_env() {
+  local key="$1" value="$2"
+  if grep -qE "^[[:space:]]*${key}=" "$ENV_FILE"; then
+    sed -E -i "s#^[[:space:]]*${key}=.*#${key}=${value}#" "$ENV_FILE"
+  else
+    printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
+  fi
+}
+
 mkdir -p "$(dirname "$ENV_FILE")"
 touch "$ENV_FILE"
 chmod 600 "$ENV_FILE" || true
@@ -23,3 +32,8 @@ if ! grep -qE '^SECURITY_ENCRYPTION_KEY=.{32,}$' "$ENV_FILE"; then
 else
   echo "[security] dedicated encryption key already configured."
 fi
+
+upsert_env JWT_EXPIRES_IN 15m
+upsert_env REFRESH_TOKEN_DAYS 30
+upsert_env LOGIN_LOCK_THRESHOLD 8
+upsert_env LOGIN_LOCK_MINUTES 15
