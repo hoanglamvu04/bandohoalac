@@ -10,6 +10,7 @@ const HaloHolaMapPage = lazy(() => import('./pages/HaloHolaMapPage.jsx'));
 const LocationPickerPage = lazy(() => import('./pages/LocationPickerPage.jsx'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetailV2.jsx'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
+const SecurityPage = lazy(() => import('./pages/SecurityPage.jsx'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard.jsx'));
 const Contribute = lazy(() => import('./pages/Contribute.jsx'));
 const CommunityVerification = lazy(() => import('./pages/CommunityVerification.jsx'));
@@ -167,6 +168,7 @@ export const router = createBrowserRouter([
       { path: 'contribute', element: withSuspense(Contribute) },
       { path: 'verify', element: withRole(CommunityVerification) },
       { path: 'profile', element: withRole(ProfilePage) },
+      { path: 'security', element: withRole(SecurityPage) },
       { path: 'leaderboard', element: withSuspense(Leaderboard) },
       { path: 'rewards', element: withSuspense(RewardsPage) },
       { path: 'missions', element: withSuspense(MissionsPage) },
