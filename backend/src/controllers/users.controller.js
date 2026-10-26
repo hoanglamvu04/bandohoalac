@@ -1,6 +1,11 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
-import { findUserById, getUserBadges, getRecentActivity, toPublicUser } from '../services/user.service.js';
+import {
+  findUserById,
+  getUserBadges,
+  getRecentActivity,
+  toPublicProfileUser
+} from '../services/user.service.js';
 import { getUserReputation } from '../services/reputation.service.js';
 import {
   countPublishedPlacesByUser,
@@ -38,7 +43,7 @@ export const getProfile = asyncHandler(async (req, res) => {
     : null;
 
   res.json({
-    user: toPublicUser(user, reputation),
+    user: toPublicProfileUser(user, reputation),
     stats: {
       placesContributed: placesCount,
       photosContributed: photosCount,
