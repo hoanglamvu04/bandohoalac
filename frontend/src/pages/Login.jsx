@@ -9,7 +9,8 @@ export default function Login() {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ email: '', password: '', totpCode: '' });
+  const [needsTwoFactor, setNeedsTwoFactor] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -26,6 +27,9 @@ export default function Login() {
       showToast('Đăng nhập thành công. Chào mừng trở lại!', 'success');
       navigate(location.state?.from?.pathname || '/', { replace: true });
     } catch (err) {
+      if (err.code === 'TWO_FACTOR_REQUIRED' || err.code === 'TWO_FACTOR_INVALID') {
+        setNeedsTwoFactor(true);
+      }
       setError(err.message);
     } finally {
       setSubmitting(false);
@@ -45,6 +49,22 @@ export default function Login() {
         <label>Mật khẩu
           <input type="password" name="password" required value={form.password} onChange={updateField} placeholder="••••••••" />
         </label>
+
+        {needsTwoFactor && (
+          <label>Mã xác thực 2 lớp
+            <input
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              name="totpCode"
+              required
+              minLength={6}
+              maxLength={6}
+              value={form.totpCode}
+              onChange={updateField}
+              placeholder="000000"
+            />
+          </label>
+        )}
 
         {error && <div className="form-status error">{error}</div>}
 
