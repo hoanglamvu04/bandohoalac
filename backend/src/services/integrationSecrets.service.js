@@ -23,7 +23,7 @@ const PROVIDERS = Object.freeze({
     key: 'HALO_HOLA',
     label: 'HALO HOLA',
     description: 'Shared secret để HALO HOLA đồng bộ bài ảnh, vị trí và gallery vào Hola Maps.',
-    envFallback: () => env.haloHolaSharedSecret || ''
+    envFallback: () => env.holaMapsHaloSecret || ''
   }
 });
 
