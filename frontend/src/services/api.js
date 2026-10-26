@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5003/api').replace(/\/$/, '');
 let accessToken = null;
+let refreshPromise = null;
 
 export const client = axios.create({ baseURL: API_URL, withCredentials: true });
 
@@ -19,6 +20,52 @@ client.interceptors.request.use((config) => {
   }
   return config;
 });
+
+async function refreshAccessToken() {
+  if (!refreshPromise) {
+    refreshPromise = client.post('/auth/refresh', null, { skipRefreshRetry: true })
+      .then((response) => {
+        const token = response.data?.token || null;
+        setToken(token);
+        return response.data;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
+client.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const config = error?.config;
+    const status = error?.response?.status;
+    const path = String(config?.url || '');
+
+    if (
+      status === 401 &&
+      config &&
+      !config.retryAfterRefresh &&
+      !config.skipRefreshRetry &&
+      !path.includes('/auth/login') &&
+      !path.includes('/auth/register') &&
+      !path.includes('/auth/refresh')
+    ) {
+      config.retryAfterRefresh = true;
+      try {
+        await refreshAccessToken();
+        config.headers = config.headers || {};
+        if (getToken()) config.headers.Authorization = 'Bearer ' + getToken();
+        return client(config);
+      } catch {
+        setToken(null);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export function getToken() {
   return accessToken;
@@ -61,7 +108,7 @@ export function login(payload) {
 }
 
 export function refreshSession() {
-  return unwrap(client.post('/auth/refresh'));
+  return unwrap(refreshAccessToken());
 }
 
 export function logoutSession() {
