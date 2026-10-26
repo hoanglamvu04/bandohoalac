@@ -348,7 +348,7 @@ export default function PlaceDetailV2() {
                   ? 'unknown'
                   : '')
             }>
-              <BadgeCheck size={13} />
+              {housingAvailability === 'UNKNOWN' ? <Clock3 size={13} /> : <BadgeCheck size={13} />}
               {housingAvailability === 'AVAILABLE'
                 ? 'Còn phòng'
                 : housingAvailability === 'LIMITED'
@@ -441,7 +441,7 @@ export default function PlaceDetailV2() {
               </div>
 
               <div className="place-v2-housing-verified">
-                {housingDetail.housing.availabilityFresh
+                {housingDetail.housing.availabilityFresh && housingAvailability !== 'UNKNOWN'
                   ? <ShieldCheck size={14} />
                   : <Clock3 size={14} />}
                 {housingDetail.housing.availabilityFresh && housingAvailability !== 'UNKNOWN'
