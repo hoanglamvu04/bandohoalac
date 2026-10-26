@@ -104,7 +104,9 @@ export function mapHousingRank(row) {
   if (status === 'AVAILABLE') signals.push('Còn phòng · xác minh trong 30 ngày');
   else if (status === 'LIMITED') signals.push('Sắp hết phòng · xác minh trong 30 ngày');
   else if (status === 'FULL') signals.push('Hiện hết phòng');
-  else signals.push('Tình trạng phòng chưa được xác minh gần đây');
+  else signals.push(verifiedRecently
+    ? 'Tình trạng phòng chưa được xác nhận'
+    : 'Tình trạng phòng chưa được xác minh trong 30 ngày');
 
   if (verifiedRecently) signals.push('Dữ liệu phòng được cập nhật gần đây');
   if (Number(row.monthly_rent) > 0) signals.push('Có giá thuê rõ ràng');
