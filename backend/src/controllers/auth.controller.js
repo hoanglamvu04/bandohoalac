@@ -1,7 +1,11 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
 import { signAccessToken } from '../utils/jwt.js';
-import { hashPassword, comparePassword } from '../utils/password.js';
+import {
+  compareDummyPassword,
+  comparePassword,
+  hashPassword
+} from '../utils/password.js';
 import {
   createUser,
   findUserByEmail,
@@ -109,6 +113,7 @@ export const login = asyncHandler(async (req, res) => {
   const user = await findUserByEmail(email);
 
   if (!user) {
+    await compareDummyPassword(password);
     throw new AppError('Invalid email or password.', 401);
   }
 
