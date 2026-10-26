@@ -27,10 +27,10 @@ const PROVIDERS = Object.freeze({
   }
 });
 
-function encryptionKey() {
+function encryptionKey(secret = env.securityEncryptionKey || env.jwtSecret) {
   return createHash('sha256')
     .update('hola-maps:integration-secrets:v1:')
-    .update(String(env.jwtSecret || ''))
+    .update(String(secret || ''))
     .digest();
 }
 
@@ -86,18 +86,32 @@ export function decryptIntegrationSecret(payload, provider = 'FOURSQUARE') {
   const authTag = payload.authTag ?? payload.auth_tag;
   if (!ciphertext || !iv || !authTag) return null;
 
-  const decipher = createDecipheriv(
-    ALGORITHM,
-    encryptionKey(),
-    Buffer.from(iv, 'base64')
-  );
-  decipher.setAAD(aadFor(key));
-  decipher.setAuthTag(Buffer.from(authTag, 'base64'));
-  const decrypted = Buffer.concat([
-    decipher.update(Buffer.from(ciphertext, 'base64')),
-    decipher.final()
-  ]);
-  return decrypted.toString('utf8');
+  const candidates = [env.securityEncryptionKey || env.jwtSecret];
+  if (env.securityEncryptionKey && env.securityEncryptionKey !== env.jwtSecret) {
+    candidates.push(env.jwtSecret);
+  }
+
+  let lastError = null;
+  for (const secret of candidates) {
+    try {
+      const decipher = createDecipheriv(
+        ALGORITHM,
+        encryptionKey(secret),
+        Buffer.from(iv, 'base64')
+      );
+      decipher.setAAD(aadFor(key));
+      decipher.setAuthTag(Buffer.from(authTag, 'base64'));
+      const decrypted = Buffer.concat([
+        decipher.update(Buffer.from(ciphertext, 'base64')),
+        decipher.final()
+      ]);
+      return decrypted.toString('utf8');
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error('Unable to decrypt integration secret.');
 }
 
 function publicProvider(provider, row, fallbackSecret = '') {
