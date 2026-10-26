@@ -275,7 +275,7 @@ export async function runFreshnessSweep(config = {}) {
        'STALE_DATA',
        CASE
          WHEN p.last_verified_at IS NULL THEN 72
-         WHEN p.last_verified_at < NOW() - (($1 * 2)::text || ' days')::interval THEN 80
+         WHEN p.last_verified_at < NOW() - (((($1)::int * 2))::text || ' days')::interval THEN 80
          ELSE 62
        END,
        'PENDING',
