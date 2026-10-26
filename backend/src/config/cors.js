@@ -1,4 +1,5 @@
 import { env } from './env.js';
+import { AppError } from '../utils/AppError.js';
 import { getDeveloperApiAllowedOrigins } from '../services/developerApi.service.js';
 
 const LOCALHOST_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/;
@@ -14,7 +15,7 @@ function resolveAgainst(origin, allowedOrigins, callback) {
     return callback(null, true);
   }
 
-  return callback(new Error(`CORS: origin "${origin}" is not allowed.`));
+  return callback(new AppError(`CORS: origin "${origin}" is not allowed.`, 403));
 }
 
 export function resolveCorsOrigin(origin, callback) {
@@ -37,7 +38,7 @@ export function resolvePublicApiCorsOrigin(origin, callback) {
   getDeveloperApiAllowedOrigins()
     .then((dynamicAllowed) => {
       if (dynamicAllowed.includes(origin)) return callback(null, true);
-      return callback(new Error('CORS: origin "' + origin + '" is not allowed.'));
+      return callback(new AppError('CORS: origin "' + origin + '" is not allowed.', 403));
     })
     .catch((error) => callback(error));
 }
