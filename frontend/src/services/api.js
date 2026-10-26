@@ -119,6 +119,10 @@ export function getSecurityOverview() {
   return unwrap(client.get('/auth/security'));
 }
 
+export function changePassword(payload) {
+  return unwrap(client.post('/auth/security/password', payload));
+}
+
 export function startTwoFactorSetup(password) {
   return unwrap(client.post('/auth/security/2fa/setup', { password }));
 }
