@@ -25,6 +25,7 @@ import {
   setRefreshCookie
 } from '../services/authSession.service.js';
 import {
+  consumeRecoveryCode,
   getAuthSecuritySummary,
   getEnabledTotpSecret
 } from '../services/userSecurity.service.js';
@@ -103,7 +104,7 @@ export const register = asyncHandler(async (req, res) => {
 });
 
 export const login = asyncHandler(async (req, res) => {
-  const { email, password, totpCode } = req.body;
+  const { email, password, totpCode, recoveryCode } = req.body;
   const context = requestContext(req);
   const user = await findUserByEmail(email);
 
@@ -138,24 +139,39 @@ export const login = asyncHandler(async (req, res) => {
     const totpSecret = await getEnabledTotpSecret(user.id);
 
     if (totpSecret) {
-      if (!totpCode) {
+      if (!totpCode && !recoveryCode) {
         throw new AppError(
-          'Nhập mã 6 số từ ứng dụng Authenticator.',
+          'Nhập mã Authenticator hoặc mã khôi phục.',
           428,
           { code: 'TWO_FACTOR_REQUIRED' }
         );
       }
 
-      if (!verifyTotp(totpSecret, totpCode)) {
+      const totpValid = Boolean(totpCode && verifyTotp(totpSecret, totpCode));
+      const recoveryValid = !totpValid && recoveryCode
+        ? await consumeRecoveryCode(user.id, recoveryCode)
+        : false;
+
+      if (!totpValid && !recoveryValid) {
         await recordFailedLogin({ userId: user.id, ...context });
         await recordSecurityEvent({
           userId: user.id,
           type: 'TWO_FACTOR_LOGIN_FAILED',
           severity: 'WARN',
-          ...context
+          ...context,
+          metadata: { method: recoveryCode ? 'RECOVERY_CODE' : 'TOTP' }
         });
         throw new AppError('Mã xác thực hai lớp không đúng.', 401, {
           code: 'TWO_FACTOR_INVALID'
+        });
+      }
+
+      if (recoveryValid) {
+        await recordSecurityEvent({
+          userId: user.id,
+          type: 'TWO_FACTOR_RECOVERY_USED',
+          severity: 'WARN',
+          ...context
         });
       }
 
