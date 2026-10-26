@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate, authorize, requireAdminSecurity } from '../middleware/auth.js';
 import {
   getCoverageCleanupAdmin,
   runCoverageCleanupAdmin
@@ -7,7 +7,7 @@ import {
 
 const router = Router();
 
-router.use(authenticate, authorize('ADMIN'));
+router.use(authenticate, authorize('ADMIN'), requireAdminSecurity);
 router.get('/', getCoverageCleanupAdmin);
 router.post('/run', runCoverageCleanupAdmin);
 
