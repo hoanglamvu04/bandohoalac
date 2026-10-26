@@ -51,8 +51,10 @@ export function toPublicProfileUser(user, reputation = null) {
 
   const {
     email: _email,
+    role: _role,
     pointsBalance: _pointsBalance,
     trustScore: _trustScore,
+    ctvLevel: _ctvLevel,
     ctvTrustScore: _ctvTrustScore,
     ctvReviewsCount: _ctvReviewsCount,
     ctvConfirmedCount: _ctvConfirmedCount,
