@@ -40,6 +40,8 @@ function unwrap(promise) {
     const wrapped = new Error(message);
     wrapped.status = error.response?.status;
     wrapped.retryAfter = error.response?.headers?.['retry-after'];
+    wrapped.details = error.response?.data?.details || null;
+    wrapped.code = wrapped.details?.code || error.response?.data?.code || null;
     throw wrapped;
   });
 }
@@ -56,6 +58,38 @@ export function register(payload) {
 
 export function login(payload) {
   return unwrap(client.post('/auth/login', payload));
+}
+
+export function refreshSession() {
+  return unwrap(client.post('/auth/refresh'));
+}
+
+export function logoutSession() {
+  return unwrap(client.post('/auth/logout'));
+}
+
+export function getSecurityOverview() {
+  return unwrap(client.get('/auth/security'));
+}
+
+export function startTwoFactorSetup(password) {
+  return unwrap(client.post('/auth/security/2fa/setup', { password }));
+}
+
+export function confirmTwoFactorSetup(code) {
+  return unwrap(client.post('/auth/security/2fa/confirm', { code }));
+}
+
+export function disableTwoFactor(payload) {
+  return unwrap(client.delete('/auth/security/2fa', { data: payload }));
+}
+
+export function revokeSecuritySession(sessionId) {
+  return unwrap(client.delete('/auth/security/sessions/' + encodeURIComponent(sessionId)));
+}
+
+export function revokeAllSecuritySessions() {
+  return unwrap(client.post('/auth/security/sessions/revoke-all'));
 }
 
 export function getMe() {
