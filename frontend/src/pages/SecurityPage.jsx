@@ -7,6 +7,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import {
   changePassword,
   confirmTwoFactorSetup,
+  disableTwoFactor,
   getSecurityOverview,
   regenerateTwoFactorRecoveryCodes,
   revokeAllSecuritySessions,
@@ -25,6 +26,8 @@ export default function SecurityPage() {
   const [code, setCode] = useState('');
   const [recoveryCodes, setRecoveryCodes] = useState([]);
   const [recoveryForm, setRecoveryForm] = useState({ password: '', code: '' });
+  const [disableForm, setDisableForm] = useState({ password: '', code: '', recoveryCode: '' });
+  const [disableWithRecovery, setDisableWithRecovery] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
   const [busy, setBusy] = useState(false);
 
@@ -117,6 +120,26 @@ export default function SecurityPage() {
     }
   }
 
+
+  async function turnOffTwoFactor(event) {
+    event.preventDefault();
+    if (!window.confirm('Tắt xác thực hai lớp cho tài khoản này?')) return;
+    setBusy(true);
+    try {
+      await disableTwoFactor(disableForm);
+      setDisableForm({ password: '', code: '', recoveryCode: '' });
+      setDisableWithRecovery(false);
+      setRecoveryCodes([]);
+      await refreshUser();
+      await load();
+      showToast('Đã tắt xác thực hai lớp.', 'success');
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function revokeAll() {
     if (!window.confirm('Đăng xuất tất cả thiết bị?')) return;
     await revokeAllSecuritySessions();
@@ -182,6 +205,57 @@ export default function SecurityPage() {
                 />
                 <button disabled={busy}><RefreshCw size={14} /> Tạo mã khôi phục mới</button>
               </form>
+
+              <details className="security-disable-2fa">
+                <summary>Tắt xác thực hai lớp</summary>
+                <form className="security-form" onSubmit={turnOffTwoFactor}>
+                  <p>
+                    {user?.role === 'ADMIN'
+                      ? 'Admin sẽ bị khóa khỏi khu quản trị cho đến khi bật 2FA lại.'
+                      : 'Chỉ nên tắt khi bạn không còn muốn bảo vệ tài khoản bằng lớp xác thực thứ hai.'}
+                  </p>
+                  <input
+                    type="password"
+                    autoComplete="current-password"
+                    value={disableForm.password}
+                    onChange={(e) => setDisableForm((current) => ({ ...current, password: e.target.value }))}
+                    placeholder="Mật khẩu hiện tại"
+                    required
+                  />
+                  {disableWithRecovery ? (
+                    <input
+                      value={disableForm.recoveryCode}
+                      onChange={(e) => setDisableForm((current) => ({ ...current, recoveryCode: e.target.value, code: '' }))}
+                      placeholder="Mã khôi phục"
+                      minLength={12}
+                      maxLength={32}
+                      required
+                    />
+                  ) : (
+                    <input
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      value={disableForm.code}
+                      onChange={(e) => setDisableForm((current) => ({ ...current, code: e.target.value, recoveryCode: '' }))}
+                      placeholder="Mã Authenticator 6 số"
+                      minLength={6}
+                      maxLength={6}
+                      required
+                    />
+                  )}
+                  <button
+                    className="security-link-button"
+                    type="button"
+                    onClick={() => {
+                      setDisableWithRecovery((value) => !value);
+                      setDisableForm((current) => ({ ...current, code: '', recoveryCode: '' }));
+                    }}
+                  >
+                    {disableWithRecovery ? 'Dùng Authenticator' : 'Dùng mã khôi phục'}
+                  </button>
+                  <button className="security-danger-button" disabled={busy}>Tắt 2FA</button>
+                </form>
+              </details>
             </div>
           ) : setup ? (
             <form onSubmit={confirm} className="security-setup">
