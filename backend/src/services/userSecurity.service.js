@@ -61,6 +61,11 @@ export async function beginTwoFactorSetup({
   ip,
   userAgent
 }) {
+  const current = await getUserSecurityRow(user.id);
+  if (current?.two_factor_enabled) {
+    throw new AppError('Xác thực hai lớp đã được bật cho tài khoản này.', 409);
+  }
+
   const secret = generateTotpSecret();
   const encrypted = encryptSecuritySecret(secret, TOTP_SCOPE);
 
