@@ -265,6 +265,10 @@ export default function Navbar() {
           <UserRound size={16} />
           Trang cá nhân
         </Link>
+        <Link to="/security" onClick={() => setMobileAccountOpen(false)}>
+          <ShieldCheck size={16} />
+          Bảo mật tài khoản
+        </Link>
         <Link to="/verify" onClick={() => setMobileAccountOpen(false)}>
           <BadgeCheck size={16} />
           Xác minh cộng đồng
