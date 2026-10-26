@@ -36,7 +36,8 @@ EOF
 
 if grep -Fq "$SNIPPET" "$TARGET"; then
   nginx -t
-  echo "[security] nginx security headers already configured."
+  systemctl reload nginx 2>/dev/null || nginx -s reload
+  echo "[security] nginx security headers refreshed."
   exit 0
 fi
 
