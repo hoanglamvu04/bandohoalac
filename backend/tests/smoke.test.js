@@ -159,6 +159,29 @@ test('contribution permissions: authenticated but invalid payload is rejected wi
   assert.equal(res.status, 400);
 });
 
+
+test('upload security: rejects spoofed image bytes', async () => {
+  const email = `smoke-upload-${Date.now()}@holamaps.vn`;
+  const registerRes = await fetch(url('/api/auth/register'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Upload User', email, password: 'Smoke@1234' })
+  });
+  const { token } = await registerRes.json();
+
+  const form = new FormData();
+  form.append('type', 'CREATE_PLACE');
+  form.append('photos', new Blob(['not-an-image'], { type: 'image/png' }), 'fake.png');
+
+  const res = await fetch(url('/api/contributions'), {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form
+  });
+
+  assert.equal(res.status, 400);
+});
+
 test('contribution permissions: a plain USER cannot reach admin moderation routes', async () => {
   const email = `smoke-user-${Date.now()}@holamaps.vn`;
   const registerRes = await fetch(url('/api/auth/register'), {
