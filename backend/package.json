@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "db:migrate": "node src/database/migrate.js",
+    "db:migrate": "node src/scripts/backupDatabase.js --optional && node src/database/migrate.js",
     "db:migrate:seed": "node src/database/migrate.js --seed",
     "db:backup": "node src/scripts/backupDatabase.js",
     "db:seed": "node src/database/seed.js",
