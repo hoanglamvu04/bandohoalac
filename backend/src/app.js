@@ -89,7 +89,7 @@ export function createApp() {
   app.use('/api/halo/v1/posts', haloIntegrationRateLimiter);
 
   app.get('/api/health', (_req, res) => {
-    res.json({ ok: true, service: 'hola-maps-api', env: env.nodeEnv });
+    res.json({ ok: true, service: 'hola-maps-api' });
   });
 
   app.get('/api/sitemap-places.xml', async (_req, res, next) => {
