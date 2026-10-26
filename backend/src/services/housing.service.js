@@ -187,6 +187,11 @@ export async function listHousingListings(filters = {}) {
     conditions.push(operator + ' $' + params.length);
   }
 
+  // A stale room count is not evidence that these rooms are still available.
+  if (filters.minAvailableRooms !== undefined) {
+    conditions.push("availability.effective_status IN ('AVAILABLE', 'LIMITED')");
+  }
+
   if (filters.maxDistanceFpt !== undefined) {
     params.push(Number(filters.maxDistanceFpt));
     conditions.push(
