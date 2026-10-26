@@ -5,12 +5,17 @@ const DEFAULT_MAX_ATTEMPTS = 10;
  * the requested one is already in use (e.g. a second `npm run dev`, or
  * another process already bound to it).
  */
-export function listenWithFallback(app, startPort, { maxAttempts = DEFAULT_MAX_ATTEMPTS, onListening, onFallback } = {}) {
+export function listenWithFallback(app, startPort, {
+  host,
+  maxAttempts = DEFAULT_MAX_ATTEMPTS,
+  onListening,
+  onFallback
+} = {}) {
   function attempt(port, attemptNumber) {
-    const server = app.listen(port);
+    const server = host ? app.listen(port, host) : app.listen(port);
 
     server.once('listening', () => {
-      if (onListening) onListening(port);
+      if (onListening) onListening(port, host);
     });
 
     server.once('error', (err) => {
