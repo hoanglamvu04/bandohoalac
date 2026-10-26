@@ -27,7 +27,7 @@ async function refreshAccessToken() {
       .then((response) => {
         const token = response.data?.token || null;
         setToken(token);
-        return response.data;
+        return response;
       })
       .finally(() => {
         refreshPromise = null;
