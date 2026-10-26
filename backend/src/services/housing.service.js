@@ -205,7 +205,7 @@ export async function listHousingListings(filters = {}) {
 
   if (filters.availability) {
     params.push(filters.availability);
-    conditions.push('availability.effective_status = 
+    conditions.push('availability.effective_status = $' + params.length);
   }
 
   if (booleanValue(filters.availableOnly) === true) {
@@ -269,97 +269,6 @@ export async function listHousingListings(filters = {}) {
       structuredCount: items.filter((item) => item.housing).length,
       partnerCount: items.filter((item) => item.isPartner).length,
       rank: HOUSING_RANK_META,
-      fpt: {
-        name: 'Trường Đại học FPT',
-        lat: FPT_LAT,
-        lng: FPT_LNG
-      }
-    }
-  };
-}
-
-export async function getHousingListingByPlaceId(placeId) {
-  const { rows } = await pool.query(
-    BASE_SELECT +
-      " WHERE p.id = $1 AND p.status = 'PUBLISHED' AND c.slug = 'bat-dong-san' LIMIT 1",
-    [placeId]
-  );
-
-  return mapHousingRow(rows[0] || null);
-}
- + params.length);
-  }
-
-  if (booleanValue(filters.availableOnly) === true) {
-    conditions.push("hl.availability_status IN ('AVAILABLE', 'LIMITED')");
-    conditions.push('COALESCE(hl.available_rooms, 1) > 0');
-  }
-
-  if (booleanValue(filters.partnerOnly) === true) {
-    conditions.push(
-      "EXISTS (SELECT 1 FROM place_partners pp WHERE pp.place_id = p.id AND pp.status = 'ACTIVE')"
-    );
-  }
-
-  const booleanFilters = [
-    ['airConditioner', 'hl.has_air_conditioner'],
-    ['waterHeater', 'hl.has_water_heater'],
-    ['privateBathroom', 'hl.has_private_bathroom'],
-    ['loft', 'hl.has_loft'],
-    ['balcony', 'hl.has_balcony'],
-    ['parking', 'hl.has_parking'],
-    ['pets', 'hl.allows_pets']
-  ];
-
-  for (const [key, column] of booleanFilters) {
-    const value = booleanValue(filters[key]);
-    if (value === null) continue;
-    params.push(value);
-    conditions.push(column + ' = $' + params.length);
-  }
-
-  const orderMap = {
-    recommended: `is_partner DESC,
-      CASE hl.availability_status
-        WHEN 'AVAILABLE' THEN 0
-        WHEN 'LIMITED' THEN 1
-        WHEN 'UNKNOWN' THEN 2
-        ELSE 3
-      END,
-      hl.last_verified_at DESC NULLS LAST,
-      p.rating_avg DESC,
-      p.updated_at DESC`,
-    rent_asc: 'hl.monthly_rent ASC NULLS LAST, p.updated_at DESC',
-    rent_desc: 'hl.monthly_rent DESC NULLS LAST, p.updated_at DESC',
-    distance: 'distance_to_fpt_m ASC, p.updated_at DESC',
-    area_desc: 'hl.area_m2 DESC NULLS LAST, p.updated_at DESC',
-    freshest: 'hl.last_verified_at DESC NULLS LAST, p.updated_at DESC'
-  };
-
-  const safeLimit = Math.min(Math.max(Number(filters.limit) || 30, 1), 100);
-  const safeOffset = Math.max(Number(filters.offset) || 0, 0);
-  const sort = orderMap[filters.sort] || orderMap.recommended;
-
-  params.push(safeLimit);
-  const limitRef = '$' + params.length;
-  params.push(safeOffset);
-  const offsetRef = '$' + params.length;
-
-  const sql = BASE_SELECT +
-    ' WHERE ' + conditions.join(' AND ') +
-    ' ORDER BY ' + sort +
-    ' LIMIT ' + limitRef +
-    ' OFFSET ' + offsetRef;
-
-  const { rows } = await pool.query(sql, params);
-  const items = rows.map(mapHousingRow);
-
-  return {
-    items,
-    meta: {
-      count: items.length,
-      structuredCount: items.filter((item) => item.housing).length,
-      partnerCount: items.filter((item) => item.isPartner).length,
       fpt: {
         name: 'Trường Đại học FPT',
         lat: FPT_LAT,
