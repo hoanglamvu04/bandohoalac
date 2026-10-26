@@ -167,6 +167,39 @@ export async function rotateRefreshSession(refreshToken, {
     const session = rows[0];
 
     if (!session) {
+      const replay = await client.query(
+        `SELECT h.session_id, h.user_id
+         FROM auth_refresh_token_history h
+         WHERE h.token_hash = $1
+           AND h.expires_at > NOW()
+         LIMIT 1`,
+        [tokenHash]
+      );
+      const reused = replay.rows[0];
+
+      if (reused) {
+        await client.query(
+          `UPDATE auth_sessions
+           SET revoked_at = COALESCE(revoked_at, NOW()),
+               revoke_reason = COALESCE(revoke_reason, 'REFRESH_REUSE')
+           WHERE user_id = $1
+             AND revoked_at IS NULL`,
+          [reused.user_id]
+        );
+        await client.query('COMMIT');
+
+        await recordSecurityEvent({
+          userId: reused.user_id,
+          sessionId: reused.session_id,
+          type: 'REFRESH_TOKEN_REUSE',
+          severity: 'CRITICAL',
+          ip,
+          userAgent
+        });
+
+        throw new AppError('Phát hiện phiên đăng nhập đã bị phát lại. Tất cả phiên đã được thu hồi.', 401);
+      }
+
       await client.query('ROLLBACK');
       throw new AppError('Phiên đăng nhập không hợp lệ.', 401);
     }
@@ -218,6 +251,14 @@ export async function rotateRefreshSession(refreshToken, {
     const nextRefreshToken = randomBytes(48).toString('base64url');
     const nextHash = hashRefreshToken(nextRefreshToken);
     const nextExpiresAt = refreshExpiry();
+
+    await client.query(
+      `INSERT INTO auth_refresh_token_history (
+         token_hash, session_id, user_id, rotated_at, expires_at
+       ) VALUES ($1,$2,$3,NOW(),$4)
+       ON CONFLICT (token_hash) DO NOTHING`,
+      [tokenHash, session.id, session.user_id, session.expires_at]
+    );
 
     await client.query(
       `UPDATE auth_sessions
