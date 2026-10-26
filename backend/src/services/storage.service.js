@@ -212,7 +212,15 @@ async function localFileAsset(file, { scope = 'misc' } = {}) {
   };
 
   if (scope === 'places') {
-    Object.assign(asset, await createLocalPlaceVariants(file));
+    const variants = await createLocalPlaceVariants(file);
+    Object.assign(asset, variants);
+
+    if (variants.cardUrl && variants.cardFilename) {
+      const originalPath = file.path || path.resolve(process.cwd(), env.uploadDir, file.filename);
+      await unlink(originalPath).catch(() => {});
+      asset.url = variants.cardUrl;
+      asset.filename = variants.cardFilename;
+    }
   }
 
   return asset;
