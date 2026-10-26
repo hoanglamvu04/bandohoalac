@@ -6,7 +6,8 @@ import path from 'node:path';
 import { env } from '../config/env.js';
 
 const backupDir = process.env.BACKUP_DIR || path.resolve('backups');
-const optional = process.argv.includes('--optional');
+const optionalRequested = process.argv.includes('--optional');
+const optional = optionalRequested && env.nodeEnv !== 'production';
 const retentionDays = Math.min(Math.max(Number(process.env.BACKUP_RETENTION_DAYS) || 14, 1), 90);
 
 function run(command, args) {
