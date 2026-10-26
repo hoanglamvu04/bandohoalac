@@ -129,3 +129,31 @@ export const revokeAllSecuritySessions = asyncHandler(async (req, res) => {
 
   res.json({ ok: true, revokedCount: count });
 });
+
+
+export const changePassword = asyncHandler(async (req, res) => {
+  const user = await requireCurrentPassword(req.user.id, req.body.currentPassword);
+  const passwordHash = await hashPassword(req.body.newPassword);
+
+  await pool.query(
+    'UPDATE users SET password_hash = $2 WHERE id = $1',
+    [user.id, passwordHash]
+  );
+
+  const count = await revokeAllSessions({
+    userId: user.id,
+    reason: 'PASSWORD_CHANGED'
+  });
+  clearRefreshCookie(res);
+
+  await recordSecurityEvent({
+    userId: user.id,
+    sessionId: req.user.sessionId,
+    type: 'PASSWORD_CHANGED',
+    severity: 'CRITICAL',
+    ...context(req),
+    metadata: { revokedSessions: count }
+  });
+
+  res.json({ ok: true, logoutRequired: true });
+});
