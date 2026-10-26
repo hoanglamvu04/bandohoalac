@@ -16,6 +16,7 @@ import {
   MapPinned,
   Medal,
   Navigation,
+  ShieldCheck,
   TrendingUp,
   X
 } from 'lucide-react';
@@ -221,6 +222,15 @@ export default function ProfilePage() {
       />
 
       <div className="profile-community-links">
+        <Link className="profile-rewards-entry security" to="/security">
+          <span className="profile-rewards-icon"><ShieldCheck size={24} /></span>
+          <span>
+            <small>BẢO MẬT TÀI KHOẢN</small>
+            <b>2FA và thiết bị đang đăng nhập</b>
+            <em><ShieldCheck size={13} /> Quản lý bảo mật</em>
+          </span>
+          <ChevronRight size={20} />
+        </Link>
         <Link className="profile-rewards-entry" to="/rewards">
           <span className="profile-rewards-icon"><Gift size={24} /></span>
           <span>
