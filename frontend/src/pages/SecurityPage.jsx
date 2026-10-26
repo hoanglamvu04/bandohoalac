@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { KeyRound, LogOut, ShieldCheck, Smartphone, Trash2 } from 'lucide-react';
+import { Copy, KeyRound, LogOut, RefreshCw, ShieldCheck, Smartphone, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -8,6 +8,7 @@ import {
   changePassword,
   confirmTwoFactorSetup,
   getSecurityOverview,
+  regenerateTwoFactorRecoveryCodes,
   revokeAllSecuritySessions,
   revokeSecuritySession,
   startTwoFactorSetup
@@ -22,6 +23,8 @@ export default function SecurityPage() {
   const [setup, setSetup] = useState(null);
   const [qr, setQr] = useState('');
   const [code, setCode] = useState('');
+  const [recoveryCodes, setRecoveryCodes] = useState([]);
+  const [recoveryForm, setRecoveryForm] = useState({ password: '', code: '' });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
   const [busy, setBusy] = useState(false);
 
@@ -49,7 +52,8 @@ export default function SecurityPage() {
     event.preventDefault();
     setBusy(true);
     try {
-      await confirmTwoFactorSetup(code);
+      const result = await confirmTwoFactorSetup(code);
+      setRecoveryCodes(Array.isArray(result?.recoveryCodes) ? result.recoveryCodes : []);
       await refreshUser();
       await load();
       setSetup(null);
@@ -69,6 +73,33 @@ export default function SecurityPage() {
       return;
     }
     await load();
+  }
+
+
+  async function regenerateRecovery(event) {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      const result = await regenerateTwoFactorRecoveryCodes(recoveryForm);
+      setRecoveryCodes(Array.isArray(result?.recoveryCodes) ? result.recoveryCodes : []);
+      setRecoveryForm({ password: '', code: '' });
+      await load();
+      showToast('Đã tạo bộ mã khôi phục mới. Mã cũ đã hết hiệu lực.', 'success');
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyRecoveryCodes() {
+    if (!recoveryCodes.length) return;
+    try {
+      await navigator.clipboard.writeText(recoveryCodes.join('\n'));
+      showToast('Đã sao chép mã khôi phục.', 'success');
+    } catch {
+      showToast('Không thể sao chép tự động.', 'error');
+    }
   }
 
   async function rotatePassword(event) {
@@ -109,7 +140,49 @@ export default function SecurityPage() {
         <article className="security-card">
           <h2><KeyRound size={18} /> Xác thực hai lớp</h2>
           {enabled ? (
-            <div className="security-ok">Đang bật và bảo vệ tài khoản.</div>
+            <div className="security-2fa-enabled">
+              <div className="security-ok">
+                Đang bật và bảo vệ tài khoản · {data?.security?.recoveryCodesRemaining ?? 0} mã khôi phục còn lại.
+              </div>
+
+              {recoveryCodes.length > 0 && (
+                <div className="security-recovery-codes">
+                  <div>
+                    <b>Lưu các mã này ngay</b>
+                    <span>Mỗi mã chỉ dùng một lần và sẽ không hiển thị lại sau khi rời trang.</span>
+                  </div>
+                  <div className="security-recovery-grid">
+                    {recoveryCodes.map((item) => <code key={item}>{item}</code>)}
+                  </div>
+                  <button type="button" onClick={copyRecoveryCodes}>
+                    <Copy size={14} /> Sao chép tất cả
+                  </button>
+                </div>
+              )}
+
+              <form className="security-form security-recovery-form" onSubmit={regenerateRecovery}>
+                <p>Tạo bộ mã khôi phục mới nếu mã cũ đã bị lộ hoặc sắp hết. Bộ mã cũ sẽ bị vô hiệu hóa.</p>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={recoveryForm.password}
+                  onChange={(e) => setRecoveryForm((current) => ({ ...current, password: e.target.value }))}
+                  placeholder="Mật khẩu hiện tại"
+                  required
+                />
+                <input
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  minLength={6}
+                  maxLength={6}
+                  value={recoveryForm.code}
+                  onChange={(e) => setRecoveryForm((current) => ({ ...current, code: e.target.value }))}
+                  placeholder="Mã Authenticator 6 số"
+                  required
+                />
+                <button disabled={busy}><RefreshCw size={14} /> Tạo mã khôi phục mới</button>
+              </form>
+            </div>
           ) : setup ? (
             <form onSubmit={confirm} className="security-setup">
               {qr && <img src={qr} alt="QR thiết lập 2FA" />}
