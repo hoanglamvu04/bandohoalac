@@ -493,12 +493,37 @@ test('partner analytics: count clicks and isolate reports to managed places', as
     "AND event_type = 'CALL'"
   ].join(' ');
   const countBefore = Number((await pool.query(countSql, [placeId])).rows[0].total);
+  let recordedClick = false;
+
+  t.after(async () => {
+    if (!recordedClick) return;
+    await pool.query(
+      [
+        'UPDATE place_engagement_daily',
+        'SET event_count = event_count - 1',
+        'WHERE place_id = $1',
+        "AND day = (NOW() AT TIME ZONE 'Asia/Bangkok')::date",
+        "AND event_type = 'CALL' AND event_count > 0"
+      ].join(' '),
+      [placeId]
+    );
+    await pool.query(
+      [
+        'DELETE FROM place_engagement_daily',
+        'WHERE place_id = $1',
+        "AND day = (NOW() AT TIME ZONE 'Asia/Bangkok')::date",
+        "AND event_type = 'CALL' AND event_count = 0"
+      ].join(' '),
+      [placeId]
+    );
+  });
 
   const clickRes = await fetch(url('/api/places/' + placeId + '/engagement'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ eventType: 'CALL' })
   });
+  recordedClick = clickRes.status === 204;
   assert.equal(clickRes.status, 204);
 
   const countAfter = Number((await pool.query(countSql, [placeId])).rows[0].total);
