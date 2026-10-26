@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getContributions, getContribution, approve, reject } from '../controllers/admin.controller.js';
-import { authenticate, authorize, requireCtvLevel } from '../middleware/auth.js';
+import { authenticate, authorize, requireAdminSecurity, requireCtvLevel } from '../middleware/auth.js';
 import { validateBody } from '../validators/validate.js';
 import { rejectContributionSchema } from '../validators/admin.validators.js';
 import {
@@ -154,6 +154,7 @@ const dataStaff = authorize('MODERATOR', 'ADMIN');
 const adminOnly = authorize('ADMIN');
 
 router.use(authenticate);
+router.use(requireAdminSecurity);
 
 router.get('/contributions', ctvStaff, getContributions);
 router.get('/contributions/:id', ctvStaff, getContribution);
