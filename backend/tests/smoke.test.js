@@ -165,6 +165,32 @@ test('admin: MODERATOR role can list contributions', async () => {
   assert.ok(Array.isArray(body.items));
 });
 
+
+test('Auto ingestion source registry is seeded by migration', async () => {
+  const { rows } = await pool.query(
+    `SELECT source_key, enabled
+     FROM data_sources
+     WHERE source_key IN ('OVERTURE_PLACES','PHOTO_SCAN','FRESHNESS_SWEEP')
+     ORDER BY source_key`
+  );
+  assert.equal(rows.length, 3);
+  assert.ok(rows.every((row) => row.enabled === true));
+});
+
+test('Auto ingestion admin route rejects MODERATOR accounts', async () => {
+  const loginRes = await fetch(url('/api/auth/login'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'moderator@holamaps.vn', password: 'Moderator@123' })
+  });
+  const { token } = await loginRes.json();
+
+  const res = await fetch(url('/api/admin/ingestion'), {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  assert.equal(res.status, 403);
+});
+
 test('GET /api/leaderboard returns ranked items', async () => {
   const res = await fetch(url('/api/leaderboard'));
   assert.equal(res.status, 200);
