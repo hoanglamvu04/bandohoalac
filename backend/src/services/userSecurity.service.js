@@ -1,8 +1,10 @@
+import { randomBytes } from 'node:crypto';
 import { pool } from '../database/pool.js';
 import { AppError } from '../utils/AppError.js';
 import {
   decryptSecuritySecret,
-  encryptSecuritySecret
+  encryptSecuritySecret,
+  hashSensitiveValue
 } from './securityCrypto.service.js';
 import {
   buildTotpUri,
@@ -16,6 +18,8 @@ import {
 } from './authSession.service.js';
 
 const TOTP_SCOPE = 'admin-totp';
+const RECOVERY_SCOPE = '2fa-recovery-code';
+const RECOVERY_CODE_COUNT = 10;
 
 function rowPayload(row) {
   if (!row?.two_factor_secret_ciphertext) return null;
@@ -24,6 +28,40 @@ function rowPayload(row) {
     iv: row.two_factor_secret_iv,
     authTag: row.two_factor_secret_auth_tag
   };
+}
+
+function normalizeRecoveryCode(value) {
+  return String(value || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+}
+
+function recoveryCodeHash(value) {
+  return hashSensitiveValue(normalizeRecoveryCode(value), RECOVERY_SCOPE);
+}
+
+function createRecoveryCode() {
+  const raw = randomBytes(8).toString('hex').toUpperCase();
+  return raw.match(/.{1,4}/g).join('-');
+}
+
+async function replaceRecoveryCodes(userId, client = pool) {
+  const codes = Array.from({ length: RECOVERY_CODE_COUNT }, createRecoveryCode);
+
+  await client.query(
+    'DELETE FROM two_factor_recovery_codes WHERE user_id = $1',
+    [userId]
+  );
+
+  for (const code of codes) {
+    await client.query(
+      `INSERT INTO two_factor_recovery_codes (user_id, code_hash)
+       VALUES ($1,$2)`,
+      [userId, recoveryCodeHash(code)]
+    );
+  }
+
+  return codes;
 }
 
 export async function getUserSecurityRow(userId, client = pool) {
@@ -40,12 +78,22 @@ export async function getUserSecurityRow(userId, client = pool) {
 }
 
 export async function getAuthSecuritySummary(user) {
-  const row = await getUserSecurityRow(user.id);
+  const [row, recovery] = await Promise.all([
+    getUserSecurityRow(user.id),
+    pool.query(
+      `SELECT COUNT(*)::int AS remaining
+       FROM two_factor_recovery_codes
+       WHERE user_id = $1 AND used_at IS NULL`,
+      [user.id]
+    )
+  ]);
+
   const enabled = Boolean(row?.two_factor_enabled);
 
   return {
     twoFactorEnabled: enabled,
-    adminTwoFactorSetupRequired: user.role === 'ADMIN' && !enabled
+    adminTwoFactorSetupRequired: user.role === 'ADMIN' && !enabled,
+    recoveryCodesRemaining: Number(recovery.rows[0]?.remaining || 0)
   };
 }
 
@@ -53,6 +101,23 @@ export async function getEnabledTotpSecret(userId) {
   const row = await getUserSecurityRow(userId);
   if (!row?.two_factor_enabled) return null;
   return decryptSecuritySecret(rowPayload(row), TOTP_SCOPE);
+}
+
+export async function consumeRecoveryCode(userId, code, client = pool) {
+  const normalized = normalizeRecoveryCode(code);
+  if (normalized.length < 12) return false;
+
+  const { rows } = await client.query(
+    `UPDATE two_factor_recovery_codes
+     SET used_at = NOW()
+     WHERE user_id = $1
+       AND code_hash = $2
+       AND used_at IS NULL
+     RETURNING id`,
+    [userId, recoveryCodeHash(normalized)]
+  );
+
+  return Boolean(rows[0]);
 }
 
 export async function beginTwoFactorSetup({
@@ -119,15 +184,28 @@ export async function confirmTwoFactorSetup({
     throw new AppError('Mã xác thực không đúng. Hãy kiểm tra lại ứng dụng Authenticator.', 400);
   }
 
-  await pool.query(
-    `UPDATE user_security
-     SET two_factor_enabled = TRUE,
-         two_factor_enabled_at = NOW(),
-         two_factor_updated_at = NOW(),
-         updated_at = NOW()
-     WHERE user_id = $1`,
-    [userId]
-  );
+  const client = await pool.connect();
+  let recoveryCodes;
+
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `UPDATE user_security
+       SET two_factor_enabled = TRUE,
+           two_factor_enabled_at = NOW(),
+           two_factor_updated_at = NOW(),
+           updated_at = NOW()
+       WHERE user_id = $1`,
+      [userId]
+    );
+    recoveryCodes = await replaceRecoveryCodes(userId, client);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
 
   await markSessionTwoFactorVerified(sessionId);
 
@@ -137,38 +215,92 @@ export async function confirmTwoFactorSetup({
     type: 'TWO_FACTOR_ENABLED',
     severity: 'WARN',
     ip,
-    userAgent
+    userAgent,
+    metadata: { recoveryCodesIssued: recoveryCodes.length }
   });
 
-  return true;
+  return { recoveryCodes };
 }
 
-export async function disableTwoFactor({
+export async function regenerateRecoveryCodes({
   userId,
   sessionId,
   code,
   ip,
   userAgent
 }) {
-  const row = await getUserSecurityRow(userId);
-  const secret = decryptSecuritySecret(rowPayload(row), TOTP_SCOPE);
-
-  if (!row?.two_factor_enabled || !secret || !verifyTotp(secret, code)) {
+  const secret = await getEnabledTotpSecret(userId);
+  if (!secret || !verifyTotp(secret, code)) {
     throw new AppError('Mã xác thực hai lớp không đúng.', 400);
   }
 
-  await pool.query(
-    `UPDATE user_security
-     SET two_factor_secret_ciphertext = NULL,
-         two_factor_secret_iv = NULL,
-         two_factor_secret_auth_tag = NULL,
-         two_factor_enabled = FALSE,
-         two_factor_enabled_at = NULL,
-         two_factor_updated_at = NOW(),
-         updated_at = NOW()
-     WHERE user_id = $1`,
-    [userId]
+  const recoveryCodes = await replaceRecoveryCodes(userId);
+
+  await recordSecurityEvent({
+    userId,
+    sessionId,
+    type: 'TWO_FACTOR_RECOVERY_CODES_REGENERATED',
+    severity: 'WARN',
+    ip,
+    userAgent,
+    metadata: { recoveryCodesIssued: recoveryCodes.length }
+  });
+
+  return { recoveryCodes };
+}
+
+export async function disableTwoFactor({
+  userId,
+  sessionId,
+  code,
+  recoveryCode,
+  ip,
+  userAgent
+}) {
+  const row = await getUserSecurityRow(userId);
+  const secret = decryptSecuritySecret(rowPayload(row), TOTP_SCOPE);
+
+  let verified = Boolean(
+    row?.two_factor_enabled &&
+    secret &&
+    code &&
+    verifyTotp(secret, code)
   );
+
+  if (!verified && recoveryCode) {
+    verified = await consumeRecoveryCode(userId, recoveryCode);
+  }
+
+  if (!verified) {
+    throw new AppError('Mã xác thực hai lớp hoặc mã khôi phục không đúng.', 400);
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `UPDATE user_security
+       SET two_factor_secret_ciphertext = NULL,
+           two_factor_secret_iv = NULL,
+           two_factor_secret_auth_tag = NULL,
+           two_factor_enabled = FALSE,
+           two_factor_enabled_at = NULL,
+           two_factor_updated_at = NOW(),
+           updated_at = NOW()
+       WHERE user_id = $1`,
+      [userId]
+    );
+    await client.query(
+      'DELETE FROM two_factor_recovery_codes WHERE user_id = $1',
+      [userId]
+    );
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
 
   await revokeAllSessions({
     userId,
