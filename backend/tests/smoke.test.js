@@ -103,6 +103,35 @@ test('auth: /me without a token is rejected', async () => {
 });
 
 
+test('auth: browser login accepts empty optional 2FA fields', async () => {
+  const email = `smoke-browser-login-${Date.now()}@holamaps.vn`;
+  const password = 'Smoke@1234';
+
+  const registerRes = await fetch(url('/api/auth/register'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Browser Login User', email, password })
+  });
+  assert.equal(registerRes.status, 201);
+
+  const loginRes = await fetch(url('/api/auth/login'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      password,
+      totpCode: '',
+      recoveryCode: ''
+    })
+  });
+
+  assert.equal(loginRes.status, 200);
+  const body = await loginRes.json();
+  assert.ok(body.token);
+  assert.equal(body.user.email, email);
+});
+
+
 test('privacy: public profile does not expose private account fields', async () => {
   const email = `smoke-public-profile-${Date.now()}@holamaps.vn`;
   const registerRes = await fetch(url('/api/auth/register'), {
