@@ -7,6 +7,7 @@
     "start": "node src/server.js",
     "db:migrate": "node src/database/migrate.js",
     "db:migrate:seed": "node src/database/migrate.js --seed",
+    "db:backup": "node src/scripts/backupDatabase.js",
     "db:seed": "node src/database/seed.js",
     "test": "node --test tests/*.test.js",
     "db:seed:admin": "node src/database/seedAdmin.js",
