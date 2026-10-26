@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { env } from '../config/env.js';
 import { pool } from './pool.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -14,6 +15,12 @@ async function runSqlFile(filePath, label) {
 
 async function run() {
   const shouldSeed = process.argv.includes('--seed');
+
+  if (shouldSeed && env.nodeEnv === 'production') {
+    throw new Error(
+      'Refusing to apply development seed.sql while NODE_ENV=production.'
+    );
+  }
 
   await runSqlFile(path.join(__dirname, 'schema.sql'), 'schema.sql');
 
