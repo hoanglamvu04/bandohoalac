@@ -8,16 +8,19 @@ if [ "$(id -u)" -ne 0 ]; then
   if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
     exec sudo -n env DOMAIN="$DOMAIN" bash "$0"
   fi
-  echo "[security] WARN: nginx hardening requires root or passwordless sudo; skipped." >&2
-  exit 0
+  echo "[security] ERROR: nginx hardening requires root or passwordless sudo." >&2
+  exit 1
 fi
 
-command -v nginx >/dev/null 2>&1 || exit 0
+command -v nginx >/dev/null 2>&1 || {
+  echo "[security] ERROR: nginx is required for production hardening." >&2
+  exit 1
+}
 
 TARGET="$(grep -RIl --include='*' -E "server_name[^;]*${DOMAIN//./\.}" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null | head -n1 || true)"
 if [ -z "$TARGET" ]; then
-  echo "[security] WARN: active nginx vhost for $DOMAIN not found; skipped." >&2
-  exit 0
+  echo "[security] ERROR: active nginx vhost for $DOMAIN not found." >&2
+  exit 1
 fi
 
 TARGET="$(readlink -f "$TARGET" 2>/dev/null || printf '%s' "$TARGET")"
