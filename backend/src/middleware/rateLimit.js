@@ -8,6 +8,22 @@ export const authRateLimiter = rateLimit({
   message: { error: 'Too many auth attempts. Please try again later.' }
 });
 
+export const authSessionRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many session requests. Please try again later.' }
+});
+
+export const securityActionRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many security changes. Please try again later.' }
+});
+
 export const contributionRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 30,
