@@ -4,7 +4,7 @@
 // No is_partner, advertisement, campaign or payment column affects ranking.
 export const HOUSING_AVAILABILITY_FRESH_DAYS = 30;
 
-export const HOUSING_RANK_LATERAL_SQL = String.raw\`
+export const HOUSING_RANK_LATERAL_SQL = String.raw`
   CROSS JOIN LATERAL (
     SELECT ROUND(ST_Distance(
       p.location::geography,
@@ -71,9 +71,9 @@ export const HOUSING_RANK_LATERAL_SQL = String.raw\`
         ELSE 0 END
     )::int AS score
   ) housing_rank
-\`;
+`;
 
-export const HOUSING_RANK_ORDER_SQL = String.raw\`
+export const HOUSING_RANK_ORDER_SQL = String.raw`
   CASE availability.effective_status
     WHEN 'AVAILABLE' THEN 0
     WHEN 'LIMITED' THEN 1
@@ -83,7 +83,7 @@ export const HOUSING_RANK_ORDER_SQL = String.raw\`
   housing_rank.score DESC,
   hl.last_verified_at DESC NULLS LAST,
   p.id ASC
-\`;
+`;
 
 export const HOUSING_RANK_META = Object.freeze({
   version: 'housing-v3',
