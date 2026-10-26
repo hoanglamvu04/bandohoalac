@@ -459,9 +459,9 @@ test('Housing V3: organic HOLA Rank ignores partner flags and never presents sta
         'INSERT INTO housing_listings',
         '(place_id, monthly_rent, area_m2, availability_status, available_rooms,',
         'total_rooms, last_verified_at, verification_source)',
-        "VALUES ($1, 2000000, 25, $2, $3, 3, NOW() - $4::int * INTERVAL '1 day', 'COMMUNITY')"
+        "VALUES ($1, 2000000, 25, $2, $3, 3, NOW() - $4::int * INTERVAL '1 day', $5)"
       ].join(' '),
-      [id, availability, rooms, ageDays]
+      [id, availability, rooms, ageDays, partner ? 'PARTNER' : 'COMMUNITY']
     );
 
     if (partner) {
