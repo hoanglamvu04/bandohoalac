@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { Copy, KeyRound, LogOut, RefreshCw, ShieldCheck, Smartphone, Trash2 } from 'lucide-react';
+import { AlertTriangle, Clock3, Copy, KeyRound, LogOut, RefreshCw, ShieldCheck, Smartphone, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -14,6 +14,24 @@ import {
   revokeSecuritySession,
   startTwoFactorSetup
 } from '../services/api.js';
+
+function securityEventLabel(type) {
+  return {
+    LOGIN_SUCCESS: 'Đăng nhập thành công',
+    LOGIN_FAILED: 'Sai mật khẩu',
+    LOGIN_LOCKED: 'Tài khoản tạm khóa',
+    TWO_FACTOR_LOGIN_FAILED: 'Sai mã xác thực hai lớp',
+    TWO_FACTOR_RECOVERY_USED: 'Đã dùng mã khôi phục',
+    TWO_FACTOR_RECOVERY_CODES_REGENERATED: 'Đã tạo lại mã khôi phục',
+    TWO_FACTOR_ENABLED: 'Đã bật xác thực hai lớp',
+    TWO_FACTOR_DISABLED: 'Đã tắt xác thực hai lớp',
+    PASSWORD_CHANGED: 'Đã đổi mật khẩu',
+    SESSION_REVOKED: 'Đã thu hồi một phiên đăng nhập',
+    ALL_SESSIONS_REVOKED: 'Đã đăng xuất tất cả thiết bị',
+    REFRESH_TOKEN_REUSE: 'Phát hiện phiên đăng nhập bị phát lại',
+    ADMIN_SESSION_CONTEXT_CHANGED: 'Phiên Admin thay đổi ngữ cảnh thiết bị'
+  }[type] || String(type || 'Hoạt động bảo mật');
+}
 
 export default function SecurityPage() {
   const { user, logout, refreshUser } = useAuth();
@@ -310,6 +328,27 @@ export default function SecurityPage() {
             <button disabled={busy}>Đổi mật khẩu an toàn</button>
           </form>
         </article>
+      </section>
+
+      <section className="security-card security-events-card">
+        <h2><Clock3 size={18} /> Hoạt động bảo mật gần đây</h2>
+        <div className="security-events">
+          {(data?.events || []).map((event) => (
+            <div className={'security-event severity-' + String(event.severity || 'INFO').toLowerCase()} key={event.id}>
+              <span className="security-event-icon">
+                {event.severity === 'CRITICAL' || event.severity === 'WARN'
+                  ? <AlertTriangle size={14} />
+                  : <ShieldCheck size={14} />}
+              </span>
+              <span>
+                <b>{securityEventLabel(event.type)}</b>
+                <small>{event.userAgent || 'Thiết bị không xác định'}</small>
+              </span>
+              <time>{new Date(event.createdAt).toLocaleString('vi-VN')}</time>
+            </div>
+          ))}
+          {!data?.events?.length && <div className="security-event-empty">Chưa có sự kiện bảo mật.</div>}
+        </div>
       </section>
     </main>
   );
