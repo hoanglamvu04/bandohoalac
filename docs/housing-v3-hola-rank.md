@@ -47,7 +47,9 @@ then place ID so pagination remains stable.
 | Straight-line distance to FPT | 8 | ≤1.5 km: 8; ≤3 km: 5; ≤5 km: 3 |
 | Recent verification source | 2 | ADMIN 2, PARTNER/COMMUNITY 1 |
 
-Partners and community confirmations receive the same source score; only a recent Hola Maps admin confirmation receives the extra source point.\n\nThe distance uses PostGIS geodesic distance to the fixed FPT reference point,
+Partners and community confirmations receive the same source score; only a recent Hola Maps admin confirmation receives the extra source point.
+
+The distance uses PostGIS geodesic distance to the fixed FPT reference point,
 **not** road routing time or a user's personalized distance. The rating and
 Partner's commercial membership do not affect this ranking.
 
