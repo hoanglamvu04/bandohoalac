@@ -138,6 +138,10 @@ export function confirmTwoFactorSetup(code) {
   return unwrap(client.post('/auth/security/2fa/confirm', { code }));
 }
 
+export function regenerateTwoFactorRecoveryCodes(payload) {
+  return unwrap(client.post('/auth/security/2fa/recovery-codes', payload));
+}
+
 export function disableTwoFactor(payload) {
   return unwrap(client.delete('/auth/security/2fa', { data: payload }));
 }
