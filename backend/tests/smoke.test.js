@@ -103,6 +103,29 @@ test('auth: /me without a token is rejected', async () => {
 });
 
 
+test('privacy: public profile does not expose private account fields', async () => {
+  const email = `smoke-public-profile-${Date.now()}@holamaps.vn`;
+  const registerRes = await fetch(url('/api/auth/register'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Private Profile User', email, password: 'Smoke@1234' })
+  });
+  assert.equal(registerRes.status, 201);
+  const registered = await registerRes.json();
+
+  const profileRes = await fetch(url('/api/users/' + registered.user.id + '/profile'));
+  assert.equal(profileRes.status, 200);
+  const profile = await profileRes.json();
+
+  assert.equal(profile.user.id, registered.user.id);
+  assert.equal(profile.user.name, 'Private Profile User');
+  assert.equal('email' in profile.user, false);
+  assert.equal('pointsBalance' in profile.user, false);
+  assert.equal('trustScore' in profile.user, false);
+  assert.equal('ctvTrustScore' in profile.user, false);
+});
+
+
 test('auth: refresh cookie rotates and returns a new access token', async () => {
   const email = `smoke-refresh-${Date.now()}@holamaps.vn`;
   const registerRes = await fetch(url('/api/auth/register'), {
