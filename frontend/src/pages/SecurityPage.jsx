@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import {
+  changePassword,
   confirmTwoFactorSetup,
   getSecurityOverview,
   revokeAllSecuritySessions,
@@ -21,6 +22,7 @@ export default function SecurityPage() {
   const [setup, setSetup] = useState(null);
   const [qr, setQr] = useState('');
   const [code, setCode] = useState('');
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
   const [busy, setBusy] = useState(false);
 
   async function load() {
@@ -67,6 +69,21 @@ export default function SecurityPage() {
       return;
     }
     await load();
+  }
+
+  async function rotatePassword(event) {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      await changePassword(passwordForm);
+      showToast('Đã đổi mật khẩu. Hãy đăng nhập lại.', 'success');
+      logout();
+      navigate('/login', { replace: true });
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function revokeAll() {
@@ -120,6 +137,31 @@ export default function SecurityPage() {
             ))}
           </div>
           <button className="security-revoke" onClick={revokeAll}><LogOut size={14} /> Đăng xuất tất cả thiết bị</button>
+        </article>
+
+        <article className="security-card security-password-card">
+          <h2><KeyRound size={18} /> Đổi mật khẩu</h2>
+          <form onSubmit={rotatePassword} className="security-form">
+            <p>Đổi mật khẩu sẽ thu hồi toàn bộ phiên đăng nhập và yêu cầu đăng nhập lại.</p>
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={passwordForm.currentPassword}
+              onChange={(e) => setPasswordForm((current) => ({ ...current, currentPassword: e.target.value }))}
+              placeholder="Mật khẩu hiện tại"
+              required
+            />
+            <input
+              type="password"
+              autoComplete="new-password"
+              minLength={10}
+              value={passwordForm.newPassword}
+              onChange={(e) => setPasswordForm((current) => ({ ...current, newPassword: e.target.value }))}
+              placeholder="Mật khẩu mới"
+              required
+            />
+            <button disabled={busy}>Đổi mật khẩu an toàn</button>
+          </form>
         </article>
       </section>
     </main>
