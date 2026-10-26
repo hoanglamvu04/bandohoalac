@@ -18,3 +18,6 @@ frontend/public/maps/.buildings-build/
 
 # Auto-downloaded local CLI tools used by map build scripts.
 scripts/.tools/
+
+# Local database security backups
+backend/backups/
