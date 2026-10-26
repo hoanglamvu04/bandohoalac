@@ -32,8 +32,6 @@ export function toPublicUser(user, reputation = null) {
     points: Number(user.points_total || 0),
     pointsBalance: Number(user.points_balance || 0),
     reputation,
-    // Keep explorerLevel for older frontend surfaces while switching its meaning
-    // from reward points to Reputation v2.
     explorerLevel: reputation,
     trustScore: user.trust_score,
     approvedCount: user.approved_count,
@@ -45,6 +43,24 @@ export function toPublicUser(user, reputation = null) {
     ctvOverturnedCount: Number(user.ctv_overturned_count || 0),
     createdAt: user.created_at
   };
+}
+
+export function toPublicProfileUser(user, reputation = null) {
+  const authenticated = toPublicUser(user, reputation);
+  if (!authenticated) return null;
+
+  const {
+    email: _email,
+    pointsBalance: _pointsBalance,
+    trustScore: _trustScore,
+    ctvTrustScore: _ctvTrustScore,
+    ctvReviewsCount: _ctvReviewsCount,
+    ctvConfirmedCount: _ctvConfirmedCount,
+    ctvOverturnedCount: _ctvOverturnedCount,
+    ...publicProfile
+  } = authenticated;
+
+  return publicProfile;
 }
 
 export async function getUserBadges(userId, client = pool) {
