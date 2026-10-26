@@ -135,50 +135,47 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   let twoFactorVerified = false;
-  if (user.role === 'ADMIN') {
-    const totpSecret = await getEnabledTotpSecret(user.id);
+  const totpSecret = await getEnabledTotpSecret(user.id);
 
-    if (totpSecret) {
-      if (!totpCode && !recoveryCode) {
-        throw new AppError(
-          'Nhập mã Authenticator hoặc mã khôi phục.',
-          428,
-          { code: 'TWO_FACTOR_REQUIRED' }
-        );
-      }
-
-      const totpValid = Boolean(totpCode && verifyTotp(totpSecret, totpCode));
-      const recoveryValid = !totpValid && recoveryCode
-        ? await consumeRecoveryCode(user.id, recoveryCode)
-        : false;
-
-      if (!totpValid && !recoveryValid) {
-        await recordFailedLogin({ userId: user.id, ...context });
-        await recordSecurityEvent({
-          userId: user.id,
-          type: 'TWO_FACTOR_LOGIN_FAILED',
-          severity: 'WARN',
-          ...context,
-          metadata: { method: recoveryCode ? 'RECOVERY_CODE' : 'TOTP' }
-        });
-        throw new AppError('Mã xác thực hai lớp không đúng.', 401, {
-          code: 'TWO_FACTOR_INVALID'
-        });
-      }
-
-      if (recoveryValid) {
-        await recordSecurityEvent({
-          userId: user.id,
-          type: 'TWO_FACTOR_RECOVERY_USED',
-          severity: 'WARN',
-          ...context
-        });
-      }
-
-      twoFactorVerified = true;
+  if (totpSecret) {
+    if (!totpCode && !recoveryCode) {
+      throw new AppError(
+        'Nhập mã Authenticator hoặc mã khôi phục.',
+        428,
+        { code: 'TWO_FACTOR_REQUIRED' }
+      );
     }
-  }
 
+    const totpValid = Boolean(totpCode && verifyTotp(totpSecret, totpCode));
+    const recoveryValid = !totpValid && recoveryCode
+      ? await consumeRecoveryCode(user.id, recoveryCode)
+      : false;
+
+    if (!totpValid && !recoveryValid) {
+      await recordFailedLogin({ userId: user.id, ...context });
+      await recordSecurityEvent({
+        userId: user.id,
+        type: 'TWO_FACTOR_LOGIN_FAILED',
+        severity: 'WARN',
+        ...context,
+        metadata: { method: recoveryCode ? 'RECOVERY_CODE' : 'TOTP' }
+      });
+      throw new AppError('Mã xác thực hai lớp không đúng.', 401, {
+        code: 'TWO_FACTOR_INVALID'
+      });
+    }
+
+    if (recoveryValid) {
+      await recordSecurityEvent({
+        userId: user.id,
+        type: 'TWO_FACTOR_RECOVERY_USED',
+        severity: 'WARN',
+        ...context
+      });
+    }
+
+    twoFactorVerified = true;
+  }
   await clearFailedLogins(user.id);
   res.json(await issueSession(req, res, user, { twoFactorVerified }));
 });
