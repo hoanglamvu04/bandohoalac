@@ -9,8 +9,9 @@ export default function Login() {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const [form, setForm] = useState({ email: '', password: '', totpCode: '' });
+  const [form, setForm] = useState({ email: '', password: '', totpCode: '', recoveryCode: '' });
   const [needsTwoFactor, setNeedsTwoFactor] = useState(false);
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -50,7 +51,7 @@ export default function Login() {
           <input type="password" name="password" required value={form.password} onChange={updateField} placeholder="••••••••" />
         </label>
 
-        {needsTwoFactor && (
+        {needsTwoFactor && !useRecoveryCode && (
           <label>Mã xác thực 2 lớp
             <input
               inputMode="numeric"
@@ -64,6 +65,35 @@ export default function Login() {
               placeholder="000000"
             />
           </label>
+        )}
+
+        {needsTwoFactor && useRecoveryCode && (
+          <label>Mã khôi phục
+            <input
+              name="recoveryCode"
+              required
+              minLength={12}
+              maxLength={32}
+              value={form.recoveryCode}
+              onChange={updateField}
+              placeholder="XXXX-XXXX-XXXX-XXXX"
+              autoComplete="off"
+            />
+          </label>
+        )}
+
+        {needsTwoFactor && (
+          <button
+            className="auth-recovery-toggle"
+            type="button"
+            onClick={() => {
+              setUseRecoveryCode((value) => !value);
+              setForm((current) => ({ ...current, totpCode: '', recoveryCode: '' }));
+              setError('');
+            }}
+          >
+            {useRecoveryCode ? 'Dùng mã Authenticator' : 'Mất Authenticator? Dùng mã khôi phục'}
+          </button>
         )}
 
         {error && <div className="form-status error">{error}</div>}
