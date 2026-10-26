@@ -15,7 +15,8 @@ import {
   beginTwoFactorSetup,
   confirmTwoFactorSetup,
   disableTwoFactor,
-  getAuthSecuritySummary
+  getAuthSecuritySummary,
+  regenerateRecoveryCodes
 } from '../services/userSecurity.service.js';
 
 function context(req) {
@@ -63,14 +64,26 @@ export const startTwoFactorSetup = asyncHandler(async (req, res) => {
 });
 
 export const confirmTwoFactor = asyncHandler(async (req, res) => {
-  await confirmTwoFactorSetup({
+  const result = await confirmTwoFactorSetup({
     userId: req.user.id,
     sessionId: req.user.sessionId,
     code: req.body.code,
     ...context(req)
   });
 
-  res.json({ ok: true });
+  res.json({ ok: true, ...result });
+});
+
+export const regenerateTwoFactorRecoveryCodes = asyncHandler(async (req, res) => {
+  await requireCurrentPassword(req.user.id, req.body.password);
+  const result = await regenerateRecoveryCodes({
+    userId: req.user.id,
+    sessionId: req.user.sessionId,
+    code: req.body.code,
+    ...context(req)
+  });
+
+  res.json({ ok: true, ...result });
 });
 
 export const removeTwoFactor = asyncHandler(async (req, res) => {
@@ -79,6 +92,7 @@ export const removeTwoFactor = asyncHandler(async (req, res) => {
     userId: req.user.id,
     sessionId: req.user.sessionId,
     code: req.body.code,
+    recoveryCode: req.body.recoveryCode,
     ...context(req)
   });
 
