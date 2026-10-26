@@ -32,6 +32,15 @@ export const contributionRateLimiter = rateLimit({
   message: { error: 'Too many contributions submitted. Please try again later.' }
 });
 
+// Public, best-effort analytics events have their own abuse ceiling.
+export const placeEngagementRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many place interaction events. Try again shortly.' }
+});
+
 export const generalApiRateLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 180,

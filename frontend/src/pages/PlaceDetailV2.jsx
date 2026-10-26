@@ -26,7 +26,8 @@ import {
   getNearbyPlaces,
   getPlace,
   getPlaceMe,
-  removeFavorite
+  removeFavorite,
+  trackPlaceEngagement
 } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -109,6 +110,7 @@ export default function PlaceDetailV2() {
         if (!active) return;
         setPlace(data);
         setStatus('ready');
+        trackPlaceEngagement(data.id, 'VIEW');
 
         if (Number.isFinite(Number(data?.lat)) && Number.isFinite(Number(data?.lng))) {
           getNearbyPlaces(data.lat, data.lng, 8000)
@@ -295,13 +297,13 @@ export default function PlaceDetailV2() {
         </div>
 
         <div className="place-v2-actions place-v2-actions-expanded">
-          {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer"><Navigation size={17} /> Chỉ đường</a>}
+          {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer" onClick={() => trackPlaceEngagement(place.id, 'DIRECTIONS')}><Navigation size={17} /> Chỉ đường</a>}
           <button type="button" onClick={toggleFavorite} className={favorite ? 'active' : ''} disabled={favoriteBusy}>
             <Heart size={17} fill={favorite ? 'currentColor' : 'none'} /> {favorite ? 'Đã lưu' : 'Lưu'}
           </button>
           <button type="button" onClick={sharePlace}><Share2 size={17} /> Chia sẻ</button>
-          {place.phone && <a href={'tel:' + place.phone}><Phone size={17} /> Gọi</a>}
-          {website && <a href={website} target="_blank" rel="noreferrer"><Globe2 size={17} /> Website</a>}
+          {place.phone && <a href={'tel:' + place.phone} onClick={() => trackPlaceEngagement(place.id, 'CALL')}><Phone size={17} /> Gọi</a>}
+          {website && <a href={website} target="_blank" rel="noreferrer" onClick={() => trackPlaceEngagement(place.id, 'WEBSITE')}><Globe2 size={17} /> Website</a>}
         </div>
       </section>
 
@@ -425,8 +427,8 @@ export default function PlaceDetailV2() {
           <div className="place-v2-section-title"><Sparkles size={19} /><h2>Về địa điểm này</h2></div>
           <p>{place.description || 'Địa điểm này chưa có mô tả chi tiết. Bạn có thể đóng góp thêm thông tin để Hola Maps hữu ích hơn cho cộng đồng Hòa Lạc.'}</p>
           <div className="place-v2-contact-list">
-            {place.phone && <a href={'tel:' + place.phone}><Phone size={17} /> {place.phone}</a>}
-            {website && <a href={website} target="_blank" rel="noreferrer"><Globe2 size={17} /> {place.website} <ExternalLink size={14} /></a>}
+            {place.phone && <a href={'tel:' + place.phone} onClick={() => trackPlaceEngagement(place.id, 'CALL')}><Phone size={17} /> {place.phone}</a>}
+            {website && <a href={website} target="_blank" rel="noreferrer" onClick={() => trackPlaceEngagement(place.id, 'WEBSITE')}><Globe2 size={17} /> {place.website} <ExternalLink size={14} /></a>}
           </div>
         </section>
 
@@ -435,7 +437,7 @@ export default function PlaceDetailV2() {
           <p><strong>Danh mục:</strong> {place.category || 'Địa điểm'}</p>
           <p><strong>Địa chỉ:</strong> {place.address || 'Chưa cập nhật'}</p>
           <p><strong>Tọa độ:</strong> {Number(place.lat).toFixed(5)}, {Number(place.lng).toFixed(5)}</p>
-          {mapsUrl && <a className="place-v2-inline-action" href={mapsUrl} target="_blank" rel="noreferrer"><Navigation size={16} /> Mở chỉ đường</a>}
+          {mapsUrl && <a className="place-v2-inline-action" href={mapsUrl} target="_blank" rel="noreferrer" onClick={() => trackPlaceEngagement(place.id, 'DIRECTIONS')}><Navigation size={16} /> Mở chỉ đường</a>}
         </section>
       </div>
 

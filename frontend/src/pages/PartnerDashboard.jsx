@@ -30,6 +30,7 @@ import {
 } from '../services/api.js';
 import { useToast } from '../context/ToastContext.jsx';
 import PartnerReconciliationPanel from '../components/PartnerReconciliationPanel.jsx';
+import PartnerAnalyticsPanel from '../components/PartnerAnalyticsPanel.jsx';
 
 function parseVoucherPayload(value) {
   const raw = String(value || '').trim();
@@ -739,6 +740,8 @@ export default function PartnerDashboard() {
         <div><TicketCheck size={19} /><span><b>{data.stats?.vouchersPending || 0}</b><small>Chờ sử dụng</small></span></div>
         <div><CheckCircle2 size={19} /><span><b>{data.stats?.vouchersUsed || 0}</b><small>Đã dùng</small></span></div>
       </section>
+
+      <PartnerAnalyticsPanel managedPlaces={data.managedPlaces || []} />
 
       {ownerPartners.length > 0 && <PartnerReconciliationPanel />}
 

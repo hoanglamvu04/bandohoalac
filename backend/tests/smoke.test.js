@@ -432,3 +432,122 @@ test('Developer API admin routes reject unauthenticated users', async () => {
   const res = await fetch(url('/api/admin/developer-api/overview'));
   assert.equal(res.status, 401);
 });
+
+test('partner analytics: rejects anonymous access and malformed event types', async () => {
+  const unauthenticated = await fetch(url('/api/partner/analytics?days=7'));
+  assert.equal(unauthenticated.status, 401);
+
+  const malformed = await fetch(url('/api/places/1/engagement'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventType: 'FAKE_CLICK' })
+  });
+  assert.equal(malformed.status, 400);
+});
+
+test('partner analytics: count clicks and isolate reports to managed places', async (t) => {
+  const published = await pool.query(
+    "SELECT id FROM places WHERE status = 'PUBLISHED' ORDER BY id ASC LIMIT 1"
+  );
+  const placeId = published.rows[0]?.id;
+  if (!placeId) {
+    t.skip('No published place in the integration database.');
+    return;
+  }
+
+  const email = 'analytics-smoke-' + Date.now() + '@holamaps.vn';
+  const registerRes = await fetch(url('/api/auth/register'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Analytics Test', email, password: 'Smoke@1234' })
+  });
+  assert.equal(registerRes.status, 201);
+  const registered = await registerRes.json();
+  const authorization = { Authorization: 'Bearer ' + registered.token };
+
+  const normalRes = await fetch(url('/api/partner/analytics?days=7'), {
+    headers: authorization
+  });
+  assert.equal(normalRes.status, 200);
+  const emptyReport = await normalRes.json();
+  assert.equal(emptyReport.days, 7);
+  assert.equal(emptyReport.daily.length, 7);
+  assert.deepEqual(emptyReport.places, []);
+
+  const badPeriodRes = await fetch(url('/api/partner/analytics?days=400'), {
+    headers: authorization
+  });
+  assert.equal(badPeriodRes.status, 400);
+
+  const forbiddenRes = await fetch(
+    url('/api/partner/analytics?days=7&placeId=' + placeId),
+    { headers: authorization }
+  );
+  assert.equal(forbiddenRes.status, 403);
+
+  const countSql = [
+    'SELECT COALESCE(SUM(event_count), 0) AS total',
+    'FROM place_engagement_daily',
+    'WHERE place_id = $1',
+    "AND day = (NOW() AT TIME ZONE 'Asia/Bangkok')::date",
+    "AND event_type = 'CALL'"
+  ].join(' ');
+  const countBefore = Number((await pool.query(countSql, [placeId])).rows[0].total);
+  let recordedClick = false;
+
+  t.after(async () => {
+    if (!recordedClick) return;
+    await pool.query(
+      [
+        'UPDATE place_engagement_daily',
+        'SET event_count = event_count - 1',
+        'WHERE place_id = $1',
+        "AND day = (NOW() AT TIME ZONE 'Asia/Bangkok')::date",
+        "AND event_type = 'CALL' AND event_count > 0"
+      ].join(' '),
+      [placeId]
+    );
+    await pool.query(
+      [
+        'DELETE FROM place_engagement_daily',
+        'WHERE place_id = $1',
+        "AND day = (NOW() AT TIME ZONE 'Asia/Bangkok')::date",
+        "AND event_type = 'CALL' AND event_count = 0"
+      ].join(' '),
+      [placeId]
+    );
+  });
+
+  const clickRes = await fetch(url('/api/places/' + placeId + '/engagement'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventType: 'CALL' })
+  });
+  recordedClick = clickRes.status === 204;
+  assert.equal(clickRes.status, 204);
+
+  const countAfter = Number((await pool.query(countSql, [placeId])).rows[0].total);
+  assert.equal(countAfter, countBefore + 1);
+
+  await pool.query(
+    "INSERT INTO place_managers (place_id, user_id, role) VALUES ($1, $2, 'OWNER') ON CONFLICT (place_id, user_id) DO NOTHING",
+    [placeId, registered.user.id]
+  );
+  try {
+    const allowedRes = await fetch(
+      url('/api/partner/analytics?days=7&placeId=' + placeId),
+      { headers: authorization }
+    );
+    assert.equal(allowedRes.status, 200);
+    const report = await allowedRes.json();
+    assert.equal(report.places.length, 1);
+    assert.equal(report.places[0].placeId, String(placeId));
+    assert.ok(report.totals.calls >= 1);
+    assert.equal(report.daily.length, 7);
+  } finally {
+    await pool.query(
+      'DELETE FROM place_managers WHERE place_id = $1 AND user_id = $2',
+      [placeId, registered.user.id]
+    );
+  }
+});

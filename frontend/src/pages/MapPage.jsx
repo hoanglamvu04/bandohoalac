@@ -56,6 +56,7 @@ import {
   getPlaceMe,
   getPlaces,
   getPlacesInBounds,
+  trackPlaceEngagement,
   removeFavorite
 } from '../services/api.js';
 import { LOCAL_BASEMAP_OPTIONS as BASEMAP_OPTIONS } from '../localBasemap.js';
@@ -1114,6 +1115,10 @@ export default function MapPage() {
     [places, selectedId]
   );
 
+  useEffect(() => {
+    if (selectedPlace?.id) trackPlaceEngagement(selectedPlace.id, 'VIEW');
+  }, [selectedPlace?.id]);
+
   const selectedImages = useMemo(() => {
     const preferred = selectedPlace?.cardImages?.length
       ? selectedPlace.cardImages
@@ -1784,6 +1789,7 @@ export default function MapPage() {
 
   async function startDirections(place) {
     if (!place) return;
+    trackPlaceEngagement(place.id, 'DIRECTIONS');
 
     setSelectedId(place.id);
     syncDiscoveryParams({ place: place.id });

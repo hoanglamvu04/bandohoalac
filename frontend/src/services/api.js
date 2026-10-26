@@ -198,6 +198,40 @@ export function getPlace(id) {
   return unwrap(client.get('/places/' + encodeURIComponent(id)));
 }
 
+// Best-effort anonymous event counter. No visitor ID or personal data is sent.
+// VIEW is deduplicated per tab for 30 minutes; clicks are throttled for 3s.
+// keepalive lets tel:/external navigation complete without waiting for telemetry.
+export function trackPlaceEngagement(placeId, eventType) {
+  const id = String(placeId || '');
+  const type = String(eventType || '').toUpperCase();
+  if (
+    !/^[1-9]\d{0,14}$/.test(id) ||
+    !['VIEW', 'CALL', 'DIRECTIONS', 'WEBSITE'].includes(type) ||
+    typeof window === 'undefined' ||
+    typeof window.fetch !== 'function'
+  ) return;
+
+  const key = 'hola_engagement_v1:' + id + ':' + type;
+  const now = Date.now();
+  const cooldownMs = type === 'VIEW' ? 30 * 60 * 1000 : 3000;
+
+  try {
+    const previous = Number(window.sessionStorage.getItem(key) || 0);
+    if (previous > 0 && now - previous < cooldownMs) return;
+    window.sessionStorage.setItem(key, String(now));
+  } catch {
+    // Private browsing can block sessionStorage. Tracking remains optional.
+  }
+
+  window.fetch(API_URL + '/places/' + encodeURIComponent(id) + '/engagement', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'omit',
+    keepalive: true,
+    body: JSON.stringify({ eventType: type })
+  }).catch(() => {});
+}
+
 export function getPlaceBySlug(slug) {
   return unwrap(client.get('/places/slug/' + encodeURIComponent(slug)));
 }
@@ -582,6 +616,10 @@ export function reviewAdminPlaceClaim(id, payload) {
 
 export function getPartnerDashboard() {
   return unwrap(client.get('/partner/dashboard'));
+}
+
+export function getPartnerAnalytics(params = {}) {
+  return unwrap(client.get('/partner/analytics', { params: cleanParams(params) }));
 }
 
 export function getPartnerScannerState() {
