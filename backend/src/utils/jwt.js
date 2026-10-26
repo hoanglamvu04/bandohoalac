@@ -6,6 +6,7 @@ export function signAccessToken(payload) {
     { ...payload, typ: 'access' },
     env.jwtSecret,
     {
+      algorithm: 'HS256',
       expiresIn: env.jwtExpiresIn,
       issuer: 'hola-maps',
       audience: 'hola-maps-web'
@@ -17,6 +18,7 @@ export const signToken = signAccessToken;
 
 export function verifyToken(token) {
   const payload = jwt.verify(token, env.jwtSecret, {
+    algorithms: ['HS256'],
     issuer: 'hola-maps',
     audience: 'hola-maps-web'
   });
