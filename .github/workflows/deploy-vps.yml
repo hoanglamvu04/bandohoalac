@@ -42,6 +42,7 @@ jobs:
             git checkout main
             git reset --hard origin/main
 
+            bash scripts/ensure-production-security-env.sh
             bash scripts/harden-production-security.sh || true
 
             echo "==> Canonical domain check"
