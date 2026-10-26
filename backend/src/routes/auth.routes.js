@@ -4,6 +4,7 @@ import {
   changePassword,
   confirmTwoFactor,
   removeTwoFactor,
+  regenerateTwoFactorRecoveryCodes,
   revokeAllSecuritySessions,
   revokeSecuritySession,
   securityOverview,
@@ -19,7 +20,8 @@ import {
   loginSchema,
   twoFactorSetupSchema,
   twoFactorConfirmSchema,
-  twoFactorDisableSchema
+  twoFactorDisableSchema,
+  twoFactorRecoveryRegenerateSchema
 } from '../validators/auth.validators.js';
 
 const router = Router();
@@ -33,6 +35,7 @@ router.get('/security', authenticate, securityOverview);
 router.post('/security/password', authenticate, securityActionRateLimiter, validateBody(changePasswordSchema), changePassword);
 router.post('/security/2fa/setup', authenticate, securityActionRateLimiter, validateBody(twoFactorSetupSchema), startTwoFactorSetup);
 router.post('/security/2fa/confirm', authenticate, securityActionRateLimiter, validateBody(twoFactorConfirmSchema), confirmTwoFactor);
+router.post('/security/2fa/recovery-codes', authenticate, securityActionRateLimiter, validateBody(twoFactorRecoveryRegenerateSchema), regenerateTwoFactorRecoveryCodes);
 router.delete('/security/2fa', authenticate, securityActionRateLimiter, validateBody(twoFactorDisableSchema), removeTwoFactor);
 router.delete('/security/sessions/:sessionId', authenticate, securityActionRateLimiter, revokeSecuritySession);
 router.post('/security/sessions/revoke-all', authenticate, securityActionRateLimiter, revokeAllSecuritySessions);
