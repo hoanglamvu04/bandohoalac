@@ -205,7 +205,7 @@ export function trackPlaceEngagement(placeId, eventType) {
   const id = String(placeId || '');
   const type = String(eventType || '').toUpperCase();
   if (
-    !/^[1-9]\\d{0,14}$/.test(id) ||
+    !/^[1-9]\d{0,14}$/.test(id) ||
     !['VIEW', 'CALL', 'DIRECTIONS', 'WEBSITE'].includes(type) ||
     typeof window === 'undefined' ||
     typeof window.fetch !== 'function'
