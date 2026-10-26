@@ -382,10 +382,11 @@ export default function PlaceDetailV2() {
                 </div>
               )}
 
-              {!housingDetail.housing.availabilityFresh && (
+              {(!housingDetail.housing.availabilityFresh ||
+                (housingAvailability === 'UNKNOWN' && housingDetail.housing.availabilityStatus !== 'UNKNOWN')) && (
                 <p className="place-v2-housing-stale" role="note">
-                  <Clock3 size={17} /> Tình trạng phòng chưa được xác minh trong 30 ngày.
-                  Hãy liên hệ chủ trọ trước khi đi xem phòng.
+                  <Clock3 size={17} /> Tình trạng phòng đã quá hạn xác minh hoặc thông tin phòng còn mâu thuẫn.
+                  Hãy liên hệ chủ trọ để kiểm tra trước khi đi xem phòng.
                 </p>
               )}
 
@@ -405,9 +406,11 @@ export default function PlaceDetailV2() {
                 <div>
                   <small>Phòng trống</small>
                   <strong>
-                    {housingDetail.housing.availableRooms !== null
-                      ? housingDetail.housing.availableRooms + (housingDetail.housing.totalRooms !== null ? '/' + housingDetail.housing.totalRooms : '')
-                      : 'Chưa cập nhật'}
+                    {housingDetail.housing.availabilityFresh && housingAvailability !== 'UNKNOWN'
+                      ? (housingDetail.housing.availableRooms !== null
+                        ? housingDetail.housing.availableRooms + (housingDetail.housing.totalRooms !== null ? '/' + housingDetail.housing.totalRooms : '')
+                        : 'Chưa cập nhật')
+                      : 'Cần xác minh'}
                   </strong>
                 </div>
               </div>
@@ -441,10 +444,10 @@ export default function PlaceDetailV2() {
                 {housingDetail.housing.availabilityFresh
                   ? <ShieldCheck size={14} />
                   : <Clock3 size={14} />}
-                {housingDetail.housing.availabilityFresh
+                {housingDetail.housing.availabilityFresh && housingAvailability !== 'UNKNOWN'
                   ? housingFreshness(housingDetail.housing.lastVerifiedAt)
-                  : 'Cần xác minh lại tình trạng phòng'}
-                {housingDetail.housing.availabilityFresh &&
+                  : 'Chưa có xác nhận tình trạng phòng'}
+                {housingDetail.housing.availabilityFresh && housingAvailability !== 'UNKNOWN' &&
                   housingDetail.housing.verificationSource === 'PARTNER' ? ' · HOLA Partner cập nhật' : ''}
               </div>
             </>
