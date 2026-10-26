@@ -5,12 +5,21 @@ import { verifyToken } from '../utils/jwt.js';
 async function resolveAuthenticatedUser(token) {
   const payload = verifyToken(token);
   const { rows } = await pool.query(
-    `SELECT id, email, role, account_status,
-            ctv_level, ctv_trust_score, ctv_reviews_count,
-            ctv_confirmed_count, ctv_overturned_count
-     FROM users
-     WHERE id = $1`,
-    [payload.id]
+    `SELECT
+       u.id, u.email, u.role, u.account_status,
+       u.ctv_level, u.ctv_trust_score, u.ctv_reviews_count,
+       u.ctv_confirmed_count, u.ctv_overturned_count,
+       s.id AS session_id,
+       s.two_factor_verified_at
+     FROM users u
+     JOIN auth_sessions s
+       ON s.user_id = u.id
+      AND s.id = $2
+     WHERE u.id = $1
+       AND s.revoked_at IS NULL
+       AND s.expires_at > NOW()
+     LIMIT 1`,
+    [payload.id, payload.sid]
   );
 
   const user = rows[0];
@@ -26,6 +35,8 @@ async function resolveAuthenticatedUser(token) {
     id: user.id,
     email: user.email,
     role: user.role,
+    sessionId: user.session_id,
+    twoFactorVerified: Boolean(user.two_factor_verified_at),
     ctvLevel: Number(user.ctv_level || 1),
     ctvTrustScore: Number(user.ctv_trust_score || 0),
     ctvReviewsCount: Number(user.ctv_reviews_count || 0),
