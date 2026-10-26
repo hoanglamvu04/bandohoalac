@@ -18,6 +18,16 @@ const strongPassword = z.string()
     message: 'Mật khẩu cần kết hợp ít nhất 3 nhóm: chữ thường, chữ hoa, số hoặc ký tự đặc biệt.'
   });
 
+const optionalTotpCode = z.preprocess(
+  (value) => value === '' || value === null ? undefined : value,
+  z.string().trim().regex(/^\d{6}$/).optional()
+);
+
+const optionalRecoveryCode = z.preprocess(
+  (value) => value === '' || value === null ? undefined : value,
+  z.string().trim().min(12).max(32).optional()
+);
+
 export const registerSchema = z.object({
   name: z.string().trim().min(2).max(120),
   email: z.string().trim().toLowerCase().email(),
@@ -27,8 +37,8 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1).max(128),
-  totpCode: z.string().trim().regex(/^\d{6}$/).optional(),
-  recoveryCode: z.string().trim().min(12).max(32).optional()
+  totpCode: optionalTotpCode,
+  recoveryCode: optionalRecoveryCode
 });
 
 export const twoFactorSetupSchema = z.object({
@@ -41,8 +51,8 @@ export const twoFactorConfirmSchema = z.object({
 
 export const twoFactorDisableSchema = z.object({
   password: z.string().min(1).max(128),
-  code: z.string().trim().regex(/^\d{6}$/, 'Mã xác thực phải gồm 6 chữ số.').optional(),
-  recoveryCode: z.string().trim().min(12).max(32).optional()
+  code: optionalTotpCode,
+  recoveryCode: optionalRecoveryCode
 }).refine(
   (value) => Boolean(value.code || value.recoveryCode),
   {
