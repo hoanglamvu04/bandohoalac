@@ -27,7 +27,8 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1).max(128),
-  totpCode: z.string().trim().regex(/^\d{6}$/).optional()
+  totpCode: z.string().trim().regex(/^\d{6}$/).optional(),
+  recoveryCode: z.string().trim().min(12).max(32).optional()
 });
 
 export const twoFactorSetupSchema = z.object({
@@ -39,6 +40,18 @@ export const twoFactorConfirmSchema = z.object({
 });
 
 export const twoFactorDisableSchema = z.object({
+  password: z.string().min(1).max(128),
+  code: z.string().trim().regex(/^\d{6}$/, 'Mã xác thực phải gồm 6 chữ số.').optional(),
+  recoveryCode: z.string().trim().min(12).max(32).optional()
+}).refine(
+  (value) => Boolean(value.code || value.recoveryCode),
+  {
+    message: 'Cần mã Authenticator hoặc mã khôi phục.',
+    path: ['code']
+  }
+);
+
+export const twoFactorRecoveryRegenerateSchema = z.object({
   password: z.string().min(1).max(128),
   code: z.string().trim().regex(/^\d{6}$/, 'Mã xác thực phải gồm 6 chữ số.')
 });
