@@ -21,18 +21,25 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
+async function performRefreshRequest() {
+  const response = await client.post('/auth/refresh', null, { skipRefreshRetry: true });
+  const token = response.data?.token || null;
+  setToken(token);
+  return response;
+}
+
 async function refreshAccessToken() {
   if (!refreshPromise) {
-    refreshPromise = client.post('/auth/refresh', null, { skipRefreshRetry: true })
-      .then((response) => {
-        const token = response.data?.token || null;
-        setToken(token);
-        return response;
-      })
-      .finally(() => {
-        refreshPromise = null;
-      });
+    refreshPromise = (
+      typeof navigator !== 'undefined' &&
+      navigator.locks?.request
+        ? navigator.locks.request('hola-auth-refresh', { mode: 'exclusive' }, performRefreshRequest)
+        : performRefreshRequest()
+    ).finally(() => {
+      refreshPromise = null;
+    });
   }
+
   return refreshPromise;
 }
 
