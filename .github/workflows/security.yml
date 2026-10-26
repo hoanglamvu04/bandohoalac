@@ -12,6 +12,16 @@ permissions:
   security-events: write
 
 jobs:
+  shell-safety:
+    name: Shell security scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate shell syntax
+        run: bash -n scripts/*.sh
+
   codeql:
     name: CodeQL JavaScript
     runs-on: ubuntu-latest
