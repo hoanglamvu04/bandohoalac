@@ -24,7 +24,7 @@
     "jsqr": "1.4.0"
   },
   "overrides": {
-    "follow-redirects": "1.16.1"
+    "follow-redirects": "1.16.2"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",

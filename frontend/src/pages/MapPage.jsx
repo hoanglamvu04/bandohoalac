@@ -39,7 +39,7 @@ import {
   Wrench,
   X
 } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import MapView from '../components/MapView.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -474,6 +474,8 @@ function stripHousingIntent(value) {
 }
 
 export default function MapPage() {
+  const location = useLocation();
+  const inEmbed = location.pathname === '/embed' || location.pathname.startsWith('/embed/');
   const { isModerator, user } = useAuth();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -2706,9 +2708,15 @@ export default function MapPage() {
                 >
                   <Heart size={16} fill={favorite ? 'currentColor' : 'none'} /> {favorite ? 'Đã lưu' : 'Lưu'}
                 </button>
+                {inEmbed ? (
+                  <a className="details" target="_blank" rel="noopener noreferrer" href={'/place/' + selectedPlace.id}>
+                    Chi tiết <ChevronRight size={15} />
+                  </a>
+                ) : (
                 <Link className="details" to={'/place/' + selectedPlace.id}>
                   Chi tiết <ChevronRight size={15} />
                 </Link>
+                )}
               </div>
             </div>
           </section>

@@ -133,6 +133,9 @@ jobs:
             pm2 restart bandohoalac-api --update-env
             pm2 save
 
+            echo "==> Install approved iframe embed gateway"
+            bash scripts/install-embed-gateway.sh
+
             echo "==> Health check"
             sleep 2
             curl --fail --silent --show-error http://127.0.0.1:5003/api/health

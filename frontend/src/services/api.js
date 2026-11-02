@@ -674,6 +674,40 @@ export function getPublicOpenApi() {
   return unwrap(client.get('/public/v1/openapi.json'));
 }
 
+// Public embed identifiers (embedKey) are intended for iframe URLs and are
+// deliberately independent of PRIVATE server-to-server Developer API keys.
+export function createEmbedRequest(payload) {
+  return unwrap(client.post('/embed/requests', payload));
+}
+
+export function getMyEmbedRequests() {
+  return unwrap(client.get('/embed/requests/mine'));
+}
+
+export function getAdminEmbedApplications() {
+  return unwrap(client.get('/admin/embed-applications'));
+}
+
+export function createAdminEmbedGrant(payload) {
+  return unwrap(client.post('/admin/embed-applications/direct', payload));
+}
+
+export function approveAdminEmbedRequest(id, payload = {}) {
+  return unwrap(client.post('/admin/embed-applications/' + encodeURIComponent(id) + '/approve', payload));
+}
+
+export function rejectAdminEmbedRequest(id, reason) {
+  return unwrap(client.post('/admin/embed-applications/' + encodeURIComponent(id) + '/reject', { reason }));
+}
+
+export function revokeAdminEmbedGrant(id) {
+  return unwrap(client.post('/admin/embed-applications/' + encodeURIComponent(id) + '/revoke'));
+}
+
+export function rotateAdminEmbedGrant(id, payload = {}) {
+  return unwrap(client.post('/admin/embed-applications/' + encodeURIComponent(id) + '/rotate', payload));
+}
+
 export function getAdminDeveloperApiOverview() {
   return unwrap(client.get('/admin/developer-api/overview'));
 }

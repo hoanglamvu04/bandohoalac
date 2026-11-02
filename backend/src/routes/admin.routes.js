@@ -1,4 +1,18 @@
 import { Router } from 'express';
+import {
+  getEmbedApplicationsAdmin,
+  createEmbedGrantAdmin,
+  approveEmbedRequestAdmin,
+  rejectEmbedRequestAdmin,
+  revokeEmbedGrantAdmin,
+  rotateEmbedGrantAdmin
+} from '../controllers/adminEmbed.controller.js';
+import {
+  adminCreateEmbedSchema,
+  adminApproveEmbedSchema,
+  adminRejectEmbedSchema,
+  adminRotateEmbedSchema
+} from '../validators/embed.validators.js';
 import { getContributions, getContribution, approve, reject } from '../controllers/admin.controller.js';
 import { authenticate, authorize, requireAdminSecurity, requireCtvLevel } from '../middleware/auth.js';
 import { validateBody } from '../validators/validate.js';
@@ -246,6 +260,14 @@ router.get('/integrations', adminOnly, listIntegrationsAdmin);
 router.post('/integrations/:provider/test', adminOnly, testIntegrationAdmin);
 router.put('/integrations/:provider', adminOnly, saveIntegrationAdmin);
 router.delete('/integrations/:provider', adminOnly, deleteIntegrationAdmin);
+
+// Embedding grants are separate from private server-to-server Developer API keys.
+router.get('/embed-applications', adminOnly, getEmbedApplicationsAdmin);
+router.post('/embed-applications/direct', adminOnly, validateBody(adminCreateEmbedSchema), createEmbedGrantAdmin);
+router.post('/embed-applications/:id/approve', adminOnly, validateBody(adminApproveEmbedSchema), approveEmbedRequestAdmin);
+router.post('/embed-applications/:id/reject', adminOnly, validateBody(adminRejectEmbedSchema), rejectEmbedRequestAdmin);
+router.post('/embed-applications/:id/revoke', adminOnly, revokeEmbedGrantAdmin);
+router.post('/embed-applications/:id/rotate', adminOnly, validateBody(adminRotateEmbedSchema), rotateEmbedGrantAdmin);
 
 router.get('/developer-api/overview', adminOnly, getDeveloperApiOverviewAdmin);
 router.patch('/developer-api/settings', adminOnly, validateBody(updateDeveloperApiSettingsSchema), updateDeveloperApiSettingsAdmin);

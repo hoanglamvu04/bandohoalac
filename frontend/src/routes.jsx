@@ -42,6 +42,7 @@ const AdminAudit = lazy(() => import('./pages/admin/AdminAudit.jsx'));
 const AdminBranding = lazy(() => import('./pages/admin/AdminBranding.jsx'));
 const AdminDeveloperApi = lazy(() => import('./pages/admin/AdminDeveloperApi.jsx'));
 const DeveloperDocs = lazy(() => import('./pages/DeveloperDocs.jsx'));
+const EmbedRequestPage = lazy(() => import('./pages/EmbedRequestPage.jsx'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage.jsx'));
 const ExploreArticlePage = lazy(() => import('./pages/ExploreArticlePage.jsx'));
 const LocalMarketplacePage = lazy(() => import('./pages/LocalMarketplacePage.jsx'));
@@ -149,6 +150,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: withSuspense(HomePage) },
       { path: 'map', element: withSuspense(MapPage) },
+      { path: 'developers/embed', element: withRole(EmbedRequestPage) },
       { path: 'phong-tro', element: <Navigate to="/map?vertical=housing&category=bat-dong-san" replace /> },
       { path: 'an-uong', element: <Navigate to="/map?vertical=food" replace /> },
       { path: 'doi-tac', element: withSuspense(PartnerLandingPage) },

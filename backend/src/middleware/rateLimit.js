@@ -32,6 +32,23 @@ export const contributionRateLimiter = rateLimit({
   message: { error: 'Too many contributions submitted. Please try again later.' }
 });
 
+// Dedicated limits: iframe authorization should not consume normal map API budget.
+export const embedPolicyLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 1200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many iframe authorization checks.' }
+});
+
+export const embedRequestLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  limit: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Bạn đã gửi quá nhiều yêu cầu cấp quyền nhúng.' }
+});
+
 export const generalApiRateLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 180,
@@ -43,6 +60,7 @@ export const generalApiRateLimiter = rateLimit({
     // Interactive map reads and trusted HALO server-to-server writes have
     // dedicated rate limits so they do not consume the normal web API budget.
     if (url.startsWith('/api/halo/v1/posts')) return true;
+    if (req.method === 'GET' && url === '/api/embed/authorize') return true;
 
     return (
       req.method === 'GET' &&

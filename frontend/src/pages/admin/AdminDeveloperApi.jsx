@@ -27,11 +27,13 @@ import {
 } from '../../services/api.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import IntegrationSecretsPanel from '../../components/admin/IntegrationSecretsPanel.jsx';
+import EmbedPlatformPanel from '../../components/admin/EmbedPlatformPanel.jsx';
 
 const TABS = [
   ['overview', 'Tổng quan'],
   ['clients', 'Website kết nối'],
   ['keys', 'API Keys'],
+  ['embed', 'Nhúng bản đồ'],
   ['integrations', 'Nguồn ngoài'],
   ['endpoints', 'Endpoint'],
   ['logs', 'Nhật ký'],
@@ -295,6 +297,8 @@ export default function AdminDeveloperApi() {
               </div>
             </section>
           )}
+
+          {tab === 'embed' && <EmbedPlatformPanel />}
 
           {tab === 'clients' && (
             <section className="devapi-section">
