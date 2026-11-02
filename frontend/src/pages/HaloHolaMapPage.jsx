@@ -110,6 +110,8 @@ function mediaTitle(item) {
 export default function HaloHolaMapPage() {
   const location = useLocation();
   const embedded = location.pathname.startsWith('/embed/');
+  const embedKey = new URLSearchParams(location.search).get('key') || '';
+  const embedMapUrl = '/embed' + (embedKey ? '?key=' + encodeURIComponent(embedKey) : '');
   const querySpotId = useMemo(
     () => new URLSearchParams(location.search).get('spot') || '',
     [location.search]
@@ -302,7 +304,7 @@ export default function HaloHolaMapPage() {
           <p>Ảnh và câu chuyện cộng đồng được đặt đúng nơi chúng diễn ra.</p>
           <div className="halo-story-actions">
             {embedded ? (
-              <Link to="/embed"><ArrowLeft size={15} /> Bản đồ</Link>
+              <Link to={embedMapUrl}><ArrowLeft size={15} /> Bản đồ</Link>
             ) : (
               <Link to="/map"><MapIcon size={15} /> Bản đồ chính</Link>
             )}
@@ -430,7 +432,7 @@ export default function HaloHolaMapPage() {
               <div className="halo-gallery-footer">
                 <span><b>{detail?.mediaCount || media.length}</b> ảnh tại điểm này</span>
                 {detail?.placeId && (
-                  <Link to={embedded ? '/embed?place=' + detail.placeId : '/place/' + detail.placeId}>
+                  <Link to={embedded ? '/embed?place=' + encodeURIComponent(detail.placeId) + (embedKey ? '&key=' + encodeURIComponent(embedKey) : '') : '/place/' + detail.placeId}>
                     Mở địa điểm <ExternalLink size={14} />
                   </Link>
                 )}
