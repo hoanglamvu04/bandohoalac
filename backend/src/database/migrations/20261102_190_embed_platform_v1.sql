@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS embed_applications (
   requested_origins TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
   approved_origins TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
   note TEXT,
+  review_note TEXT,
   status TEXT NOT NULL DEFAULT 'PENDING'
     CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'REVOKED')),
   embed_key TEXT UNIQUE,
