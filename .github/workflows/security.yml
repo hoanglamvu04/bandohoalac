@@ -22,6 +22,9 @@ jobs:
       - name: Validate shell syntax
         run: bash -n scripts/*.sh
 
+      - name: Guard HALO HOLA iframe allowlist
+        run: bash scripts/check-iframe-embedding-policy.sh
+
   codeql:
     name: CodeQL JavaScript
     runs-on: ubuntu-latest
