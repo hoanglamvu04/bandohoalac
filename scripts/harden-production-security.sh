@@ -29,12 +29,16 @@ mkdir -p /etc/nginx/snippets
 cat > "$SNIPPET" <<'EOF'
 add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 add_header X-Content-Type-Options "nosniff" always;
-add_header X-Frame-Options "DENY" always;
+# CSP frame-ancestors protects against clickjacking while allowing only
+# the official HALO HOLA parent origins to embed /embed and /embed/halo.
+# Do not set X-Frame-Options: DENY/SAMEORIGIN here: legacy XFO cannot
+# express a cross-origin partner allowlist.
+add_header Content-Security-Policy "frame-ancestors 'self' https://halohola.vn https://www.halohola.vn" always;
 add_header X-Permitted-Cross-Domain-Policies "none" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 add_header Permissions-Policy "camera=(self), geolocation=(self), microphone=(), payment=(), usb=()" always;
 add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
-add_header Content-Security-Policy-Report-Only "default-src 'self' https: data: blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; font-src 'self' data: https:; worker-src 'self' blob:; frame-src 'self' https:;" always;
+add_header Content-Security-Policy-Report-Only "default-src 'self' https: data: blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self' https://halohola.vn https://www.halohola.vn; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; font-src 'self' data: https:; worker-src 'self' blob:; frame-src 'self' https:;" always;
 EOF
 
 if grep -Fq "$SNIPPET" "$TARGET"; then
