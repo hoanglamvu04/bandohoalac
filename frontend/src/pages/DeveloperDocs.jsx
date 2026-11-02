@@ -94,6 +94,16 @@ export default function DeveloperDocs() {
             <pre>{fetchExample}</pre>
           </article>
 
+          <article className="developer-docs-warning">
+            <ShieldCheck />
+            <div>
+              <h3>Nhúng bản đồ vào website khác</h3>
+              <p>HOLA Embed Platform cho phép đăng ký tên miền, chờ Admin duyệt,
+                rồi nhận mã nhúng công khai. Có thể thu hồi hoặc gia hạn cho từng ứng dụng.</p>
+              <a href="/developers/embed">Gửi yêu cầu cấp quyền nhúng bản đồ</a>
+            </div>
+          </article>
+
           <article id="browser" className="developer-docs-warning">
             <ShieldCheck />
             <div>
