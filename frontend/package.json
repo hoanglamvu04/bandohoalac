@@ -13,12 +13,12 @@
   },
   "dependencies": {
     "@protomaps/basemaps": "5.7.2",
-    "axios": "^1.7.9",
+    "axios": "^1.21.0",
     "lucide-react": "^0.468.0",
-    "maplibre-gl": "6.10.0",
+    "maplibre-gl": "6.16.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.18.4",
+    "react-router-dom": "^7.18.5",
     "pmtiles": "4.5.0",
     "qrcode": "1.5.4",
     "jsqr": "1.4.0"
