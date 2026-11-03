@@ -42,7 +42,12 @@ export default function MapHaloFilterPortal() {
   if (!target) return null;
 
   const embedded = typeof window !== 'undefined' && window.location.pathname.startsWith('/embed');
-  const haloHref = embedded ? '/embed/halo' : '/halo';
+  // Each /embed/* navigation must preserve its approved public key, otherwise
+  // the HOLA Maps gateway rejects the next iframe document with HTTP 403.
+  const embedKey = embedded ? new URLSearchParams(window.location.search).get('key') : null;
+  const haloHref = embedded
+    ? '/embed/halo' + (embedKey ? '?key=' + encodeURIComponent(embedKey) : '')
+    : '/halo';
 
   return createPortal(
     <a className="hm-halo-filter-link" href={haloHref}>
