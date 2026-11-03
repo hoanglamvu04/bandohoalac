@@ -4,7 +4,9 @@ import { AppError } from '../utils/AppError.js';
 
 const MAX_MEDIA_PER_POST = 20;
 const HALO_SOURCE = 'HALO_HOLA';
-const HALO_MEDIA_ORIGIN = 'https://halohola.vn';
+// The live HALO HOLA submission API is currently served on this host.
+// Keep a single configurable origin for new and previously synced media URLs.
+const HALO_MEDIA_ORIGIN = 'https://halohola.xspace.vn';
 
 function text(value, max = 2000) {
   const result = String(value ?? '').trim();
@@ -320,9 +322,9 @@ export async function listHaloSpotFeatures(params = {}) {
             ST_Y(hs.location) AS lat, ST_X(hs.location) AS lng,
             COUNT(DISTINCT hp.id)::int AS post_count,
             COUNT(hm.id)::int AS media_count,
-            (ARRAY_AGG(COALESCE(hm.thumbnail_url, hm.url)
+            (ARRAY_AGG(hm.external_media_id
               ORDER BY COALESCE(hp.posted_at, hp.created_at) DESC, hm.sort_order, hm.id)
-              FILTER (WHERE hm.id IS NOT NULL))[1] AS cover_url
+              FILTER (WHERE hm.id IS NOT NULL))[1] AS cover_media_id
      FROM halo_spots hs
      JOIN halo_posts hp ON hp.spot_id = hs.id AND hp.status = 'PUBLISHED' AND hp.source = 'HALO_HOLA'
      JOIN halo_media hm ON hm.post_id = hp.id AND hm.status = 'ACTIVE'
@@ -352,7 +354,7 @@ export async function listHaloSpotFeatures(params = {}) {
       externalSpotId: row.external_spot_id || null,
       postCount: Number(row.post_count) || 0,
       mediaCount: Number(row.media_count) || 0,
-      coverUrl: row.cover_url || null
+      coverUrl: row.cover_media_id ? stableHaloMediaUrl(row.cover_media_id) : null
     }
   }));
 }
@@ -361,8 +363,10 @@ function mediaRow(row) {
   return {
     id: String(row.media_id),
     externalMediaId: row.external_media_id || null,
-    url: row.url,
-    thumbnailUrl: row.thumbnail_url || row.url,
+    // Construct fresh stable URLs for old rows too: previously persisted
+    // halohola.vn links may not serve the live submission media endpoint.
+    url: row.external_media_id ? stableHaloMediaUrl(row.external_media_id) : row.url,
+    thumbnailUrl: row.external_media_id ? stableHaloMediaUrl(row.external_media_id) : (row.thumbnail_url || row.url),
     width: row.width ? Number(row.width) : null,
     height: row.height ? Number(row.height) : null,
     source: row.source || HALO_SOURCE,
