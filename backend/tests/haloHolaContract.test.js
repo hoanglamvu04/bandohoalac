@@ -124,7 +124,7 @@ test('HALO HOLA contract: auth, canonical place upsert, provenance and stable me
   assert.equal(dbRows[0].caption, 'Bản đã cập nhật');
   assert.equal(String(dbRows[0].place_id), String(canonicalPlace.id));
   assert.equal(dbRows[0].metadata.code, 'HH26-CONTRACT-PLACE');
-  const stableMediaUrl = `https://halohola.vn/api/submissions/media/${encodeURIComponent(mediaId)}/halo`;
+  const stableMediaUrl = `https://halohola.xspace.vn/api/submissions/media/${encodeURIComponent(mediaId)}/halo`;
   assert.equal(dbRows[0].url, stableMediaUrl);
   assert.equal(dbRows[0].thumbnail_url, stableMediaUrl);
 
