@@ -8,7 +8,6 @@ import { listPublishedPlaceSitemapEntries } from './services/place.service.js';
 import {
   getExploreArticleSeoPage,
   getExploreHubSeoPage,
-  getHomeSeoPage,
   getPlaceSeoPage,
   redirectLegacyPlaceSeoPage
 } from './controllers/seoPages.controller.js';
@@ -182,8 +181,8 @@ export function createApp() {
   app.use('/api/brand', brandRoutes);
   app.use('/api/halo/v1', haloHolaRoutes);
 
-  // Public SEO pages are server-rendered so crawlers receive content and metadata in the first HTML response.
-  app.get('/', getHomeSeoPage);
+  // Public editorial and place pages are server-rendered. The root URL remains
+  // owned by the React SPA so the original interactive HOLA Maps homepage loads.
   app.get('/kham-pha', getExploreHubSeoPage);
   app.get('/kham-pha/:slug', getExploreArticleSeoPage);
   app.get('/dia-diem/:slug', getPlaceSeoPage);
