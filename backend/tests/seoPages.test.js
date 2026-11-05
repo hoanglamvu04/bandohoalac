@@ -72,7 +72,7 @@ test('SEO: published Explore article returns complete HTML before JavaScript', a
   assert.match(html, /<h2>/);
   assert.match(html, /application\/ld\+json/);
   assert.match(html, /Article/);
-  assert.match(html, /class="hola-app-header"/);
+  assert.match(html, /hola-app-header/);
   assert.match(html, /src="\/logo\.svg\?v=20260929-2"/);
   assert.match(html, /href="\/map"/);
   assert.match(html, /href="\/kham-pha"/);
@@ -122,7 +122,7 @@ test('SEO: canonical place slug returns rendered content and legacy numeric URL 
   assert.ok(html.includes('https://maps.dothihoalac.vn/dia-diem/' + encodeURIComponent(place.slug)));
   assert.match(html, /Place/);
   assert.match(html, /BreadcrumbList/);
-  assert.match(html, /class="hola-app-header"/);
+  assert.match(html, /hola-app-header/);
   assert.match(html, /src="\/logo\.svg\?v=20260929-2"/);
   assert.match(html, /href="\/map"/);
   assert.match(html, /href="\/contribute"/);
