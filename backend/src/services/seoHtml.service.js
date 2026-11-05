@@ -186,7 +186,7 @@ export function renderPlaceSeoPage(place) {
   };
   const gallery = images.length
     ? '<div class="seo-place-gallery">' + images.map((image, index) =>
-      '<img src="' + escapeHtml(image) + '" alt="' + escapeHtml(place.name) + (index ? ' - ảnh ' + (index + 1) : '') + '" ' + (index ? 'loading="lazy"' : 'fetchpriority="high") + '>').join('') + '</div>'
+      '<img src="' + escapeHtml(image) + '" alt="' + escapeHtml(place.name) + (index ? ' - ảnh ' + (index + 1) : '') + '" ' + (index ? 'loading="lazy"' : 'fetchpriority="high"') + '>').join('') + '</div>'
     : '<div class="seo-place-no-image">Địa điểm chưa có ảnh được xác minh.</div>';
   const facts = [
     place.address ? '<div><dt>Địa chỉ / khu vực</dt><dd>' + escapeHtml(place.address) + '</dd></div>' : '',
