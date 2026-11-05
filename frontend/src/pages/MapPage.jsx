@@ -2709,11 +2709,11 @@ export default function MapPage() {
                   <Heart size={16} fill={favorite ? 'currentColor' : 'none'} /> {favorite ? 'Đã lưu' : 'Lưu'}
                 </button>
                 {inEmbed ? (
-                  <a className="details" target="_blank" rel="noopener noreferrer" href={'/place/' + selectedPlace.id}>
+                  <a className="details" target="_blank" rel="noopener noreferrer" href={selectedPlace.slug ? '/dia-diem/' + encodeURIComponent(selectedPlace.slug) : '/place/' + selectedPlace.id}>
                     Chi tiết <ChevronRight size={15} />
                   </a>
                 ) : (
-                <Link className="details" to={'/place/' + selectedPlace.id}>
+                <Link className="details" to={selectedPlace.slug ? '/dia-diem/' + encodeURIComponent(selectedPlace.slug) : '/place/' + selectedPlace.id}>
                   Chi tiết <ChevronRight size={15} />
                 </Link>
                 )}

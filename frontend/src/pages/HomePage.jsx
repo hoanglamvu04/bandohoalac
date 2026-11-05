@@ -136,7 +136,7 @@ function FeaturedPlaceCard({ place, index, tone, initialFavorite = false }) {
     place.image ||
     null;
   const categoryTone = tone || ['blue', 'green', 'orange', 'purple'][index % 4];
-  const detailHref = '/place/' + place.id;
+  const detailHref = place.slug ? '/dia-diem/' + encodeURIComponent(place.slug) : '/place/' + place.id;
   const canFavorite = true;
 
   useEffect(() => {

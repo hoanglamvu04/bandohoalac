@@ -4,12 +4,13 @@ test('place detail exposes canonical, geo metadata and structured data graph', a
   await page.route('**/api/**', async (route) => {
     const url = new URL(route.request().url());
 
-    if (url.pathname === '/api/places/42') {
+    if (url.pathname === '/api/places/slug/cafe-test-hoa-lac') {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           id: '42',
+          slug: 'cafe-test-hoa-lac',
           name: 'Cafe Test Hòa Lạc',
           address: 'Hòa Lạc, Hà Nội',
           description: 'Một địa điểm kiểm thử SEO Place V3 tại Hòa Lạc.',
@@ -43,12 +44,12 @@ test('place detail exposes canonical, geo metadata and structured data graph', a
     });
   });
 
-  await page.goto('/place/42', { waitUntil: 'domcontentloaded' });
+  await page.goto('/dia-diem/cafe-test-hoa-lac', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { name: 'Cafe Test Hòa Lạc', level: 1 })).toBeVisible();
   await expect(page).toHaveTitle(/Cafe Test Hòa Lạc \| Hola Maps/);
 
   const canonical = page.locator('link[rel="canonical"]');
-  await expect(canonical).toHaveAttribute('href', 'https://maps.dothihoalac.vn/place/42');
+  await expect(canonical).toHaveAttribute('href', 'https://maps.dothihoalac.vn/dia-diem/cafe-test-hoa-lac');
   await expect(page.locator('meta[name="geo.position"]')).toHaveAttribute('content', '21.015;105.544');
   await expect(page.locator('meta[property="og:locale"]')).toHaveAttribute('content', 'vi_VN');
 
@@ -56,6 +57,6 @@ test('place detail exposes canonical, geo metadata and structured data graph', a
   const jsonLd = JSON.parse(jsonLdText);
   expect(jsonLd['@context']).toBe('https://schema.org');
   expect(Array.isArray(jsonLd['@graph'])).toBeTruthy();
-  expect(jsonLd['@graph'].some((node) => node['@type'] === 'Place' && node['@id'] === 'https://maps.dothihoalac.vn/place/42#place')).toBeTruthy();
+  expect(jsonLd['@graph'].some((node) => node['@type'] === 'Place' && node['@id'] === 'https://maps.dothihoalac.vn/dia-diem/cafe-test-hoa-lac#place')).toBeTruthy();
   expect(jsonLd['@graph'].some((node) => node['@type'] === 'BreadcrumbList')).toBeTruthy();
 });

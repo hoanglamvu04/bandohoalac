@@ -166,7 +166,7 @@ function PlaceCard({ place, mode }) {
 
   return (
     <article className={'local-market-card ' + (mode === 'housing' ? 'housing-card' : '')}>
-      <Link className="local-market-card-media" to={'/place/' + place.id}>
+      <Link className="local-market-card-media" to={place.slug ? '/dia-diem/' + encodeURIComponent(place.slug) : '/place/' + place.id}>
         {cover ? (
           <img src={cover} alt={place.name || 'Địa điểm Hòa Lạc'} loading="lazy" />
         ) : (
@@ -200,7 +200,7 @@ function PlaceCard({ place, mode }) {
           )}
         </div>
 
-        <Link className="local-market-card-title" to={'/place/' + place.id}>{place.name}</Link>
+        <Link className="local-market-card-title" to={place.slug ? '/dia-diem/' + encodeURIComponent(place.slug) : '/place/' + place.id}>{place.name}</Link>
         <p className="local-market-card-address"><MapPin size={14} /> {place.address || 'Hòa Lạc, Hà Nội'}</p>
 
         {mode === 'housing' ? (

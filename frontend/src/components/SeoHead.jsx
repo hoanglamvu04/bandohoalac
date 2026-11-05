@@ -42,7 +42,8 @@ function placeNodeFromJsonLd(jsonLd) {
 
 function buildStructuredData(jsonLd, { canonical, title }) {
   if (!jsonLd) return null;
-  const isPlace = String(canonical || '').includes('/place/');
+  const canonicalPath = String(canonical || '');
+  const isPlace = canonicalPath.includes('/place/') || canonicalPath.includes('/dia-diem/');
   if (!isPlace) return jsonLd;
 
   const sourceNodes = Array.isArray(jsonLd)

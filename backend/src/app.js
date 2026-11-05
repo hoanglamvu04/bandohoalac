@@ -4,6 +4,14 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
 import { pool } from './database/pool.js';
+import { listPublishedPlaceSitemapEntries } from './services/place.service.js';
+import {
+  getExploreArticleSeoPage,
+  getExploreHubSeoPage,
+  getHomeSeoPage,
+  getPlaceSeoPage,
+  redirectLegacyPlaceSeoPage
+} from './controllers/seoPages.controller.js';
 import { uploadRoot } from './middleware/upload.js';
 import {
   generalApiRateLimiter,
@@ -95,24 +103,20 @@ export function createApp() {
 
   app.get('/api/sitemap-places.xml', async (_req, res, next) => {
     try {
-      const { rows } = await pool.query(`
-        SELECT id, updated_at
-        FROM places
-        WHERE status = 'PUBLISHED'
-        ORDER BY updated_at DESC
-        LIMIT 10000
-      `);
-
+      const rows = await listPublishedPlaceSitemapEntries();
       const urls = rows.map((place) => {
         const lastmod = place.updated_at
-          ? `\n    <lastmod>${new Date(place.updated_at).toISOString()}</lastmod>`
+          ? '\n    <lastmod>' + new Date(place.updated_at).toISOString() + '</lastmod>'
           : '';
-        return `  <url>\n    <loc>https://maps.dothihoalac.vn/place/${place.id}</loc>${lastmod}\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`;
+        return '  <url>\n    <loc>https://maps.dothihoalac.vn/dia-diem/' +
+          encodeURIComponent(place.slug) + '</loc>' + lastmod +
+          '\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>';
       }).join('\n');
 
       res.set('Content-Type', 'application/xml; charset=utf-8');
       res.set('Cache-Control', 'public, max-age=900, stale-while-revalidate=3600');
-      res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`);
+      res.send('<?xml version="1.0" encoding="UTF-8"?>\n' +
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + urls + '\n</urlset>');
     } catch (error) {
       next(error);
     }
@@ -177,6 +181,13 @@ export function createApp() {
   app.use('/api/partner', partnerPortalRoutes);
   app.use('/api/brand', brandRoutes);
   app.use('/api/halo/v1', haloHolaRoutes);
+
+  // Public SEO pages are server-rendered so crawlers receive content and metadata in the first HTML response.
+  app.get('/', getHomeSeoPage);
+  app.get('/kham-pha', getExploreHubSeoPage);
+  app.get('/kham-pha/:slug', getExploreArticleSeoPage);
+  app.get('/dia-diem/:slug', getPlaceSeoPage);
+  app.get('/place/:id', redirectLegacyPlaceSeoPage);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

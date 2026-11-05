@@ -26,7 +26,7 @@ export default function PlaceCard({place,index=0,onDirections,directionsActive=f
           <span className="verified"><BadgeCheck size={15}/> Đã xác thực</span>
           <div className="place-card-actions">
             {onDirections && <button className="place-directions" onClick={()=>onDirections(place)} disabled={directionsLoading}><Navigation size={14}/> {directionsActive?'Đang chỉ đường':'Chỉ đường'}</button>}
-            <Link to={'/place/'+place.id}>Chi tiết <ArrowUpRight size={14}/></Link>
+            <Link to={place.slug ? '/dia-diem/' + encodeURIComponent(place.slug) : '/place/' + place.id}>Chi tiết <ArrowUpRight size={14}/></Link>
           </div>
         </div>
       </div>

@@ -19,6 +19,9 @@ jobs:
       - name: Validate production shell scripts
         run: bash -n scripts/*.sh
 
+      - name: Validate SEO route and sitemap contract
+        run: bash scripts/check-seo-routing.sh
+
   frontend:
     name: Frontend build
     runs-on: ubuntu-latest
