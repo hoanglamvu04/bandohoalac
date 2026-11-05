@@ -125,6 +125,26 @@ test('SEO: missing and unpublished content returns a noindex 404', async () => {
   assert.match(missingArticle.headers.get('x-robots-tag') || '', /noindex/i);
 });
 
+test('SEO: decomposed Vietnamese text is normalized to NFC before rendering', () => {
+  const decomposed = 'ra\u0302\u0301t nhanh';
+  assert.equal(escapeHtml(decomposed), 'rất nhanh');
+
+  const html = renderPlaceSeoPage({
+    id: 999998,
+    slug: 'unicode-normalization-test',
+    name: 'Ca\u0300 phe\u0302 Hoa\u0300 La\u0323c',
+    description: 'Kho\u0302ng gian ca\u0300 phe\u0302 ra\u0302\u0301t đe\u0323p.',
+    address: 'Hoa\u0300 La\u0323c',
+    images: [],
+    rating: 0,
+    reviews: 0,
+    lat: 0,
+    lng: 0
+  });
+  assert.ok(html.includes('Cà phê Hòa Lạc'));
+  assert.ok(html.includes('Không gian cà phê rất đẹp.'));
+});
+
 test('SEO: user-controlled place content is escaped in HTML and JSON-LD', () => {
   const html = renderPlaceSeoPage({
     id: 999999,
