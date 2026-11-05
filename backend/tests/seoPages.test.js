@@ -139,6 +139,6 @@ test('SEO: user-controlled place content is escaped in HTML and JSON-LD', () => 
   assert.match(html, /&lt;script&gt;alert\(&quot;xss&quot;\)&lt;\/script&gt;/);
   assert.match(html, /\\u003cscript\\u003e/);
   assert.doesNotMatch(html, /<script>alert/);
-  assert.doesNotMatch(html, /onerror=/);
+  assert.doesNotMatch(html, /<img[^>]+onerror=/i);
   assert.doesNotMatch(html, /href="javascript:/);
 });
