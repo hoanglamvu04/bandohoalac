@@ -50,9 +50,9 @@ test('SEO: batch 02 local-intent guides are published, canonical and present in 
     const response = await fetch(url('/kham-pha/' + slug));
     assert.equal(response.status, 200, slug + ' should be published');
     const html = await response.text();
-    assert.match(html, new RegExp('<link rel="canonical" href="https://maps\\\\.dothihoalac\\\\.vn/kham-pha/' + slug + '"'));
-    assert.match(html, /<h1>[^<]+<\\/h1>/);
-    assert.match(html, /application\\/ld\\+json/);
+    assert.ok(html.includes('<link rel="canonical" href="https://maps.dothihoalac.vn/kham-pha/' + slug + '"'));
+    assert.match(html, /<h1>[^<]+<\/h1>/);
+    assert.match(html, /application\/ld\+json/);
     assert.match(html, /Article/);
   }
 
