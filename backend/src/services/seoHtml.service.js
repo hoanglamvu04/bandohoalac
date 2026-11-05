@@ -4,6 +4,7 @@ const DEFAULT_IMAGE = SITE_URL + '/pwa-icon.svg';
 
 export function escapeHtml(value) {
   return String(value ?? '')
+    .normalize('NFC')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -12,7 +13,7 @@ export function escapeHtml(value) {
 }
 
 function cleanText(value, fallback = '') {
-  return String(value ?? fallback).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  return String(value ?? fallback).normalize('NFC').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function compactText(value, fallback, maxLength = 160) {
@@ -32,7 +33,7 @@ function safePublicUrl(value) {
 }
 
 function jsonForHtml(value) {
-  return JSON.stringify(value)
+  return JSON.stringify(value).normalize('NFC')
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e')
     .replace(/&/g, '\\u0026');
