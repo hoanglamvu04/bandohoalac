@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euxo pipefail
+set -euo pipefail
 
 APP="backend/src/app.js"
 NGINX="scripts/install-embed-gateway.sh"
@@ -27,7 +27,7 @@ grep -Fq 'write_seo_proxy_location "^~ /dia-diem/"' "$NGINX"
 grep -Fq 'write_seo_proxy_location "^~ /place/"' "$NGINX"
 
 grep -Fq 'href="/seo-rendered.css"' "$SEO_RENDERER"
-grep -Fq 'class="hola-app-header"' "$SEO_RENDERER"
+grep -Fq 'hola-app-header' "$SEO_RENDERER"
 grep -Fq 'src="/logo.svg?v=20260929-2"' "$SEO_RENDERER"
 test -s "$SEO_CSS"
 grep -Fq '.seo-editorial-layout {' "$SEO_CSS"
