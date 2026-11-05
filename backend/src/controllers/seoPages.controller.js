@@ -57,6 +57,8 @@ export const getExploreHubSeoPage = asyncHandler(async (req, res) => {
   const html = renderExploreHubSeoPage({
     items: result.items,
     categories: result.categories,
+    category: category || 'all',
+    query,
     noindex
   });
   if (noindex) {
