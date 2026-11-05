@@ -123,6 +123,35 @@ function renderBreadcrumbs(items) {
   }).join('') + '</nav>';
 }
 
+function renderEditorialSidebar({
+  eyebrow = 'HOLA MAPS',
+  title,
+  description,
+  primaryHref = '/map',
+  primaryLabel = 'Mở bản đồ',
+  secondaryHref = '/kham-pha',
+  secondaryLabel = 'Đọc cẩm nang',
+  links = []
+}) {
+  const quickLinks = links.length
+    ? '<nav class="seo-sidebar-links" aria-label="Khám phá thêm"><h3>Khám phá thêm</h3>' +
+      links.map((link) => '<a href="' + escapeHtml(link.href) + '">' + escapeHtml(link.label) + '<span aria-hidden="true">→</span></a>').join('') +
+      '</nav>'
+    : '';
+  return [
+    '<aside class="seo-sidebar" aria-label="Khám phá Hòa Lạc">',
+    '<section class="seo-sidebar-card">',
+    '<span class="seo-sidebar-eyebrow">' + escapeHtml(eyebrow) + '</span>',
+    '<h2>' + escapeHtml(title) + '</h2>',
+    '<p>' + escapeHtml(description) + '</p>',
+    '<a class="seo-sidebar-primary" href="' + escapeHtml(primaryHref) + '">' + escapeHtml(primaryLabel) + '<span aria-hidden="true">→</span></a>',
+    '<a class="seo-sidebar-secondary" href="' + escapeHtml(secondaryHref) + '">' + escapeHtml(secondaryLabel) + '</a>',
+    '</section>',
+    quickLinks,
+    '</aside>'
+  ].join('');
+}
+
 function renderPlaceCard(place) {
   const name = escapeHtml(place.name);
   const href = place.slug
@@ -195,10 +224,25 @@ export function renderPlaceSeoPage(place) {
     place.website && safePublicUrl(place.website) ? '<div><dt>Website</dt><dd><a href="' + escapeHtml(safePublicUrl(place.website)) + '" rel="nofollow noopener" target="_blank">' + escapeHtml(place.website) + '</a></dd></div>' : '',
     place.lastVerifiedAt ? '<div><dt>Xác minh gần nhất</dt><dd>' + escapeHtml(formatDate(place.lastVerifiedAt)) + '</dd></div>' : ''
   ].filter(Boolean).join('');
+  const mapHref = '/map?place=' + encodeURIComponent(place.id);
+  const sidebar = renderEditorialSidebar({
+    eyebrow: place.category || 'ĐỊA ĐIỂM HÒA LẠC',
+    title: 'Xem vị trí và khám phá khu vực.',
+    description: 'Mở bản đồ HOLA Maps để xem vị trí, tìm đường và khám phá những địa điểm khác quanh đây.',
+    primaryHref: mapHref,
+    primaryLabel: 'Xem trên bản đồ',
+    secondaryHref: '/kham-pha',
+    secondaryLabel: 'Đọc cẩm nang Hòa Lạc',
+    links: [
+      { label: 'Tìm địa điểm ăn uống', href: '/map?vertical=food' },
+      { label: 'Khám phá tất cả địa điểm', href: '/map' }
+    ]
+  });
   const body = [
     '<main class="seo-content seo-place-page">',
     renderBreadcrumbs(breadcrumbs),
-    '<article><header class="seo-page-heading"><span class="seo-eyebrow">' + escapeHtml(place.category || 'Địa điểm Hòa Lạc') + '</span>',
+    '<div class="seo-editorial-layout">',
+    '<article class="seo-editorial-main"><header class="seo-page-heading"><span class="seo-eyebrow">' + escapeHtml(place.category || 'Địa điểm Hòa Lạc') + '</span>',
     '<h1>' + escapeHtml(place.name) + '</h1><p class="seo-lead">' + escapeHtml(description) + '</p>',
     '<div class="seo-page-meta">',
     place.address ? '<span>' + escapeHtml(place.address) + '</span>' : '',
@@ -209,8 +253,10 @@ export function renderPlaceSeoPage(place) {
     facts ? '<section class="seo-facts"><h2>Thông tin địa điểm</h2><dl>' + facts + '</dl></section>' : '',
     place.description ? '<section class="seo-prose"><h2>Giới thiệu</h2><p>' + escapeHtml(place.description) + '</p></section>' : '',
     '<section class="seo-map-cta"><div><strong>Xem vị trí và đường đi</strong><p>Mở HOLA Maps để xem địa điểm trên bản đồ và khám phá các tiện ích xung quanh.</p></div>',
-    '<a href="/map?place=' + encodeURIComponent(place.id) + '">Xem trên bản đồ →</a></section>',
-    '</article></main>'
+    '<a href="' + escapeHtml(mapHref) + '">Xem trên bản đồ →</a></section>',
+    '</article>',
+    sidebar,
+    '</div></main>'
   ].join('');
   return renderShell({
     title: place.name,
@@ -274,10 +320,24 @@ export function renderExploreArticleSeoPage({ article, relatedPlaces = [] }) {
   const placeCards = relatedPlaces.length
     ? '<section class="seo-related-places"><div class="seo-section-heading"><span>KHÁM PHÁ ĐỊA ĐIỂM</span><h2>Địa điểm liên quan trên HOLA Maps</h2></div><div class="seo-place-grid">' + relatedPlaces.map(renderPlaceCard).join('') + '</div></section>'
     : '';
+  const sidebar = renderEditorialSidebar({
+    eyebrow: 'HOLA MAPS · CẨM NANG',
+    title: 'Tìm địa điểm phù hợp quanh Hòa Lạc.',
+    description: 'Từ bài viết đến địa điểm thực tế: xem vị trí, tìm đường và khám phá thêm trên bản đồ cộng đồng.',
+    primaryHref: '/map',
+    primaryLabel: 'Mở bản đồ HOLA Maps',
+    secondaryHref: '/kham-pha',
+    secondaryLabel: 'Xem các cẩm nang khác',
+    links: [
+      { label: 'Khám phá địa điểm ăn uống', href: '/map?vertical=food' },
+      { label: 'Xem toàn bộ bản đồ', href: '/map' }
+    ]
+  });
   const body = [
     '<main class="seo-content seo-article-page">',
     renderBreadcrumbs(breadcrumbs),
-    '<article><header class="seo-page-heading seo-article-heading">',
+    '<div class="seo-editorial-layout">',
+    '<article class="seo-editorial-main"><header class="seo-page-heading seo-article-heading">',
     '<span class="seo-eyebrow">' + escapeHtml(article.eyebrow || article.categoryLabel || 'HOLA GUIDE') + '</span>',
     '<h1>' + escapeHtml(article.title) + '</h1><p class="seo-lead">' + escapeHtml(article.excerpt) + '</p>',
     '<div class="seo-page-meta"><span>' + escapeHtml(formatDate(article.publishedAt)) + '</span><span>' + (Number(article.readingMinutes) || 5) + ' phút đọc</span></div>',
@@ -288,6 +348,8 @@ export function renderExploreArticleSeoPage({ article, relatedPlaces = [] }) {
     Array.isArray(article.tags) && article.tags.length ? '<div class="seo-tags">' + article.tags.map((tag) => '<span>#' + escapeHtml(tag) + '</span>').join('') + '</div>' : '',
     '<section class="seo-map-cta"><div><strong>Khám phá các địa điểm trên bản đồ</strong><p>Chọn địa điểm phù hợp và xem vị trí thực tế trên HOLA Maps.</p></div><a href="/map">Mở bản đồ →</a></section>',
     '</article>',
+    sidebar,
+    '</div>',
     placeCards,
     '</main>'
   ].join('');

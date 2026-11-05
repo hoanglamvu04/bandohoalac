@@ -22,6 +22,10 @@ grep -Fq 'write_seo_proxy_location "^~ /place/"' "$NGINX"
 
 grep -Fq 'href="/seo-rendered.css"' "$SEO_RENDERER"
 test -s "$SEO_CSS"
+grep -Fq '.seo-editorial-layout {' "$SEO_CSS"
+grep -Fq '.seo-sidebar-card {' "$SEO_CSS"
+grep -Fq 'font-size: 19px;' "$SEO_CSS"
+grep -Fq '@media (max-width: 760px)' "$SEO_CSS"
 
 if grep -Eq 'https://maps\.dothihoalac\.vn/(map|halo|an-uong|phong-tro|kham-pha)</loc>' "$SITEMAP"; then
   echo "[seo] ERROR: map-only, client-redirect or dynamically-sitemapped URLs must not be in the static sitemap." >&2
