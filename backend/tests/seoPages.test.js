@@ -90,6 +90,12 @@ test('SEO: Explore hub returns crawlable article links and filtered views are no
   const html = await response.text();
   assert.match(html, /<h1>Khám phá Hòa Lạc<\/h1>/);
   assert.match(html, /href="\/kham-pha\/hoa-lac-co-gi"/);
+  assert.match(html, /class="explore-hero"/);
+  assert.match(html, /class="explore-search"/);
+  assert.match(html, /class="explore-categories"/);
+  assert.match(html, /class="explore-featured"/);
+  assert.match(html, /class="explore-grid"/);
+  assert.match(html, /seo-rendered\.css\?v=20261105-explore-ssr-v2/);
   assert.match(html, /CollectionPage/);
 
   const filtered = await fetch(url('/kham-pha?category=cafe'));
