@@ -2713,7 +2713,7 @@ export default function MapPage() {
                     Chi tiết <ChevronRight size={15} />
                   </a>
                 ) : (
-                <Link className="details" to={'/place/' + selectedPlace.id}>
+                <Link className="details" to={selectedPlace.slug ? '/dia-diem/' + encodeURIComponent(selectedPlace.slug) : '/place/' + selectedPlace.id}>
                   Chi tiết <ChevronRight size={15} />
                 </Link>
                 )}
