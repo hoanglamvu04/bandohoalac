@@ -2,51 +2,50 @@
 
 ## Public HTML delivery
 
-The existing React/Vite application remains the interactive client application. The Nginx installer now routes selected public SEO document requests to Express before the SPA fallback:
+The React/Vite application owns the product homepage and interactive application chrome. The root URL `/` must fall through to the existing Nginx SPA fallback so the original HOLA Maps Navbar, hero, discovery sections and interactive controls remain intact.
 
-- \`/\` — homepage with published place inventory.
-- \`/kham-pha\` — Explore hub with published guide links.
-- \`/kham-pha/:slug\` — published guide article.
-- \`/dia-diem/:slug\` — published place detail.
-- \`/place/:id\` — legacy numeric place URL; HTTP 301 to its canonical slug URL.
+Nginx routes only selected editorial and place SEO document requests to Express before the SPA fallback:
+- `/kham-pha` — Explore hub with published guide links.
+- `/kham-pha/:slug` — published guide article.
+- `/dia-diem/:slug` — published place detail.
+- `/place/:id` — legacy numeric place URL; HTTP 301 to its canonical slug URL.
 
-Express renders a complete Vietnamese HTML document containing the page title, description, robots directive, canonical, Open Graph/Twitter metadata, visible headings/content, breadcrumbs and JSON-LD. These editorial/place routes do not depend on JavaScript for the primary content. Their static header mirrors the main HOLA Maps navigation and uses the official `/logo.svg` asset. The root homepage is not server-rendered by Express; it remains the original React SPA.
+Express renders a complete Vietnamese HTML document containing route-specific title, description, robots directive, canonical, Open Graph/Twitter metadata, visible headings/content, breadcrumbs and JSON-LD. Editorial/place routes do not depend on JavaScript for primary content. Their static header mirrors the main HOLA Maps navigation and uses the official `/logo.svg` asset.
 
-The HTML uses the standalone static stylesheet \`/seo-rendered.css\`, copied from \`frontend/public\` into the Vite build output. It intentionally does not load the React application bundle; links to the map open the existing interactive SPA.
+SEO documents use the standalone stylesheet `/seo-rendered.css`, copied from `frontend/public` into the Vite build output. They do not load the React bundle; links to the map open the existing interactive SPA. The homepage itself remains the original interactive React SPA.
 
 ## Canonical and sitemap rules
 
-- Place canonical URL: \`https://maps.dothihoalac.vn/dia-diem/:slug\`.
-- Old numeric \`/place/:id\` URLs redirect permanently to the current slug URL.
-- Explore article URLs remain \`/kham-pha/:slug\` to avoid unnecessary URL migration.
+- Place canonical URL: `https://maps.dothihoalac.vn/dia-diem/:slug`.
+- Old numeric `/place/:id` URLs redirect permanently to the current slug URL.
+- Explore article URLs remain `/kham-pha/:slug` to avoid unnecessary URL migration.
 - Place sitemap entries use the same in-coverage, published-place filter as the public detail API.
-- Static sitemap no longer lists map-only routes or client-side redirects.
-- The Explore sitemap owns the \`/kham-pha\` hub URL; it is not duplicated in the static pages sitemap.
-- Filtered Explore URLs containing \`category\` or \`q\` are noindex and use the hub canonical.
+- Static sitemap excludes map-only routes and client-side redirects.
+- The Explore sitemap owns the `/kham-pha` hub URL; it is not duplicated in the static pages sitemap.
+- Filtered Explore URLs containing `category` or `q` are noindex and use the hub canonical.
 
 ## Deployment
 
-The existing production workflow already runs \`scripts/install-embed-gateway.sh\` after frontend build and backend restart. That script now also adds Nginx proxy locations for the homepage, Explore pages and place pages. Nginx validates the generated configuration with \`nginx -t\` before reloading.
+The production workflow runs `scripts/install-embed-gateway.sh` after frontend build and backend restart. That script adds Nginx proxy locations for Explore and place pages only. It deliberately does not proxy `/`, so the existing SPA fallback serves the original homepage. Nginx validates the generated configuration with `nginx -t` before reloading.
 
-No database migration is required. Existing \`places.slug\` and \`explore_articles\` data are reused.
+No database migration is required for the routing/header restoration. Existing `places.slug` and `explore_articles` data are reused.
 
 ## Verification
 
 Backend integration tests cover:
+- Root path is not intercepted by the standalone SEO renderer.
 - Raw HTML title, description, canonical, visible H1/H2 and JSON-LD before JavaScript.
-- Homepage and Explore hub rendering.
-- Filtered Explore noindex behavior.
+- Shared HOLA Maps header/logo/navigation on Explore and place SEO pages.
+- Explore hub and filtered noindex behavior.
 - Published place slug page and legacy 301 redirect.
 - Place sitemap canonical slug format.
 - 404/noindex behavior for missing content.
 - Escaping of user-controlled content in HTML and JSON-LD.
 
-The CI repository-safety job also checks that the Express routes and Nginx proxy paths stay aligned.
+The CI repository-safety job checks that the Express routes, Nginx proxy paths and shared SEO header remain aligned.
 
 ## Scope and limitations
 
-This V1 server-renders the homepage, Explore hub/articles and place detail pages. Other application routes remain on the existing React SPA and are not all guaranteed to have first-response route-specific HTML yet.
+The Explore hub/articles and place detail pages are first-response HTML. The homepage, map, account, partner and other interactive routes remain on the existing React SPA. The SEO header is a server-rendered public navigation shell; authentication-specific controls remain available in the interactive app.
 
-The server-rendered SEO pages are read-only documents. Interactive map search, account actions, favorites, reviews and contribution tools remain available through the linked interactive map/application experience. A future SSR hydration phase can unify those interactions without sacrificing first-response HTML.
-
-Category landing pages, area landing pages and the Admin editorial CMS are intentionally deferred to later SEO phases. Do not publish thin category/area pages until enough verified local inventory and unique editorial content exist.
+Category landing pages, area landing pages and the Admin editorial CMS are deferred to later SEO phases. Do not publish thin category/area pages until enough verified local inventory and unique editorial content exist.
