@@ -1749,3 +1749,76 @@ a { color: inherit; }
     padding: 0 11px;
   }
 }
+
+
+
+/* Stronger category color treatment: make each filter visibly distinct on white. */
+.explore-page .explore-categories {
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #dce8f8;
+  border-bottom: 1px solid #dce8f8;
+  border-radius: 15px;
+  background: #f0f5ff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+}
+.explore-page .explore-categories button,
+.explore-page .explore-categories a {
+  min-height: 42px;
+  padding: 0 15px;
+  border: 1px solid #d4e2f5;
+  border-radius: 11px;
+  color: #365a83;
+  background: #e4eefc;
+  text-decoration: none;
+  box-shadow: 0 2px 5px rgba(34, 83, 145, .045);
+  transition: color .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.explore-page .explore-categories button:hover,
+.explore-page .explore-categories a:hover {
+  color: #075fcf;
+  border-color: #a9c9f2;
+  background: #d8e9ff;
+  box-shadow: 0 4px 10px rgba(11, 111, 232, .10);
+  transform: translateY(-1px);
+}
+.explore-page .explore-categories button.active,
+.explore-page .explore-categories a.active {
+  color: #064fae;
+  border-color: #8db9f0;
+  background: #cfe3ff;
+  box-shadow: 0 4px 12px rgba(11, 111, 232, .14);
+}
+.explore-page .explore-categories button span,
+.explore-page .explore-categories a span {
+  min-width: 21px;
+  height: 21px;
+  padding: 0 6px;
+  border-radius: 7px;
+  color: #315d91;
+  background: #cfdef3;
+  font-size: 10px;
+  font-weight: 900;
+}
+.explore-page .explore-categories button.active span,
+.explore-page .explore-categories a.active span {
+  color: #064fae;
+  background: #a9ceff;
+}
+.explore-page .explore-categories button:focus-visible,
+.explore-page .explore-categories a:focus-visible {
+  outline: 3px solid rgba(11, 111, 232, .25);
+  outline-offset: 2px;
+}
+@media (max-width: 700px) {
+  .explore-page .explore-categories {
+    gap: 7px;
+    padding: 9px;
+    border-radius: 13px;
+  }
+  .explore-page .explore-categories button,
+  .explore-page .explore-categories a {
+    min-height: 38px;
+    padding: 0 12px;
+  }
+}
