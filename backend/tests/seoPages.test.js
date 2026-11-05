@@ -132,9 +132,9 @@ test('SEO: decomposed Vietnamese text is normalized to NFC before rendering', ()
   const html = renderPlaceSeoPage({
     id: 999998,
     slug: 'unicode-normalization-test',
-    name: 'Ca\u0300 phe\u0302 Hoa\u0300 La\u0323c',
+    name: 'Ca\u0300 phe\u0302 Ho\u0300a La\u0323c',
     description: 'Kho\u0302ng gian ca\u0300 phe\u0302 ra\u0302\u0301t đe\u0323p.',
-    address: 'Hoa\u0300 La\u0323c',
+    address: 'Ho\u0300a La\u0323c',
     images: [],
     rating: 0,
     reviews: 0,
