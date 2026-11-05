@@ -401,6 +401,24 @@ export async function listFeaturedPlaces({ limit = 4 } = {}) {
   return rows.map(mapRow);
 }
 
+export async function listPublishedPlaceSitemapEntries(client = pool) {
+  const { rows } = await client.query(`
+    SELECT p.slug, p.updated_at
+    FROM places p
+    WHERE p.status = 'PUBLISHED'
+      AND p.slug IS NOT NULL
+      AND p.slug <> ''
+      AND ST_Intersects(
+        p.location,
+        ST_SetSRID(ST_GeomFromGeoJSON($1), 4326)
+      )
+    ORDER BY p.updated_at DESC, p.id DESC
+    LIMIT 10000
+  `, [SERVICE_AREA_GEOJSON_STRING]);
+
+  return rows;
+}
+
 export async function getPlaceById(id, client = pool) {
   const sql = BASE_SELECT +
     ' WHERE p.id = $1' +
