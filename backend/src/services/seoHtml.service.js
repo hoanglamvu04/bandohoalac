@@ -388,7 +388,7 @@ function renderExploreArticleVisual(article, large = false) {
   const image = safePublicUrl(article.coverImage);
   const visualClass = large ? ' large' : '';
   if (image) {
-    return '<img class="explore-card-image' + visualClass + '" src="' +
+    return '<img class="explore-card-image' + visualClass + '" data-explore-fallback="true" src="' +
       escapeHtml(image) + '" alt="" loading="' + (large ? 'eager' : 'lazy') + '">';
   }
 
@@ -546,7 +546,8 @@ export function renderExploreHubSeoPage({
         : '')),
     featuredCard,
     articleSection,
-    '</main></div>'
+    '</main></div>',
+    '<script src="/explore-image-fallback.js?v=20261105-1" defer></script>'
   ].join('');
 
   return renderShell({
