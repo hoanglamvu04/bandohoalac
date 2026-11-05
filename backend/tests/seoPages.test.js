@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createApp } from '../src/app.js';
 import { pool } from '../src/database/pool.js';
 import { SERVICE_AREA_GEOJSON_STRING } from '../src/config/mapCoverage.js';
-import { escapeHtml, renderPlaceSeoPage } from '../src/services/seoHtml.service.js';
+import { escapeHtml, renderExploreHubSeoPage, renderPlaceSeoPage } from '../src/services/seoHtml.service.js';
 
 let server;
 let baseUrl;
@@ -102,6 +102,28 @@ test('SEO: Explore hub returns crawlable article links and filtered views are no
   assert.equal(filtered.status, 200);
   assert.match(filtered.headers.get('x-robots-tag') || '', /noindex/i);
   assert.match(await filtered.text(), /name="robots" content="noindex,follow"/);
+});
+
+test('SEO: missing and broken Explore cover images use the HOLA GUIDE fallback', () => {
+  const baseArticle = {
+    slug: 'fallback-image-test',
+    title: 'Fallback image test',
+    excerpt: 'Kiểm tra ảnh cẩm nang.',
+    readingMinutes: 5
+  };
+
+  const missingImageHtml = renderExploreHubSeoPage({
+    items: [{ ...baseArticle, coverImage: null }],
+    categories: []
+  });
+  assert.match(missingImageHtml, /class="explore-card-fallback large"/);
+
+  const brokenImageHtml = renderExploreHubSeoPage({
+    items: [{ ...baseArticle, coverImage: 'https://example.com/missing-cover.jpg' }],
+    categories: []
+  });
+  assert.match(brokenImageHtml, /data-explore-fallback="true"/);
+  assert.match(brokenImageHtml, /explore-image-fallback\.js\?v=20261105-1/);
 });
 
 test('SEO: canonical place slug returns rendered content and legacy numeric URL redirects once', async (t) => {
