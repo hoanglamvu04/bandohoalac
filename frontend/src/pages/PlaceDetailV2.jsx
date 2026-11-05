@@ -25,6 +25,7 @@ import {
   getHousingListing,
   getNearbyPlaces,
   getPlace,
+  getPlaceBySlug,
   getPlaceMe,
   removeFavorite
 } from '../services/api.js';
@@ -83,7 +84,7 @@ function housingFreshness(value) {
 }
 
 export default function PlaceDetailV2() {
-  const { id } = useParams();
+  const { id, slug } = useParams();
   const { user } = useAuth();
   const { showToast } = useToast();
   const [place, setPlace] = useState(null);
@@ -98,13 +99,14 @@ export default function PlaceDetailV2() {
   useEffect(() => {
     let active = true;
     setStatus('loading');
+    setPlace(null);
     setNearby([]);
     setHaloSpot(null);
     setHousingDetail(null);
     setActiveImage(0);
     setFavorite(false);
 
-    getPlace(id)
+    (slug ? getPlaceBySlug(slug) : getPlace(id))
       .then((data) => {
         if (!active) return;
         setPlace(data);
@@ -141,7 +143,7 @@ export default function PlaceDetailV2() {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, slug]);
 
   useEffect(() => {
     let active = true;
@@ -188,7 +190,7 @@ export default function PlaceDetailV2() {
   const rating = Number(place.rating) || 0;
   const reviewCount = Number(place.reviews || place.ratingCount || 0);
   const website = normalizeWebsite(place.website);
-  const canonical = 'https://maps.dothihoalac.vn/place/' + encodeURIComponent(place.id);
+  const canonical = 'https://maps.dothihoalac.vn/dia-diem/' + encodeURIComponent(place.slug || place.id);
   const metaDescription = compactDescription(
     place.description,
     `${place.name} tại ${place.address || 'Hòa Lạc'}. Xem vị trí, hình ảnh, đánh giá và chỉ đường trên Hola Maps.`
@@ -485,7 +487,7 @@ export default function PlaceDetailV2() {
           </div>
           <div className="place-v2-nearby-grid">
             {nearby.map((item) => (
-              <Link to={'/place/' + encodeURIComponent(item.id)} key={item.id} className="place-v2-nearby-card">
+              <Link to={item.slug ? '/dia-diem/' + encodeURIComponent(item.slug) : '/place/' + encodeURIComponent(item.id)} key={item.id} className="place-v2-nearby-card">
                 <div className="place-v2-nearby-image">
                   {item.cardImages?.[0] || item.images?.[0] ? <img src={item.cardImages?.[0] || item.images?.[0]} alt={item.name} /> : <MapPin size={28} />}
                 </div>
