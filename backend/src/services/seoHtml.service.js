@@ -83,12 +83,12 @@ function renderShell(options) {
   return [
     '<!doctype html><html lang="vi"><head>',
     '<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
-    '<meta name="theme-color" content="#102f29">',
+    '<meta name="theme-color" content="' + escapeHtml(options.themeColor || '#102f29') + '">',
     '<meta name="description" content="' + escapeHtml(description) + '">',
     '<meta name="robots" content="' + robots + '">',
     '<link rel="canonical" href="' + escapeHtml(canonical) + '">',
     '<link rel="icon" href="/pwa-icon.svg" type="image/svg+xml">',
-    '<link rel="stylesheet" href="/seo-rendered.css">',
+    '<link rel="stylesheet" href="/seo-rendered.css?v=20261105-explore-ssr-v2">',
     '<meta property="og:locale" content="vi_VN"><meta property="og:site_name" content="' + SITE_NAME + '">',
     '<meta property="og:type" content="' + type + '">',
     '<meta property="og:title" content="' + escapeHtml(title) + '">',
@@ -101,7 +101,7 @@ function renderShell(options) {
     '<meta name="twitter:image" content="' + escapeHtml(image) + '">',
     '<title>' + escapeHtml(title) + ' | ' + SITE_NAME + '</title>',
     structuredData,
-    '</head><body><div class="seo-site-shell">',
+    '</head><body><div class="seo-site-shell' + (options.shellClass ? ' ' + escapeHtml(options.shellClass) : '') + '">',
     '<header class="seo-site-header hola-app-header">',
     '<a class="seo-brand app-brand" href="/" aria-label="HOLA Maps - Trang chủ">',
     '<img class="seo-brand-logo" src="/logo.svg?v=20260929-2" alt="HOLA Maps" width="198" height="56"></a>',
@@ -113,7 +113,7 @@ function renderShell(options) {
     '<div class="seo-header-actions">',
     '<a class="seo-header-partner" href="/doi-tac">Đối tác</a>',
     '<a class="seo-header-cta" href="/contribute"><span aria-hidden="true">＋</span>Đóng góp</a>',
-    '<a class="seo-header-account" href="/login">Tài khoản</a>',
+    '<a class="seo-header-account" href="/login">Đăng nhập</a>',
     '</div>',
     '</header>',
     options.body,
@@ -373,9 +373,64 @@ export function renderExploreArticleSeoPage({ article, relatedPlaces = [] }) {
   });
 }
 
-export function renderExploreHubSeoPage({ items = [], categories = [], noindex = false }) {
+function formatExploreDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(date);
+}
+
+function renderExploreArticleVisual(article, large = false) {
+  const image = safePublicUrl(article.coverImage);
+  const visualClass = large ? ' large' : '';
+  if (image) {
+    return '<img class="explore-card-image' + visualClass + '" src="' +
+      escapeHtml(image) + '" alt="" loading="' + (large ? 'eager' : 'lazy') + '">';
+  }
+
+  return [
+    '<div class="explore-card-fallback' + visualClass + '">',
+    '<svg viewBox="0 0 24 24" width="' + (large ? '42' : '30') + '" height="' + (large ? '42' : '30') + '" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',
+    '<circle cx="12" cy="12" r="10"></circle>',
+    '<path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12Z"></path>',
+    '</svg>',
+    '<span>HOLA GUIDE</span>',
+    '</div>'
+  ].join('');
+}
+
+function renderExploreArticleCard(article) {
+  const href = '/kham-pha/' + encodeURIComponent(article.slug);
+  return [
+    '<a class="explore-card" href="' + escapeHtml(href) + '">',
+    renderExploreArticleVisual(article),
+    '<div class="explore-card-body">',
+    '<span>' + escapeHtml(article.categoryLabel || 'Cẩm nang') + '</span>',
+    '<h3>' + escapeHtml(article.title) + '</h3>',
+    '<p>' + escapeHtml(article.excerpt) + '</p>',
+    '<footer><small>' + (Number(article.readingMinutes) || 5) + ' phút đọc</small>',
+    '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',
+    '<path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path>',
+    '</svg></footer>',
+    '</div></a>'
+  ].join('');
+}
+
+export function renderExploreHubSeoPage({
+  items = [],
+  categories = [],
+  category = 'all',
+  query = '',
+  noindex = false
+}) {
   const canonical = SITE_URL + '/kham-pha';
   const description = 'Cẩm nang Hòa Lạc: ăn gì, chơi gì, cà phê, homestay và trải nghiệm địa phương, kết nối trực tiếp với địa điểm trên HOLA Maps.';
+  const activeCategory = String(category || 'all');
+  const searchQuery = String(query || '').trim();
   const jsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -398,39 +453,113 @@ export function renderExploreHubSeoPage({ items = [], categories = [], noindex =
       breadcrumbJsonLd([{ name: SITE_NAME, url: SITE_URL + '/' }, { name: 'Khám phá Hòa Lạc' }], canonical)
     ]
   };
-  const categoryLinks = categories.map((category) =>
-    '<a href="/kham-pha?category=' + encodeURIComponent(category.slug) + '">' + escapeHtml(category.label) + ' <span>' + (Number(category.count) || 0) + '</span></a>'
-  ).join('');
-  const cards = items.map((article) => {
-    const image = safePublicUrl(article.coverImage);
-    const href = '/kham-pha/' + encodeURIComponent(article.slug);
-    return [
-      '<a class="seo-guide-card" href="' + escapeHtml(href) + '">',
-      image ? '<img src="' + escapeHtml(image) + '" alt="' + escapeHtml(article.title) + '" loading="lazy">' : '<span class="seo-guide-placeholder">HOLA GUIDE</span>',
-      '<span class="seo-guide-card-copy"><small>' + escapeHtml(article.categoryLabel || 'Cẩm nang') + '</small>',
-      '<strong>' + escapeHtml(article.title) + '</strong><span>' + escapeHtml(article.excerpt) + '</span>',
-      '<em>' + (Number(article.readingMinutes) || 5) + ' phút đọc</em></span></a>'
-    ].join('');
-  }).join('');
-  const body = [
-    '<main class="seo-content seo-explore-hub">',
-    renderBreadcrumbs([{ name: SITE_NAME, url: SITE_URL + '/' }, { name: 'Khám phá Hòa Lạc' }]),
-    '<header class="seo-page-heading"><span class="seo-eyebrow">HOLA GUIDE</span><h1>Khám phá Hòa Lạc</h1><p class="seo-lead">' + escapeHtml(description) + '</p></header>',
-    categoryLinks ? '<nav class="seo-category-links" aria-label="Chủ đề cẩm nang">' + categoryLinks + '</nav>' : '',
-    cards ? '<section class="seo-guide-grid" aria-label="Danh sách cẩm nang">' + cards + '</section>' : '<p>Hiện chưa có cẩm nang được xuất bản.</p>',
-    '<section class="seo-map-cta"><div><strong>Tìm địa điểm phù hợp với bạn</strong><p>Mở bản đồ để tìm quán ăn, cà phê, nơi vui chơi và tiện ích quanh Hòa Lạc.</p></div><a href="/map">Mở bản đồ →</a></section>',
-    '</main>'
+
+  function categoryHref(slug) {
+    const params = new URLSearchParams();
+    if (slug && slug !== 'all') params.set('category', slug);
+    if (searchQuery) params.set('q', searchQuery);
+    const search = params.toString();
+    return '/kham-pha' + (search ? '?' + search : '');
+  }
+
+  const categoryLinks = [
+    '<a href="' + escapeHtml(categoryHref('all')) + '"' +
+      (activeCategory === 'all' ? ' class="active" aria-current="page"' : '') + '>Tất cả</a>',
+    ...categories.map((item) =>
+      '<a href="' + escapeHtml(categoryHref(item.slug)) + '"' +
+        (activeCategory === item.slug ? ' class="active" aria-current="page"' : '') + '>' +
+        escapeHtml(item.label) + '<span>' + (Number(item.count) || 0) + '</span></a>'
+    )
   ].join('');
+
+  const quickLinks = [
+    { label: 'Ăn gì', slug: 'an-gi' },
+    { label: 'Cafe', slug: 'cafe' },
+    { label: 'Homestay', slug: 'homestay' },
+    { label: 'Chơi gì', slug: 'choi-gi' }
+  ].map((item) =>
+    '<a href="' + escapeHtml(categoryHref(item.slug)) + '">' + item.label + '</a>'
+  ).join('');
+
+  const featured = items.find((item) => item.slug === 'hoa-lac-choi-gi') ||
+    items.find((item) => item.featured) ||
+    items[0] ||
+    null;
+  const rest = featured ? items.filter((item) => item !== featured) : [];
+
+  const featuredCard = featured
+    ? [
+      '<a class="explore-featured" href="/kham-pha/' + escapeHtml(encodeURIComponent(featured.slug)) + '">',
+      renderExploreArticleVisual(featured, true),
+      '<div class="explore-featured-copy">',
+      '<span>' + escapeHtml(featured.eyebrow || featured.categoryLabel || 'Cẩm nang Hòa Lạc') + '</span>',
+      '<h2>' + escapeHtml(featured.title) + '</h2>',
+      '<p>' + escapeHtml(featured.excerpt) + '</p>',
+      '<div><small>' + (Number(featured.readingMinutes) || 5) + ' phút đọc' +
+        (featured.publishedAt ? ' · ' + escapeHtml(formatExploreDate(featured.publishedAt)) : '') + '</small>',
+      '<b>Đọc cẩm nang <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',
+      '<path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></b>',
+      '</div></div></a>'
+    ].join('')
+    : '';
+
+  const articleSection = rest.length
+    ? [
+      '<section class="explore-section">',
+      '<div class="explore-section-head"><div><span>GỢI Ý TIẾP THEO</span>',
+      '<h2>Chọn theo nhu cầu của bạn</h2></div>',
+      '<a href="/map">Mở bản đồ <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',
+      '<path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a></div>',
+      '<div class="explore-grid">' + rest.map(renderExploreArticleCard).join('') + '</div>',
+      '</section>'
+    ].join('')
+    : '';
+
+  const body = [
+    '<div class="explore-page seo-explore-hub">',
+    '<section class="explore-hero">',
+    '<div class="explore-shell explore-hero-grid">',
+    '<div class="explore-hero-copy">',
+    '<span class="explore-kicker"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',
+    '<circle cx="12" cy="12" r="10"></circle><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12Z"></path>',
+    '</svg> HOLA GUIDE</span>',
+    '<h1>Khám phá Hòa Lạc</h1>',
+    '<p>Ăn gì, chơi gì, cafe, homestay và những điểm đáng ghé — chọn nhanh rồi mở thẳng trên HOLA Maps.</p>',
+    '<div class="explore-hero-note"><span>' + (items.length || 20) + ' cẩm nang</span>',
+    '<span>Dữ liệu địa phương · cập nhật liên tục</span></div>',
+    '</div>',
+    '<div class="explore-hero-actions"><span class="explore-hero-actions-label">Tìm nhanh</span>',
+    '<form class="explore-search" action="/kham-pha" method="get">',
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',
+    '<circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>',
+    '<input name="q" value="' + escapeHtml(searchQuery) + '" placeholder="Cafe, homestay, FPT, cuối tuần..." aria-label="Tìm bài Khám phá Hòa Lạc">',
+    (activeCategory !== 'all' ? '<input type="hidden" name="category" value="' + escapeHtml(activeCategory) + '">' : ''),
+    '<button type="submit">Tìm</button></form>',
+    '<div class="explore-quick-links" aria-label="Chủ đề tìm nhanh">' + quickLinks + '</div>',
+    '</div></div></section>',
+    '<main class="explore-shell explore-main">',
+    '<nav class="explore-categories" aria-label="Chủ đề Khám phá">' + categoryLinks + '</nav>',
+    (!featured && !searchQuery && activeCategory === 'all'
+      ? '<div class="explore-state">Hiện chưa có cẩm nang được xuất bản.</div>'
+      : (!featured
+        ? '<div class="explore-state">Chưa có bài phù hợp với bộ lọc này.</div>'
+        : '')),
+    featuredCard,
+    articleSection,
+    '</main></div>'
+  ].join('');
+
   return renderShell({
     title: 'Khám phá Hòa Lạc',
     description,
     canonical,
     jsonLd,
     noindex,
+    shellClass: 'seo-explore-shell',
+    themeColor: '#0b6fe8',
     body
   });
 }
-
 export function renderSeoNotFoundPage() {
   return renderShell({
     title: 'Không tìm thấy nội dung',
