@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -euxo pipefail
 
 APP="backend/src/app.js"
 NGINX="scripts/install-embed-gateway.sh"
