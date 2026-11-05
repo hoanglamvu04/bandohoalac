@@ -25,7 +25,7 @@ function formatDate(value) {
 
 function PlaceCard({ place }) {
   return (
-    <Link className="explore-place-card" to={'/map?place=' + encodeURIComponent(place.id)}>
+    <Link className="explore-place-card" to={place.slug ? '/dia-diem/' + encodeURIComponent(place.slug) : '/map?place=' + encodeURIComponent(place.id)}>
       <div className="explore-place-cover">
         {place.coverImage
           ? <img src={place.coverImage} alt="" loading="lazy" />
@@ -122,7 +122,9 @@ export default function ExploreArticlePage() {
           '@type': 'ListItem',
           position: index + 1,
           name: place.name,
-          url: 'https://maps.dothihoalac.vn/place/' + place.id
+          url: place.slug
+            ? 'https://maps.dothihoalac.vn/dia-diem/' + encodeURIComponent(place.slug)
+            : 'https://maps.dothihoalac.vn/map?place=' + encodeURIComponent(place.id)
         }))
       });
     }
