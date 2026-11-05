@@ -51,6 +51,9 @@ test('SEO: published Explore article returns complete HTML before JavaScript', a
   assert.match(html, /<h2>/);
   assert.match(html, /application\/ld\+json/);
   assert.match(html, /Article/);
+  assert.match(html, /class="seo-editorial-layout"/);
+  assert.match(html, /class="seo-sidebar"/);
+  assert.match(html, /Mở bản đồ HOLA Maps/);
   assert.doesNotMatch(html, /src="\/src\/main\.jsx"|type="module"/);
 });
 
@@ -92,6 +95,9 @@ test('SEO: canonical place slug returns rendered content and legacy numeric URL 
   assert.ok(html.includes('https://maps.dothihoalac.vn/dia-diem/' + encodeURIComponent(place.slug)));
   assert.match(html, /Place/);
   assert.match(html, /BreadcrumbList/);
+  assert.match(html, /class="seo-editorial-layout"/);
+  assert.match(html, /class="seo-sidebar"/);
+  assert.match(html, /Xem trên bản đồ/);
   assert.doesNotMatch(html, /src="\/src\/main\.jsx"|type="module"/);
 
   const legacy = await fetch(url('/place/' + place.id), { redirect: 'manual' });
