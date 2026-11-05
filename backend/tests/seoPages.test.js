@@ -23,6 +23,19 @@ function url(path) {
   return baseUrl + path;
 }
 
+test('SEO: homepage returns crawlable local discovery content in the initial HTML', async () => {
+  const response = await fetch(url('/'));
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type') || '', /text\/html/i);
+  const html = await response.text();
+  assert.match(html, /<title>Bản đồ cộng đồng Hòa Lạc \| HOLA Maps<\/title>/);
+  assert.match(html, /<h1>Khám phá Hòa Lạc theo cách của bạn<\/h1>/);
+  assert.match(html, /name="description"/);
+  assert.match(html, /CollectionPage/);
+  assert.match(html, /href="\/map"/);
+  assert.doesNotMatch(html, /src="\/src\/main\.jsx"|type="module"/);
+});
+
 test('SEO: published Explore article returns complete HTML before JavaScript', async () => {
   const response = await fetch(url('/kham-pha/hoa-lac-co-gi'));
   assert.equal(response.status, 200);
