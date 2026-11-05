@@ -36,6 +36,34 @@ test('SEO: homepage returns crawlable local discovery content in the initial HTM
   assert.doesNotMatch(html, /src="\/src\/main\.jsx"|type="module"/);
 });
 
+test('SEO: batch 02 local-intent guides are published, canonical and present in sitemap', async () => {
+  const slugs = [
+    'quan-an-sang-hoa-lac',
+    'an-toi-o-hoa-lac',
+    'quan-lau-hoa-lac',
+    'ca-phe-gan-ho-tan-xa',
+    'cam-trai-quanh-hoa-lac',
+    'di-hoa-lac-tu-ha-noi'
+  ];
+
+  for (const slug of slugs) {
+    const response = await fetch(url('/kham-pha/' + slug));
+    assert.equal(response.status, 200, slug + ' should be published');
+    const html = await response.text();
+    assert.match(html, new RegExp('<link rel="canonical" href="https://maps\\\\.dothihoalac\\\\.vn/kham-pha/' + slug + '"'));
+    assert.match(html, /<h1>[^<]+<\\/h1>/);
+    assert.match(html, /application\\/ld\\+json/);
+    assert.match(html, /Article/);
+  }
+
+  const sitemap = await fetch(url('/api/sitemap-explore.xml'));
+  assert.equal(sitemap.status, 200);
+  const xml = await sitemap.text();
+  for (const slug of slugs) {
+    assert.ok(xml.includes('/kham-pha/' + slug), slug + ' must be listed in the Explore sitemap');
+  }
+});
+
 test('SEO: published Explore article returns complete HTML before JavaScript', async () => {
   const response = await fetch(url('/kham-pha/hoa-lac-co-gi'));
   assert.equal(response.status, 200);
