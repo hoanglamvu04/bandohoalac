@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Dynamic Nginx auth_request gateway for multi-tenant iframe embedding.
+# Nginx gateway for approved iframe embedding and server-rendered public SEO routes.
 # Non-embed routes retain the existing X-Frame-Options: DENY hardening.
 DOMAIN="${DOMAIN:-maps.dothihoalac.vn}"
 APP_DIR="${APP_DIR:-/var/www/bandohoalac}"
