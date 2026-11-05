@@ -82,6 +82,30 @@ EOF
 write_embed_location "= /embed"
 write_embed_location "^~ /embed/"
 
+# Public SEO documents must reach Express before the SPA index.html fallback.
+# Express returns complete HTML with route-specific metadata and visible content.
+write_seo_proxy_location() {
+  local location_match="$1"
+  cat >> "$SNIPPET" <<EOF
+location $location_match {
+  proxy_pass ${API_UPSTREAM};
+  proxy_http_version 1.1;
+  proxy_set_header Host \$host;
+  proxy_set_header X-Real-IP \$remote_addr;
+  proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto \$scheme;
+  proxy_connect_timeout 5s;
+  proxy_read_timeout 15s;
+}
+
+EOF
+}
+
+write_seo_proxy_location "= /kham-pha"
+write_seo_proxy_location "^~ /kham-pha/"
+write_seo_proxy_location "^~ /dia-diem/"
+write_seo_proxy_location "^~ /place/"
+
 # Idempotent: the include is installed only once per domain-bearing server block.
 if ! grep -Fq "include $SNIPPET;" "$TARGET"; then
   python3 - "$TARGET" "$DOMAIN" "$SNIPPET" <<'PY'
