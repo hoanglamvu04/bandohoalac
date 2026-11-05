@@ -10,7 +10,7 @@ The existing React/Vite application remains the interactive client application. 
 - \`/dia-diem/:slug\` — published place detail.
 - \`/place/:id\` — legacy numeric place URL; HTTP 301 to its canonical slug URL.
 
-Express renders a complete Vietnamese HTML document containing the page title, description, robots directive, canonical, Open Graph/Twitter metadata, visible headings/content, breadcrumbs and JSON-LD. These routes do not depend on JavaScript for the primary content.
+Express renders a complete Vietnamese HTML document containing the page title, description, robots directive, canonical, Open Graph/Twitter metadata, visible headings/content, breadcrumbs and JSON-LD. These editorial/place routes do not depend on JavaScript for the primary content. Their static header mirrors the main HOLA Maps navigation and uses the official `/logo.svg` asset. The root homepage is not server-rendered by Express; it remains the original React SPA.
 
 The HTML uses the standalone static stylesheet \`/seo-rendered.css\`, copied from \`frontend/public\` into the Vite build output. It intentionally does not load the React application bundle; links to the map open the existing interactive SPA.
 
