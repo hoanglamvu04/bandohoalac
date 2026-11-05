@@ -156,7 +156,7 @@ export function renderPlaceSeoPage(place) {
   const placeSchema = {
     '@type': 'Place',
     '@id': canonical + '#place',
-    name: cleanText(place.name),
+    name: String(place.name ?? ''),
     description,
     url: canonical,
     mainEntityOfPage: { '@id': canonical },
