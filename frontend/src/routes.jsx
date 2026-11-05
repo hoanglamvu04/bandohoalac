@@ -166,6 +166,7 @@ export const router = createBrowserRouter([
       { path: 'embed/halo', element: withSuspense(HaloHolaMapPage) },
       { path: 'picker', element: withSuspense(LocationPickerPage) },
       { path: 'embed/picker', element: withSuspense(LocationPickerPage) },
+      { path: 'dia-diem/:slug', element: withSuspense(PlaceDetail) },
       { path: 'place/:id', element: withSuspense(PlaceDetail) },
       { path: 'contribute', element: withSuspense(Contribute) },
       { path: 'verify', element: withRole(CommunityVerification) },
