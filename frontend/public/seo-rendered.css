@@ -595,3 +595,14 @@ a { color: inherit; }
   .seo-header-actions .seo-header-cta { padding: 0 8px; }
   .seo-primary-nav .seo-nav-link { font-size: 11px; }
 }
+
+.seo-nav-icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
