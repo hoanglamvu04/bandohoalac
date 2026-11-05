@@ -39,6 +39,10 @@ if grep -Eq 'font-family:.*(Georgia|Times New Roman)' "$SEO_CSS"; then
   exit 1
 fi
 grep -Fq '@media (max-width: 760px)' "$SEO_CSS"
+grep -Fq '.hola-app-header {' "$SEO_CSS"
+grep -Fq '.seo-primary-nav .seo-nav-link' "$SEO_CSS"
+grep -Fq '.seo-header-cta' "$SEO_CSS"
+grep -Fq '.seo-nav-icon {' "$SEO_CSS"
 
 if grep -Eq 'https://maps\.dothihoalac\.vn/(map|halo|an-uong|phong-tro|kham-pha)</loc>' "$SITEMAP"; then
   echo "[seo] ERROR: map-only, client-redirect or dynamically-sitemapped URLs must not be in the static sitemap." >&2
