@@ -88,7 +88,7 @@ function renderShell(options) {
     '<meta name="robots" content="' + robots + '">',
     '<link rel="canonical" href="' + escapeHtml(canonical) + '">',
     '<link rel="icon" href="/pwa-icon.svg" type="image/svg+xml">',
-    '<link rel="stylesheet" href="/seo-rendered.css?v=20261105-explore-ssr-v3">',
+    '<link rel="stylesheet" href="/seo-rendered.css?v=20261105-explore-ssr-v4">',
     '<meta property="og:locale" content="vi_VN"><meta property="og:site_name" content="' + SITE_NAME + '">',
     '<meta property="og:type" content="' + type + '">',
     '<meta property="og:title" content="' + escapeHtml(title) + '">',
