@@ -443,3 +443,166 @@ a { color: inherit; }
   .seo-prose p { font-size: 16px; line-height: 1.8; }
   .seo-sidebar-card p { font-size: 15px; }
 }
+
+
+/* Preserve the real HOLA Maps product navigation on server-rendered SEO pages. */
+.hola-app-header {
+  width: min(1500px, calc(100% - 48px));
+  max-width: 1500px;
+  min-height: 76px;
+  height: auto;
+  margin: 0 auto;
+  padding: 9px 8px;
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid #e4edf5;
+  background: rgba(255,255,255,.97);
+  box-shadow: 0 8px 24px rgba(24,70,120,.045);
+  backdrop-filter: blur(16px);
+}
+.hola-app-header .app-brand {
+  width: 198px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+.seo-brand-logo {
+  display: block;
+  width: 198px;
+  max-width: 100%;
+  height: auto;
+  max-height: 58px;
+  object-fit: contain;
+  object-position: left center;
+}
+.seo-primary-nav {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.seo-primary-nav .seo-nav-link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 15px;
+  border-radius: 12px;
+  color: #263d5a;
+  text-decoration: none;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 800;
+  transition: color .18s ease, background .18s ease;
+}
+.seo-primary-nav .seo-nav-link:hover,
+.seo-primary-nav .seo-nav-link.active {
+  color: #075fcf;
+  background: #edf5ff;
+}
+.seo-nav-symbol {
+  width: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #176fe7;
+  font-size: 20px;
+  line-height: 1;
+}
+.seo-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+}
+.seo-header-actions a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 13px;
+  border: 1px solid #d9e5f0;
+  border-radius: 12px;
+  color: #24415f;
+  background: #fff;
+  text-decoration: none;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 800;
+}
+.seo-header-actions .seo-header-partner { color: #1268c9; background: #f7fbff; }
+.seo-header-actions .seo-header-cta {
+  border-color: #075b47;
+  color: #fff;
+  background: #075b47;
+  box-shadow: 0 8px 18px rgba(7,91,71,.13);
+}
+.seo-header-actions .seo-header-cta:hover { background: #087457; }
+.seo-header-actions .seo-header-account { padding: 0 12px; }
+@media (max-width: 1080px) {
+  .hola-app-header {
+    grid-template-columns: 180px minmax(0,1fr) auto;
+    gap: 10px;
+  }
+  .hola-app-header .app-brand,
+  .seo-brand-logo { width: 176px; }
+  .seo-primary-nav .seo-nav-link { padding: 0 10px; font-size: 13px; }
+  .seo-header-actions { gap: 6px; }
+  .seo-header-actions a { padding: 0 10px; font-size: 12px; }
+}
+@media (max-width: 760px) {
+  .hola-app-header {
+    width: calc(100% - 28px);
+    min-height: 0;
+    padding: 10px 0 8px;
+    grid-template-columns: minmax(0,1fr) auto;
+    gap: 9px 10px;
+  }
+  .hola-app-header .app-brand,
+  .seo-brand-logo { width: 158px; }
+  .seo-brand-logo { max-height: 46px; }
+  .seo-header-actions { grid-column: 2; grid-row: 1; gap: 6px; }
+  .seo-header-actions a { min-height: 38px; padding: 0 9px; font-size: 11px; }
+  .seo-header-actions .seo-header-partner { display: none; }
+  .seo-header-actions .seo-header-account { display: none; }
+  .seo-primary-nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: space-between;
+    gap: 4px;
+  }
+  .seo-primary-nav .seo-nav-link {
+    flex: 1;
+    min-height: 39px;
+    padding: 0 7px;
+    gap: 5px;
+    font-size: 12px;
+  }
+  .seo-nav-symbol { font-size: 17px; }
+}
+@media (max-width: 390px) {
+  .hola-app-header { width: calc(100% - 22px); }
+  .hola-app-header .app-brand,
+  .seo-brand-logo { width: 140px; }
+  .seo-header-actions .seo-header-cta { padding: 0 8px; }
+  .seo-primary-nav .seo-nav-link { font-size: 11px; }
+}
+
+.seo-nav-icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

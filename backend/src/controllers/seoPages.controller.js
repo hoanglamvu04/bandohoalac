@@ -1,9 +1,7 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import {
   getPlaceById,
-  getPlaceBySlug,
-  listFeaturedPlaces,
-  listHomeSections
+  getPlaceBySlug
 } from '../services/place.service.js';
 import {
   getExploreArticleBySlug,
@@ -12,7 +10,6 @@ import {
 import {
   renderExploreArticleSeoPage,
   renderExploreHubSeoPage,
-  renderHomeSeoPage,
   renderPlaceSeoPage,
   renderSeoNotFoundPage
 } from '../services/seoHtml.service.js';
@@ -30,14 +27,6 @@ function sendSeoHtml(res, html, maxAge = 300) {
   res.set('X-Content-Type-Options', 'nosniff');
   res.send(html);
 }
-
-export const getHomeSeoPage = asyncHandler(async (_req, res) => {
-  const [sections, featured] = await Promise.all([
-    listHomeSections({ limit: 4 }),
-    listFeaturedPlaces({ limit: 6 })
-  ]);
-  return sendSeoHtml(res, renderHomeSeoPage({ sections, featured }), 120);
-});
 
 export const getPlaceSeoPage = asyncHandler(async (req, res) => {
   const place = await getPlaceBySlug(req.params.slug);

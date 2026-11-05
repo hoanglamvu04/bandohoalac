@@ -102,11 +102,19 @@ function renderShell(options) {
     '<title>' + escapeHtml(title) + ' | ' + SITE_NAME + '</title>',
     structuredData,
     '</head><body><div class="seo-site-shell">',
-    '<header class="seo-site-header">',
-    '<a class="seo-brand" href="/" aria-label="HOLA Maps - Trang chủ">',
-    '<span class="seo-brand-mark" aria-hidden="true">H</span>',
-    '<span><strong>HOLA MAPS</strong><small>Khám phá Hòa Lạc</small></span></a>',
-    '<nav aria-label="Điều hướng chính"><a href="/kham-pha">Cẩm nang</a><a href="/map">Bản đồ</a></nav>',
+    '<header class="seo-site-header hola-app-header">',
+    '<a class="seo-brand app-brand" href="/" aria-label="HOLA Maps - Trang chủ">',
+    '<img class="seo-brand-logo" src="/logo.svg?v=20260929-2" alt="HOLA Maps" width="198" height="56"></a>',
+    '<nav class="seo-primary-nav" aria-label="Điều hướng chính">',
+    '<a class="seo-nav-link" href="/map"><svg class="seo-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.2"/></svg>Bản đồ</a>',
+    '<a class="seo-nav-link active" href="/kham-pha"><svg class="seo-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.8 8.2-2.3 5.3-5.3 2.3 2.3-5.3 5.3-2.3Z"/></svg>Khám phá</a>',
+    '<a class="seo-nav-link" href="/leaderboard"><svg class="seo-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v4a4 4 0 0 1-8 0V4Z"/><path d="M8 6H5v2a4 4 0 0 0 4 4M16 6h3v2a4 4 0 0 1-4 4M12 12v5m-4 3h8m-6-3h4"/></svg>Cộng đồng</a>',
+    '</nav>',
+    '<div class="seo-header-actions">',
+    '<a class="seo-header-partner" href="/doi-tac">Đối tác</a>',
+    '<a class="seo-header-cta" href="/contribute"><span aria-hidden="true">＋</span>Đóng góp</a>',
+    '<a class="seo-header-account" href="/login">Tài khoản</a>',
+    '</div>',
     '</header>',
     options.body,
     '<footer class="seo-site-footer"><a href="/">HOLA Maps</a>',
@@ -360,87 +368,6 @@ export function renderExploreArticleSeoPage({ article, relatedPlaces = [] }) {
     canonical,
     image,
     type: 'article',
-    jsonLd,
-    body
-  });
-}
-
-export function renderHomeSeoPage({ sections = [], featured = [] }) {
-  const canonical = SITE_URL + '/';
-  const description = 'Khám phá địa điểm, quán ăn, cà phê, nơi vui chơi và tiện ích quanh Hòa Lạc. Tìm vị trí thực tế và thông tin địa phương trên bản đồ cộng đồng HOLA Maps.';
-  const visiblePlaces = [
-    ...featured,
-    ...sections.flatMap((section) => Array.isArray(section.items) ? section.items : [])
-  ].filter((place, index, all) => place?.id && all.findIndex((item) => String(item.id) === String(place.id)) === index);
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'Organization',
-        '@id': canonical + '#organization',
-        name: SITE_NAME,
-        url: canonical
-      },
-      {
-        '@type': 'WebSite',
-        '@id': canonical + '#website',
-        name: SITE_NAME,
-        url: canonical,
-        inLanguage: 'vi-VN',
-        publisher: { '@id': canonical + '#organization' }
-      },
-      {
-        '@type': 'CollectionPage',
-        '@id': canonical + '#home',
-        name: 'Bản đồ cộng đồng Hòa Lạc',
-        description,
-        url: canonical,
-        mainEntity: {
-          '@type': 'ItemList',
-          itemListElement: visiblePlaces.slice(0, 30).map((place, index) => ({
-            '@type': 'ListItem',
-            position: index + 1,
-            name: cleanText(place.name),
-            url: place.slug ? SITE_URL + '/dia-diem/' + encodeURIComponent(place.slug) : SITE_URL + '/map?place=' + encodeURIComponent(place.id)
-          }))
-        }
-      }
-    ]
-  };
-  const featuredCards = featured.length
-    ? '<section class="seo-home-section"><div class="seo-section-heading"><span>GỢI Ý ĐỊA ĐIỂM</span><h2>Địa điểm nổi bật quanh Hòa Lạc</h2></div><div class="seo-place-grid">' +
-      featured.slice(0, 6).map((place) => renderPlaceCard({
-        ...place,
-        coverImage: place.cardImages?.[0] || place.thumbnails?.[0] || place.images?.[0] || null
-      })).join('') + '</div></section>'
-    : '';
-  const categorySections = sections.map((section) => {
-    const category = section.category || {};
-    const places = Array.isArray(section.items) ? section.items : [];
-    if (!places.length) return '';
-    const cards = places.slice(0, 4).map((place) => renderPlaceCard({
-      ...place,
-      coverImage: place.cardImages?.[0] || place.thumbnails?.[0] || place.images?.[0] || null
-    })).join('');
-    return '<section class="seo-home-section"><div class="seo-section-heading"><span>KHÁM PHÁ THEO DANH MỤC</span><h2>' +
-      escapeHtml(category.name || 'Địa điểm') + '</h2></div><div class="seo-place-grid">' + cards +
-      '</div><a class="seo-inline-link" href="/map?category=' + encodeURIComponent(category.slug || '') + '">Xem trên bản đồ →</a></section>';
-  }).join('');
-  const body = [
-    '<main class="seo-content seo-home-page">',
-    '<section class="seo-home-hero"><span class="seo-eyebrow">BẢN ĐỒ CỘNG ĐỒNG HÒA LẠC</span>',
-    '<h1>Khám phá Hòa Lạc theo cách của bạn</h1>',
-    '<p class="seo-lead">' + escapeHtml(description) + '</p>',
-    '<div class="seo-home-actions"><a href="/map">Mở bản đồ tương tác →</a><a href="/kham-pha">Đọc cẩm nang địa phương</a></div></section>',
-    featuredCards,
-    categorySections,
-    '<section class="seo-map-cta"><div><strong>Đang tìm một địa điểm cụ thể?</strong><p>Tìm kiếm theo tên, danh mục và khu vực trên bản đồ HOLA Maps.</p></div><a href="/map">Tìm trên bản đồ →</a></section>',
-    '</main>'
-  ].join('');
-  return renderShell({
-    title: 'Bản đồ cộng đồng Hòa Lạc',
-    description,
-    canonical,
     jsonLd,
     body
   });

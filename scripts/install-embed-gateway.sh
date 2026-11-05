@@ -101,7 +101,6 @@ location $location_match {
 EOF
 }
 
-write_seo_proxy_location "= /"
 write_seo_proxy_location "= /kham-pha"
 write_seo_proxy_location "^~ /kham-pha/"
 write_seo_proxy_location "^~ /dia-diem/"

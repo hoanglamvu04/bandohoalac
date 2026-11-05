@@ -7,20 +7,28 @@ SITEMAP="frontend/public/sitemap-pages.xml"
 SEO_RENDERER="backend/src/services/seoHtml.service.js"
 SEO_CSS="frontend/public/seo-rendered.css"
 
-grep -Fq "app.get('/', getHomeSeoPage);" "$APP"
+if grep -Fq "app.get('/', getHomeSeoPage);" "$APP"; then
+  echo "[seo] ERROR: root homepage must remain on the original React SPA." >&2
+  exit 1
+fi
 grep -Fq "app.get('/kham-pha', getExploreHubSeoPage);" "$APP"
 grep -Fq "app.get('/kham-pha/:slug', getExploreArticleSeoPage);" "$APP"
 grep -Fq "app.get('/dia-diem/:slug', getPlaceSeoPage);" "$APP"
 grep -Fq "app.get('/place/:id', redirectLegacyPlaceSeoPage);" "$APP"
 grep -Fq "listPublishedPlaceSitemapEntries" "$APP"
 
-grep -Fq 'write_seo_proxy_location "= /"' "$NGINX"
+if grep -Fxq 'write_seo_proxy_location "= /"' "$NGINX"; then
+  echo "[seo] ERROR: Nginx root must fall through to the React SPA." >&2
+  exit 1
+fi
 grep -Fq 'write_seo_proxy_location "= /kham-pha"' "$NGINX"
 grep -Fq 'write_seo_proxy_location "^~ /kham-pha/"' "$NGINX"
 grep -Fq 'write_seo_proxy_location "^~ /dia-diem/"' "$NGINX"
 grep -Fq 'write_seo_proxy_location "^~ /place/"' "$NGINX"
 
 grep -Fq 'href="/seo-rendered.css"' "$SEO_RENDERER"
+grep -Fq 'hola-app-header' "$SEO_RENDERER"
+grep -Fq 'src="/logo.svg?v=20260929-2"' "$SEO_RENDERER"
 test -s "$SEO_CSS"
 grep -Fq '.seo-editorial-layout {' "$SEO_CSS"
 grep -Fq '.seo-sidebar-card {' "$SEO_CSS"
@@ -31,6 +39,10 @@ if grep -Eq 'font-family:.*(Georgia|Times New Roman)' "$SEO_CSS"; then
   exit 1
 fi
 grep -Fq '@media (max-width: 760px)' "$SEO_CSS"
+grep -Fq '.hola-app-header {' "$SEO_CSS"
+grep -Fq '.seo-primary-nav .seo-nav-link' "$SEO_CSS"
+grep -Fq '.seo-header-cta' "$SEO_CSS"
+grep -Fq '.seo-nav-icon {' "$SEO_CSS"
 
 if grep -Eq 'https://maps\.dothihoalac\.vn/(map|halo|an-uong|phong-tro|kham-pha)</loc>' "$SITEMAP"; then
   echo "[seo] ERROR: map-only, client-redirect or dynamically-sitemapped URLs must not be in the static sitemap." >&2
