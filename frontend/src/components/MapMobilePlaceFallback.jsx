@@ -196,7 +196,7 @@ export default function MapMobilePlaceFallback() {
           </div>
 
           <div className="hm-mobile-place-fallback-actions">
-            <Link className="primary" to={'/place/' + encodeURIComponent(place.id)}>
+            <Link className="primary" to={place.slug ? '/dia-diem/' + encodeURIComponent(place.slug) : '/place/' + encodeURIComponent(place.id)}>
               Xem chi tiết <ChevronRight size={15} />
             </Link>
             {mapsUrl && (
