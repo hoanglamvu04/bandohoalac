@@ -14,7 +14,7 @@ body {
   margin: 0;
   background: #fff;
   color: var(--seo-ink);
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-family: Arial, "Segoe UI", Tahoma, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 a { color: inherit; }
@@ -207,7 +207,7 @@ a { color: inherit; }
 .seo-not-found h1 {
   max-width: 940px;
   color: #143a2d;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Arial, "Segoe UI", Tahoma, sans-serif;
   font-size: clamp(36px, 3.1vw, 48px);
   font-weight: 700;
   line-height: 1.16;
@@ -216,7 +216,7 @@ a { color: inherit; }
 .seo-lead {
   max-width: 900px;
   color: #4e655b;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Arial, "Segoe UI", Tahoma, sans-serif;
   font-size: 19px;
   line-height: 1.8;
 }
@@ -233,13 +233,13 @@ a { color: inherit; }
 .seo-article-body {
   max-width: 100%;
   color: #183d31;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Arial, "Segoe UI", Tahoma, sans-serif;
 }
 .seo-article-body section { margin: 36px 0; }
 .seo-article-body h2 {
   margin: 0 0 16px;
   color: #123b2e;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Arial, "Segoe UI", Tahoma, sans-serif;
   font-size: clamp(27px, 2.25vw, 32px);
   font-weight: 700;
   line-height: 1.3;
@@ -249,7 +249,7 @@ a { color: inherit; }
 .seo-prose p {
   margin: 0 0 21px;
   color: #183a30;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Arial, "Segoe UI", Tahoma, sans-serif;
   font-size: 19px;
   line-height: 1.9;
   white-space: pre-line;
@@ -259,7 +259,7 @@ a { color: inherit; }
   margin: 16px 0 24px;
   padding-left: 28px;
   color: #24483b;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Arial, "Segoe UI", Tahoma, sans-serif;
   font-size: 18px;
   line-height: 1.85;
 }
@@ -289,7 +289,7 @@ a { color: inherit; }
 .seo-prose h2 {
   margin: 0 0 17px;
   color: #143c30;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Arial, "Segoe UI", Tahoma, sans-serif;
   font-size: 27px;
 }
 .seo-facts dt { font-size: 12px; }
@@ -329,7 +329,7 @@ a { color: inherit; }
 .seo-sidebar-card h2 {
   margin: 0 0 12px;
   color: #143b2e;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Arial, "Segoe UI", Tahoma, sans-serif;
   font-size: 26px;
   font-weight: 700;
   line-height: 1.2;
@@ -337,7 +337,7 @@ a { color: inherit; }
 .seo-sidebar-card p {
   margin: 0 0 19px;
   color: #687b70;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Arial, "Segoe UI", Tahoma, sans-serif;
   font-size: 16px;
   line-height: 1.7;
 }
@@ -375,7 +375,7 @@ a { color: inherit; }
 .seo-sidebar-links h3 {
   margin: 0 0 11px;
   color: #244a3b;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Arial, "Segoe UI", Tahoma, sans-serif;
   font-size: 17px;
 }
 .seo-sidebar-links a {
@@ -401,7 +401,7 @@ a { color: inherit; }
 .seo-guide-card-copy small { font-size: 11px; }
 .seo-guide-card-copy em { font-size: 12px; }
 .seo-category-links a { font-size: 14px; }
-.seo-home-hero h1 { font-family: Georgia, "Times New Roman", serif; }
+.seo-home-hero h1 { font-family: Arial, "Segoe UI", Tahoma, sans-serif; }
 .seo-home-hero .seo-lead { font-size: 19px; }
 .seo-home-actions a { font-size: 14px; }
 
