@@ -23,17 +23,10 @@ function url(path) {
   return baseUrl + path;
 }
 
-test('SEO: homepage returns crawlable local discovery content in the initial HTML', async () => {
+test('SEO: root path is not intercepted by the standalone SEO renderer', async () => {
   const response = await fetch(url('/'));
-  assert.equal(response.status, 200);
-  assert.match(response.headers.get('content-type') || '', /text\/html/i);
-  const html = await response.text();
-  assert.match(html, /<title>Bản đồ cộng đồng Hòa Lạc \| HOLA Maps<\/title>/);
-  assert.match(html, /<h1>Khám phá Hòa Lạc theo cách của bạn<\/h1>/);
-  assert.match(html, /name="description"/);
-  assert.match(html, /CollectionPage/);
-  assert.match(html, /href="\/map"/);
-  assert.doesNotMatch(html, /src="\/src\/main\.jsx"|type="module"/);
+  assert.equal(response.status, 404);
+  assert.doesNotMatch(response.headers.get('content-type') || '', /text\/html/i);
 });
 
 test('SEO: batch 02 local-intent guides are published, canonical and present in sitemap', async () => {
@@ -79,6 +72,12 @@ test('SEO: published Explore article returns complete HTML before JavaScript', a
   assert.match(html, /<h2>/);
   assert.match(html, /application\/ld\+json/);
   assert.match(html, /Article/);
+  assert.match(html, /class="hola-app-header"/);
+  assert.match(html, /src="\/logo\.svg\?v=20260929-2"/);
+  assert.match(html, /href="\/map"/);
+  assert.match(html, /href="\/kham-pha"/);
+  assert.match(html, /href="\/doi-tac"/);
+  assert.match(html, /href="\/contribute"/);
   assert.match(html, /class="seo-editorial-layout"/);
   assert.match(html, /class="seo-sidebar"/);
   assert.match(html, /Mở bản đồ HOLA Maps/);
@@ -123,6 +122,10 @@ test('SEO: canonical place slug returns rendered content and legacy numeric URL 
   assert.ok(html.includes('https://maps.dothihoalac.vn/dia-diem/' + encodeURIComponent(place.slug)));
   assert.match(html, /Place/);
   assert.match(html, /BreadcrumbList/);
+  assert.match(html, /class="hola-app-header"/);
+  assert.match(html, /src="\/logo\.svg\?v=20260929-2"/);
+  assert.match(html, /href="\/map"/);
+  assert.match(html, /href="\/contribute"/);
   assert.match(html, /class="seo-editorial-layout"/);
   assert.match(html, /class="seo-sidebar"/);
   assert.match(html, /Xem trên bản đồ/);
