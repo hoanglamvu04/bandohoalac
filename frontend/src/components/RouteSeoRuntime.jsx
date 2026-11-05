@@ -91,7 +91,9 @@ export default function RouteSeoRuntime() {
     };
   }, [location.pathname]);
 
-  const noindex = isPrivateRoute(location.pathname);
+  const exploreFilters = location.pathname === '/kham-pha' &&
+    Boolean(new URLSearchParams(location.search).get('category') || new URLSearchParams(location.search).get('q'));
+  const noindex = isPrivateRoute(location.pathname) || exploreFilters;
   const canonical = 'https://maps.dothihoalac.vn' + location.pathname;
 
   return (
