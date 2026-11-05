@@ -14,13 +14,17 @@ function formatDate(value) {
 }
 
 function ArticleVisual({ article, large = false }) {
-  if (article.coverImage) {
+  const [failedImageUrl, setFailedImageUrl] = useState('');
+  const imageUrl = article.coverImage || '';
+
+  if (imageUrl && failedImageUrl !== imageUrl) {
     return (
       <img
         className={large ? 'explore-card-image large' : 'explore-card-image'}
-        src={article.coverImage}
+        src={imageUrl}
         alt=""
         loading={large ? 'eager' : 'lazy'}
+        onError={() => setFailedImageUrl(imageUrl)}
       />
     );
   }
