@@ -61,6 +61,8 @@ function isPrivateRoute(pathname) {
     pathname.startsWith('/login') ||
     pathname.startsWith('/register') ||
     pathname.startsWith('/verify') ||
+    pathname === '/map' ||
+    pathname === '/halo' ||
     pathname.startsWith('/embed') ||
     pathname.startsWith('/picker')
   );
@@ -76,7 +78,7 @@ export default function RouteSeoRuntime() {
       };
     }
 
-    if (location.pathname.startsWith('/place/')) {
+    if (location.pathname.startsWith('/place/') || location.pathname.startsWith('/dia-diem/')) {
       return {
         title: 'Địa điểm Hòa Lạc',
         description: 'Thông tin địa điểm, hình ảnh, đánh giá và chỉ đường trên Hola Maps.'
