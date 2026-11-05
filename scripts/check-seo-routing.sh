@@ -17,7 +17,7 @@ grep -Fq "app.get('/dia-diem/:slug', getPlaceSeoPage);" "$APP"
 grep -Fq "app.get('/place/:id', redirectLegacyPlaceSeoPage);" "$APP"
 grep -Fq "listPublishedPlaceSitemapEntries" "$APP"
 
-if grep -Fq 'write_seo_proxy_location "= /"' "$NGINX"; then
+if grep -Fxq 'write_seo_proxy_location "= /"' "$NGINX"; then
   echo "[seo] ERROR: Nginx root must fall through to the React SPA." >&2
   exit 1
 fi
