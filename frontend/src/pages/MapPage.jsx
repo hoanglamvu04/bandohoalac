@@ -657,9 +657,6 @@ export default function MapPage() {
   }, []);
 
   useEffect(() => {
-    setVisiblePlaceCount(PLACE_PAGE_SIZE);
-    setListScrollTop(0);
-    if (placeListRef.current) placeListRef.current.scrollTop = 0;
     setListPagination({
       kind: 'none',
       offset: 0,
@@ -667,6 +664,19 @@ export default function MapPage() {
       hasMore: false,
       params: null
     });
+  }, [
+    regionId,
+    category,
+    minRating,
+    query,
+    verticalMode,
+    housingFilterSignature
+  ]);
+
+  useEffect(() => {
+    setVisiblePlaceCount(PLACE_PAGE_SIZE);
+    setListScrollTop(0);
+    if (placeListRef.current) placeListRef.current.scrollTop = 0;
   }, [
     regionId,
     category,
@@ -1225,20 +1235,26 @@ export default function MapPage() {
     });
   }, [filteredPlaces, viewport, query, placeScope, sortMode]);
 
-  const visibleSidebarPlaces = useMemo(() => {
-    const visible = sidebarPlaces.slice(0, 80);
-    if (selectedId === null || selectedId === undefined) return visible;
+  const visibleSidebarPlaces = useMemo(
+    () => sidebarPlaces.slice(0, Math.min(visiblePlaceCount, sidebarPlaces.length)),
+    [sidebarPlaces, visiblePlaceCount]
+  );
 
-    const alreadyVisible = visible.some(
-      (place) => String(place.id) === String(selectedId)
-    );
-    if (alreadyVisible) return visible;
-
-    const selected = sidebarPlaces.find(
-      (place) => String(place.id) === String(selectedId)
-    );
-    return selected ? [selected, ...visible.slice(0, 79)] : visible;
-  }, [sidebarPlaces, selectedId]);
+  const virtualRowHeight = isHousingMode ? 144 : 116;
+  const virtualStartIndex = Math.max(
+    0,
+    Math.floor(listScrollTop / virtualRowHeight) - VIRTUAL_LIST_OVERSCAN
+  );
+  const virtualEndIndex = Math.min(
+    visibleSidebarPlaces.length,
+    Math.ceil((listScrollTop + listViewportHeight) / virtualRowHeight) + VIRTUAL_LIST_OVERSCAN
+  );
+  const virtualSidebarRows = visibleSidebarPlaces
+    .slice(virtualStartIndex, virtualEndIndex)
+    .map((place, index) => ({
+      place,
+      index: virtualStartIndex + index
+    }));
 
   const selectedPlace = useMemo(
     () => places.find((place) => place.id === selectedId) || null,
@@ -1282,16 +1298,36 @@ export default function MapPage() {
   }, [selectedId, user?.id]);
 
   useEffect(() => {
-    if (!selectedId || !leftOpen) return undefined;
+    if (selectedId === null || selectedId === undefined || !leftOpen) return undefined;
 
-    const timer = window.requestAnimationFrame(() => {
-      placeRowRefs.current
-        .get(String(selectedId))
-        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    });
+    const selectedIndex = sidebarPlaces.findIndex(
+      (place) => String(place.id) === String(selectedId)
+    );
+    if (selectedIndex < 0) return undefined;
 
-    return () => window.cancelAnimationFrame(timer);
-  }, [selectedId, leftOpen]);
+    if (selectedIndex >= visiblePlaceCount) {
+      setVisiblePlaceCount(selectedIndex + 1);
+    }
+
+    const node = placeListRef.current;
+    if (!node) return undefined;
+
+    const top = selectedIndex * virtualRowHeight;
+    const bottom = top + virtualRowHeight;
+    const currentTop = node.scrollTop;
+    const currentBottom = currentTop + node.clientHeight;
+
+    if (top < currentTop) {
+      node.scrollTo({ top, behavior: 'smooth' });
+    } else if (bottom > currentBottom) {
+      node.scrollTo({
+        top: Math.max(0, bottom - node.clientHeight),
+        behavior: 'smooth'
+      });
+    }
+
+    return undefined;
+  }, [selectedId, leftOpen, sidebarPlaces, visiblePlaceCount, virtualRowHeight]);
 
   useEffect(() => {
     if (!selectedImages.length) {
@@ -1355,6 +1391,152 @@ export default function MapPage() {
     }
   }
 
+  function resetPlaceListWindow() {
+    setVisiblePlaceCount(PLACE_PAGE_SIZE);
+    setListScrollTop(0);
+    if (placeListRef.current) placeListRef.current.scrollTop = 0;
+  }
+
+  async function loadMorePlaces() {
+    const cursor = listPagination;
+    if (!cursor?.hasMore || cursor.kind === 'none' || loadingMorePlacesRef.current) return;
+
+    loadingMorePlacesRef.current = true;
+    setLoadingMorePlaces(true);
+
+    try {
+      let items = [];
+      let hasMore = false;
+      let total = cursor.total;
+      const offset = Number(cursor.offset) || 0;
+      const params = cursor.params || {};
+
+      if (cursor.kind === 'search' || cursor.kind === 'all') {
+        const data = await getPlaces({
+          ...params,
+          limit: PLACE_PAGE_SIZE,
+          offset
+        });
+        items = Array.isArray(data?.items) ? data.items : [];
+        hasMore = Boolean(data?.meta?.hasMore);
+        total = Number(data?.meta?.total) || total;
+      } else if (cursor.kind === 'search-food' || cursor.kind === 'all-food') {
+        const responses = await Promise.all(
+          params.categories.map((slug) => getPlaces({
+            q: params.q || undefined,
+            category: slug,
+            minRating: params.minRating || undefined,
+            limit: PLACE_PAGE_SIZE,
+            offset
+          }))
+        );
+        items = mergeUniquePlaces(
+          responses.map((data) => Array.isArray(data?.items) ? data.items : [])
+        );
+        hasMore = responses.some((data) => Boolean(data?.meta?.hasMore));
+        total = responses.reduce((sum, data) => sum + (Number(data?.meta?.total) || 0), 0);
+      } else if (cursor.kind === 'bounds') {
+        const data = await getPlacesInBounds({
+          ...params.bounds,
+          limit: PLACE_PAGE_SIZE,
+          offset
+        });
+        items = Array.isArray(data?.items) ? data.items : [];
+        hasMore = Boolean(data?.hasMore);
+        total = Number(data?.total) || total;
+      } else if (cursor.kind === 'bounds-food') {
+        const responses = await Promise.all(
+          params.categories.map((slug) => getPlacesInBounds({
+            ...params.bounds,
+            category: slug,
+            limit: PLACE_PAGE_SIZE,
+            offset
+          }))
+        );
+        items = mergeUniquePlaces(
+          responses.map((data) => Array.isArray(data?.items) ? data.items : [])
+        );
+        hasMore = responses.some((data) => Boolean(data?.hasMore));
+        total = responses.reduce((sum, data) => sum + (Number(data?.total) || 0), 0);
+      } else if (cursor.kind === 'housing') {
+        const data = await getHousingListings({
+          ...params,
+          limit: PLACE_PAGE_SIZE,
+          offset
+        });
+        items = Array.isArray(data?.items) ? data.items : [];
+        hasMore = Boolean(data?.meta?.hasMore);
+        total = Number(data?.meta?.total) || total;
+      } else if (cursor.kind === 'nearby') {
+        const data = await getNearbyPlaces(
+          params.lat,
+          params.lng,
+          params.radius,
+          {
+            category: params.category,
+            minRating: params.minRating,
+            limit: PLACE_PAGE_SIZE,
+            offset
+          }
+        );
+        items = Array.isArray(data?.items) ? data.items : [];
+        hasMore = Boolean(data?.hasMore);
+        total = Number(data?.total) || total;
+      } else if (cursor.kind === 'nearby-food') {
+        const responses = await Promise.all(
+          params.categories.map((slug) => getNearbyPlaces(
+            params.lat,
+            params.lng,
+            params.radius,
+            {
+              category: slug,
+              minRating: params.minRating,
+              limit: PLACE_PAGE_SIZE,
+              offset
+            }
+          ))
+        );
+        items = mergeUniquePlaces(
+          responses.map((data) => Array.isArray(data?.items) ? data.items : [])
+        );
+        hasMore = responses.some((data) => Boolean(data?.hasMore));
+        total = responses.reduce((sum, data) => sum + (Number(data?.total) || 0), 0);
+      }
+
+      setPlaces((current) => appendPagedPlaces(current, items));
+      setVisiblePlaceCount((current) => current + Math.max(items.length, PLACE_PAGE_SIZE));
+      setListPagination((current) => ({
+        ...current,
+        offset: offset + PLACE_PAGE_SIZE,
+        total: Number(total) || current.total,
+        hasMore: Boolean(hasMore)
+      }));
+    } catch (error) {
+      showToast(error.message || 'Không tải thêm được địa điểm.', 'error');
+    } finally {
+      loadingMorePlacesRef.current = false;
+      setLoadingMorePlaces(false);
+    }
+  }
+
+  function handlePlaceListScroll(event) {
+    const node = event.currentTarget;
+    const nextScrollTop = node.scrollTop;
+    setListScrollTop(nextScrollTop);
+
+    const remaining = node.scrollHeight - (nextScrollTop + node.clientHeight);
+    if (remaining > virtualRowHeight * 3) return;
+
+    if (visiblePlaceCount < sidebarPlaces.length) {
+      setVisiblePlaceCount((current) =>
+        Math.min(sidebarPlaces.length, current + PLACE_PAGE_SIZE)
+      );
+      return;
+    }
+
+    if (listPagination.hasMore) loadMorePlaces();
+  }
+
   function resetToViewportPlaces() {
     lastPlacesRequestKeyRef.current = '';
     loadedPlaceBoundsRef.current = [];
@@ -1393,19 +1575,27 @@ export default function MapPage() {
     return { items: [], radius: radii[radii.length - 1] || 0 };
   }
 
-  async function loadFoodNearby(anchor, radius) {
+  async function loadFoodNearby(anchor, radius, offset = 0) {
+    const categoriesForRequest = foodCategorySlugs();
     const responses = await Promise.all(
-      foodCategorySlugs().map((slug) =>
+      categoriesForRequest.map((slug) =>
         getNearbyPlaces(anchor.lat, anchor.lng, radius, {
           category: slug,
-          minRating: minRating || undefined
+          minRating: minRating || undefined,
+          limit: PLACE_PAGE_SIZE,
+          offset
         })
       )
     );
 
-    return mergeUniquePlaces(
-      responses.map((data) => Array.isArray(data?.items) ? data.items : [])
-    );
+    return {
+      items: mergeUniquePlaces(
+        responses.map((data) => Array.isArray(data?.items) ? data.items : [])
+      ),
+      total: responses.reduce((sum, data) => sum + (Number(data?.total) || 0), 0),
+      hasMore: responses.some((data) => Boolean(data?.hasMore)),
+      categories: categoriesForRequest
+    };
   }
 
   async function showNearMePlaces() {
