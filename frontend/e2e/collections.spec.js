@@ -35,9 +35,9 @@ test('public HOLA Collection opens as a map with ordered places and a shareable 
     }
   ];
 
-  await page.route('**/api/**', async (route) => {
+  await page.route('**/*', async (route) => {
     const url = new URL(route.request().url());
-    if (url.pathname !== '/api/collections/public/cafe-hoc-tap-test') {
+    if (!url.pathname.includes('/collections/public/cafe-hoc-tap-test')) {
       return route.continue();
     }
     await route.fulfill({
