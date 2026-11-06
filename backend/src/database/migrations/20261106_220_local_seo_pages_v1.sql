@@ -104,6 +104,7 @@ INSERT INTO local_seo_pages (
 ),
 (
   'quan-an-thach-that',
+  'AREA_CATEGORY',
   'Quán ăn Thạch Thất: chọn địa điểm theo bữa ăn và nhu cầu',
   'Quán ăn Thạch Thất: địa điểm ăn uống, thông tin thực tế và bản đồ',
   'Tìm quán ăn tại Thạch Thất theo bữa sáng, bữa trưa, bữa tối hoặc đi nhóm. Xem địa chỉ, ảnh thực tế, thông tin xác minh và vị trí trên HOLA Maps.',
@@ -152,6 +153,7 @@ INSERT INTO local_seo_pages (
 ),
 (
   'check-in-quoc-oai',
+  'AREA_CATEGORY',
   'Địa điểm check-in Quốc Oai: gợi ý cách chọn điểm đi và chụp ảnh',
   'Địa điểm check-in Quốc Oai: khám phá điểm đến và trải nghiệm',
   'Tìm địa điểm check-in tại Quốc Oai, xem thông tin thực tế, ảnh, vị trí và lưu ý trước chuyến đi. Trang chỉ được xuất bản khi dữ liệu và phạm vi bản đồ đáp ứng điều kiện HOLA Maps.',
@@ -199,6 +201,7 @@ INSERT INTO local_seo_pages (
 ),
 (
   'homestay-ba-vi',
+  'AREA_CATEGORY',
   'Homestay Ba Vì: chọn nơi lưu trú theo nhóm và kế hoạch nghỉ dưỡng',
   'Homestay Ba Vì: thông tin lưu trú, tiện nghi và vị trí',
   'Tìm homestay tại Ba Vì theo quy mô nhóm, nhu cầu nghỉ ngơi, tiện nghi và vị trí. Xem hồ sơ địa điểm thực tế khi dữ liệu và phạm vi bản đồ đáp ứng điều kiện xuất bản.',
@@ -246,6 +249,7 @@ INSERT INTO local_seo_pages (
 ),
 (
   'dich-vu-quanh-dai-hoc-fpt',
+  'CAMPUS_RADIUS',
   'Dịch vụ quanh Đại học FPT Hòa Lạc: tìm tiện ích theo nhu cầu',
   'Dịch vụ quanh Đại học FPT Hòa Lạc: ăn uống, mua sắm và tiện ích',
   'Khám phá dịch vụ quanh Đại học FPT Hòa Lạc trong bán kính tìm kiếm thực tế: ăn uống, cafe, cửa hàng và tiện ích. Xem địa điểm đã xuất bản trên HOLA Maps.',
