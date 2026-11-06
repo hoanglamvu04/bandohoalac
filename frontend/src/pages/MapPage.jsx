@@ -2148,6 +2148,19 @@ export default function MapPage() {
             <TriangleAlert size={16} />
             <span>Báo tình trạng</span>
           </button>
+
+          <button
+            type="button"
+            className={leftOpen ? 'hm-quick-filter active hm-mobile-list-toggle' : 'hm-quick-filter hm-mobile-list-toggle'}
+            onClick={toggleDiscoveryPanel}
+            aria-expanded={leftOpen}
+            aria-controls="hm-place-list-panel"
+            aria-label={leftOpen ? 'Ẩn danh sách địa điểm' : 'Mở danh sách địa điểm'}
+            title={leftOpen ? 'Ẩn danh sách địa điểm' : 'Mở danh sách địa điểm'}
+          >
+            <PanelLeftOpen size={14} />
+            <span>{leftOpen ? 'Ẩn danh sách' : 'Danh sách'}</span>
+          </button>
         </div>
 
         <Link className="hm-add-place" to="/contribute" title="Thêm địa điểm">
