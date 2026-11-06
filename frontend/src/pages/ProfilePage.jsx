@@ -222,6 +222,15 @@ export default function ProfilePage() {
       />
 
       <div className="profile-community-links">
+        <Link className="profile-rewards-entry collections" to="/collections">
+          <span className="profile-rewards-icon"><Images size={24} /></span>
+          <span>
+            <small>HOLA COLLECTIONS</small>
+            <b>Tạo và chia sẻ bộ sưu tập địa điểm yêu thích</b>
+            <em><MapPinned size={13} /> Quản lý bộ sưu tập của tôi</em>
+          </span>
+          <ChevronRight size={20} />
+        </Link>
         <Link className="profile-rewards-entry security" to="/security">
           <span className="profile-rewards-icon"><ShieldCheck size={24} /></span>
           <span>
