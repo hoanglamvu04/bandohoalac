@@ -3,8 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
-import { pool } from './database/pool.js';
 import { listPublishedPlaceSitemapEntries } from './services/place.service.js';
+import { listExploreSitemapEntries } from './services/explore.service.js';
 import {
   getExploreArticleSeoPage,
   getExploreHubSeoPage,
@@ -45,6 +45,48 @@ import haloHolaRoutes from './routes/haloHola.routes.js';
 import exploreRoutes from './routes/explore.routes.js';
 import housingRoutes from './routes/housing.routes.js';
 import embedRoutes from './routes/embed.routes.js';
+
+const SITEMAP_ORIGIN = 'https://maps.dothihoalac.vn';
+const SITEMAP_IMAGE_NAMESPACE = 'http://www.google.com/schemas/sitemap-image/1.1';
+
+function escapeXml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function resolveSitemapImageUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    const url = new URL(raw, SITEMAP_ORIGIN);
+    if (url.protocol !== 'https:' || url.username || url.password) return '';
+    return url.href;
+  } catch {
+    return '';
+  }
+}
+
+function renderSitemapUrl({ path, updatedAt, image }) {
+  const lastmodDate = updatedAt ? new Date(updatedAt) : null;
+  const lastmod = lastmodDate && !Number.isNaN(lastmodDate.getTime())
+    ? '    <lastmod>' + lastmodDate.toISOString() + '</lastmod>'
+    : '';
+  const imageUrl = resolveSitemapImageUrl(image);
+  const imageTag = imageUrl
+    ? '    <image:image><image:loc>' + escapeXml(imageUrl) + '</image:loc></image:image>'
+    : '';
+  return [
+    '  <url>',
+    '    <loc>' + escapeXml(SITEMAP_ORIGIN + path) + '</loc>',
+    lastmod,
+    imageTag,
+    '  </url>'
+  ].filter(Boolean).join('\n');
+}
 
 export function createApp() {
   const app = express();
@@ -103,19 +145,17 @@ export function createApp() {
   app.get('/api/sitemap-places.xml', async (_req, res, next) => {
     try {
       const rows = await listPublishedPlaceSitemapEntries();
-      const urls = rows.map((place) => {
-        const lastmod = place.updated_at
-          ? '\n    <lastmod>' + new Date(place.updated_at).toISOString() + '</lastmod>'
-          : '';
-        return '  <url>\n    <loc>https://maps.dothihoalac.vn/dia-diem/' +
-          encodeURIComponent(place.slug) + '</loc>' + lastmod +
-          '\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>';
-      }).join('\n');
+      const urls = rows.map((place) => renderSitemapUrl({
+        path: '/dia-diem/' + encodeURIComponent(place.slug),
+        updatedAt: place.updated_at,
+        image: place.cover_image
+      })).join('\n');
 
       res.set('Content-Type', 'application/xml; charset=utf-8');
       res.set('Cache-Control', 'public, max-age=900, stale-while-revalidate=3600');
       res.send('<?xml version="1.0" encoding="UTF-8"?>\n' +
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + urls + '\n</urlset>');
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="' +
+        SITEMAP_IMAGE_NAMESPACE + '">\n' + urls + '\n</urlset>');
     } catch (error) {
       next(error);
     }
@@ -123,39 +163,26 @@ export function createApp() {
 
   app.get('/api/sitemap-explore.xml', async (_req, res, next) => {
     try {
-      const { rows } = await pool.query(`
-        SELECT slug, updated_at
-        FROM explore_articles
-        WHERE status = 'PUBLISHED'
-          AND published_at <= NOW()
-        ORDER BY published_at DESC, id DESC
-        LIMIT 5000
-      `);
-
+      const rows = await listExploreSitemapEntries();
+      const hubLastmod = rows[0]?.sitemap_lastmod || null;
       const urls = [
-        {
-          slug: '',
-          updated_at: rows[0]?.updated_at || new Date()
-        },
-        ...rows
-      ].map((article) => {
-        const path = article.slug
-          ? '/kham-pha/' + encodeURIComponent(article.slug)
-          : '/kham-pha';
-        const lastmod = article.updated_at
-          ? `\n    <lastmod>${new Date(article.updated_at).toISOString()}</lastmod>`
-          : '';
-        return `  <url>\n    <loc>https://maps.dothihoalac.vn${path}</loc>${lastmod}\n    <changefreq>weekly</changefreq>\n    <priority>${article.slug ? '0.8' : '0.9'}</priority>\n  </url>`;
-      }).join('\n');
+        renderSitemapUrl({ path: '/kham-pha', updatedAt: hubLastmod }),
+        ...rows.map((article) => renderSitemapUrl({
+          path: '/kham-pha/' + encodeURIComponent(article.slug),
+          updatedAt: article.updated_at,
+          image: article.cover_image
+        }))
+      ].join('\n');
 
       res.set('Content-Type', 'application/xml; charset=utf-8');
       res.set('Cache-Control', 'public, max-age=900, stale-while-revalidate=3600');
-      res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`);
+      res.send('<?xml version="1.0" encoding="UTF-8"?>\n' +
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="' +
+        SITEMAP_IMAGE_NAMESPACE + '">\n' + urls + '\n</urlset>');
     } catch (error) {
       next(error);
     }
   });
-
   app.use('/api/explore', exploreRoutes);
   app.use('/api/housing', housingRoutes);
   app.use('/api/embed', embedRoutes);
