@@ -1,5 +1,13 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
+function parsePositiveId(value, fieldName = 'ID') {
+  const id = Number(value);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    throw new AppError(fieldName + ' không hợp lệ.', 400);
+  }
+  return id;
+}
+
 import {
   addPlaceToCollection,
   createCollection,
@@ -19,7 +27,7 @@ export const listMine = asyncHandler(async (req, res) => {
 });
 
 export const getMine = asyncHandler(async (req, res) => {
-  const collection = await getMyCollection(Number(req.params.id), req.user.id);
+  const collection = await getMyCollection(parsePositiveId(req.params.id, 'Collection ID'), req.user.id);
   res.set('Cache-Control', 'private, no-store');
   res.json(collection);
 });
@@ -43,7 +51,7 @@ export const create = asyncHandler(async (req, res) => {
 
 export const update = asyncHandler(async (req, res) => {
   const collection = await updateCollection(
-    Number(req.params.id),
+    parsePositiveId(req.params.id, 'Collection ID'),
     req.user.id,
     req.body
   );
@@ -51,33 +59,33 @@ export const update = asyncHandler(async (req, res) => {
 });
 
 export const remove = asyncHandler(async (req, res) => {
-  await deleteCollection(Number(req.params.id), req.user.id);
+  await deleteCollection(parsePositiveId(req.params.id, 'Collection ID'), req.user.id);
   res.status(204).end();
 });
 
 export const addPlace = asyncHandler(async (req, res) => {
   await addPlaceToCollection(
-    Number(req.params.id),
+    parsePositiveId(req.params.id, 'Collection ID'),
     req.user.id,
-    Number(req.body.placeId)
+    parsePositiveId(req.body.placeId, 'Place ID')
   );
-  const collection = await getMyCollection(Number(req.params.id), req.user.id);
+  const collection = await getMyCollection(parsePositiveId(req.params.id, 'Collection ID'), req.user.id);
   res.json(collection);
 });
 
 export const removePlace = asyncHandler(async (req, res) => {
   await removePlaceFromCollection(
-    Number(req.params.id),
+    parsePositiveId(req.params.id, 'Collection ID'),
     req.user.id,
-    Number(req.params.placeId)
+    parsePositiveId(req.params.placeId, 'Place ID')
   );
-  const collection = await getMyCollection(Number(req.params.id), req.user.id);
+  const collection = await getMyCollection(parsePositiveId(req.params.id, 'Collection ID'), req.user.id);
   res.json(collection);
 });
 
 export const replacePlaces = asyncHandler(async (req, res) => {
   const collection = await replaceCollectionPlaces(
-    Number(req.params.id),
+    parsePositiveId(req.params.id, 'Collection ID'),
     req.user.id,
     req.body.placeIds
   );
