@@ -974,7 +974,7 @@ function renderTripStops(map, stops = []) {
       source: TRIP_STOP_SOURCE_ID,
       layout: {
         'text-field': ['get', 'stopNumber'],
-        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+        'text-font': ['Noto Sans Regular'],
         'text-size': 11,
         'text-allow-overlap': true,
         'text-ignore-placement': true
