@@ -128,7 +128,8 @@ const CATEGORY_GROUPS = [
 
 const MOBILE_SHEET_LEVELS = ['peek', 'half', 'full'];
 
-const MAX_PROGRESSIVE_PLACES = 400;
+const PLACE_PAGE_SIZE = 45;
+const VIRTUAL_LIST_OVERSCAN = 6;
 const VIEWPORT_PREFETCH_RATIO = 0.35;
 const MAX_LOADED_VIEWPORTS = 24;
 
@@ -177,9 +178,20 @@ function mergeProgressivePlaces(current, incoming) {
   // New viewport results go first so the sidebar feels relevant to where the
   // user has just moved, while older loaded places remain available.
   for (const place of [...incoming, ...current]) {
-    if (!place?.id || merged.has(place.id)) continue;
-    merged.set(place.id, place);
-    if (merged.size >= MAX_PROGRESSIVE_PLACES) break;
+    if (!place?.id || merged.has(String(place.id))) continue;
+    merged.set(String(place.id), place);
+  }
+
+  return Array.from(merged.values());
+}
+
+function appendPagedPlaces(current, incoming) {
+  const merged = new Map();
+
+  // Paged search results append after the existing page to preserve order.
+  for (const place of [...current, ...incoming]) {
+    if (!place?.id || merged.has(String(place.id))) continue;
+    merged.set(String(place.id), place);
   }
 
   return Array.from(merged.values());
@@ -481,6 +493,17 @@ export default function MapPage() {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [places, setPlaces] = useState([]);
+  const [visiblePlaceCount, setVisiblePlaceCount] = useState(PLACE_PAGE_SIZE);
+  const [listPagination, setListPagination] = useState({
+    kind: 'none',
+    offset: 0,
+    total: null,
+    hasMore: false,
+    params: null
+  });
+  const [loadingMorePlaces, setLoadingMorePlaces] = useState(false);
+  const [listScrollTop, setListScrollTop] = useState(0);
+  const [listViewportHeight, setListViewportHeight] = useState(600);
   const [query, setQuery] = useState(() => searchParams.get('q') || '');
   const [categories, setCategories] = useState([]);
   const [category, setCategory] = useState(() => searchParams.get('category') || 'all');
@@ -530,6 +553,8 @@ export default function MapPage() {
   const lastLayersRequestKeyRef = useRef('');
   const galleryTouchStartRef = useRef(null);
   const placeRowRefs = useRef(new Map());
+  const placeListRef = useRef(null);
+  const loadingMorePlacesRef = useRef(false);
   const sheetDragRef = useRef(null);
   const sheetDragMovedRef = useRef(false);
 
@@ -616,7 +641,7 @@ export default function MapPage() {
       privateBathroom: housingPrivateBathroom ? 'true' : undefined,
       parking: housingParking ? 'true' : undefined,
       sort: housingSort,
-      limit: 100
+      limit: PLACE_PAGE_SIZE
     };
   }
 
