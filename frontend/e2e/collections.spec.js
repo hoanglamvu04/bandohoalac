@@ -4,6 +4,17 @@ test('public HOLA Collection opens as a map with ordered places and a shareable 
   await page.setViewportSize({ width: 1440, height: 900 });
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
+  page.on('request', (request) => {
+    if (request.url().includes('collections')) console.log('[collections-e2e] request', request.url());
+  });
+  page.on('requestfailed', (request) => {
+    if (request.url().includes('collections')) console.log('[collections-e2e] request failed', request.url(), request.failure()?.errorText);
+  });
+  page.on('pageerror', (error) => console.log('[collections-e2e] page error', error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') console.log('[collections-e2e] console error', message.text());
+  });
+
   const places = [
     {
       id: '201',
