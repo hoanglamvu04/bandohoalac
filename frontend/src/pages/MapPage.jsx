@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import MapView from '../components/MapView.jsx';
+import TripPlanner from '../components/TripPlanner.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import {
@@ -50,6 +51,7 @@ import {
   createContribution,
   getCategories,
   getDirections,
+  getTripDirections,
   getHousingListings,
   getMapLayers,
   getNearbyPlaces,
@@ -547,6 +549,11 @@ export default function MapPage() {
   const [routeData, setRouteData] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState('');
+  const [tripStops, setTripStops] = useState([]);
+  const [tripRouteData, setTripRouteData] = useState(null);
+  const [tripPlannerOpen, setTripPlannerOpen] = useState(false);
+  const [tripLoading, setTripLoading] = useState(false);
+  const [tripError, setTripError] = useState('');
 
   const lastPlacesRequestKeyRef = useRef('');
   const loadedPlaceBoundsRef = useRef([]);
@@ -561,6 +568,7 @@ export default function MapPage() {
 
   const regionId = searchParams.get('region') || 'all';
   const requestedPlaceId = searchParams.get('place') || '';
+  const sharedTripParam = searchParams.get('trip') || '';
   const focusRegion = REGION_PRESETS.find((item) => item.id === regionId) || REGION_PRESETS[0];
   const categoryBySlug = useMemo(
     () => new Map(categories.map((item) => [item.slug, item])),
@@ -656,6 +664,36 @@ export default function MapPage() {
       .then((data) => setCategories(Array.isArray(data?.items) ? data.items : []))
       .catch(() => setCategories([]));
   }, []);
+
+  useEffect(() => {
+    if (!sharedTripParam) return undefined;
+
+    const ids = Array.from(new Set(
+      sharedTripParam.split('.').map((value) => value.trim()).filter(Boolean)
+    )).slice(0, 12);
+    if (ids.length < 2) return undefined;
+
+    let active = true;
+    Promise.all(ids.map((id) => getPlace(id).catch(() => null)))
+      .then((results) => {
+        if (!active) return;
+        const loaded = mergeUniquePlaces(results.filter((place) => place?.id));
+        setTripStops(loaded);
+        setTripRouteData(null);
+        setTripError('');
+        setTripPlannerOpen(true);
+        if (loaded.length !== ids.length) {
+          showToast('Một số địa điểm trong lịch trình chia sẻ không còn khả dụng.', 'error');
+        } else {
+          showToast('Đã mở lịch trình được chia sẻ.', 'success');
+        }
+      })
+      .catch(() => {
+        if (active) showToast('Không tải được lịch trình chia sẻ.', 'error');
+      });
+
+    return () => { active = false; };
+  }, [sharedTripParam]);
 
   useEffect(() => {
     setListPagination({
@@ -2332,9 +2370,128 @@ export default function MapPage() {
     }
   }
 
+  function addTripStop(place) {
+    if (!place?.id) return;
+    if (tripStops.some((stop) => String(stop.id) === String(place.id))) {
+      setTripPlannerOpen(true);
+      showToast('Địa điểm này đã có trong lịch trình.', 'info');
+      return;
+    }
+    if (tripStops.length >= 12) {
+      showToast('Mỗi lịch trình tối đa 12 điểm đến.', 'error');
+      return;
+    }
+
+    setTripStops((current) => [...current, place]);
+    setTripRouteData(null);
+    setTripError('');
+    setRouteData(null);
+    setRouteDestination(null);
+    setTripPlannerOpen(true);
+    showToast('Đã thêm ' + (place.name || 'địa điểm') + ' vào HOLA Trip.', 'success');
+  }
+
+  function removeTripStop(placeId) {
+    setTripStops((current) =>
+      current.filter((stop) => String(stop.id) !== String(placeId))
+    );
+    setTripRouteData(null);
+    setTripError('');
+  }
+
+  function moveTripStop(index, direction) {
+    setTripStops((current) => {
+      const next = [...current];
+      const target = index + direction;
+      if (target < 0 || target >= next.length) return current;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+    setTripRouteData(null);
+    setTripError('');
+  }
+
+  async function calculateTrip(optimize = false) {
+    if (tripStops.length < 2 || tripLoading) {
+      if (tripStops.length < 2) {
+        showToast('Hãy thêm ít nhất 2 địa điểm để lập lịch trình.', 'error');
+      }
+      return;
+    }
+
+    setTripLoading(true);
+    setTripError('');
+    setTripPlannerOpen(true);
+    setRouteDestination(null);
+    setRouteData(null);
+
+    try {
+      const route = await getTripDirections({
+        stops: tripStops.map((stop) => ({
+          id: String(stop.id),
+          name: stop.name,
+          lat: Number(stop.lat),
+          lng: Number(stop.lng)
+        })),
+        optimize,
+        profile: 'driving'
+      });
+
+      setTripRouteData(route);
+      if (optimize && Array.isArray(route.stops)) {
+        const existing = new Map(tripStops.map((stop) => [String(stop.id), stop]));
+        setTripStops(route.stops.map((stop) => ({
+          ...(existing.get(String(stop.id)) || {}),
+          ...stop
+        })));
+      }
+      showToast(
+        optimize ? 'Đã tối ưu thứ tự ghé thăm.' : 'Đã tính xong lịch trình.',
+        'success'
+      );
+    } catch (error) {
+      setTripRouteData(null);
+      setTripError(error.message || 'Không thể tính lịch trình này.');
+    } finally {
+      setTripLoading(false);
+    }
+  }
+
+  async function shareTrip() {
+    if (tripStops.length < 2) {
+      showToast('Cần ít nhất 2 địa điểm để chia sẻ lịch trình.', 'error');
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('trip', tripStops.map((stop) => encodeURIComponent(String(stop.id))).join('.'));
+    url.searchParams.delete('place');
+
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      showToast('Đã sao chép link chia sẻ HOLA Trip.', 'success');
+    } catch {
+      showToast('Trình duyệt không cho phép sao chép link. Hãy kiểm tra quyền clipboard.', 'error');
+    }
+  }
+
+  function clearTrip() {
+    setTripStops([]);
+    setTripRouteData(null);
+    setTripError('');
+    setTripPlannerOpen(false);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete('trip');
+      return next;
+    }, { replace: true });
+  }
+
   async function startDirections(place) {
     if (!place) return;
 
+    setTripRouteData(null);
+    setTripPlannerOpen(false);
     setSelectedId(place.id);
     syncDiscoveryParams({ place: place.id });
     setRouteDestination(place);
@@ -2408,7 +2565,8 @@ export default function MapPage() {
         onSelectStatusFeature={setSelectedStatusFeature}
         onUserLocation={setUserLocation}
         userLocation={userLocation}
-        route={routeData}
+        route={tripRouteData || routeData}
+        tripStops={tripStops}
         mapData={mapData}
         activeLayers={activeLayers}
         basemapMode={basemapMode}
@@ -2442,6 +2600,19 @@ export default function MapPage() {
             </button>
           )}
         </div>
+
+        <button
+          type="button"
+          className={tripPlannerOpen ? 'hm-trip-trigger active' : 'hm-trip-trigger'}
+          onClick={() => setTripPlannerOpen((value) => !value)}
+          aria-expanded={tripPlannerOpen}
+          aria-label="Mở HOLA Trip Planner"
+          title="Lập lịch trình nhiều điểm"
+        >
+          <Route size={16} />
+          <span>HOLA Trip</span>
+          {tripStops.length > 0 && <b>{tripStops.length}</b>}
+        </button>
 
         <div className="hm-discovery-filters">
           <button
@@ -3345,10 +3516,43 @@ export default function MapPage() {
                 </Link>
                 )}
               </div>
+              <button
+                type="button"
+                className={tripStops.some((stop) => String(stop.id) === String(selectedPlace.id))
+                  ? 'hm-trip-add-place added'
+                  : 'hm-trip-add-place'}
+                onClick={() => {
+                  if (tripStops.some((stop) => String(stop.id) === String(selectedPlace.id))) {
+                    removeTripStop(selectedPlace.id);
+                  } else {
+                    addTripStop(selectedPlace);
+                  }
+                }}
+              >
+                <Route size={15} />
+                {tripStops.some((stop) => String(stop.id) === String(selectedPlace.id))
+                  ? 'Đã thêm vào lịch trình · Bỏ khỏi lịch trình'
+                  : 'Thêm vào HOLA Trip'}
+              </button>
             </div>
           </section>
         );
       })()}
+
+      <TripPlanner
+        open={tripPlannerOpen}
+        stops={tripStops}
+        route={tripRouteData}
+        loading={tripLoading}
+        error={tripError}
+        onClose={() => setTripPlannerOpen(false)}
+        onMove={moveTripStop}
+        onRemove={removeTripStop}
+        onCalculate={calculateTrip}
+        onOptimize={() => calculateTrip(true)}
+        onShare={shareTrip}
+        onClear={clearTrip}
+      />
 
       {routeDestination && (
         <aside className="hm-route-panel">
