@@ -127,7 +127,6 @@ test('HOLA Trip builds, reorders, optimizes and shares a multi-stop itinerary', 
   await page.locator('.hm-place-row').nth(0).click();
   await page.locator('.hm-trip-add-place').click();
   await page.locator('.hm-place-row').nth(1).click();
-  await page.locator('.hm-trip-add-place').click();
 
   const planner = page.locator('.hm-trip-panel');
   await expect(planner).toBeVisible();
