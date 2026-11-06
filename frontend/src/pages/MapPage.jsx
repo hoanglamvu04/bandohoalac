@@ -24,6 +24,7 @@ import {
   Map as MapIcon,
   MapPin,
   Mountain,
+  PanelLeftOpen,
   Navigation,
   Plus,
   Route,
@@ -1111,6 +1112,21 @@ export default function MapPage() {
     });
   }, [filteredPlaces, viewport, query, placeScope, sortMode]);
 
+  const visibleSidebarPlaces = useMemo(() => {
+    const visible = sidebarPlaces.slice(0, 80);
+    if (selectedId === null || selectedId === undefined) return visible;
+
+    const alreadyVisible = visible.some(
+      (place) => String(place.id) === String(selectedId)
+    );
+    if (alreadyVisible) return visible;
+
+    const selected = sidebarPlaces.find(
+      (place) => String(place.id) === String(selectedId)
+    );
+    return selected ? [selected, ...visible.slice(0, 79)] : visible;
+  }, [sidebarPlaces, selectedId]);
+
   const selectedPlace = useMemo(
     () => places.find((place) => place.id === selectedId) || null,
     [places, selectedId]
@@ -1843,7 +1859,14 @@ export default function MapPage() {
     : '';
 
   return (
-    <main className="hm-workspace">
+    <main
+      className={
+        leftOpen && !isMobileMapViewport()
+          ? 'hm-workspace hm-workspace-split'
+          : 'hm-workspace'
+      }
+      aria-label="Bản đồ và danh sách địa điểm Hòa Lạc"
+    >
       <MapView
         places={filteredPlaces}
         selectedPlaceId={selectedId}
@@ -1866,9 +1889,12 @@ export default function MapPage() {
           className="hm-map-menu"
           type="button"
           onClick={toggleDiscoveryPanel}
-          aria-label="Mở lớp dữ liệu"
+          aria-label={leftOpen ? 'Ẩn danh sách địa điểm' : 'Mở danh sách địa điểm'}
+          aria-expanded={leftOpen}
+          aria-controls="hm-place-list-panel"
+          title={leftOpen ? 'Ẩn danh sách địa điểm' : 'Mở danh sách địa điểm'}
         >
-          <Layers size={19} />
+          <PanelLeftOpen size={19} />
         </button>
 
         <div className="hm-map-search">
@@ -2280,6 +2306,8 @@ export default function MapPage() {
       )}
 
       <aside
+        id="hm-place-list-panel"
+        aria-label="Danh sách địa điểm"
         className={
           (leftOpen ? 'hm-left-panel open ' : 'hm-left-panel ') +
           'sheet-' + mobileSheetLevel
@@ -2305,7 +2333,14 @@ export default function MapPage() {
             <span>{isHousingMode ? 'HOLA HOUSING' : isFoodMode ? 'HOLA FOOD' : 'HOLA MAPS ENGINE'}</span>
             <h1>{isHousingMode ? 'Phòng trọ trên bản đồ' : isFoodMode ? 'Ăn uống trên bản đồ' : 'Bản đồ Hòa Lạc'}</h1>
           </div>
-          <button type="button" onClick={() => setLeftOpen(false)}><X size={17} /></button>
+          <button
+            type="button"
+            onClick={() => setLeftOpen(false)}
+            aria-label="Chuyển về bản đồ"
+            title="Chuyển về bản đồ"
+          >
+            <X size={17} />
+          </button>
         </div>
 
         <section className="hm-panel-section hm-place-results">
@@ -2353,7 +2388,7 @@ export default function MapPage() {
           )}
 
           <div className="hm-place-list">
-            {sidebarPlaces.slice(0, 80).map((place) => (
+            {visibleSidebarPlaces.map((place) => (
               <button
                 key={place.id}
                 type="button"
@@ -2362,8 +2397,9 @@ export default function MapPage() {
                   if (node) placeRowRefs.current.set(key, node);
                   else placeRowRefs.current.delete(key);
                 }}
+                aria-pressed={String(selectedId) === String(place.id)}
                 className={
-                  selectedId === place.id
+                  String(selectedId) === String(place.id)
                     ? 'hm-place-row active'
                     : String(hoveredPlaceId) === String(place.id)
                       ? 'hm-place-row hovered'
