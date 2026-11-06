@@ -6,8 +6,8 @@ import {
 import { smartListPlaces } from '../services/smartPlaceSearch.service.js';
 
 export const getPlaces = asyncHandler(async (req, res) => {
-  const { q, category, minRating, limit, offset } = req.query;
-  const result = await smartListPlaces({ q, category, minRating, limit, offset });
+  const { q, category, minRating, limit, offset, radius } = req.query;
+  const result = await smartListPlaces({ q, category, minRating, limit, offset, radius });
   res.json(result);
 });
 
@@ -37,28 +37,41 @@ export const getNearby = asyncHandler(async (req, res) => {
   const lat = Number(req.query.lat);
   const lng = Number(req.query.lng);
   const radius = Number(req.query.radius) || 5000;
+  const limit = Math.min(Math.max(Number(req.query.limit) || 45, 1), 100);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
   const items = await getNearbyPlaces({
     lat,
     lng,
     radius,
     category: req.query.category,
-    minRating: req.query.minRating
+    minRating: req.query.minRating,
+    limit,
+    offset
   });
-  res.json({ center: { lat, lng }, radius, items });
+  const total = Number(items[0]?.totalCount) || offset + items.length;
+  res.json({
+    center: { lat, lng },
+    radius,
+    items,
+    total,
+    hasMore: offset + items.length < total
+  });
 });
 
 export const getBounds = asyncHandler(async (req, res) => {
   const { north, south, east, west } = req.query;
-  const { items, cacheStatus } = await getPlacesInBoundsCached({
+  const { items, total, hasMore, cacheStatus } = await getPlacesInBoundsCached({
     north: Number(north),
     south: Number(south),
     east: Number(east),
     west: Number(west),
     category: req.query.category,
-    minRating: req.query.minRating
+    minRating: req.query.minRating,
+    limit: req.query.limit,
+    offset: req.query.offset
   });
 
   res.set('X-Hola-Cache', cacheStatus);
   res.set('Cache-Control', 'public, max-age=5, stale-while-revalidate=25');
-  res.json({ items });
+  res.json({ items, total, hasMore });
 });
