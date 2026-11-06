@@ -2383,6 +2383,7 @@ export default function MapPage() {
     }
 
     setTripStops((current) => [...current, place]);
+    setSelectedId(null);
     setTripRouteData(null);
     setTripError('');
     setRouteData(null);
@@ -2604,7 +2605,15 @@ export default function MapPage() {
         <button
           type="button"
           className={tripPlannerOpen ? 'hm-trip-trigger active' : 'hm-trip-trigger'}
-          onClick={() => setTripPlannerOpen((value) => !value)}
+          onClick={() => {
+            const next = !tripPlannerOpen;
+            setTripPlannerOpen(next);
+            if (next) {
+              setSelectedId(null);
+              setRouteDestination(null);
+              setRouteData(null);
+            }
+          }}
           aria-expanded={tripPlannerOpen}
           aria-label="Mở HOLA Trip Planner"
           title="Lập lịch trình nhiều điểm"
