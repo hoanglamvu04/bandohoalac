@@ -51,8 +51,18 @@ test('public HOLA Collection opens as a map with ordered places and a shareable 
     if (!url.pathname.includes('/collections/public/cafe-hoc-tap-test')) {
       return route.continue();
     }
+    const corsHeaders = {
+      'access-control-allow-origin': route.request().headers().origin || '*',
+      'access-control-allow-credentials': 'true',
+      'access-control-allow-methods': 'GET, OPTIONS',
+      'access-control-allow-headers': 'Authorization, Content-Type'
+    };
+    if (route.request().method() === 'OPTIONS') {
+      return route.fulfill({ status: 204, headers: corsHeaders });
+    }
     await route.fulfill({
       status: 200,
+      headers: corsHeaders,
       contentType: 'application/json',
       body: JSON.stringify({
         id: '77',
