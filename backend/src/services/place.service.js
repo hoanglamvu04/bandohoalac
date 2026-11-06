@@ -519,7 +519,18 @@ export async function getNearbyPlaces({
   addDiscoveryFilters({ conditions, params, category, minRating });
 
   params.push(Math.min(Math.max(Number(limit) || 45, 1), 100));
-  const limitRef = '
+  const limitRef = '$' + params.length;
+  params.push(Math.max(Number(offset) || 0, 0));
+  const offsetRef = '$' + params.length;
+
+  const sql = selectWithDistance +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY distance_m ASC, p.rating_avg DESC' +
+    ' LIMIT ' + limitRef + ' OFFSET ' + offsetRef;
+
+  const { rows } = await pool.query(sql, params);
+  return rows.map(mapRow);
+}
 
 export async function getPlacesInBounds({
   north,
