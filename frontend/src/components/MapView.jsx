@@ -1373,6 +1373,44 @@ export default function MapView({
     });
   }, [focusRegion?.id, interactiveReady]);
 
+  // The map canvas changes width when the desktop discovery rail opens or
+  // closes. Observe the actual container so MapLibre recalculates its viewport
+  // during the split-view transition, not only on browser-window resize.
+  useEffect(() => {
+    if (!interactiveReady) return undefined;
+
+    const map = mapRef.current;
+    const container = containerRef.current;
+    if (!map || !container) return undefined;
+
+    let frame = 0;
+    const resizeMap = () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        if (mapRef.current === map) map.resize();
+      });
+    };
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(resizeMap);
+      observer.observe(container);
+      resizeMap();
+
+      return () => {
+        observer.disconnect();
+        if (frame) window.cancelAnimationFrame(frame);
+      };
+    }
+
+    window.addEventListener('resize', resizeMap);
+    resizeMap();
+    return () => {
+      window.removeEventListener('resize', resizeMap);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [interactiveReady]);
+
   useEffect(() => {
     const map = mapRef.current;
     const selected = validPlaces.find((place) => place.id === selectedPlaceId);
