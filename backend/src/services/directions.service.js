@@ -2,12 +2,16 @@ import { env } from '../config/env.js';
 import { AppError } from '../utils/AppError.js';
 import { pool } from '../database/pool.js';
 import { SERVICE_AREA_GEOJSON_STRING, isInsideServiceCoverage } from '../config/mapCoverage.js';
-import { buildTripDistanceMatrix, optimizeTripOrder } from '../utils/tripOptimization.js';
+import {
+  buildTripDistanceMatrix,
+  buildTripEstimatedDurationMatrix,
+  optimizeTripOrder
+} from '../utils/tripOptimization.js';
 
 const SUPPORTED_PROFILES = new Set(['driving']);
 
 async function getRouteHazards(geometry) {
-  if (!geometry?.coordinates?.length) return [];
+  if (!geometry?.coordinates?.length) return { items: [], available: false };
 
   try {
     const { rows } = await pool.query(
@@ -48,20 +52,23 @@ async function getRouteHazards(geometry) {
       [JSON.stringify(geometry), SERVICE_AREA_GEOJSON_STRING]
     );
 
-    return rows.map((row) => ({
-      id: String(row.id),
-      type: row.layer_type,
-      name: row.name,
-      severity: row.severity || 'INFO',
-      geometry: row.geometry || null,
-      ...(row.properties || {})
-    }));
+    return {
+      available: true,
+      items: rows.map((row) => ({
+        id: String(row.id),
+        type: row.layer_type,
+        name: row.name,
+        severity: row.severity || 'INFO',
+        ...(row.properties || {}),
+        geometry: row.geometry || null
+      }))
+    };
   } catch (error) {
     // Keep routing available even before the optional map_features migration
     // has been applied on an older development database.
-    if (error?.code === '42P01') return [];
+    if (error?.code === '42P01') return { items: [], available: false };
     console.error('[Hola Maps] Hazard lookup failed:', error);
-    return [];
+    return { items: [], available: false };
   }
 }
 
@@ -131,7 +138,7 @@ export async function getDirections({
 
     const route = data.routes[0];
     const steps = route.legs?.flatMap((leg) => leg.steps || []).map(normalizeStep) || [];
-    const hazards = await getRouteHazards(route.geometry);
+    const hazardResult = await getRouteHazards(route.geometry);
 
     return {
       provider: 'OSRM',
@@ -142,7 +149,8 @@ export async function getDirections({
       durationSeconds: Math.round(Number(route.duration) || 0),
       geometry: route.geometry,
       steps,
-      hazards
+      hazards: hazardResult.items,
+      hazardCheckAvailable: hazardResult.available
     };
   } catch (error) {
     if (error?.name === 'AbortError') {
@@ -246,7 +254,7 @@ export async function getTripDirections({
       } else {
         orderedIndexes = optimizeTripOrder(
           normalizedStops,
-          buildTripDistanceMatrix(normalizedStops)
+          buildTripEstimatedDurationMatrix(normalizedStops)
         );
       }
     } catch (error) {
@@ -255,7 +263,7 @@ export async function getTripDirections({
       console.warn('[Hola Maps] OSRM table optimization unavailable; using distance estimate.', error.message);
       orderedIndexes = optimizeTripOrder(
         normalizedStops,
-        buildTripDistanceMatrix(normalizedStops)
+        buildTripEstimatedDurationMatrix(normalizedStops)
       );
       optimizationMethod = 'distance-estimate';
     }
@@ -287,7 +295,7 @@ export async function getTripDirections({
     steps: (leg.steps || []).map(normalizeStep)
   }));
   const steps = legs.flatMap((leg) => leg.steps);
-  const hazards = await getRouteHazards(route.geometry);
+  const hazardResult = await getRouteHazards(route.geometry);
 
   return {
     provider: 'OSRM',
@@ -302,6 +310,7 @@ export async function getTripDirections({
     geometry: route.geometry,
     legs,
     steps,
-    hazards
+    hazards: hazardResult.items,
+    hazardCheckAvailable: hazardResult.available
   };
 }
