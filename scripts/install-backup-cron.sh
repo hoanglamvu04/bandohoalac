@@ -8,8 +8,8 @@ mkdir -p "$APP_DIR/backend/backups"
 chmod 700 "$APP_DIR/backend/backups" || true
 
 if ! command -v crontab >/dev/null 2>&1; then
-  echo "[backup] crontab is unavailable; skipped." >&2
-  exit 0
+  echo "[backup] crontab is unavailable; cannot install nightly backups." >&2
+  exit 1
 fi
 
 LINE="17 3 * * * cd $APP_DIR/backend && npm run db:backup >> $APP_DIR/backend/backups/backup.log 2>&1 $MARKER"

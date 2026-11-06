@@ -4,6 +4,7 @@ import { unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/AppError.js';
+import { sanitizeUploadedImage } from './imageSanitizer.service.js';
 
 function sanitizeFolder(value) {
   return String(value || '')
@@ -167,7 +168,8 @@ async function uploadCloudinaryFile(file, {
 
   const signature = signCloudinaryParams(signedParams, apiSecret);
   const body = new FormData();
-  body.append('file', new Blob([file.buffer], { type: file.mimetype }), file.originalname || 'image');
+  const safeBuffer = await sanitizeUploadedImage(file);
+  body.append('file', new Blob([safeBuffer], { type: 'image/webp' }), 'image.webp');
   body.append('api_key', apiKey);
   body.append('timestamp', String(timestamp));
   body.append('signature', signature);
