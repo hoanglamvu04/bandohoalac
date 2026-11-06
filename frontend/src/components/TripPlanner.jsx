@@ -77,7 +77,7 @@ export default function TripPlanner({
       <div className="hm-trip-stop-heading">
         <div>
           <b>ĐIỂM GHÉ THĂM</b>
-          <small>Kéo thứ tự bằng nút lên / xuống</small>
+          <small>Sắp xếp bằng nút lên / xuống</small>
         </div>
         {stops.length > 0 && (
           <button type="button" onClick={onClear} disabled={loading}>
