@@ -228,11 +228,33 @@ export async function getExploreArticleBySlug(slug) {
 
 export async function listExploreSitemapEntries() {
   const { rows } = await pool.query(`
-    SELECT slug, updated_at
-    FROM explore_articles
-    WHERE status = 'PUBLISHED'
-      AND published_at <= NOW()
-    ORDER BY published_at DESC, id DESC
+    SELECT
+      a.slug,
+      a.updated_at,
+      MAX(a.updated_at) OVER () AS sitemap_lastmod,
+      (
+        SELECT COALESCE(pi.card_url, pi.thumbnail_url, pi.url)
+        FROM places p
+        LEFT JOIN categories c ON c.id = p.category_id
+        JOIN place_images pi ON pi.place_id = p.id
+        WHERE p.status = 'PUBLISHED'
+          AND (a.related_query IS NOT NULL OR a.related_category IS NOT NULL)
+          AND (a.related_category IS NULL OR c.slug = a.related_category)
+          AND (
+            a.related_query IS NULL OR
+            lower(public.hola_unaccent(
+              COALESCE(p.name, '') || ' ' ||
+              COALESCE(p.address, '') || ' ' ||
+              COALESCE(p.description, '')
+            )) LIKE '%' || lower(public.hola_unaccent(a.related_query)) || '%'
+          )
+        ORDER BY pi.is_cover DESC, p.rating_avg DESC, p.rating_count DESC, pi.id ASC
+        LIMIT 1
+      ) AS cover_image
+    FROM explore_articles a
+    WHERE a.status = 'PUBLISHED'
+      AND a.published_at <= NOW()
+    ORDER BY a.published_at DESC, a.id DESC
     LIMIT 5000
   `);
 
