@@ -1257,9 +1257,26 @@ export default function MapPage() {
     }));
 
   const selectedPlace = useMemo(
-    () => places.find((place) => place.id === selectedId) || null,
+    () => places.find((place) => String(place.id) === String(selectedId)) || null,
     [places, selectedId]
   );
+
+  // The list can now hold thousands of paged records. Keep MapLibre's GeoJSON
+  // source lean by sending only places in the current viewport plus selection.
+  const mapPlaces = useMemo(() => {
+    const visible = viewport
+      ? filteredPlaces.filter((place) => placeInsideViewport(place, viewport))
+      : filteredPlaces.slice(0, 250);
+
+    if (
+      selectedPlace &&
+      !visible.some((place) => String(place.id) === String(selectedPlace.id))
+    ) {
+      visible.push(selectedPlace);
+    }
+
+    return visible;
+  }, [filteredPlaces, viewport, selectedPlace]);
 
   const selectedImages = useMemo(() => {
     const preferred = selectedPlace?.cardImages?.length
@@ -2281,7 +2298,7 @@ export default function MapPage() {
       aria-label="Bản đồ và danh sách địa điểm Hòa Lạc"
     >
       <MapView
-        places={filteredPlaces}
+        places={mapPlaces}
         selectedPlaceId={selectedId}
         hoveredPlaceId={hoveredPlaceId}
         onSelectPlace={togglePlaceSelection}
