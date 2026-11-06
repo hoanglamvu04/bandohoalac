@@ -80,7 +80,10 @@ function mapRow(row) {
       : undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    lastVerifiedAt: row.last_verified_at || null
+    lastVerifiedAt: row.last_verified_at || null,
+    totalCount: row.total_count === undefined || row.total_count === null
+      ? undefined
+      : Number(row.total_count)
   };
 }
 
@@ -114,7 +117,9 @@ function placeBoundsCacheKey(args = {}) {
     String(args.category || 'all'),
     args.minRating === undefined || args.minRating === null || args.minRating === ''
       ? ''
-      : String(Number(args.minRating))
+      : String(Number(args.minRating)),
+    String(Math.max(Number(args.limit) || 200, 1)),
+    String(Math.max(Number(args.offset) || 0, 0))
   ].join('|');
 }
 
@@ -132,13 +137,13 @@ export async function getPlacesInBoundsCached(args = {}) {
   if (cached && cached.expiresAt > now) {
     placeBoundsCache.delete(key);
     placeBoundsCache.set(key, cached);
-    return { items: cached.items, cacheStatus: 'HIT' };
+    return { ...cached.result, cacheStatus: 'HIT' };
   }
 
   if (cached) placeBoundsCache.delete(key);
 
-  const items = await getPlacesInBounds(args);
-  placeBoundsCache.set(key, { items, expiresAt: now + ttlMs });
+  const result = await getPlacesInBounds(args);
+  placeBoundsCache.set(key, { result, expiresAt: now + ttlMs });
 
   while (placeBoundsCache.size > maxEntries) {
     const oldestKey = placeBoundsCache.keys().next().value;
@@ -146,7 +151,7 @@ export async function getPlacesInBoundsCached(args = {}) {
     placeBoundsCache.delete(oldestKey);
   }
 
-  return { items, cacheStatus: 'MISS' };
+  return { ...result, cacheStatus: 'MISS' };
 }
 
 function addDiscoveryFilters({ conditions, params, q, category, minRating }) {
@@ -238,6 +243,30 @@ export async function listPlaces({
 
   const { rows } = await pool.query(sql, params);
   return rows.map(mapRow);
+}
+
+export async function countPlaces({
+  q,
+  category,
+  minRating,
+  status = 'PUBLISHED'
+} = {}) {
+  const conditions = [
+    'p.status = $1',
+    'ST_Intersects(p.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))'
+  ];
+  const params = [status, SERVICE_AREA_GEOJSON_STRING];
+
+  addDiscoveryFilters({ conditions, params, q, category, minRating });
+
+  const { rows } = await pool.query(
+    'SELECT COUNT(*)::int AS total FROM places p ' +
+      'LEFT JOIN categories c ON c.id = p.category_id ' +
+      'WHERE ' + conditions.join(' AND '),
+    params
+  );
+
+  return Number(rows[0]?.total) || 0;
 }
 
 export async function listHomeSections({ limit = 8 } = {}) {
@@ -452,9 +481,14 @@ export async function getNearbyPlaces({
   radius = 5000,
   status = 'PUBLISHED',
   category,
-  minRating
+  minRating,
+  limit = 100,
+  offset = 0
 }) {
   const selectWithDistance = BASE_SELECT.replace(
+    /^SELECT/,
+    'SELECT COUNT(*) OVER() AS total_count,'
+  ).replace(
     'FROM places p',
     [
       ', ST_Distance(',
@@ -484,10 +518,15 @@ export async function getNearbyPlaces({
 
   addDiscoveryFilters({ conditions, params, category, minRating });
 
+  params.push(Math.min(Math.max(Number(limit) || 100, 1), 100));
+  const limitRef = '$' + params.length;
+  params.push(Math.max(Number(offset) || 0, 0));
+  const offsetRef = '$' + params.length;
+
   const sql = selectWithDistance +
     ' WHERE ' + conditions.join(' AND ') +
     ' ORDER BY distance_m ASC, p.rating_avg DESC' +
-    ' LIMIT 100';
+    ' LIMIT ' + limitRef + ' OFFSET ' + offsetRef;
 
   const { rows } = await pool.query(sql, params);
   return rows.map(mapRow);
@@ -500,7 +539,9 @@ export async function getPlacesInBounds({
   west,
   status = 'PUBLISHED',
   category,
-  minRating
+  minRating,
+  limit = 200,
+  offset = 0
 }) {
   const conditions = [
     'p.status = $1',
@@ -518,13 +559,31 @@ export async function getPlacesInBounds({
 
   addDiscoveryFilters({ conditions, params, category, minRating });
 
-  const sql = BASE_SELECT +
-    ' WHERE ' + conditions.join(' AND ') +
+  const safeLimit = Math.min(Math.max(Number(limit) || 200, 1), 200);
+  const safeOffset = Math.max(Number(offset) || 0, 0);
+  const whereSql = ' WHERE ' + conditions.join(' AND ');
+  const countSql = 'SELECT COUNT(*)::int AS total FROM places p ' +
+    'LEFT JOIN categories c ON c.id = p.category_id' + whereSql;
+  const pageParams = [...params, safeLimit];
+  const limitRef = '$' + pageParams.length;
+  pageParams.push(safeOffset);
+  const offsetRef = '$' + pageParams.length;
+  const pageSql = BASE_SELECT + whereSql +
     ' ORDER BY p.rating_avg DESC, p.updated_at DESC' +
-    ' LIMIT 200';
+    ' LIMIT ' + limitRef + ' OFFSET ' + offsetRef;
 
-  const { rows } = await pool.query(sql, params);
-  return rows.map(mapRow);
+  const [pageResult, countResult] = await Promise.all([
+    pool.query(pageSql, pageParams),
+    pool.query(countSql, params)
+  ]);
+  const items = pageResult.rows.map(mapRow);
+  const total = Number(countResult.rows[0]?.total) || 0;
+
+  return {
+    items,
+    total,
+    hasMore: safeOffset + items.length < total
+  };
 }
 
 export async function createPlace(data, client = pool) {
