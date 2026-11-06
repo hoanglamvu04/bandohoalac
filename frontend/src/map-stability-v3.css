@@ -855,7 +855,8 @@ body.map-route-active .hm-filter-popover-footer>button:hover{
 
   body.map-route-active .hm-workspace.hm-workspace-split .hm-place-list {
     min-height: 0 !important;
-    height: 100% !important;
+    height: auto !important;
+    flex: 1 1 auto !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
     padding: 0 2px 20px 0;
