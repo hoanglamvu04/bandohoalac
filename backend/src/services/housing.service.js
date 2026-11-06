@@ -1,4 +1,10 @@
 import { pool } from '../database/pool.js';
+import {
+  HOUSING_RANK_LATERAL_SQL,
+  HOUSING_RANK_META,
+  HOUSING_RANK_ORDER_SQL,
+  mapHousingRank
+} from './housingRank.service.js';
 
 const FPT_LNG = 105.52522;
 const FPT_LAT = 21.01354;
@@ -43,11 +49,14 @@ function mapHousingRow(row) {
     cardImages: Array.isArray(row.card_images) ? row.card_images : [],
     distanceToFptM: Number(row.distance_to_fpt_m) || 0,
     updatedAt: row.updated_at,
+    holaRank: mapHousingRank(row),
     housing: hasStructuredHousing ? {
       monthlyRent: numberOrNull(row.monthly_rent),
       depositAmount: numberOrNull(row.deposit_amount),
       areaM2: numberOrNull(row.area_m2),
       availabilityStatus: row.availability_status || 'UNKNOWN',
+      effectiveAvailabilityStatus: row.effective_availability_status || 'UNKNOWN',
+      availabilityFresh: Boolean(row.availability_is_recent),
       availableRooms: numberOrNull(row.available_rooms),
       totalRooms: numberOrNull(row.total_rooms),
       electricityPricePerKwh: numberOrNull(row.electricity_price_per_kwh),
@@ -116,10 +125,10 @@ const BASE_SELECT = `
       FROM place_images pi
       WHERE pi.place_id = p.id
     ), '[]'::json) AS card_images,
-    ROUND(ST_Distance(
-      p.location::geography,
-      ST_SetSRID(ST_MakePoint(105.52522, 21.01354), 4326)::geography
-    ))::int AS distance_to_fpt_m,
+    fpt.distance_m AS distance_to_fpt_m,
+    availability.effective_status AS effective_availability_status,
+    COALESCE(availability.is_recent, FALSE) AS availability_is_recent,
+    housing_rank.score AS hola_rank_score,
     hl.place_id AS housing_place_id,
     hl.monthly_rent,
     hl.deposit_amount,
@@ -146,7 +155,7 @@ const BASE_SELECT = `
   FROM places p
   JOIN categories c ON c.id = p.category_id
   LEFT JOIN housing_listings hl ON hl.place_id = p.id
-`;
+` + HOUSING_RANK_LATERAL_SQL;
 
 export async function listHousingListings(filters = {}) {
   const conditions = [
@@ -178,6 +187,11 @@ export async function listHousingListings(filters = {}) {
     conditions.push(operator + ' $' + params.length);
   }
 
+  // A stale room count is not evidence that these rooms are still available.
+  if (filters.minAvailableRooms !== undefined) {
+    conditions.push("availability.effective_status IN ('AVAILABLE', 'LIMITED')");
+  }
+
   if (filters.maxDistanceFpt !== undefined) {
     params.push(Number(filters.maxDistanceFpt));
     conditions.push(
@@ -191,17 +205,16 @@ export async function listHousingListings(filters = {}) {
 
   if (filters.verifiedWithinDays !== undefined) {
     params.push(Number(filters.verifiedWithinDays));
-    conditions.push("hl.last_verified_at >= NOW() - ($" + params.length + " * INTERVAL '1 day')");
+    conditions.push("hl.last_verified_at >= NOW() - ($" + params.length + " * INTERVAL '1 day') AND hl.last_verified_at <= NOW()");
   }
 
   if (filters.availability) {
     params.push(filters.availability);
-    conditions.push('hl.availability_status = $' + params.length);
+    conditions.push('availability.effective_status = $' + params.length);
   }
 
   if (booleanValue(filters.availableOnly) === true) {
-    conditions.push("hl.availability_status IN ('AVAILABLE', 'LIMITED')");
-    conditions.push('COALESCE(hl.available_rooms, 1) > 0');
+    conditions.push("availability.effective_status IN ('AVAILABLE', 'LIMITED')");
   }
 
   if (booleanValue(filters.partnerOnly) === true) {
@@ -228,21 +241,12 @@ export async function listHousingListings(filters = {}) {
   }
 
   const orderMap = {
-    recommended: `is_partner DESC,
-      CASE hl.availability_status
-        WHEN 'AVAILABLE' THEN 0
-        WHEN 'LIMITED' THEN 1
-        WHEN 'UNKNOWN' THEN 2
-        ELSE 3
-      END,
-      hl.last_verified_at DESC NULLS LAST,
-      p.rating_avg DESC,
-      p.updated_at DESC`,
-    rent_asc: 'hl.monthly_rent ASC NULLS LAST, p.updated_at DESC',
-    rent_desc: 'hl.monthly_rent DESC NULLS LAST, p.updated_at DESC',
-    distance: 'distance_to_fpt_m ASC, p.updated_at DESC',
-    area_desc: 'hl.area_m2 DESC NULLS LAST, p.updated_at DESC',
-    freshest: 'hl.last_verified_at DESC NULLS LAST, p.updated_at DESC'
+    recommended: HOUSING_RANK_ORDER_SQL,
+    rent_asc: 'hl.monthly_rent ASC NULLS LAST, p.updated_at DESC, p.id ASC',
+    rent_desc: 'hl.monthly_rent DESC NULLS LAST, p.updated_at DESC, p.id ASC',
+    distance: 'distance_to_fpt_m ASC, p.updated_at DESC, p.id ASC',
+    area_desc: 'hl.area_m2 DESC NULLS LAST, p.updated_at DESC, p.id ASC',
+    freshest: 'hl.last_verified_at DESC NULLS LAST, p.updated_at DESC, p.id ASC'
   };
 
   const safeLimit = Math.min(Math.max(Number(filters.limit) || 30, 1), 100);
@@ -269,6 +273,7 @@ export async function listHousingListings(filters = {}) {
       count: items.length,
       structuredCount: items.filter((item) => item.housing).length,
       partnerCount: items.filter((item) => item.isPartner).length,
+      rank: HOUSING_RANK_META,
       fpt: {
         name: 'Trường Đại học FPT',
         lat: FPT_LAT,

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import '../housing-rank-v3.css';
 import {
   Building2,
   Camera,
@@ -114,6 +115,14 @@ function housingFormFrom(place) {
     contactZalo: housing.contactZalo || '',
     availableFrom: housing.availableFrom ? String(housing.availableFrom).slice(0, 10) : ''
   };
+}
+
+function housingNeedsReverification(housing) {
+  if (!housing) return true;
+  const timestamp = new Date(housing.lastVerifiedAt || '').getTime();
+  return !Number.isFinite(timestamp)
+    || timestamp > Date.now()
+    || Date.now() - timestamp > 30 * 24 * 60 * 60 * 1000;
 }
 
 export default function PartnerDashboard() {
@@ -628,6 +637,16 @@ export default function PartnerDashboard() {
       return;
     }
 
+    if (housingEnabled && housing.availabilityStatus === 'FULL' && Number(housing.availableRooms || 0) > 0) {
+      showToast('Tin hết phòng phải có 0 phòng trống hoặc bỏ trống số lượng.', 'error');
+      return;
+    }
+
+    if (housingEnabled && ['AVAILABLE', 'LIMITED'].includes(housing.availabilityStatus) && housing.availableRooms === 0) {
+      showToast('Trạng thái còn phòng không thể ghi 0 phòng trống.', 'error');
+      return;
+    }
+
     setPlaceSaving(true);
     try {
       await updatePartnerManagedPlace(editingPlace.placeId, {
@@ -1015,6 +1034,11 @@ export default function PartnerDashboard() {
                   </small>
                   <b>{place.partnerName || place.name}</b>
                   <span>{place.address || 'Hòa Lạc'}</span>
+                  {place.categorySlug === 'bat-dong-san' && housingNeedsReverification(place.housing) && (
+                    <small className="partner-housing-reverify">
+                      <Clock3 size={13} /> Hãy xác minh lại tình trạng phòng (quá 30 ngày hoặc chưa xác minh)
+                    </small>
+                  )}
                 </div>
                 <div className="partner-place-actions">
                   {place.canEditPlace && (
@@ -1186,9 +1210,9 @@ export default function PartnerDashboard() {
             {editingPlace.categorySlug === 'bat-dong-san' && (
               <section className="partner-housing-editor">
                 <div className="partner-housing-editor-head">
-                  <span>HOLA HOUSING V2</span>
+                  <span>HOLA HOUSING V3</span>
                   <h3>Thông tin phòng trọ chuyên sâu</h3>
-                  <p>Lưu form này cũng đồng thời cập nhật mốc “xác minh gần nhất” từ HOLA Partner.</p>
+                  <p>Hãy kiểm tra số phòng còn trống thực tế trước khi lưu. Mỗi lần cập nhật xác minh lại tình trạng trong 30 ngày tiếp theo.</p>
                 </div>
 
                 <div className="partner-housing-grid">
