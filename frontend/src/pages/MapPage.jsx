@@ -1442,6 +1442,7 @@ export default function MapPage() {
       let hasMore = false;
       let total = cursor.total;
       const offset = Number(cursor.offset) || 0;
+      let nextOffset = offset + PLACE_PAGE_SIZE;
       const params = cursor.params || {};
 
       if (cursor.kind === 'search' || cursor.kind === 'all') {
@@ -1500,6 +1501,36 @@ export default function MapPage() {
         items = Array.isArray(data?.items) ? data.items : [];
         hasMore = Boolean(data?.meta?.hasMore);
         total = Number(data?.meta?.total) || total;
+      } else if (cursor.kind === 'housing-nearby') {
+        let scanOffset = offset;
+        let scannedPages = 0;
+        let data = null;
+
+        do {
+          data = await getHousingListings({
+            ...params.housingParams,
+            limit: PLACE_PAGE_SIZE,
+            offset: scanOffset
+          });
+          const pageItems = Array.isArray(data?.items) ? data.items : [];
+          items = pageItems
+            .map((place) => {
+              const distance = distanceMeters(
+                params.anchor.lat,
+                params.anchor.lng,
+                place.lat,
+                place.lng
+              );
+              return { ...place, distanceFromUser: distance, distance };
+            })
+            .filter((place) => place.distanceFromUser <= params.radius);
+          scanOffset += PLACE_PAGE_SIZE;
+          scannedPages += 1;
+          hasMore = Boolean(data?.meta?.hasMore);
+        } while (!items.length && hasMore && scannedPages < 3);
+
+        nextOffset = scanOffset;
+        total = null;
       } else if (cursor.kind === 'nearby') {
         const data = await getNearbyPlaces(
           params.lat,
@@ -1540,7 +1571,7 @@ export default function MapPage() {
       setVisiblePlaceCount((current) => current + Math.max(items.length, PLACE_PAGE_SIZE));
       const nextPagination = {
         ...cursor,
-        offset: offset + PLACE_PAGE_SIZE,
+        offset: nextOffset,
         total: Number(total) || cursor.total,
         hasMore: Boolean(hasMore)
       };
@@ -1605,11 +1636,12 @@ export default function MapPage() {
   }
 
   async function loadHousingForAnchor(anchor, radii) {
-    const data = await getHousingListings({
+    const housingParams = {
       ...housingRequestParams({ includeQuery: false }),
       limit: 100,
       offset: 0
-    });
+    };
+    const data = await getHousingListings(housingParams);
     const allItems = Array.isArray(data?.items) ? data.items : [];
 
     for (const radius of radii) {
@@ -1621,11 +1653,21 @@ export default function MapPage() {
         .filter((place) => place.distanceFromUser <= radius);
 
       if (items.length >= 6 || (items.length > 0 && radius >= radii[Math.min(1, radii.length - 1)])) {
-        return { items, radius };
+        return {
+          items,
+          radius,
+          hasMore: Boolean(data?.meta?.hasMore),
+          housingParams
+        };
       }
     }
 
-    return { items: [], radius: radii[radii.length - 1] || 0 };
+    return {
+      items: [],
+      radius: radii[radii.length - 1] || 0,
+      hasMore: Boolean(data?.meta?.hasMore),
+      housingParams
+    };
   }
 
   async function loadFoodNearby(anchor, radius, offset = 0) {
@@ -1676,11 +1718,23 @@ export default function MapPage() {
       let items = [];
       let resolvedRadius = 0;
       let pageMeta = null;
+      let housingPagination = null;
 
       if (isHousingMode) {
         const result = await loadHousingForAnchor(location, [5000, 10000, 20000, 40000]);
         items = result.items;
         resolvedRadius = result.radius;
+        housingPagination = {
+          kind: 'housing-nearby',
+          offset: 100,
+          total: null,
+          hasMore: result.hasMore,
+          params: {
+            housingParams: result.housingParams,
+            anchor: location,
+            radius: result.radius
+          }
+        };
       } else {
         for (const radius of [5000, 10000, 20000, 40000]) {
           if (isFoodMode) {
@@ -1707,7 +1761,7 @@ export default function MapPage() {
       setNearbyRadius(resolvedRadius);
       setSortMode('nearest');
       resetPlaceListWindow();
-      setListPagination(pageMeta ? {
+      setListPagination(housingPagination || (pageMeta ? {
         kind: isFoodMode ? 'nearby-food' : 'nearby',
         offset: PLACE_PAGE_SIZE,
         total: Number(pageMeta.total) || null,
@@ -1733,7 +1787,7 @@ export default function MapPage() {
         total: null,
         hasMore: false,
         params: null
-      });
+      }));
       syncDiscoveryParams({ sort: 'nearest' });
 
       if (
@@ -1761,6 +1815,7 @@ export default function MapPage() {
       let items = [];
       let resolvedRadius = 0;
       let pageMeta = null;
+      let housingPagination = null;
 
       // Expand progressively so "nearby" is useful even in sparse zones
       // without immediately dumping every place in the whole service area.
@@ -1771,6 +1826,17 @@ export default function MapPage() {
           distance: place.distanceFromUser
         }));
         resolvedRadius = result.radius;
+        housingPagination = {
+          kind: 'housing-nearby',
+          offset: 100,
+          total: null,
+          hasMore: result.hasMore,
+          params: {
+            housingParams: result.housingParams,
+            anchor: center,
+            radius: result.radius
+          }
+        };
       } else {
         for (const radius of [5000, 10000, 20000]) {
           if (isFoodMode) {
@@ -1796,7 +1862,7 @@ export default function MapPage() {
       setPlaceScope('nearby');
       setNearbyRadius(resolvedRadius);
       resetPlaceListWindow();
-      setListPagination(pageMeta ? {
+      setListPagination(housingPagination || (pageMeta ? {
         kind: isFoodMode ? 'nearby-food' : 'nearby',
         offset: PLACE_PAGE_SIZE,
         total: Number(pageMeta.total) || null,
@@ -1822,7 +1888,7 @@ export default function MapPage() {
         total: null,
         hasMore: false,
         params: null
-      });
+      }));
     } catch (error) {
       console.warn('[Hola Maps] nearby places request failed:', error);
     } finally {
