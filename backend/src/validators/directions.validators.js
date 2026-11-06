@@ -19,3 +19,36 @@ export const directionsQuerySchema = z.object({
     });
   }
 });
+
+
+const tripStopSchema = z.object({
+  id: z.string().trim().min(1).max(80).optional(),
+  name: z.string().trim().max(160).optional(),
+  lat: latitude,
+  lng: longitude
+});
+
+export const tripDirectionsBodySchema = z.object({
+  stops: z.array(tripStopSchema).min(2).max(12),
+  optimize: z.boolean().optional().default(false),
+  profile: z.enum(['driving']).optional().default('driving')
+}).superRefine((data, ctx) => {
+  data.stops.forEach((stop, index) => {
+    if (!isInsideServiceCoverage(stop.lng, stop.lat)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Trip stops must be inside the Hola Maps service area.',
+        path: ['stops', index, 'lat']
+      });
+    }
+  });
+
+  const ids = data.stops.map((stop) => stop.id).filter(Boolean);
+  if (new Set(ids).size !== ids.length) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'A place can only be added once to a trip.',
+      path: ['stops']
+    });
+  }
+});
