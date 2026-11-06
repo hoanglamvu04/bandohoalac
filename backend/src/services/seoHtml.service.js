@@ -389,7 +389,8 @@ function renderExploreArticleVisual(article, large = false) {
   const visualClass = large ? ' large' : '';
   if (image) {
     return '<img class="explore-card-image' + visualClass + '" data-explore-fallback="true" src="' +
-      escapeHtml(image) + '" alt="" loading="' + (large ? 'eager' : 'lazy') + '">';
+      escapeHtml(image) + '" alt="' + escapeHtml(article.title || 'HOLA GUIDE') +
+      '" loading="' + (large ? 'eager' : 'lazy') + '">';
   }
 
   return [
