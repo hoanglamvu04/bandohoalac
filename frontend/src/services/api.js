@@ -241,6 +241,14 @@ export function getDirections({
   }));
 }
 
+export function getTripDirections({ stops = [], optimize = false, profile = 'driving' } = {}) {
+  return unwrap(client.post('/directions/trip', {
+    stops,
+    optimize,
+    profile
+  }));
+}
+
 export function getMapLayers({ types = [], bounds } = {}, options = {}) {
   return unwrap(client.get('/map-layers', {
     params: cleanParams({
