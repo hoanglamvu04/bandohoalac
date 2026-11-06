@@ -37,6 +37,22 @@ test('HOLA Trip builds, reorders, optimizes and shares a multi-stop itinerary', 
       thumbnails: [],
       cardImages: [],
       status: 'PUBLISHED'
+    },
+    {
+      id: '103',
+      name: 'Vườn hoa Hòa Lạc',
+      slug: 'vuon-hoa-hoa-lac',
+      category: 'Check-in',
+      categorySlug: 'check-in',
+      address: 'Yên Xuân, Hòa Lạc',
+      lat: 21.024,
+      lng: 105.541,
+      rating: 4.7,
+      reviews: 9,
+      images: [],
+      thumbnails: [],
+      cardImages: [],
+      status: 'PUBLISHED'
     }
   ];
 
@@ -127,10 +143,11 @@ test('HOLA Trip builds, reorders, optimizes and shares a multi-stop itinerary', 
   await page.locator('.hm-place-row').nth(0).click();
   await page.locator('.hm-trip-add-place').click();
   await page.locator('.hm-place-row').nth(1).click();
+  await page.locator('.hm-place-row').nth(2).click();
 
   const planner = page.locator('.hm-trip-panel');
   await expect(planner).toBeVisible();
-  await expect(planner.locator('.hm-trip-stop')).toHaveCount(2);
+  await expect(planner.locator('.hm-trip-stop')).toHaveCount(3);
 
   await planner.getByRole('button', { name: 'Đưa Cafe Xứ Đoài lên' }).click();
   await expect(planner.locator('.hm-trip-stop').first()).toContainText('Cafe Xứ Đoài');
@@ -147,5 +164,5 @@ test('HOLA Trip builds, reorders, optimizes and shares a multi-stop itinerary', 
 
   await planner.getByRole('button', { name: /Chia sẻ lịch trình/ }).click();
   const sharedUrl = await page.evaluate(() => navigator.clipboard.readText());
-  expect(sharedUrl).toContain('trip=102.101');
+  expect(sharedUrl).toContain('trip=102.101.103');
 });
