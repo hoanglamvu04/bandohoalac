@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Award,
   BadgeCheck,
+  BookmarkPlus,
   Building2,
   Camera,
   ChevronRight,
@@ -247,6 +248,16 @@ export default function ProfilePage() {
             <small>NHIỆM VỤ CỘNG ĐỒNG</small>
             <b>Tham gia nhiệm vụ để nhận thêm điểm thưởng</b>
             <em><Flag size={13} /> Theo dõi tiến độ chiến dịch</em>
+          </span>
+          <ChevronRight size={20} />
+        </Link>
+
+        <Link className="profile-rewards-entry collections" to="/collections">
+          <span className="profile-rewards-icon"><BookmarkPlus size={24} /></span>
+          <span>
+            <small>HOLA COLLECTIONS</small>
+            <b>Tạo và chia sẻ bộ sưu tập địa điểm</b>
+            <em><BookmarkPlus size={13} /> Quản lý những nơi muốn khám phá</em>
           </span>
           <ChevronRight size={20} />
         </Link>

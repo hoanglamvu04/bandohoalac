@@ -1,0 +1,280 @@
+/* HOLA Collections */
+.hola-collections-page {
+  max-width: 1180px;
+  color: #173b33;
+}
+.hola-collections-hero,
+.hola-collection-detail-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 30px;
+  border: 1px solid rgba(22, 61, 51, .09);
+  border-radius: 26px;
+  background: linear-gradient(135deg, #fffdf8 0%, #eef5f0 100%);
+  box-shadow: 0 16px 44px rgba(20, 54, 47, .06);
+}
+.hola-collections-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #55756a;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .13em;
+}
+.hola-collections-hero h1,
+.hola-collection-detail-hero h1 {
+  margin: 10px 0 9px;
+  color: #153f33;
+  font-size: clamp(30px, 4vw, 43px);
+  letter-spacing: -.045em;
+}
+.hola-collections-hero p,
+.hola-collection-detail-copy > p {
+  max-width: 680px;
+  margin: 0;
+  color: #687a73;
+  font-size: 15px;
+  line-height: 1.7;
+}
+.hola-collections-primary,
+.hola-collections-secondary,
+.hola-collections-danger {
+  min-height: 43px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 13px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.hola-collections-primary {
+  background: #174b3d;
+  color: #fff;
+}
+.hola-collections-primary:hover { background: #0e392e; }
+.hola-collections-primary:disabled { opacity: .55; cursor: wait; }
+.hola-collections-secondary {
+  border: 1px solid #dce6df;
+  background: #fff;
+  color: #244f42;
+}
+.hola-collections-danger {
+  border: 1px solid #f0d8d3;
+  background: #fff8f6;
+  color: #a34132;
+}
+.hola-collections-section { margin-top: 34px; }
+.hola-collections-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.hola-collections-section-heading > div > span,
+.hola-collection-form-heading > div > span {
+  color: #82938c;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .14em;
+}
+.hola-collections-section-heading h2,
+.hola-collection-form-heading h2 {
+  margin: 4px 0 0;
+  color: #1b4438;
+  font-size: 22px;
+  letter-spacing: -.025em;
+}
+.hola-collections-section-heading > b {
+  color: #73847d;
+  font-size: 12px;
+}
+.hola-collections-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.hola-collection-card {
+  overflow: hidden;
+  border: 1px solid #e3eae5;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(20, 54, 47, .045);
+}
+.hola-collection-cover {
+  position: relative;
+  height: 176px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: linear-gradient(135deg, #e9f1eb, #f7f1e5);
+  color: #517568;
+}
+.hola-collection-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform .35s ease; }
+.hola-collection-card:hover .hola-collection-cover img { transform: scale(1.04); }
+.hola-collection-cover-empty { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 18px; background: rgba(255,255,255,.72); }
+.hola-collection-visibility {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.hola-collection-cover .hola-collection-visibility {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  backdrop-filter: blur(12px);
+}
+.hola-collection-visibility.public { background: #e7f3eb; color: #286449; }
+.hola-collection-visibility.private { background: #f0eee8; color: #6d6a5c; }
+.hola-collection-card-copy { padding: 16px 17px 17px; }
+.hola-collection-card-meta { display: flex; justify-content: space-between; gap: 10px; color: #83928b; font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+.hola-collection-card-meta b { color: #537367; white-space: nowrap; }
+.hola-collection-card-title { display: block; margin-top: 9px; color: #193f34; font-size: 17px; font-weight: 850; text-decoration: none; }
+.hola-collection-card-copy p { min-height: 42px; margin: 7px 0 13px; color: #718078; font-size: 12px; line-height: 1.55; }
+.hola-collection-card-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #eef1ed; padding-top: 12px; }
+.hola-collection-card-actions a { display: inline-flex; align-items: center; gap: 5px; color: #275d49; font-size: 11px; font-weight: 800; text-decoration: none; }
+.hola-collections-empty,
+.hola-collections-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 190px;
+  padding: 28px;
+  border: 1px dashed #d5e1d9;
+  border-radius: 20px;
+  background: #fbfcfa;
+  color: #658075;
+  text-align: center;
+}
+.hola-collections-empty b { color: #244d40; font-size: 15px; }
+.hola-collections-empty span { max-width: 430px; color: #7b8982; font-size: 12px; line-height: 1.55; }
+.hola-collections-empty a,
+.hola-collections-empty button {
+  margin-top: 4px;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 11px;
+  background: #e8f1eb;
+  color: #245642;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+.hola-collections-empty.compact { min-height: 150px; }
+.hola-collection-form {
+  display: grid;
+  gap: 15px;
+  margin-top: 20px;
+  padding: 23px;
+  border: 1px solid #dfe8e1;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(20,54,47,.055);
+}
+.hola-collection-form-heading { display: flex; align-items: center; justify-content: space-between; }
+.hola-collection-form-heading > button { border: 0; background: transparent; color: #718078; font-size: 24px; cursor: pointer; }
+.hola-collection-form label { display: grid; gap: 7px; color: #385a4e; font-size: 12px; font-weight: 800; }
+.hola-collection-form input,
+.hola-collection-form textarea,
+.hola-collection-form select {
+  width: 100%;
+  min-height: 43px;
+  padding: 10px 12px;
+  border: 1px solid #dce5de;
+  border-radius: 11px;
+  outline: none;
+  background: #fcfdfb;
+  color: #1d3f34;
+  font-size: 13px;
+}
+.hola-collection-form textarea { resize: vertical; }
+.hola-collection-form input:focus,
+.hola-collection-form textarea:focus,
+.hola-collection-form select:focus { border-color: #6a9a82; box-shadow: 0 0 0 3px rgba(63,125,91,.1); }
+.hola-collection-form-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hola-collection-back { margin: 0 0 14px; }
+.hola-collection-back a { display: inline-flex; align-items: center; gap: 7px; color: #61766b; font-size: 12px; font-weight: 800; text-decoration: none; }
+.hola-collection-detail-hero { align-items: center; }
+.hola-collection-detail-copy { min-width: 0; }
+.hola-collection-detail-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.hola-collection-detail-title-row h1 { margin: 8px 0; }
+.hola-collection-owner { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-top: 14px; color: #718078; font-size: 11px; }
+.hola-collection-owner i { color: #b0bdb5; font-style: normal; }
+.hola-collection-detail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.hola-collection-place-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.hola-collection-place { display: grid; grid-template-columns: 116px minmax(0,1fr); gap: 13px; padding: 10px; border: 1px solid #e4ebe5; border-radius: 17px; background: #fff; }
+.hola-collection-place-image { display: grid; place-items: center; min-height: 112px; overflow: hidden; border-radius: 12px; background: #eef3ee; color: #638174; }
+.hola-collection-place-image img { width: 100%; height: 100%; min-height: 112px; object-fit: cover; }
+.hola-collection-place-copy { min-width: 0; padding: 3px 2px; }
+.hola-collection-place-copy > small { color: #7f9287; font-size: 10px; font-weight: 800; }
+.hola-collection-place-copy > a { display: block; overflow: hidden; margin-top: 5px; color: #1d4638; font-size: 14px; font-weight: 850; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.hola-collection-place-copy p { margin: 6px 0 10px; color: #75837b; font-size: 11px; line-height: 1.45; }
+.hola-collection-place-copy > div { display: flex; flex-wrap: wrap; gap: 10px; }
+.hola-collection-place-copy > div a,
+.hola-collection-place-copy > div button { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; color: #2e6a51; font-size: 10px; font-weight: 800; text-decoration: none; cursor: pointer; }
+.hola-collection-place-copy > div button { color: #a65a4d; }
+.hola-collection-place-copy > div button:disabled { opacity: .55; }
+.hola-collection-share-foot { display: flex; align-items: center; gap: 7px; margin-top: 24px; color: #72867b; font-size: 11px; }
+.hola-collection-picker { position: relative; display: inline-flex; }
+.hola-collection-picker-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 13px; border: 1px solid #dbe6de; border-radius: 12px; background: #f8fbf8; color: #245541; font-size: 12px; font-weight: 800; cursor: pointer; }
+.hola-collection-picker-panel { position: absolute; z-index: 30; top: calc(100% + 8px); right: 0; width: min(310px, calc(100vw - 32px)); padding: 12px; border: 1px solid #dce7df; border-radius: 16px; background: #fff; box-shadow: 0 18px 48px rgba(16,47,41,.18); }
+.hola-collection-picker-heading { display: flex; align-items: center; justify-content: space-between; padding: 2px 3px 9px; border-bottom: 1px solid #eef2ee; color: #244c3e; font-size: 12px; }
+.hola-collection-picker-heading button { border: 0; background: transparent; color: #74857c; font-size: 20px; cursor: pointer; }
+.hola-collection-picker-list { display: grid; gap: 4px; max-height: 240px; overflow: auto; padding: 7px 0; }
+.hola-collection-picker-list > button { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 8px; border: 0; border-radius: 10px; background: transparent; color: #2a5947; text-align: left; cursor: pointer; }
+.hola-collection-picker-list > button:hover { background: #f0f6f1; }
+.hola-collection-picker-list > button:disabled { color: #6b907b; cursor: default; }
+.hola-collection-picker-list > button span { display: grid; gap: 3px; }
+.hola-collection-picker-list > button b { font-size: 12px; }
+.hola-collection-picker-list > button small { color: #84938a; font-size: 10px; }
+.hola-collection-picker-state { display: block; padding: 14px 4px; color: #7a8981; font-size: 11px; }
+.hola-collection-picker-panel > a { display: flex; align-items: center; gap: 6px; padding: 9px 5px 2px; border-top: 1px solid #eef2ee; color: #286448; font-size: 11px; font-weight: 850; text-decoration: none; }
+.hm-collection-map-banner { position: absolute; z-index: 30; top: calc(var(--app-safe-top, 0px) + 74px); left: 50%; display: flex; align-items: center; gap: 18px; max-width: min(620px, calc(100vw - 28px)); padding: 11px 15px; transform: translateX(-50%); border: 1px solid rgba(21,63,51,.12); border-radius: 15px; background: rgba(255,253,248,.95); box-shadow: 0 10px 30px rgba(16,47,41,.14); backdrop-filter: blur(12px); }
+.hm-collection-map-banner > div { display: grid; gap: 2px; min-width: 0; }
+.hm-collection-map-banner small { color: #779084; font-size: 9px; font-weight: 900; letter-spacing: .13em; }
+.hm-collection-map-banner strong { overflow: hidden; color: #1a493a; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.hm-collection-map-banner span { color: #7b8982; font-size: 10px; }
+.hm-collection-map-banner a { display: inline-flex; align-items: center; gap: 5px; color: #245b45; font-size: 11px; font-weight: 850; text-decoration: none; white-space: nowrap; }
+.hm-collection-map-mode .hm-map-search,
+.hm-collection-map-mode .hm-discovery-filters,
+.hm-collection-map-mode .hm-add-place { display: none !important; }
+.hm-collection-map-mode .hm-map-topbar { justify-content: flex-start; }
+@media (max-width: 900px) {
+  .hola-collections-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hola-collection-detail-hero { align-items: flex-start; flex-direction: column; }
+}
+@media (max-width: 640px) {
+  .hola-collections-page.page-container { width: min(100% - 24px, 1180px); padding-top: 24px; }
+  .hola-collections-hero { align-items: flex-start; flex-direction: column; padding: 22px; }
+  .hola-collections-hero .hola-collections-primary { width: 100%; }
+  .hola-collections-grid { grid-template-columns: 1fr; }
+  .hola-collection-cover { height: 190px; }
+  .hola-collection-place-list { grid-template-columns: 1fr; }
+  .hola-collection-place { grid-template-columns: 94px minmax(0,1fr); }
+  .hola-collection-place-image,
+  .hola-collection-place-image img { min-height: 98px; }
+  .hola-collection-detail-hero { padding: 21px; }
+  .hola-collection-detail-actions { width: 100%; }
+  .hola-collection-detail-actions > * { flex: 1; }
+  .hola-collection-form { padding: 17px; }
+  .hola-collection-form-actions { align-items: stretch; flex-direction: column-reverse; }
+  .hola-collection-form-actions > * { width: 100%; }
+  .hm-collection-map-banner { top: calc(var(--app-safe-top, 0px) + 60px); width: max-content; max-width: calc(100vw - 24px); }
+}

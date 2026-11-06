@@ -50,6 +50,7 @@ import {
   confirmRoadStatus,
   createContribution,
   getCategories,
+  getCollectionBySlug,
   getDirections,
   getTripDirections,
   getHousingListings,
@@ -65,6 +66,7 @@ import { LOCAL_BASEMAP_OPTIONS as BASEMAP_OPTIONS } from '../localBasemap.js';
 import { getBestBrowserLocation } from '../utils/geolocation.js';
 import { distanceMeters, formatOpenStatus, isPlaceOpenNow } from '../utils/placeDiscovery.js';
 import { REGION_PRESETS } from '../mapConfig.js';
+import '../hola-collections.css';
 
 const LAYERS = [
   { type: 'TERRAIN', label: 'Địa hình', icon: Mountain, tone: 'green' },
@@ -495,6 +497,7 @@ export default function MapPage() {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [places, setPlaces] = useState([]);
+  const [collectionView, setCollectionView] = useState(null);
   const [visiblePlaceCount, setVisiblePlaceCount] = useState(PLACE_PAGE_SIZE);
   const [listPagination, setListPagination] = useState({
     kind: 'none',
@@ -568,6 +571,7 @@ export default function MapPage() {
 
   const regionId = searchParams.get('region') || 'all';
   const requestedPlaceId = searchParams.get('place') || '';
+  const collectionSlug = searchParams.get('collection') || '';
   const sharedTripParam = searchParams.get('trip') || '';
   const focusRegion = REGION_PRESETS.find((item) => item.id === regionId) || REGION_PRESETS[0];
   const categoryBySlug = useMemo(
@@ -798,6 +802,43 @@ export default function MapPage() {
   }, [requestedPlaceId]);
 
   useEffect(() => {
+    if (!collectionSlug) {
+      setCollectionView(null);
+      return undefined;
+    }
+
+    let active = true;
+    setCollectionView({ loading: true, collection: null, items: [] });
+
+    getCollectionBySlug(collectionSlug)
+      .then((result) => {
+        if (!active) return;
+        const items = Array.isArray(result?.items) ? result.items : [];
+        setCollectionView(result);
+        setPlaces(items);
+        setPlaceScope('all');
+        setNearbyRadius(0);
+        setSelectedId(null);
+        setVisiblePlaceCount(Math.max(PLACE_PAGE_SIZE, items.length));
+        setListPagination({
+          kind: 'collection',
+          offset: items.length,
+          total: items.length,
+          hasMore: false,
+          params: null
+        });
+        setLeftOpen(true);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setCollectionView({ error: error.message || 'Không thể tải bộ sưu tập.', collection: null, items: [] });
+        setPlaces([]);
+      });
+
+    return () => { active = false; };
+  }, [collectionSlug]);
+
+  useEffect(() => {
     // Region/filter changes start a new progressive discovery session. Within
     // that session, panning keeps already loaded places instead of replacing
     // them on every bounds request.
@@ -835,6 +876,7 @@ export default function MapPage() {
   }, [searchParams]);
 
   useEffect(() => {
+    if (collectionSlug) return undefined;
     if (!viewport) return undefined;
 
     const needle = query.trim();
@@ -1104,7 +1146,8 @@ export default function MapPage() {
     minRating,
     verticalMode,
     housingFilterSignature,
-    sortMode
+    sortMode,
+    collectionSlug
   ]);
 
   useEffect(() => {
@@ -1318,6 +1361,8 @@ export default function MapPage() {
   // The list can now hold thousands of paged records. Keep MapLibre's GeoJSON
   // source lean by sending only places in the current viewport plus selection.
   const mapPlaces = useMemo(() => {
+    if (collectionSlug) return filteredPlaces;
+
     const visible = viewport
       ? filteredPlaces.filter((place) => placeInsideViewport(place, viewport))
       : filteredPlaces.slice(0, 250);
@@ -1330,7 +1375,7 @@ export default function MapPage() {
     }
 
     return visible;
-  }, [filteredPlaces, viewport, selectedPlace]);
+  }, [filteredPlaces, viewport, selectedPlace, collectionSlug]);
 
   const selectedImages = useMemo(() => {
     const preferred = selectedPlace?.cardImages?.length
@@ -2383,7 +2428,6 @@ export default function MapPage() {
     }
 
     setTripStops((current) => [...current, place]);
-    setSelectedId(null);
     setTripRouteData(null);
     setTripError('');
     setRouteData(null);
@@ -2551,9 +2595,9 @@ export default function MapPage() {
   return (
     <main
       className={
-        leftOpen && !isMobileMapViewport()
+        (leftOpen && !isMobileMapViewport()
           ? 'hm-workspace hm-workspace-split'
-          : 'hm-workspace'
+          : 'hm-workspace') + (collectionSlug ? ' hm-collection-map-mode' : '')
       }
       aria-label="Bản đồ và danh sách địa điểm Hòa Lạc"
     >
@@ -2573,7 +2617,21 @@ export default function MapPage() {
         basemapMode={basemapMode}
         onViewportChange={setViewport}
         focusRegion={focusRegion}
+        fitPlacesKey={collectionView?.collection?.slug
+          ? collectionView.collection.slug + ':' + (collectionView.collection.updatedAt || '')
+          : ''}
       />
+
+      {collectionSlug && (
+        <div className="hm-collection-map-banner">
+          <div>
+            <small>HOLA COLLECTIONS · {collectionView?.items?.length || 0} ĐỊA ĐIỂM</small>
+            <strong>{collectionView?.collection?.title || (collectionView?.error ? 'Không thể mở bộ sưu tập' : 'Đang tải bộ sưu tập...')}</strong>
+            {collectionView?.error && <span>{collectionView.error}</span>}
+          </div>
+          <Link to={'/collections/' + encodeURIComponent(collectionSlug)}>← Chi tiết bộ sưu tập</Link>
+        </div>
+      )}
 
       <header className="hm-map-topbar">
         <button
@@ -2605,15 +2663,7 @@ export default function MapPage() {
         <button
           type="button"
           className={tripPlannerOpen ? 'hm-trip-trigger active' : 'hm-trip-trigger'}
-          onClick={() => {
-            const next = !tripPlannerOpen;
-            setTripPlannerOpen(next);
-            if (next) {
-              setSelectedId(null);
-              setRouteDestination(null);
-              setRouteData(null);
-            }
-          }}
+          onClick={() => setTripPlannerOpen((value) => !value)}
           aria-expanded={tripPlannerOpen}
           aria-label="Mở HOLA Trip Planner"
           title="Lập lịch trình nhiều điểm"
