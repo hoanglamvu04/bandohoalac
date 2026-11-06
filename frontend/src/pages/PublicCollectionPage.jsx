@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Bookmark,
+  ChevronRight,
   ExternalLink,
   Globe2,
   MapPin,
