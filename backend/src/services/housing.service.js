@@ -249,58 +249,24 @@ export async function listHousingListings(filters = {}) {
   const safeOffset = Math.max(Number(filters.offset) || 0, 0);
   const sort = orderMap[filters.sort] || orderMap.recommended;
 
-  params.push(safeLimit + 1);
-  const limitRef = '
-}
-
-export async function getHousingListingByPlaceId(placeId) {
-  const { rows } = await pool.query(
-    BASE_SELECT +
-      " WHERE p.id = $1 AND p.status = 'PUBLISHED' AND c.slug = 'bat-dong-san' LIMIT 1",
-    [placeId]
-  );
-
-  return mapHousingRow(rows[0] || null);
-}
- + params.length;
+  params.push(safeLimit);
+  const limitRef = '$' + params.length;
   params.push(safeOffset);
-  const offsetRef = '
-}
+  const offsetRef = '$' + params.length;
 
-export async function getHousingListingByPlaceId(placeId) {
-  const { rows } = await pool.query(
-    BASE_SELECT +
-      " WHERE p.id = $1 AND p.status = 'PUBLISHED' AND c.slug = 'bat-dong-san' LIMIT 1",
-    [placeId]
-  );
-
-  return mapHousingRow(rows[0] || null);
-}
- + params.length;
-
-  const pagedBaseSelect = BASE_SELECT.replace(
-    /^SELECT/,
-    'SELECT COUNT(*) OVER() AS total_count,'
-  );
-  const sql = pagedBaseSelect +
+  const sql = BASE_SELECT +
     ' WHERE ' + conditions.join(' AND ') +
     ' ORDER BY ' + sort +
     ' LIMIT ' + limitRef +
     ' OFFSET ' + offsetRef;
 
   const { rows } = await pool.query(sql, params);
-  const hasMore = rows.length > safeLimit;
-  const pageRows = rows.slice(0, safeLimit);
-  const items = pageRows.map(mapHousingRow);
-  const total = Number(rows[0]?.total_count) || safeOffset + items.length;
+  const items = rows.map(mapHousingRow);
 
   return {
     items,
     meta: {
       count: items.length,
-      total,
-      hasMore,
-      nextOffset: safeOffset + items.length,
       structuredCount: items.filter((item) => item.housing).length,
       partnerCount: items.filter((item) => item.isPartner).length,
       fpt: {
