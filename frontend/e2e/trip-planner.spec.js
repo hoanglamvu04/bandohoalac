@@ -122,9 +122,11 @@ test('HOLA Trip builds, reorders, optimizes and shares a multi-stop itinerary', 
       });
     }
 
-    const placeMatch = url.pathname.match(/^\\/api\\/places\\/(\\d+)$/);
-    if (placeMatch) {
-      const place = places.find((item) => item.id === placeMatch[1]);
+    const placeId = url.pathname.startsWith('/api/places/')
+      ? url.pathname.slice('/api/places/'.length)
+      : '';
+    if (placeId && placeId !== 'bounds' && Number.isInteger(Number(placeId))) {
+      const place = places.find((item) => item.id === placeId);
       return route.fulfill({
         status: place ? 200 : 404,
         contentType: 'application/json',
