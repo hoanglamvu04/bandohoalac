@@ -238,7 +238,7 @@ export async function listPlaces({
   const sql = BASE_SELECT +
     ' WHERE ' + conditions.join(' AND ') +
     ' ORDER BY ' + searchOrder +
-    'p.rating_avg DESC, p.rating_count DESC, p.updated_at DESC' +
+    'p.rating_avg DESC, p.rating_count DESC, p.updated_at DESC, p.id DESC' +
     ' LIMIT ' + limitRef + ' OFFSET ' + offsetRef;
 
   const { rows } = await pool.query(sql, params);
@@ -525,7 +525,7 @@ export async function getNearbyPlaces({
 
   const sql = selectWithDistance +
     ' WHERE ' + conditions.join(' AND ') +
-    ' ORDER BY distance_m ASC, p.rating_avg DESC' +
+    ' ORDER BY distance_m ASC, p.rating_avg DESC, p.id DESC' +
     ' LIMIT ' + limitRef + ' OFFSET ' + offsetRef;
 
   const { rows } = await pool.query(sql, params);
@@ -569,7 +569,7 @@ export async function getPlacesInBounds({
   pageParams.push(safeOffset);
   const offsetRef = '$' + pageParams.length;
   const pageSql = BASE_SELECT + whereSql +
-    ' ORDER BY p.rating_avg DESC, p.updated_at DESC' +
+    ' ORDER BY p.rating_avg DESC, p.updated_at DESC, p.id DESC' +
     ' LIMIT ' + limitRef + ' OFFSET ' + offsetRef;
 
   const [pageResult, countResult] = await Promise.all([
