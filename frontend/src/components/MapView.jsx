@@ -813,8 +813,13 @@ function renderRoute(map, route, maplibre, fittedRouteKeyRef) {
     const bounds = new maplibre.LngLatBounds();
     coordinates.forEach((coordinate) => bounds.extend(coordinate));
     if (!bounds.isEmpty()) {
+      const mobileViewport =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(max-width: 760px)').matches;
       map.fitBounds(bounds, {
-        padding: { top: 120, right: 380, bottom: 100, left: 390 },
+        padding: mobileViewport
+          ? { top: 105, right: 26, bottom: 155, left: 26 }
+          : { top: 120, right: 410, bottom: 100, left: 390 },
         duration: 650,
         maxZoom: 16
       });
