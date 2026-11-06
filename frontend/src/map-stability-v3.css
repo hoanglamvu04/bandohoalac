@@ -892,3 +892,44 @@ body.map-route-active .hm-filter-popover-footer>button:hover{
     left: calc(50% + 160px) !important;
   }
 }
+
+
+
+
+/* Mobile uses an explicit map/list switch; the list remains a draggable sheet. */
+.hm-mobile-list-toggle {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  body.map-route-active .hm-discovery-filters .hm-mobile-list-toggle {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 9px !important;
+    border: 1px solid rgba(23, 77, 65, .14) !important;
+    border-radius: 13px !important;
+    color: #315e52 !important;
+    background: rgba(255, 255, 255, .97) !important;
+    box-shadow: 0 7px 20px rgba(15, 58, 49, .09) !important;
+    font-size: 10.5px !important;
+    font-weight: 850 !important;
+    white-space: nowrap !important;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-mobile-list-toggle.active {
+    color: #fff !important;
+    border-color: #174d41 !important;
+    background: #174d41 !important;
+  }
+
+  body.map-route-active .hm-discovery-filters .hm-mobile-list-toggle span {
+    display: inline !important;
+    max-width: none !important;
+    overflow: visible !important;
+    color: inherit !important;
+  }
+}
