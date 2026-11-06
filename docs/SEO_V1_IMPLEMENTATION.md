@@ -24,6 +24,18 @@ SEO documents use the standalone stylesheet `/seo-rendered.css`, copied from `fr
 - The Explore sitemap owns the `/kham-pha` hub URL; it is not duplicated in the static pages sitemap.
 - Filtered Explore URLs containing `category` or `q` are noindex and use the hub canonical.
 
+## Sitemap and image discovery
+
+The root `frontend/public/sitemap.xml` is the sitemap index referenced by `robots.txt`. It includes the static page sitemap plus the dynamic Explore and place feeds:
+- `/sitemap-pages.xml` — stable public pages only; it intentionally excludes `/kham-pha` because the Explore feed owns that URL.
+- `/api/sitemap-explore.xml` — the Explore hub and published guide articles.
+- `/api/sitemap-places.xml` — published place pages inside the HOLA Maps service coverage.
+
+The two dynamic feeds include the Google image sitemap namespace and the primary cover image when a crawlable HTTPS image URL is available. `lastmod` comes from the content's `updated_at` value; the Explore hub uses the newest article update. Do not replace these values with the current deployment date. XML values are escaped and all page locations are absolute canonical URLs.
+
+Google ignores `priority` and `changefreq`; the feeds therefore focus on canonical locations, verifiable modification dates and image locations. Keep filtered Explore URLs (`category` and `q`) out of the sitemap because they are noindex.
+
+Submit only the root sitemap index (`https://maps.dothihoalac.vn/sitemap.xml`) in Google Search Console. Inspect the individual child feeds there when diagnosing discovery or processing issues.
 ## Deployment
 
 The production workflow runs `scripts/install-embed-gateway.sh` after frontend build and backend restart. That script adds Nginx proxy locations for Explore and place pages only. It deliberately does not proxy `/`, so the existing SPA fallback serves the original homepage. Nginx validates the generated configuration with `nginx -t` before reloading.
