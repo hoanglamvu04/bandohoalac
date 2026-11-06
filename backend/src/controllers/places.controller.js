@@ -37,7 +37,7 @@ export const getNearby = asyncHandler(async (req, res) => {
   const lat = Number(req.query.lat);
   const lng = Number(req.query.lng);
   const radius = Number(req.query.radius) || 5000;
-  const limit = Math.min(Math.max(Number(req.query.limit) || 45, 1), 100);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 100);
   const offset = Math.max(Number(req.query.offset) || 0, 0);
   const items = await getNearbyPlaces({
     lat,
