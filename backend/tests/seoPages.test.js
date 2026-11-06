@@ -51,7 +51,7 @@ test('SEO: batch 02 local-intent guides are published, canonical and present in 
 
   const sitemap = await fetch(url('/api/sitemap-explore.xml'));
   assert.equal(sitemap.status, 200);
-  assert.match(sitemap.headers.get('content-type') || '', /application\\/xml/i);
+  assert.ok((sitemap.headers.get('content-type') || '').includes('application/xml'));
   const xml = await sitemap.text();
   assert.ok(xml.includes('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"'));
   assert.ok(xml.includes('<loc>https://maps.dothihoalac.vn/kham-pha</loc>'));
