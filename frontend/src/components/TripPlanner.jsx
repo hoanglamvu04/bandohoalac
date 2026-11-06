@@ -191,7 +191,11 @@ export default function TripPlanner({
                 <small>{hazard.severity || 'INFO'}</small>
               </div>
             )) : (
-              <p>Không có cảnh báo ngập, đường cấm hoặc cảnh báo đang hiệu lực được ghi nhận trên tuyến.</p>
+              <p>
+                {route.hazardCheckAvailable === false
+                  ? 'Chưa thể xác minh dữ liệu ngập và đường cấm trên tuyến. Hãy kiểm tra lại lớp cảnh báo bản đồ.'
+                  : 'Không có cảnh báo ngập, đường cấm hoặc cảnh báo đang hiệu lực được ghi nhận trên tuyến.'}
+              </p>
             )}
           </div>
         </>
