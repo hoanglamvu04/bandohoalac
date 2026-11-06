@@ -2248,6 +2248,13 @@ export default function MapPage() {
   function togglePlaceSelection(place) {
     if (!place) return;
 
+    // With the planner open, selecting a marker or list row adds it directly
+    // to the itinerary instead of opening a detail inspector behind the panel.
+    if (tripPlannerOpen) {
+      addTripStop(place);
+      return;
+    }
+
     const nextSelected = selectedId === place.id ? null : place.id;
     setSelectedId(nextSelected);
     syncDiscoveryParams({ place: nextSelected || null });
