@@ -362,6 +362,44 @@ export function getMyFavorites() {
   return unwrap(client.get('/places/favorites/me'));
 }
 
+export function getMyCollections() {
+  return unwrap(client.get('/collections/mine'));
+}
+
+export function getCollection(id) {
+  return unwrap(client.get('/collections/' + encodeURIComponent(id)));
+}
+
+export function getPublicCollection(slug) {
+  return unwrap(client.get('/collections/public/' + encodeURIComponent(slug)));
+}
+
+export function createCollection(payload) {
+  return unwrap(client.post('/collections', payload));
+}
+
+export function updateCollection(id, payload) {
+  return unwrap(client.patch('/collections/' + encodeURIComponent(id), payload));
+}
+
+export function deleteCollection(id) {
+  return unwrap(client.delete('/collections/' + encodeURIComponent(id)));
+}
+
+export function addCollectionPlace(id, placeId) {
+  return unwrap(client.post('/collections/' + encodeURIComponent(id) + '/places', { placeId }));
+}
+
+export function removeCollectionPlace(id, placeId) {
+  return unwrap(client.delete(
+    '/collections/' + encodeURIComponent(id) + '/places/' + encodeURIComponent(placeId)
+  ));
+}
+
+export function replaceCollectionPlaces(id, placeIds) {
+  return unwrap(client.put('/collections/' + encodeURIComponent(id) + '/places', { placeIds }));
+}
+
 export function getNotifications(params = {}) {
   return unwrap(client.get('/notifications', { params: cleanParams(params) }));
 }
