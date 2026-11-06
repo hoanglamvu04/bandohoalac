@@ -51,7 +51,10 @@ test('SEO: batch 02 local-intent guides are published, canonical and present in 
 
   const sitemap = await fetch(url('/api/sitemap-explore.xml'));
   assert.equal(sitemap.status, 200);
+  assert.match(sitemap.headers.get('content-type') || '', /application\\/xml/i);
   const xml = await sitemap.text();
+  assert.ok(xml.includes('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"'));
+  assert.ok(xml.includes('<loc>https://maps.dothihoalac.vn/kham-pha</loc>'));
   for (const slug of slugs) {
     assert.ok(xml.includes('/kham-pha/' + slug), slug + ' must be listed in the Explore sitemap');
   }
@@ -95,7 +98,7 @@ test('SEO: Explore hub returns crawlable article links and filtered views are no
   assert.match(html, /class="explore-categories"/);
   assert.match(html, /class="explore-featured"/);
   assert.match(html, /class="explore-grid"/);
-  assert.match(html, /seo-rendered\.css\?v=20261105-explore-ssr-v2/);
+  assert.match(html, /seo-rendered\.css\?v=20261105-explore-ssr-v4/);
   assert.match(html, /CollectionPage/);
 
   const filtered = await fetch(url('/kham-pha?category=cafe'));
@@ -169,6 +172,7 @@ test('SEO: place sitemap contains canonical slugs and excludes legacy numeric UR
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type') || '', /application\/xml/i);
   const xml = await response.text();
+  assert.ok(xml.includes('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"'));
   assert.match(xml, /\/dia-diem\//);
   assert.doesNotMatch(xml, /\/place\/[0-9]+<\/loc>/);
 });
