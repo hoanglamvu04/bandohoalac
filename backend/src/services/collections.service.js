@@ -151,7 +151,7 @@ export async function getPublicCollection(slug) {
 
 export async function createCollection({ userId, title, description = '', visibility = 'PRIVATE' }) {
   const baseSlug = slugify(title) || 'bo-suu-tap';
-  const slug = baseSlug + '-' + randomBytes(4).toString('hex');
+  const slug = baseSlug + '-' + randomBytes(6).toString('hex');
   const { rows } = await pool.query(
     `INSERT INTO place_collections (user_id, title, slug, description, visibility)
      VALUES ($1, $2, $3, $4, $5)
