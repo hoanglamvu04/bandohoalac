@@ -2374,7 +2374,7 @@ export default function MapPage() {
     if (!place?.id) return;
     if (tripStops.some((stop) => String(stop.id) === String(place.id))) {
       setTripPlannerOpen(true);
-      showToast('Địa điểm này đã có trong lịch trình.', 'info');
+      showToast('Địa điểm này đã có trong lịch trình.', 'success');
       return;
     }
     if (tripStops.length >= 12) {
@@ -2464,7 +2464,7 @@ export default function MapPage() {
     }
 
     const url = new URL(window.location.href);
-    url.searchParams.set('trip', tripStops.map((stop) => encodeURIComponent(String(stop.id))).join('.'));
+    url.searchParams.set('trip', tripStops.map((stop) => String(stop.id)).join('.'));
     url.searchParams.delete('place');
 
     try {
