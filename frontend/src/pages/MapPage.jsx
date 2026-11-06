@@ -550,6 +550,7 @@ export default function MapPage() {
 
   const lastPlacesRequestKeyRef = useRef('');
   const loadedPlaceBoundsRef = useRef([]);
+  const boundsPaginationRef = useRef(new Map());
   const lastLayersRequestKeyRef = useRef('');
   const galleryTouchStartRef = useRef(null);
   const placeRowRefs = useRef(new Map());
@@ -764,6 +765,7 @@ export default function MapPage() {
     // them on every bounds request.
     lastPlacesRequestKeyRef.current = '';
     loadedPlaceBoundsRef.current = [];
+    boundsPaginationRef.current.clear();
     setPlaces([]);
     setPlaceScope('viewport');
     setNearbyRadius(0);
@@ -962,6 +964,10 @@ export default function MapPage() {
     if (loadedPlaceBoundsRef.current.some((bounds) =>
       viewportContains(bounds, normalizedViewport)
     )) {
+      const cachedPagination = Array.from(boundsPaginationRef.current.values()).find((entry) =>
+        entry?.params?.bounds && viewportContains(entry.params.bounds, normalizedViewport)
+      );
+      if (cachedPagination) setListPagination(cachedPagination);
       return () => controller.abort();
     }
 
@@ -1014,15 +1020,17 @@ export default function MapPage() {
           ].slice(0, MAX_LOADED_VIEWPORTS);
 
           setPlaces((current) => mergeProgressivePlaces(current, items));
-          setListPagination({
+          const pagination = {
             kind: isFoodMode ? 'bounds-food' : 'bounds',
             offset: PLACE_PAGE_SIZE,
             total: Number(data?.total) || null,
             hasMore: Boolean(data?.hasMore),
             params: isFoodMode
-              ? { bounds: boundsParams, categories: boundsCategories }
-              : { bounds: boundsParams }
-          });
+              ? { bounds: boundsParams, categories: boundsCategories, key: requestKey }
+              : { bounds: boundsParams, key: requestKey }
+          };
+          setListPagination(pagination);
+          boundsPaginationRef.current.set(requestKey, pagination);
         })
         .catch((error) => {
           if (!active || error?.name === 'AbortError') return;
@@ -1522,12 +1530,19 @@ export default function MapPage() {
 
       setPlaces((current) => appendPagedPlaces(current, items));
       setVisiblePlaceCount((current) => current + Math.max(items.length, PLACE_PAGE_SIZE));
-      setListPagination((current) => ({
-        ...current,
+      const nextPagination = {
+        ...cursor,
         offset: offset + PLACE_PAGE_SIZE,
-        total: Number(total) || current.total,
+        total: Number(total) || cursor.total,
         hasMore: Boolean(hasMore)
-      }));
+      };
+      setListPagination(nextPagination);
+      if (
+        (cursor.kind === 'bounds' || cursor.kind === 'bounds-food') &&
+        params.key
+      ) {
+        boundsPaginationRef.current.set(params.key, nextPagination);
+      }
     } catch (error) {
       showToast(error.message || 'Không tải thêm được địa điểm.', 'error');
     } finally {
