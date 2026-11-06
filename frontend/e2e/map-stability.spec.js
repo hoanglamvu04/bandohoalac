@@ -88,9 +88,14 @@ test('mobile map keeps controls inside viewport', async ({ page }) => {
   expect(workspace.width).toBeLessThanOrEqual(390);
   expect(Math.abs(mapSurface.x - workspace.x)).toBeLessThanOrEqual(2);
 
-  const listToggle = page.locator('.hm-map-menu');
+  const listToggle = page.locator('.hm-mobile-list-toggle');
   await expect(listToggle).toBeVisible();
   await listToggle.click();
   await expect(page.locator('.hm-left-panel')).toHaveClass(/open/);
+  await expect(listToggle).toContainText('Ẩn danh sách');
   await expect(workspaceLocator).not.toHaveClass(/hm-workspace-split/);
+
+  await listToggle.click();
+  await expect(page.locator('.hm-left-panel')).not.toHaveClass(/open/);
+  await expect(listToggle).toContainText('Danh sách');
 });
