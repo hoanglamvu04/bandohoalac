@@ -24,6 +24,7 @@ import { resolveCorsOrigin, resolvePublicApiCorsOrigin } from './config/cors.js'
 
 import authRoutes from './routes/auth.routes.js';
 import placesRoutes from './routes/places.routes.js';
+import collectionsRoutes from './routes/collections.routes.js';
 import categoriesRoutes from './routes/categories.routes.js';
 import contributionsRoutes from './routes/contributions.routes.js';
 import adminRoutes from './routes/admin.routes.js';
@@ -190,6 +191,7 @@ export function createApp() {
   app.use('/api/public/v1', publicIntegrationRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/places', placesRoutes);
+  app.use('/api/collections', collectionsRoutes);
   app.use('/api/categories', categoriesRoutes);
   app.use('/api/contributions', contributionsRoutes);
   app.use('/api/admin/coverage-cleanup', adminCoverageRoutes);
