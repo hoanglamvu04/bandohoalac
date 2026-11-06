@@ -33,6 +33,8 @@ import { getBestBrowserLocation } from '../utils/geolocation.js';
 
 const DATA_SOURCE_ID = 'hola-data-layers';
 const ROUTE_SOURCE_ID = 'hola-route-source';
+const ROUTE_HAZARD_SOURCE_ID = 'hola-route-hazards';
+const TRIP_STOP_SOURCE_ID = 'hola-trip-stops';
 const COVERAGE_SOURCE_ID = 'hola-service-areas';
 const PLACE_SOURCE_ID = 'hola-place-points';
 const PLACE_POINT_LAYER_ID = 'hm-place-point';
@@ -800,8 +802,11 @@ function renderRoute(map, route, maplibre, fittedRouteKeyRef) {
     });
   }
 
+  renderRouteHazards(map, route);
+
   const routeKey = route.origin?.lng + ',' + route.origin?.lat + '>' +
-    route.destination?.lng + ',' + route.destination?.lat;
+    route.destination?.lng + ',' + route.destination?.lat + ':' +
+    (route.stops || []).map((stop) => String(stop.id)).join(',');
 
   if (fittedRouteKeyRef.current !== routeKey) {
     const bounds = new maplibre.LngLatBounds();
@@ -817,6 +822,171 @@ function renderRoute(map, route, maplibre, fittedRouteKeyRef) {
   }
 }
 
+function renderRouteHazards(map, route) {
+  if (!map?.isStyleLoaded()) return;
+
+  const features = (route?.hazards || [])
+    .filter((hazard) => hazard?.geometry)
+    .map((hazard, index) => {
+      let geometry = hazard.geometry;
+      if (typeof geometry === 'string') {
+        try { geometry = JSON.parse(geometry); } catch { geometry = null; }
+      }
+      if (!geometry) return null;
+      return {
+        type: 'Feature',
+        id: String(hazard.id || index),
+        geometry,
+        properties: {
+          type: hazard.type || 'ALERT',
+          severity: hazard.severity || 'INFO',
+          name: hazard.name || ''
+        }
+      };
+    })
+    .filter(Boolean);
+
+  const data = { type: 'FeatureCollection', features };
+  const source = map.getSource(ROUTE_HAZARD_SOURCE_ID);
+
+  if (!features.length) {
+    ['hm-route-hazard-fill', 'hm-route-hazard-line', 'hm-route-hazard-point'].forEach((id) => {
+      if (map.getLayer(id)) map.removeLayer(id);
+    });
+    if (source) map.removeSource(ROUTE_HAZARD_SOURCE_ID);
+    return;
+  }
+
+  if (source) {
+    source.setData(data);
+  } else {
+    map.addSource(ROUTE_HAZARD_SOURCE_ID, { type: 'geojson', data });
+  }
+
+  if (!map.getLayer('hm-route-hazard-fill')) {
+    map.addLayer({
+      id: 'hm-route-hazard-fill',
+      type: 'fill',
+      source: ROUTE_HAZARD_SOURCE_ID,
+      paint: {
+        'fill-color': [
+          'match', ['get', 'type'],
+          'FLOOD', '#1689d5',
+          'ROAD_CLOSURE', '#d9473f',
+          '#e58a28'
+        ],
+        'fill-opacity': 0.22
+      }
+    });
+  }
+
+  if (!map.getLayer('hm-route-hazard-line')) {
+    map.addLayer({
+      id: 'hm-route-hazard-line',
+      type: 'line',
+      source: ROUTE_HAZARD_SOURCE_ID,
+      paint: {
+        'line-color': [
+          'match', ['get', 'type'],
+          'FLOOD', '#1689d5',
+          'ROAD_CLOSURE', '#d9473f',
+          '#e58a28'
+        ],
+        'line-width': 5,
+        'line-opacity': 0.95,
+        'line-dasharray': [1.2, 1.1]
+      }
+    });
+  }
+
+  if (!map.getLayer('hm-route-hazard-point')) {
+    map.addLayer({
+      id: 'hm-route-hazard-point',
+      type: 'circle',
+      source: ROUTE_HAZARD_SOURCE_ID,
+      paint: {
+        'circle-radius': 8,
+        'circle-color': [
+          'match', ['get', 'type'],
+          'FLOOD', '#1689d5',
+          'ROAD_CLOSURE', '#d9473f',
+          '#e58a28'
+        ],
+        'circle-stroke-color': '#ffffff',
+        'circle-stroke-width': 2
+      }
+    });
+  }
+}
+
+function renderTripStops(map, stops = []) {
+  if (!map?.isStyleLoaded()) return;
+
+  const features = stops
+    .filter((stop) =>
+      Number.isFinite(Number(stop.lng)) &&
+      Number.isFinite(Number(stop.lat)) &&
+      isInsideServiceCoverage(stop.lng, stop.lat)
+    )
+    .map((stop, index) => ({
+      type: 'Feature',
+      id: String(stop.id || index + 1),
+      geometry: {
+        type: 'Point',
+        coordinates: [Number(stop.lng), Number(stop.lat)]
+      },
+      properties: {
+        stopNumber: String(index + 1),
+        isStart: index === 0,
+        name: stop.name || ''
+      }
+    }));
+
+  const data = { type: 'FeatureCollection', features };
+  const source = map.getSource(TRIP_STOP_SOURCE_ID);
+
+  if (source) {
+    source.setData(data);
+  } else {
+    map.addSource(TRIP_STOP_SOURCE_ID, { type: 'geojson', data });
+  }
+
+  if (!map.getLayer('hm-trip-stop-circles')) {
+    map.addLayer({
+      id: 'hm-trip-stop-circles',
+      type: 'circle',
+      source: TRIP_STOP_SOURCE_ID,
+      paint: {
+        'circle-radius': 13,
+        'circle-color': ['case', ['boolean', ['get', 'isStart'], false], '#145f91', '#f0a52c'],
+        'circle-stroke-color': '#ffffff',
+        'circle-stroke-width': 3,
+        'circle-opacity': 1
+      }
+    });
+  }
+
+  if (!map.getLayer('hm-trip-stop-labels')) {
+    map.addLayer({
+      id: 'hm-trip-stop-labels',
+      type: 'symbol',
+      source: TRIP_STOP_SOURCE_ID,
+      layout: {
+        'text-field': ['get', 'stopNumber'],
+        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+        'text-size': 11,
+        'text-allow-overlap': true,
+        'text-ignore-placement': true
+      },
+      paint: {
+        'text-color': '#ffffff',
+        'text-halo-color': 'rgba(12, 47, 73, .25)',
+        'text-halo-width': 1
+      }
+    });
+  }
+}
+
 export default function MapView({
   places = [],
   selectedPlaceId,
@@ -827,6 +997,7 @@ export default function MapView({
   onUserLocation,
   userLocation,
   route,
+  tripStops = [],
   mapData = emptyFeatureCollection(),
   activeLayers = [],
   basemapMode = 'streets',
@@ -841,6 +1012,7 @@ export default function MapView({
   const latestMapDataRef = useRef(mapData);
   const latestActiveLayersRef = useRef(activeLayers);
   const latestRouteRef = useRef(route);
+  const latestTripStopsRef = useRef([]);
   const latestPlacesRef = useRef([]);
   const latestSelectPlaceRef = useRef(onSelectPlace);
   const latestHoverPlaceRef = useRef(onHoverPlace);
@@ -1153,6 +1325,10 @@ export default function MapView({
   }, [route]);
 
   useEffect(() => {
+    latestTripStopsRef.current = tripStops;
+  }, [tripStops]);
+
+  useEffect(() => {
     latestPlacesRef.current = validPlaces;
   }, [validPlaces]);
 
@@ -1242,6 +1418,7 @@ export default function MapView({
         setLayerVisibility(map, latestActiveLayersRef.current);
         setBuildingDimensionVisibility(map, building3D);
         renderRoute(map, latestRouteRef.current, maplibre, fittedRouteKeyRef);
+        renderTripStops(map, latestTripStopsRef.current);
 
         appliedStyleKeyRef.current = nextStyleKey;
         setInteractiveReady(true);
@@ -1341,6 +1518,12 @@ export default function MapView({
     if (!map || !maplibre || !interactiveReady) return;
     renderRoute(map, route, maplibre, fittedRouteKeyRef);
   }, [route, interactiveReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !interactiveReady) return;
+    renderTripStops(map, tripStops);
+  }, [tripStops, interactiveReady]);
 
   useEffect(() => {
     const supports3D =
