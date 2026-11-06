@@ -246,7 +246,13 @@ export async function addPlaceToCollection(collectionId, userId, placeId) {
 
 export async function removePlaceFromCollection(collectionId, userId, placeId) {
   return withTransaction(async (client) => {
-    await getOwnedCollectionRow(collectionId, userId, client);
+    const lockedCollection = await client.query(
+      'SELECT id FROM place_collections WHERE id = $1 AND user_id = $2 FOR UPDATE',
+      [collectionId, userId]
+    );
+    if (!lockedCollection.rows[0]) {
+      throw new AppError('Không tìm thấy bộ sưu tập hoặc bạn không có quyền truy cập.', 404);
+    }
     await client.query(
       'DELETE FROM collection_places WHERE collection_id = $1 AND place_id = $2',
       [collectionId, placeId]
@@ -290,7 +296,13 @@ export async function replaceCollectionPlaces(collectionId, userId, placeIds = [
   }
 
   return withTransaction(async (client) => {
-    await getOwnedCollectionRow(collectionId, userId, client);
+    const lockedCollection = await client.query(
+      'SELECT id FROM place_collections WHERE id = $1 AND user_id = $2 FOR UPDATE',
+      [collectionId, userId]
+    );
+    if (!lockedCollection.rows[0]) {
+      throw new AppError('Không tìm thấy bộ sưu tập hoặc bạn không có quyền truy cập.', 404);
+    }
 
     if (normalizedIds.length) {
       const { rows } = await client.query(
