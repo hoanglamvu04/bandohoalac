@@ -403,7 +403,16 @@ export async function listFeaturedPlaces({ limit = 4 } = {}) {
 
 export async function listPublishedPlaceSitemapEntries(client = pool) {
   const { rows } = await client.query(`
-    SELECT p.slug, p.updated_at
+    SELECT
+      p.slug,
+      p.updated_at,
+      (
+        SELECT COALESCE(pi.card_url, pi.thumbnail_url, pi.url)
+        FROM place_images pi
+        WHERE pi.place_id = p.id
+        ORDER BY pi.is_cover DESC, pi.id ASC
+        LIMIT 1
+      ) AS cover_image
     FROM places p
     WHERE p.status = 'PUBLISHED'
       AND p.slug IS NOT NULL
