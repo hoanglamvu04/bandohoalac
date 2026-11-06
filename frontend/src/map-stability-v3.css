@@ -743,6 +743,10 @@ body.map-route-active .hm-filter-popover-footer>button:hover{
    remaining map column. Mobile keeps the existing draggable sheet.
    ============================================================ */
 @media (min-width: 761px) {
+  body.map-route-active .hm-map-shell {
+    transition: left .22s ease;
+  }
+
   body.map-route-active .hm-workspace.hm-workspace-split {
     --hm-split-rail: var(--hm-v3-rail, 380px);
     isolation: isolate;
