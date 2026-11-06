@@ -680,12 +680,38 @@ export default function MapPage() {
         const loaded = mergeUniquePlaces(results.filter((place) => place?.id));
         setTripStops(loaded);
         setTripRouteData(null);
+        setRouteData(null);
+        setRouteDestination(null);
         setTripError('');
         setTripPlannerOpen(true);
+
         if (loaded.length !== ids.length) {
           showToast('Một số địa điểm trong lịch trình chia sẻ không còn khả dụng.', 'error');
         } else {
           showToast('Đã mở lịch trình được chia sẻ.', 'success');
+        }
+
+        if (loaded.length >= 2) {
+          setTripLoading(true);
+          getTripDirections({
+            stops: loaded.map((stop) => ({
+              id: String(stop.id),
+              name: stop.name,
+              lat: Number(stop.lat),
+              lng: Number(stop.lng)
+            })),
+            optimize: false,
+            profile: 'driving'
+          })
+            .then((route) => {
+              if (active) setTripRouteData(route);
+            })
+            .catch((error) => {
+              if (active) setTripError(error.message || 'Không tính được lịch trình chia sẻ.');
+            })
+            .finally(() => {
+              if (active) setTripLoading(false);
+            });
         }
       })
       .catch(() => {
