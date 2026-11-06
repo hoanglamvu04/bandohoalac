@@ -18,8 +18,15 @@ export function buildTripDistanceMatrix(stops = []) {
   );
 }
 
+export function buildTripEstimatedDurationMatrix(stops = [], averageSpeedKmh = 30) {
+  const metersPerSecond = Math.max(Number(averageSpeedKmh) || 30, 5) / 3.6;
+  return buildTripDistanceMatrix(stops).map((row) =>
+    row.map((distance) => distance / metersPerSecond)
+  );
+}
+
 function normalizeMatrix(stops, matrix) {
-  const fallback = buildTripDistanceMatrix(stops);
+  const fallback = buildTripEstimatedDurationMatrix(stops);
   return stops.map((_, rowIndex) =>
     stops.map((_, columnIndex) => {
       const value = matrix?.[rowIndex]?.[columnIndex];
