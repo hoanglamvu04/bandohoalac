@@ -122,6 +122,16 @@ test('HOLA Trip builds, reorders, optimizes and shares a multi-stop itinerary', 
       });
     }
 
+    const placeMatch = url.pathname.match(/^\\/api\\/places\\/(\\d+)$/);
+    if (placeMatch) {
+      const place = places.find((item) => item.id === placeMatch[1]);
+      return route.fulfill({
+        status: place ? 200 : 404,
+        contentType: 'application/json',
+        body: JSON.stringify(place || { message: 'Place not found' })
+      });
+    }
+
     if (url.pathname === '/api/map-layers') {
       return route.fulfill({
         status: 200,
@@ -165,4 +175,11 @@ test('HOLA Trip builds, reorders, optimizes and shares a multi-stop itinerary', 
   await planner.getByRole('button', { name: /Chia sẻ lịch trình/ }).click();
   const sharedUrl = await page.evaluate(() => navigator.clipboard.readText());
   expect(sharedUrl).toContain('trip=102.101.103');
+
+  await page.goto(sharedUrl, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('.hm-trip-panel')).toBeVisible();
+  await expect(page.locator('.hm-trip-stop')).toHaveCount(3);
+  await expect(page.locator('.hm-trip-summary')).toBeVisible({ timeout: 20000 });
+  await expect.poll(() => tripRequests.length).toBe(3);
+  expect(tripRequests[2].optimize).toBe(false);
 });
