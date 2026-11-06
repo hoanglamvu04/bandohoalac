@@ -3,7 +3,6 @@ import { AppError } from '../utils/AppError.js';
 import { pool } from '../database/pool.js';
 import { SERVICE_AREA_GEOJSON_STRING, isInsideServiceCoverage } from '../config/mapCoverage.js';
 import {
-  buildTripDistanceMatrix,
   buildTripEstimatedDurationMatrix,
   optimizeTripOrder
 } from '../utils/tripOptimization.js';
