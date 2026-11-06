@@ -10,6 +10,7 @@ import './premium.css';
 import './modern-ui.css';
 import './map-fix.css';
 import './directions.css';
+import './trip-planner.css';
 import './map-workspace.css';
 import './footer.css';
 import './community.css';
