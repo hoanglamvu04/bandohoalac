@@ -1,5 +1,5 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { getDirections } from '../services/directions.service.js';
+import { getDirections, getTripDirections } from '../services/directions.service.js';
 
 export const getDirectionsHandler = asyncHandler(async (req, res) => {
   const originLat = Number(req.query.originLat);
@@ -16,5 +16,10 @@ export const getDirectionsHandler = asyncHandler(async (req, res) => {
     profile
   });
 
+  res.json(route);
+});
+
+export const getTripDirectionsHandler = asyncHandler(async (req, res) => {
+  const route = await getTripDirections(req.body);
   res.json(route);
 });
