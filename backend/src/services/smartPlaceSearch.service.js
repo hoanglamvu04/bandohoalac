@@ -1,6 +1,6 @@
 import { pool } from '../database/pool.js';
 import { SERVICE_AREA_GEOJSON_STRING } from '../config/mapCoverage.js';
-import { getNearbyPlaces, listPlaces } from './place.service.js';
+import { countPlaces, getNearbyPlaces, listPlaces } from './place.service.js';
 
 const CATEGORY_ALIASES = [
   { slug: 'cafe', aliases: ['cafe', 'coffee', 'ca phe', 'quan ca phe'] },
@@ -245,22 +245,36 @@ async function resolveAnchor(anchorQuery) {
   return { anchor: null, resolvedQuery: null };
 }
 
-async function nearbyWithAdaptiveRadius({ lat, lng, category, minRating }) {
+async function nearbyWithAdaptiveRadius({
+  lat,
+  lng,
+  category,
+  minRating,
+  limit = 50,
+  offset = 0,
+  preferredRadius
+}) {
   let lastItems = [];
-  for (const radius of NEARBY_RADII) {
+  const radii = Number(preferredRadius) > 0
+    ? [Math.min(Math.max(Number(preferredRadius), 100), 50000)]
+    : NEARBY_RADII;
+
+  for (const radius of radii) {
     const items = await getNearbyPlaces({
       lat,
       lng,
       radius,
       category: category || undefined,
-      minRating
+      minRating,
+      limit,
+      offset
     });
     lastItems = items;
-    if (items.length >= 5 || radius === NEARBY_RADII[NEARBY_RADII.length - 1]) {
+    if (items.length >= 5 || radius === radii[radii.length - 1]) {
       return { items, radius };
     }
   }
-  return { items: lastItems, radius: NEARBY_RADII[NEARBY_RADII.length - 1] };
+  return { items: lastItems, radius: radii[radii.length - 1] };
 }
 
 function dedupeSearchItems(items) {
@@ -282,7 +296,14 @@ function dedupeSearchItems(items) {
  * - Road and landmark names come from map_features.
  * - Nearby queries may use either a POI or a road/landmark as anchor.
  */
-export async function smartListPlaces({ q, category, minRating, limit = 50, offset = 0 } = {}) {
+export async function smartListPlaces({
+  q,
+  category,
+  minRating,
+  limit = 50,
+  offset = 0,
+  radius
+} = {}) {
   const rawQuery = String(q || '').trim();
   const explicitCategory = category && category !== 'all' ? category : null;
   const parsed = splitProximityQuery(rawQuery);
@@ -290,20 +311,29 @@ export async function smartListPlaces({ q, category, minRating, limit = 50, offs
   const safeOffset = Math.max(Number(offset) || 0, 0);
 
   if (!parsed) {
-    const [placeItems, mapItems] = await Promise.all([
-      listPlaces({ q: rawQuery, category, minRating, limit: safeLimit, offset: 0 }),
-      explicitCategory ? Promise.resolve([]) : searchMapFeaturesByName(rawQuery, 24)
+    const [placeItems, total, mapItems] = await Promise.all([
+      listPlaces({
+        q: rawQuery,
+        category,
+        minRating,
+        limit: safeLimit,
+        offset: safeOffset
+      }),
+      countPlaces({ q: rawQuery, category, minRating }),
+      safeOffset === 0 && !explicitCategory
+        ? searchMapFeaturesByName(rawQuery, 24)
+        : Promise.resolve([])
     ]);
 
-    const items = dedupeSearchItems([...placeItems, ...mapItems])
-      .slice(safeOffset, safeOffset + safeLimit);
-
     return {
-      items,
+      items: dedupeSearchItems([...placeItems, ...mapItems]),
       meta: {
         mode: 'unified-text',
         interpretedCategory: explicitCategory,
-        includesMapFeatures: mapItems.length > 0
+        includesMapFeatures: mapItems.length > 0,
+        total: total + mapItems.length,
+        hasMore: safeOffset + placeItems.length < total,
+        offset: safeOffset
       }
     };
   }
@@ -312,17 +342,30 @@ export async function smartListPlaces({ q, category, minRating, limit = 50, offs
   const { anchor, resolvedQuery } = await resolveAnchor(parsed.anchor);
 
   if (!anchor) {
-    const [placeItems, mapItems] = await Promise.all([
-      listPlaces({ q: rawQuery, category, minRating, limit: safeLimit, offset: 0 }),
-      explicitCategory ? Promise.resolve([]) : searchMapFeaturesByName(rawQuery, 20)
+    const [placeItems, total, mapItems] = await Promise.all([
+      listPlaces({
+        q: rawQuery,
+        category,
+        minRating,
+        limit: safeLimit,
+        offset: safeOffset
+      }),
+      countPlaces({ q: rawQuery, category, minRating }),
+      safeOffset === 0 && !explicitCategory
+        ? searchMapFeaturesByName(rawQuery, 20)
+        : Promise.resolve([])
     ]);
+
     return {
-      items: dedupeSearchItems([...placeItems, ...mapItems]).slice(safeOffset, safeOffset + safeLimit),
+      items: dedupeSearchItems([...placeItems, ...mapItems]),
       meta: {
         mode: 'text-fallback',
         interpretedCategory,
         anchorQuery: parsed.anchor,
-        anchorResolved: false
+        anchorResolved: false,
+        total: total + mapItems.length,
+        hasMore: safeOffset + placeItems.length < total,
+        offset: safeOffset
       }
     };
   }
@@ -331,10 +374,14 @@ export async function smartListPlaces({ q, category, minRating, limit = 50, offs
     lat: anchor.lat,
     lng: anchor.lng,
     category: interpretedCategory,
-    minRating
+    minRating,
+    limit: safeLimit,
+    offset: safeOffset,
+    preferredRadius: radius
   });
 
-  const items = nearbyResult.items.slice(safeOffset, safeOffset + safeLimit);
+  const items = nearbyResult.items;
+  const total = Number(items[0]?.totalCount) || null;
 
   return {
     items,
@@ -351,7 +398,12 @@ export async function smartListPlaces({ q, category, minRating, limit = 50, offs
         lat: anchor.lat,
         lng: anchor.lng
       },
-      radius: nearbyResult.radius
+      radius: nearbyResult.radius,
+      total,
+      hasMore: total === null
+        ? items.length === safeLimit
+        : safeOffset + items.length < total,
+      offset: safeOffset
     }
   };
 }
