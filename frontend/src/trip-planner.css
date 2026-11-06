@@ -561,3 +561,91 @@
   .hm-trip-legs { max-height: 110px; }
   .hm-trip-hazards { max-height: 130px; }
 }
+
+
+/* Compact entry point in the map toolbar */
+body.map-route-active .hm-map-topbar .hm-trip-trigger {
+  position: relative;
+  min-width: 104px;
+  min-height: 44px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid #c7dced;
+  border-radius: 13px;
+  color: #155b89;
+  background: rgba(247, 252, 255, .97);
+  box-shadow: 0 9px 24px rgba(17, 69, 107, .1);
+  font-size: 11px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+body.map-route-active .hm-map-topbar .hm-trip-trigger.active {
+  border-color: #155b89;
+  color: #fff;
+  background: #155b89;
+}
+
+body.map-route-active .hm-map-topbar .hm-trip-trigger b {
+  min-width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+  border-radius: 999px;
+  color: #155b89;
+  background: #dcecf9;
+  font-size: 9px;
+}
+
+body.map-route-active .hm-inspector-actions .hm-trip-add-place {
+  width: 100%;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 9px;
+  padding: 8px 12px;
+  border: 1px solid #c9dff0;
+  border-radius: 10px;
+  color: #155e8d;
+  background: #eef7ff;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+body.map-route-active .hm-inspector-actions .hm-trip-add-place.added {
+  border-color: #d6e5ed;
+  color: #567386;
+  background: #f2f7fa;
+}
+
+@media (max-width: 760px) {
+  body.map-route-active .hm-map-topbar .hm-trip-trigger {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 13px;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-trip-trigger > span {
+    display: none;
+  }
+
+  body.map-route-active .hm-map-topbar .hm-trip-trigger b {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 17px;
+    height: 17px;
+    border: 2px solid #fff;
+    font-size: 8px;
+  }
+}
