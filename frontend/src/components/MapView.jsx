@@ -766,6 +766,7 @@ function renderRoute(map, route, maplibre, fittedRouteKeyRef) {
       if (map.getLayer(id)) map.removeLayer(id);
     });
     if (map.getSource(ROUTE_SOURCE_ID)) map.removeSource(ROUTE_SOURCE_ID);
+    renderRouteHazards(map, null);
     fittedRouteKeyRef.current = '';
     return;
   }
