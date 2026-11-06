@@ -2405,6 +2405,10 @@ export default function MapPage() {
 
   function addTripStop(place) {
     if (!place?.id) return;
+    if (tripLoading) {
+      showToast('Đang tính lịch trình. Hãy đợi hoàn tất rồi thêm điểm mới.', 'error');
+      return;
+    }
     const placeId = Number(place.id);
     if (
       !Number.isInteger(placeId) ||
