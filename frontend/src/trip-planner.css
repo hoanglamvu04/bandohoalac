@@ -602,7 +602,7 @@ body.map-route-active .hm-map-topbar .hm-trip-trigger b {
   font-size: 9px;
 }
 
-body.map-route-active .hm-inspector-actions .hm-trip-add-place {
+body.map-route-active .hm-trip-add-place {
   width: 100%;
   min-height: 38px;
   display: inline-flex;
@@ -620,7 +620,7 @@ body.map-route-active .hm-inspector-actions .hm-trip-add-place {
   cursor: pointer;
 }
 
-body.map-route-active .hm-inspector-actions .hm-trip-add-place.added {
+body.map-route-active .hm-trip-add-place.added {
   border-color: #d6e5ed;
   color: #567386;
   background: #f2f7fa;
