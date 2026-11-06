@@ -6,7 +6,6 @@ import {
   Check,
   ChevronRight,
   Globe2,
-  Link2,
   LockKeyhole,
   MapPin,
   Plus,
@@ -39,7 +38,7 @@ const STARTER_COLLECTIONS = [
 
 function formatCount(value) {
   const count = Number(value) || 0;
-  return count + (count === 1 ? ' địa điểm' : ' địa điểm');
+  return count + ' địa điểm';
 }
 
 export default function CollectionsPage() {
