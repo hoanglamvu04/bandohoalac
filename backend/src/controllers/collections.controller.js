@@ -1,13 +1,5 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
-function parsePositiveId(value, fieldName = 'ID') {
-  const id = Number(value);
-  if (!Number.isSafeInteger(id) || id <= 0) {
-    throw new AppError(fieldName + ' không hợp lệ.', 400);
-  }
-  return id;
-}
-
 import {
   addPlaceToCollection,
   createCollection,
@@ -19,6 +11,14 @@ import {
   replaceCollectionPlaces,
   updateCollection
 } from '../services/collections.service.js';
+
+function parsePositiveId(value, fieldName = 'ID') {
+  const id = Number(value);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    throw new AppError(fieldName + ' không hợp lệ.', 400);
+  }
+  return id;
+}
 
 export const listMine = asyncHandler(async (req, res) => {
   const items = await listMyCollections(req.user.id);
