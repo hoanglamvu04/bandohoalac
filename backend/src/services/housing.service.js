@@ -260,7 +260,7 @@ export async function listHousingListings(filters = {}) {
   );
   const sql = pagedBaseSelect +
     ' WHERE ' + conditions.join(' AND ') +
-    ' ORDER BY ' + sort +
+    ' ORDER BY ' + sort + ', p.id DESC' +
     ' LIMIT ' + limitRef +
     ' OFFSET ' + offsetRef;
 
