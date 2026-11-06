@@ -7,7 +7,9 @@ export const nearbyQuerySchema = z.object({
   lng: numericString,
   radius: numericString.optional(),
   category: z.string().trim().max(80).optional(),
-  minRating: numericString.optional()
+  minRating: numericString.optional(),
+  limit: numericString.optional(),
+  offset: numericString.optional()
 });
 
 export const boundsQuerySchema = z.object({
@@ -16,7 +18,9 @@ export const boundsQuerySchema = z.object({
   east: numericString,
   west: numericString,
   category: z.string().trim().max(80).optional(),
-  minRating: numericString.optional()
+  minRating: numericString.optional(),
+  limit: numericString.optional(),
+  offset: numericString.optional()
 });
 
 export const listPlacesQuerySchema = z.object({
