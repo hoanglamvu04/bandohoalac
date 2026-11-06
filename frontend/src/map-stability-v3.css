@@ -733,3 +733,161 @@ body.map-route-active .hm-filter-popover-footer>button:hover{
     grid-template-columns:1fr;
   }
 }
+
+
+
+
+/* ============================================================
+   DESKTOP SPLIT DISCOVERY VIEW
+   The place rail owns its own column; MapLibre renders only in the
+   remaining map column. Mobile keeps the existing draggable sheet.
+   ============================================================ */
+@media (min-width: 761px) {
+  body.map-route-active .hm-workspace.hm-workspace-split {
+    --hm-split-rail: var(--hm-v3-rail, 380px);
+    isolation: isolate;
+  }
+
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-map-shell {
+    left: var(--hm-split-rail) !important;
+    right: 0 !important;
+    width: auto !important;
+    transition: left .22s ease;
+  }
+
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-left-panel {
+    position: absolute !important;
+    top: 0 !important;
+    right: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: var(--hm-split-rail) !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    transform: translateX(0) !important;
+    border: 0 !important;
+    border-right: 1px solid #e2eaf2 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    box-shadow: 2px 0 20px rgba(16, 47, 41, .055) !important;
+    backdrop-filter: none !important;
+    z-index: 25 !important;
+  }
+
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-sheet-drag-handle {
+    display: none !important;
+  }
+
+  /* Restore a useful title in the permanent desktop rail. */
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-panel-heading {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    z-index: 2 !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 78px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 17px 18px !important;
+    border-bottom: 1px solid #edf2f7 !important;
+    background: #fff !important;
+    pointer-events: auto !important;
+  }
+
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-panel-heading > div {
+    min-width: 0;
+    display: block !important;
+  }
+
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-panel-heading > div > span {
+    color: #1769c8 !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+    letter-spacing: .13em !important;
+  }
+
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-panel-heading h1 {
+    margin: 4px 0 0 !important;
+    color: #102f50 !important;
+    font-size: 20px !important;
+    line-height: 1.2 !important;
+    letter-spacing: -.035em !important;
+  }
+
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-panel-heading > button {
+    position: static !important;
+    width: 34px !important;
+    height: 34px !important;
+    display: grid !important;
+    place-items: center !important;
+    margin: 0 !important;
+    border: 1px solid #e4ebf3 !important;
+    border-radius: 10px !important;
+    color: #55708c !important;
+    background: #f7faff !important;
+    box-shadow: none !important;
+    pointer-events: auto !important;
+  }
+
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-panel-heading > button:hover {
+    color: #075fc9 !important;
+    border-color: #c7dcf6 !important;
+    background: #edf5ff !important;
+  }
+
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-place-results {
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+    padding: 15px 13px 10px !important;
+    overflow: hidden !important;
+  }
+
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-section-title {
+    margin-bottom: 10px;
+  }
+
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-place-list {
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    padding: 0 2px 20px 0;
+    scrollbar-gutter: stable;
+  }
+
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-layer-section {
+    flex: 0 0 auto !important;
+    border-top: 1px solid #edf2f7;
+    background: #fbfdff !important;
+  }
+
+  /* The basemap picker is outside MapView, so move it into the map column. */
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-basemap-switcher,
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-basemap-switcher.panel-open {
+    left: calc(var(--hm-split-rail) + 18px) !important;
+  }
+
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-pin-hint {
+    left: calc(50% + 190px) !important;
+  }
+}
+
+/* Smaller desktop rails retain the same map/list separation. */
+@media (min-width: 761px) and (max-width: 1439px) {
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-pin-hint {
+    left: calc(50% + 175px) !important;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1080px) {
+  body.map-route-active .hm-workspace.hm-workspace-split .hm-pin-hint {
+    left: calc(50% + 160px) !important;
+  }
+}
