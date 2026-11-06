@@ -209,7 +209,9 @@ export function getNearbyPlaces(lat, lng, radius = 5000, filters = {}) {
       lng,
       radius,
       category: filters.category,
-      minRating: filters.minRating
+      minRating: filters.minRating,
+      limit: filters.limit,
+      offset: filters.offset
     })
   }));
 }
