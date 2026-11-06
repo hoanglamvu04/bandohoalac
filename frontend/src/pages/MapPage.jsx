@@ -1622,6 +1622,7 @@ export default function MapPage() {
 
       let items = [];
       let resolvedRadius = 0;
+      let pageMeta = null;
 
       if (isHousingMode) {
         const result = await loadHousingForAnchor(location, [5000, 10000, 20000, 40000]);
@@ -1630,13 +1631,18 @@ export default function MapPage() {
       } else {
         for (const radius of [5000, 10000, 20000, 40000]) {
           if (isFoodMode) {
-            items = await loadFoodNearby(location, radius);
+            const result = await loadFoodNearby(location, radius, 0);
+            items = result.items;
+            pageMeta = result;
           } else {
             const data = await getNearbyPlaces(location.lat, location.lng, radius, {
               category,
-              minRating: minRating || undefined
+              minRating: minRating || undefined,
+              limit: PLACE_PAGE_SIZE,
+              offset: 0
             });
             items = Array.isArray(data?.items) ? data.items : [];
+            pageMeta = data;
           }
           resolvedRadius = radius;
           if (items.length >= 8 || (items.length > 0 && radius >= 10000)) break;
@@ -1647,6 +1653,34 @@ export default function MapPage() {
       setPlaceScope('near-me');
       setNearbyRadius(resolvedRadius);
       setSortMode('nearest');
+      resetPlaceListWindow();
+      setListPagination(pageMeta ? {
+        kind: isFoodMode ? 'nearby-food' : 'nearby',
+        offset: PLACE_PAGE_SIZE,
+        total: Number(pageMeta.total) || null,
+        hasMore: Boolean(pageMeta.hasMore),
+        params: isFoodMode
+          ? {
+              lat: location.lat,
+              lng: location.lng,
+              radius: resolvedRadius,
+              categories: pageMeta.categories,
+              minRating: minRating || undefined
+            }
+          : {
+              lat: location.lat,
+              lng: location.lng,
+              radius: resolvedRadius,
+              category,
+              minRating: minRating || undefined
+            }
+      } : {
+        kind: 'none',
+        offset: 0,
+        total: null,
+        hasMore: false,
+        params: null
+      });
       syncDiscoveryParams({ sort: 'nearest' });
 
       if (
@@ -1673,6 +1707,7 @@ export default function MapPage() {
     try {
       let items = [];
       let resolvedRadius = 0;
+      let pageMeta = null;
 
       // Expand progressively so "nearby" is useful even in sparse zones
       // without immediately dumping every place in the whole service area.
@@ -1686,13 +1721,18 @@ export default function MapPage() {
       } else {
         for (const radius of [5000, 10000, 20000]) {
           if (isFoodMode) {
-            items = await loadFoodNearby(center, radius);
+            const result = await loadFoodNearby(center, radius, 0);
+            items = result.items;
+            pageMeta = result;
           } else {
             const data = await getNearbyPlaces(center.lat, center.lng, radius, {
               category,
-              minRating: minRating || undefined
+              minRating: minRating || undefined,
+              limit: PLACE_PAGE_SIZE,
+              offset: 0
             });
             items = Array.isArray(data?.items) ? data.items : [];
+            pageMeta = data;
           }
           resolvedRadius = radius;
           if (items.length >= 6 || (items.length > 0 && radius >= 10000)) break;
@@ -1702,6 +1742,34 @@ export default function MapPage() {
       setPlaces(items);
       setPlaceScope('nearby');
       setNearbyRadius(resolvedRadius);
+      resetPlaceListWindow();
+      setListPagination(pageMeta ? {
+        kind: isFoodMode ? 'nearby-food' : 'nearby',
+        offset: PLACE_PAGE_SIZE,
+        total: Number(pageMeta.total) || null,
+        hasMore: Boolean(pageMeta.hasMore),
+        params: isFoodMode
+          ? {
+              lat: center.lat,
+              lng: center.lng,
+              radius: resolvedRadius,
+              categories: pageMeta.categories,
+              minRating: minRating || undefined
+            }
+          : {
+              lat: center.lat,
+              lng: center.lng,
+              radius: resolvedRadius,
+              category,
+              minRating: minRating || undefined
+            }
+      } : {
+        kind: 'none',
+        offset: 0,
+        total: null,
+        hasMore: false,
+        params: null
+      });
     } catch (error) {
       console.warn('[Hola Maps] nearby places request failed:', error);
     } finally {
@@ -1717,35 +1785,77 @@ export default function MapPage() {
 
     try {
       let items = [];
+      let pagination = {
+        kind: 'none',
+        offset: 0,
+        total: null,
+        hasMore: false,
+        params: null
+      };
 
       if (isHousingMode) {
-        const data = await getHousingListings(housingRequestParams({ includeQuery: false }));
+        const params = {
+          ...housingRequestParams({ includeQuery: false }),
+          limit: PLACE_PAGE_SIZE,
+          offset: 0
+        };
+        const data = await getHousingListings(params);
         items = Array.isArray(data?.items) ? data.items : [];
+        pagination = {
+          kind: 'housing',
+          offset: PLACE_PAGE_SIZE,
+          total: Number(data?.meta?.total) || null,
+          hasMore: Boolean(data?.meta?.hasMore),
+          params
+        };
       } else if (isFoodMode) {
+        const categoriesForRequest = foodCategorySlugs();
         const responses = await Promise.all(
-          foodCategorySlugs().map((slug) =>
+          categoriesForRequest.map((slug) =>
             getPlaces({
               category: slug,
               minRating: minRating || undefined,
-              limit: 100
+              limit: PLACE_PAGE_SIZE,
+              offset: 0
             })
           )
         );
         items = mergeUniquePlaces(
           responses.map((data) => Array.isArray(data?.items) ? data.items : [])
         );
+        pagination = {
+          kind: 'all-food',
+          offset: PLACE_PAGE_SIZE,
+          total: responses.reduce((sum, data) => sum + (Number(data?.meta?.total) || 0), 0),
+          hasMore: responses.some((data) => Boolean(data?.meta?.hasMore)),
+          params: {
+            categories: categoriesForRequest,
+            minRating: minRating || undefined
+          }
+        };
       } else {
-        const data = await getPlaces({
+        const params = {
           category,
           minRating: minRating || undefined,
-          limit: 100
-        });
+          limit: PLACE_PAGE_SIZE,
+          offset: 0
+        };
+        const data = await getPlaces(params);
         items = Array.isArray(data?.items) ? data.items : [];
+        pagination = {
+          kind: 'all',
+          offset: PLACE_PAGE_SIZE,
+          total: Number(data?.meta?.total) || null,
+          hasMore: Boolean(data?.meta?.hasMore),
+          params
+        };
       }
 
       setPlaces(items);
       setPlaceScope('all');
       setNearbyRadius(0);
+      resetPlaceListWindow();
+      setListPagination(pagination);
     } catch (error) {
       console.warn('[Hola Maps] all places request failed:', error);
     } finally {
