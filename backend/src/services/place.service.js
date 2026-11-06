@@ -118,7 +118,7 @@ function placeBoundsCacheKey(args = {}) {
     args.minRating === undefined || args.minRating === null || args.minRating === ''
       ? ''
       : String(Number(args.minRating)),
-    String(Math.max(Number(args.limit) || 45, 1)),
+    String(Math.max(Number(args.limit) || 200, 1)),
     String(Math.max(Number(args.offset) || 0, 0))
   ].join('|');
 }
@@ -540,7 +540,7 @@ export async function getPlacesInBounds({
   status = 'PUBLISHED',
   category,
   minRating,
-  limit = 45,
+  limit = 200,
   offset = 0
 }) {
   const conditions = [
@@ -559,7 +559,7 @@ export async function getPlacesInBounds({
 
   addDiscoveryFilters({ conditions, params, category, minRating });
 
-  const safeLimit = Math.min(Math.max(Number(limit) || 45, 1), 100);
+  const safeLimit = Math.min(Math.max(Number(limit) || 200, 1), 200);
   const safeOffset = Math.max(Number(offset) || 0, 0);
   const whereSql = ' WHERE ' + conditions.join(' AND ');
   const countSql = 'SELECT COUNT(*)::int AS total FROM places p ' +
