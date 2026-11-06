@@ -2803,7 +2803,15 @@ export default function MapPage() {
                     ? 'TẤT CẢ ĐỊA ĐIỂM'
                     : 'ĐỊA ĐIỂM ĐÃ TẢI'}
             </span>
-            <b>{filteredPlaces.length}</b>
+            <b>
+              {visibleSidebarPlaces.length}
+              {' / '}
+              {listPagination.total !== null && listPagination.total !== undefined
+                ? Math.max(Number(listPagination.total) || 0, sidebarPlaces.length)
+                : listPagination.hasMore
+                  ? Math.max(sidebarPlaces.length, visibleSidebarPlaces.length) + '+'
+                  : sidebarPlaces.length}
+            </b>
           </div>
 
           {!query.trim() && placeScope === 'viewport' && filteredPlaces.length > 0 && viewportPlaceCount === 0 && (
@@ -2830,11 +2838,23 @@ export default function MapPage() {
             </div>
           )}
 
-          <div className="hm-place-list">
-            {visibleSidebarPlaces.map((place) => (
+          <div
+            className="hm-place-list"
+            ref={placeListRef}
+            onScroll={handlePlaceListScroll}
+          >
+            <div
+              className="hm-place-list-virtual"
+              style={{ height: visibleSidebarPlaces.length * virtualRowHeight }}
+            >
+              {virtualSidebarRows.map(({ place, index }) => (
               <button
                 key={place.id}
                 type="button"
+                className="hm-place-row-virtual"
+                style={{ top: index * virtualRowHeight, height: virtualRowHeight }}
+                aria-posinset={index + 1}
+                aria-setsize={listPagination.total || sidebarPlaces.length}
                 ref={(node) => {
                   const key = String(place.id);
                   if (node) placeRowRefs.current.set(key, node);
@@ -2842,11 +2862,12 @@ export default function MapPage() {
                 }}
                 aria-pressed={String(selectedId) === String(place.id)}
                 className={
-                  String(selectedId) === String(place.id)
-                    ? 'hm-place-row active'
+                  'hm-place-row ' +
+                  (String(selectedId) === String(place.id)
+                    ? 'active'
                     : String(hoveredPlaceId) === String(place.id)
-                      ? 'hm-place-row hovered'
-                      : 'hm-place-row'
+                      ? 'hovered'
+                      : '')
                 }
                 onMouseEnter={() => setHoveredPlaceId(String(place.id))}
                 onMouseLeave={() => setHoveredPlaceId(null)}
@@ -2922,7 +2943,8 @@ export default function MapPage() {
                   )}
                 </span>
               </button>
-            ))}
+              ))}
+            </div>
 
             {!placeScopeLoading && filteredPlaces.length === 0 && !query.trim() && placeScope === 'viewport' && (
               <div className="hm-place-empty">
@@ -2987,6 +3009,31 @@ export default function MapPage() {
               <div className="hm-place-scope-loading">
                 <span />
                 Đang mở rộng phạm vi địa điểm…
+              </div>
+            )}
+
+            {sidebarPlaces.length > 0 && (
+              <div className="hm-place-list-footer">
+                <span>
+                  Đang hiển thị {visibleSidebarPlaces.length} / {
+                    listPagination.total !== null && listPagination.total !== undefined
+                      ? Math.max(Number(listPagination.total) || 0, sidebarPlaces.length)
+                      : listPagination.hasMore
+                        ? Math.max(sidebarPlaces.length, visibleSidebarPlaces.length) + '+'
+                        : sidebarPlaces.length
+                  } địa điểm
+                </span>
+                {loadingMorePlaces ? (
+                  <small>Đang tải thêm địa điểm…</small>
+                ) : listPagination.hasMore ? (
+                  <button type="button" onClick={loadMorePlaces}>
+                    Tải thêm {PLACE_PAGE_SIZE} địa điểm
+                  </button>
+                ) : visibleSidebarPlaces.length < sidebarPlaces.length ? (
+                  <small>Cuộn xuống để xem các địa điểm đã tải</small>
+                ) : (
+                  <small>Đã hiển thị hết kết quả hiện có</small>
+                )}
               </div>
             )}
           </div>
