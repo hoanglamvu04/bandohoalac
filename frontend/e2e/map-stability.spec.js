@@ -51,10 +51,26 @@ for (const viewport of [
     expect(box.y + Math.min(box.height, 120)).toBeLessThanOrEqual(viewport.height + 2);
 
     const sidebar = page.locator('.hm-left-panel').first();
-    if (await sidebar.isVisible()) {
-      const sideBox = await sidebar.boundingBox();
-      expect(sideBox.height).toBeLessThanOrEqual(viewport.height);
-    }
+    const workspace = page.locator('.hm-workspace').first();
+    const mapSurface = page.locator('.hm-map-shell').first();
+    await expect(workspace).toHaveClass(/hm-workspace-split/);
+    await expect(sidebar).toBeVisible();
+
+    const [workspaceBox, sideBox, mapBox] = await Promise.all([
+      workspace.boundingBox(),
+      sidebar.boundingBox(),
+      mapSurface.boundingBox()
+    ]);
+    expect(workspaceBox).toBeTruthy();
+    expect(sideBox).toBeTruthy();
+    expect(mapBox).toBeTruthy();
+
+    // Desktop is a real two-column layout: the map begins at the rail edge
+    // instead of rendering underneath a floating sidebar card.
+    expect(Math.abs(mapBox.x - (sideBox.x + sideBox.width))).toBeLessThanOrEqual(2);
+    expect(Math.abs(sideBox.y - workspaceBox.y)).toBeLessThanOrEqual(2);
+    expect(Math.abs(sideBox.height - workspaceBox.height)).toBeLessThanOrEqual(2);
+    expect(mapBox.width).toBeGreaterThan(360);
   });
 }
 
@@ -63,7 +79,18 @@ test('mobile map keeps controls inside viewport', async ({ page }) => {
   await stubApi(page);
   await page.goto('/map', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('body')).toHaveClass(/map-route-active/);
-  await expect(page.locator('.hm-workspace')).toBeVisible();
-  const workspace = await page.locator('.hm-workspace').boundingBox();
+  const workspaceLocator = page.locator('.hm-workspace');
+  await expect(workspaceLocator).toBeVisible();
+  await expect(workspaceLocator).not.toHaveClass(/hm-workspace-split/);
+
+  const workspace = await workspaceLocator.boundingBox();
+  const mapSurface = await page.locator('.hm-map-shell').boundingBox();
   expect(workspace.width).toBeLessThanOrEqual(390);
+  expect(Math.abs(mapSurface.x - workspace.x)).toBeLessThanOrEqual(2);
+
+  const listToggle = page.locator('.hm-map-menu');
+  await expect(listToggle).toBeVisible();
+  await listToggle.click();
+  await expect(page.locator('.hm-left-panel')).toHaveClass(/open/);
+  await expect(workspaceLocator).not.toHaveClass(/hm-workspace-split/);
 });
