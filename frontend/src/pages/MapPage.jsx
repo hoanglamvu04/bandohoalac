@@ -2851,7 +2851,6 @@ export default function MapPage() {
               <button
                 key={place.id}
                 type="button"
-                className="hm-place-row-virtual"
                 style={{ top: index * virtualRowHeight, height: virtualRowHeight }}
                 aria-posinset={index + 1}
                 aria-setsize={listPagination.total || sidebarPlaces.length}
@@ -2862,7 +2861,7 @@ export default function MapPage() {
                 }}
                 aria-pressed={String(selectedId) === String(place.id)}
                 className={
-                  'hm-place-row ' +
+                  'hm-place-row hm-place-row-virtual ' +
                   (String(selectedId) === String(place.id)
                     ? 'active'
                     : String(hoveredPlaceId) === String(place.id)
