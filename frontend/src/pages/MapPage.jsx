@@ -1572,10 +1572,19 @@ export default function MapPage() {
   function resetToViewportPlaces() {
     lastPlacesRequestKeyRef.current = '';
     loadedPlaceBoundsRef.current = [];
+    boundsPaginationRef.current.clear();
     setPlaces([]);
     setPlaceScope('viewport');
     setNearbyRadius(0);
     setSelectedId(null);
+    setListPagination({
+      kind: 'none',
+      offset: 0,
+      total: null,
+      hasMore: false,
+      params: null
+    });
+    resetPlaceListWindow();
     syncDiscoveryParams({ place: null });
   }
 
