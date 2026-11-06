@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Bookmark,
-  Check,
-  Clock3,
   ExternalLink,
   Globe2,
   MapPin,
@@ -19,12 +17,12 @@ import { getPublicCollection } from '../services/api.js';
 
 function collectionFocus(places, slug) {
   if (!places.length) {
-    return { id: 'collection-' + slug, center: [105.52, 21.02], zoom: 11.7 };
+    return { id: 'collection-' + slug + '-' + places.length, center: [105.52, 21.02], zoom: 11.7 };
   }
   const lngs = places.map((place) => Number(place.lng)).filter(Number.isFinite);
   const lats = places.map((place) => Number(place.lat)).filter(Number.isFinite);
   if (!lngs.length || !lats.length) {
-    return { id: 'collection-' + slug, center: [105.52, 21.02], zoom: 11.7 };
+    return { id: 'collection-' + slug + '-' + places.length, center: [105.52, 21.02], zoom: 11.7 };
   }
   const center = [
     (Math.min(...lngs) + Math.max(...lngs)) / 2,
@@ -35,7 +33,7 @@ function collectionFocus(places, slug) {
     Math.max(...lats) - Math.min(...lats)
   );
   const zoom = spread > 0.08 ? 11.5 : spread > 0.035 ? 12.2 : spread > 0.012 ? 13 : 14;
-  return { id: 'collection-' + slug, center, zoom };
+  return { id: 'collection-' + slug + '-' + places.length, center, zoom };
 }
 
 export default function PublicCollectionPage() {
