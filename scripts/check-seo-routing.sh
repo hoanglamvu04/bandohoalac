@@ -4,8 +4,12 @@ set -euo pipefail
 APP="backend/src/app.js"
 NGINX="scripts/install-embed-gateway.sh"
 SITEMAP="frontend/public/sitemap-pages.xml"
+SITEMAP_INDEX="frontend/public/sitemap.xml"
+ROBOTS="frontend/public/robots.txt"
 SEO_RENDERER="backend/src/services/seoHtml.service.js"
 SEO_CSS="frontend/public/seo-rendered.css"
+EXPLORE_SERVICE="backend/src/services/explore.service.js"
+PLACE_SERVICE="backend/src/services/place.service.js"
 
 if grep -Fq "app.get('/', getHomeSeoPage);" "$APP"; then
   echo "[seo] ERROR: root homepage must remain on the original React SPA." >&2
@@ -16,6 +20,16 @@ grep -Fq "app.get('/kham-pha/:slug', getExploreArticleSeoPage);" "$APP"
 grep -Fq "app.get('/dia-diem/:slug', getPlaceSeoPage);" "$APP"
 grep -Fq "app.get('/place/:id', redirectLegacyPlaceSeoPage);" "$APP"
 grep -Fq "listPublishedPlaceSitemapEntries" "$APP"
+grep -Fq "listExploreSitemapEntries" "$APP"
+grep -Fq "SITEMAP_IMAGE_NAMESPACE" "$APP"
+grep -Fq "AS cover_image" "$EXPLORE_SERVICE"
+grep -Fq "AS cover_image" "$PLACE_SERVICE"
+grep -Fq "sitemap_lastmod" "$EXPLORE_SERVICE"
+grep -Fq "api/sitemap-explore.xml" "$SITEMAP_INDEX"
+grep -Fq "api/sitemap-places.xml" "$SITEMAP_INDEX"
+grep -Fq "Sitemap: https://maps.dothihoalac.vn/sitemap.xml" "$ROBOTS"
+test -s "$SITEMAP_INDEX"
+test -s "$ROBOTS"
 
 if grep -Fxq 'write_seo_proxy_location "= /"' "$NGINX"; then
   echo "[seo] ERROR: Nginx root must fall through to the React SPA." >&2
@@ -26,7 +40,7 @@ grep -Fq 'write_seo_proxy_location "^~ /kham-pha/"' "$NGINX"
 grep -Fq 'write_seo_proxy_location "^~ /dia-diem/"' "$NGINX"
 grep -Fq 'write_seo_proxy_location "^~ /place/"' "$NGINX"
 
-grep -Fq 'href="/seo-rendered.css"' "$SEO_RENDERER"
+grep -Fq 'href="/seo-rendered.css?v=' "$SEO_RENDERER"
 grep -Fq 'hola-app-header' "$SEO_RENDERER"
 grep -Fq 'src="/logo.svg?v=20260929-2"' "$SEO_RENDERER"
 test -s "$SEO_CSS"
@@ -49,4 +63,4 @@ if grep -Eq 'https://maps\.dothihoalac\.vn/(map|halo|an-uong|phong-tro|kham-pha)
   exit 1
 fi
 
-echo "[seo] PASS: server-rendered routes, Nginx proxy paths, stylesheet and static sitemap contract."
+echo "[seo] PASS: server-rendered routes, Nginx proxy paths, image-aware sitemaps, robots and stylesheet contract."
