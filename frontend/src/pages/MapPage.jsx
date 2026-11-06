@@ -43,6 +43,7 @@ import {
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import MapView from '../components/MapView.jsx';
 import TripPlanner from '../components/TripPlanner.jsx';
+import CollectionPicker from '../components/CollectionPicker.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import {
@@ -554,6 +555,7 @@ export default function MapPage() {
   const [tripPlannerOpen, setTripPlannerOpen] = useState(false);
   const [tripLoading, setTripLoading] = useState(false);
   const [tripError, setTripError] = useState('');
+  const [collectionPickerOpen, setCollectionPickerOpen] = useState(false);
 
   const lastPlacesRequestKeyRef = useRef('');
   const loadedPlaceBoundsRef = useRef([]);
@@ -3591,10 +3593,23 @@ export default function MapPage() {
                   ? 'Đã thêm vào lịch trình · Bỏ khỏi lịch trình'
                   : 'Thêm vào HOLA Trip'}
               </button>
+              <button
+                type="button"
+                className="hm-collection-add-place"
+                onClick={() => setCollectionPickerOpen(true)}
+              >
+                <BookmarkPlus size={15} /> Thêm vào bộ sưu tập
+              </button>
             </div>
           </section>
         );
       })()}
+
+      <CollectionPicker
+        open={collectionPickerOpen}
+        place={selectedPlace}
+        onClose={() => setCollectionPickerOpen(false)}
+      />
 
       <TripPlanner
         open={tripPlannerOpen}
