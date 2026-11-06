@@ -22,7 +22,7 @@ function ArticleVisual({ article, large = false }) {
       <img
         className={large ? 'explore-card-image large' : 'explore-card-image'}
         src={imageUrl}
-        alt=""
+        alt={article.title || 'HOLA GUIDE'}
         loading={large ? 'eager' : 'lazy'}
         onError={() => setFailedImageUrl(imageUrl)}
       />
