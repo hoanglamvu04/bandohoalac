@@ -45,6 +45,7 @@ import haloHolaRoutes from './routes/haloHola.routes.js';
 import exploreRoutes from './routes/explore.routes.js';
 import housingRoutes from './routes/housing.routes.js';
 import embedRoutes from './routes/embed.routes.js';
+import collectionsRoutes from './routes/collections.routes.js';
 
 const SITEMAP_ORIGIN = 'https://maps.dothihoalac.vn';
 const SITEMAP_IMAGE_NAMESPACE = 'http://www.google.com/schemas/sitemap-image/1.1';
@@ -190,6 +191,7 @@ export function createApp() {
   app.use('/api/public/v1', publicIntegrationRoutes);
   app.use('/api/auth', authRoutes);
   app.use('/api/places', placesRoutes);
+  app.use('/api/collections', collectionsRoutes);
   app.use('/api/categories', categoriesRoutes);
   app.use('/api/contributions', contributionsRoutes);
   app.use('/api/admin/coverage-cleanup', adminCoverageRoutes);

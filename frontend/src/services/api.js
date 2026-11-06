@@ -362,6 +362,40 @@ export function getMyFavorites() {
   return unwrap(client.get('/places/favorites/me'));
 }
 
+export function getMyCollections(params = {}) {
+  return unwrap(client.get('/collections/me', { params: cleanParams(params) }));
+}
+
+export function getPublicCollections(params = {}) {
+  return unwrap(client.get('/collections/discover', { params: cleanParams(params) }));
+}
+
+export function getCollectionBySlug(slug) {
+  return unwrap(client.get('/collections/public/' + encodeURIComponent(slug)));
+}
+
+export function createCollection(payload) {
+  return unwrap(client.post('/collections', payload));
+}
+
+export function updateCollection(id, payload) {
+  return unwrap(client.patch('/collections/' + encodeURIComponent(id), payload));
+}
+
+export function deleteCollection(id) {
+  return unwrap(client.delete('/collections/' + encodeURIComponent(id)));
+}
+
+export function addPlaceToCollection(collectionId, placeId) {
+  return unwrap(client.post('/collections/' + encodeURIComponent(collectionId) + '/items', { placeId }));
+}
+
+export function removePlaceFromCollection(collectionId, placeId) {
+  return unwrap(client.delete(
+    '/collections/' + encodeURIComponent(collectionId) + '/items/' + encodeURIComponent(placeId)
+  ));
+}
+
 export function getNotifications(params = {}) {
   return unwrap(client.get('/notifications', { params: cleanParams(params) }));
 }

@@ -766,7 +766,6 @@ function renderRoute(map, route, maplibre, fittedRouteKeyRef) {
       if (map.getLayer(id)) map.removeLayer(id);
     });
     if (map.getSource(ROUTE_SOURCE_ID)) map.removeSource(ROUTE_SOURCE_ID);
-    renderRouteHazards(map, null);
     fittedRouteKeyRef.current = '';
     return;
   }
@@ -1003,7 +1002,8 @@ export default function MapView({
   activeLayers = [],
   basemapMode = 'streets',
   onViewportChange,
-  focusRegion
+  focusRegion,
+  fitPlacesKey = ''
 }) {
   const mapRef = useRef(null);
   const maplibreRef = useRef(null);
@@ -1026,6 +1026,7 @@ export default function MapView({
   const appliedStyleKeyRef = useRef('');
   const locationNoticeTimerRef = useRef(null);
   const lastFocusRegionRef = useRef('');
+  const lastFitPlacesKeyRef = useRef('');
 
   const [interactiveReady, setInteractiveReady] = useState(false);
   const [mapBooted, setMapBooted] = useState(false);
@@ -1545,7 +1546,44 @@ export default function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !interactiveReady || !focusRegion?.center) return;
+    if (!fitPlacesKey) {
+      lastFitPlacesKeyRef.current = '';
+      return;
+    }
+    if (!map || !interactiveReady || !validPlaces.length) return;
+    if (lastFitPlacesKeyRef.current === fitPlacesKey) return;
+
+    lastFitPlacesKeyRef.current = fitPlacesKey;
+    if (validPlaces.length === 1) {
+      const place = validPlaces[0];
+      map.flyTo({
+        center: [Number(place.lng), Number(place.lat)],
+        zoom: Math.max(map.getZoom(), 14.5),
+        duration: 650,
+        essential: true
+      });
+      return;
+    }
+
+    const bounds = new maplibre.LngLatBounds();
+    validPlaces.forEach((place) => bounds.extend([Number(place.lng), Number(place.lat)]));
+    if (!bounds.isEmpty()) {
+      const isMobile = typeof window !== 'undefined'
+        && window.matchMedia('(max-width: 760px)').matches;
+      map.fitBounds(bounds, {
+        padding: isMobile
+          ? { top: 145, right: 70, bottom: 270, left: 70 }
+          : { top: 150, right: 90, bottom: 100, left: 360 },
+        maxZoom: 15,
+        duration: 700,
+        essential: true
+      });
+    }
+  }, [fitPlacesKey, validPlaces, interactiveReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !interactiveReady || !focusRegion?.center || fitPlacesKey) return;
     if (lastFocusRegionRef.current === focusRegion.id) return;
 
     lastFocusRegionRef.current = focusRegion.id;
@@ -1555,7 +1593,7 @@ export default function MapView({
       duration: 650,
       essential: true
     });
-  }, [focusRegion?.id, interactiveReady]);
+  }, [focusRegion?.id, interactiveReady, fitPlacesKey]);
 
   // The map canvas changes width when the desktop discovery rail opens or
   // closes. Observe the actual container so MapLibre recalculates its viewport

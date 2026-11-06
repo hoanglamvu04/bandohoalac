@@ -33,6 +33,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import SeoHead from '../components/SeoHead.jsx';
 import PlaceContributionPanel from '../components/PlaceContributionPanel.jsx';
+import CollectionPickerButton from '../components/CollectionPickerButton.jsx';
 import PlaceReviews from '../components/PlaceReviews.jsx';
 
 function uniqueImages(values = []) {
@@ -302,6 +303,7 @@ export default function PlaceDetailV2() {
             <Heart size={17} fill={favorite ? 'currentColor' : 'none'} /> {favorite ? 'Đã lưu' : 'Lưu'}
           </button>
           <button type="button" onClick={sharePlace}><Share2 size={17} /> Chia sẻ</button>
+          <CollectionPickerButton place={place} />
           {place.phone && <a href={'tel:' + place.phone}><Phone size={17} /> Gọi</a>}
           {website && <a href={website} target="_blank" rel="noreferrer"><Globe2 size={17} /> Website</a>}
         </div>

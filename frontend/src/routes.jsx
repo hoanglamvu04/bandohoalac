@@ -9,6 +9,8 @@ const MapPage = lazy(() => import('./pages/MapDiscoveryPage.jsx'));
 const HaloHolaMapPage = lazy(() => import('./pages/HaloHolaMapPage.jsx'));
 const LocationPickerPage = lazy(() => import('./pages/LocationPickerPage.jsx'));
 const PlaceDetail = lazy(() => import('./pages/PlaceDetailV2.jsx'));
+const CollectionsPage = lazy(() => import('./pages/CollectionsPage.jsx'));
+const CollectionDetailPage = lazy(() => import('./pages/CollectionDetailPage.jsx'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
 const SecurityPage = lazy(() => import('./pages/SecurityPage.jsx'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard.jsx'));
@@ -150,6 +152,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: withSuspense(HomePage) },
       { path: 'map', element: withSuspense(MapPage) },
+      { path: 'collections', element: withSuspense(CollectionsPage) },
+      { path: 'collections/:slug', element: withSuspense(CollectionDetailPage) },
       { path: 'developers/embed', element: withRole(EmbedRequestPage) },
       { path: 'phong-tro', element: <Navigate to="/map?vertical=housing&category=bat-dong-san" replace /> },
       { path: 'an-uong', element: <Navigate to="/map?vertical=food" replace /> },
