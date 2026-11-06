@@ -2405,6 +2405,17 @@ export default function MapPage() {
 
   function addTripStop(place) {
     if (!place?.id) return;
+    const placeId = Number(place.id);
+    if (
+      !Number.isInteger(placeId) ||
+      placeId <= 0 ||
+      (place.resultType && place.resultType !== 'place') ||
+      !Number.isFinite(Number(place.lat)) ||
+      !Number.isFinite(Number(place.lng))
+    ) {
+      showToast('HOLA Trip hiện chỉ nhận địa điểm đã có hồ sơ và tọa độ hợp lệ.', 'error');
+      return;
+    }
     if (tripStops.some((stop) => String(stop.id) === String(place.id))) {
       setTripPlannerOpen(true);
       showToast('Địa điểm này đã có trong lịch trình.', 'success');
