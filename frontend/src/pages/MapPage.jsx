@@ -926,8 +926,16 @@ export default function MapPage() {
               total: Number(data?.meta?.total) || null,
               hasMore: Boolean(data?.meta?.hasMore),
               params: isFoodMode
-                ? { q: needle, categories: searchCategories, minRating: minRating || undefined }
-                : { ...searchParams, offset: PLACE_PAGE_SIZE }
+                ? {
+                    q: needle,
+                    categories: searchCategories,
+                    minRating: minRating || undefined,
+                    radius: Number(data?.meta?.radius) || undefined
+                  }
+                : {
+                    ...searchParams,
+                    radius: Number(data?.meta?.radius) || undefined
+                  }
             });
 
             // Search is a discovery list first. Never auto-select a strong
@@ -1597,7 +1605,11 @@ export default function MapPage() {
   }
 
   async function loadHousingForAnchor(anchor, radii) {
-    const data = await getHousingListings(housingRequestParams({ includeQuery: false }));
+    const data = await getHousingListings({
+      ...housingRequestParams({ includeQuery: false }),
+      limit: 100,
+      offset: 0
+    });
     const allItems = Array.isArray(data?.items) ? data.items : [];
 
     for (const radius of radii) {
