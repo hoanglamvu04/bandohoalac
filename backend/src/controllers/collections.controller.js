@@ -35,7 +35,9 @@ export const getMine = asyncHandler(async (req, res) => {
 export const getPublic = asyncHandler(async (req, res) => {
   const collection = await getPublicCollection(req.params.slug);
   if (!collection) throw new AppError('Bộ sưu tập không tồn tại hoặc chưa được công khai.', 404);
-  res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+  // Public collections can be switched back to PRIVATE by their owner.
+  // Do not let a previously public response remain in a browser/shared cache.
+  res.set('Cache-Control', 'no-store');
   res.json(collection);
 });
 
