@@ -79,6 +79,7 @@ test('public HOLA Collection opens as a map with ordered places and a shareable 
   });
 
   await page.goto('/bo-suu-tap/cafe-hoc-tap-test', { waitUntil: 'domcontentloaded' });
+  console.log('[collections-e2e] body after navigation', (await page.locator('body').innerText()).slice(0, 1200));
 
   await expect(page.getByRole('heading', { name: 'Cafe học tập tại Hòa Lạc' })).toBeVisible();
   await expect(page.locator('.hc-public-map')).toBeVisible();
