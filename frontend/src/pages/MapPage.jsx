@@ -3113,7 +3113,7 @@ export default function MapPage() {
               </div>
             )}
 
-            {sidebarPlaces.length > 0 && (
+            {(sidebarPlaces.length > 0 || listPagination.hasMore) && (
               <div className="hm-place-list-footer">
                 <span>
                   Đang hiển thị {visibleSidebarPlaces.length} / {
