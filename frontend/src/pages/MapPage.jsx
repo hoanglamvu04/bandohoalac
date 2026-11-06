@@ -657,6 +657,46 @@ export default function MapPage() {
   }, []);
 
   useEffect(() => {
+    setVisiblePlaceCount(PLACE_PAGE_SIZE);
+    setListScrollTop(0);
+    if (placeListRef.current) placeListRef.current.scrollTop = 0;
+    setListPagination({
+      kind: 'none',
+      offset: 0,
+      total: null,
+      hasMore: false,
+      params: null
+    });
+  }, [
+    regionId,
+    category,
+    minRating,
+    query,
+    openNow,
+    sortMode,
+    placeScope,
+    verticalMode,
+    housingFilterSignature
+  ]);
+
+  useEffect(() => {
+    const node = placeListRef.current;
+    if (!node || !leftOpen) return undefined;
+
+    const updateHeight = () => setListViewportHeight(node.clientHeight || 600);
+    updateHeight();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateHeight);
+      return () => window.removeEventListener('resize', updateHeight);
+    }
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [leftOpen]);
+
+  useEffect(() => {
     // Vertical navigation should immediately reveal the discovery list instead
     // of leaving Housing/Food hidden behind a previously closed side panel.
     if (!verticalMode) return;
@@ -718,6 +758,13 @@ export default function MapPage() {
     setPlaceScope('viewport');
     setNearbyRadius(0);
     setSelectedId(null);
+    setListPagination({
+      kind: 'none',
+      offset: 0,
+      total: null,
+      hasMore: false,
+      params: null
+    });
   }, [regionId, category, minRating, verticalMode, housingFilterSignature]);
 
   useEffect(() => {
@@ -761,14 +808,27 @@ export default function MapPage() {
         return () => controller.abort();
       }
 
+      const housingParams = {
+        ...housingRequestParams(),
+        limit: PLACE_PAGE_SIZE,
+        offset: 0
+      };
+
       const timer = window.setTimeout(() => {
-        getHousingListings(housingRequestParams(), { signal: controller.signal })
+        getHousingListings(housingParams, { signal: controller.signal })
           .then((data) => {
             if (!active) return;
             lastPlacesRequestKeyRef.current = requestKey;
             const items = Array.isArray(data?.items) ? data.items : [];
             setPlaces(items);
             setSelectedId(null);
+            setListPagination({
+              kind: 'housing',
+              offset: items.length,
+              total: Number(data?.meta?.total) || null,
+              hasMore: Boolean(data?.meta?.hasMore),
+              params: housingParams
+            });
 
             if (
               needle &&
@@ -799,16 +859,24 @@ export default function MapPage() {
         return () => controller.abort();
       }
 
+      const searchCategories = isFoodMode ? foodCategorySlugs() : null;
+      const searchParams = {
+        q: needle,
+        category,
+        minRating: minRating || undefined
+      };
+
       const timer = window.setTimeout(() => {
         const searchRequest = isFoodMode
           ? Promise.all(
-              foodCategorySlugs().map((slug) =>
+              searchCategories.map((slug) =>
                 getPlaces(
                   {
                     q: needle,
                     category: slug,
                     minRating: minRating || undefined,
-                    limit: 80
+                    limit: PLACE_PAGE_SIZE,
+                    offset: 0
                   },
                   { signal: controller.signal }
                 )
@@ -816,14 +884,19 @@ export default function MapPage() {
             ).then((responses) => ({
               items: mergeUniquePlaces(
                 responses.map((data) => Array.isArray(data?.items) ? data.items : [])
-              )
+              ),
+              meta: {
+                total: responses.reduce((sum, data) => sum + (Number(data?.meta?.total) || 0), 0),
+                hasMore: responses.some((data) => Boolean(data?.meta?.hasMore))
+              }
             }))
           : getPlaces(
               {
                 q: needle,
                 category,
                 minRating: minRating || undefined,
-                limit: 80
+                limit: PLACE_PAGE_SIZE,
+                offset: 0
               },
               { signal: controller.signal }
             );
@@ -835,6 +908,15 @@ export default function MapPage() {
             const items = Array.isArray(data?.items) ? data.items : [];
             lastPlacesRequestKeyRef.current = requestKey;
             setPlaces(items);
+            setListPagination({
+              kind: isFoodMode ? 'search-food' : 'search',
+              offset: PLACE_PAGE_SIZE,
+              total: Number(data?.meta?.total) || null,
+              hasMore: Boolean(data?.meta?.hasMore),
+              params: isFoodMode
+                ? { q: needle, categories: searchCategories, minRating: minRating || undefined }
+                : { ...searchParams, offset: PLACE_PAGE_SIZE }
+            });
 
             // Search is a discovery list first. Never auto-select a strong
             // match: users choose the place explicitly, then the detail card
@@ -880,38 +962,35 @@ export default function MapPage() {
       return () => controller.abort();
     }
 
+    const boundsParams = {
+      west: requestViewport.west,
+      south: requestViewport.south,
+      east: requestViewport.east,
+      north: requestViewport.north,
+      category,
+      minRating: minRating || undefined,
+      limit: PLACE_PAGE_SIZE,
+      offset: 0
+    };
+    const boundsCategories = isFoodMode ? foodCategorySlugs() : null;
+
     const timer = window.setTimeout(() => {
       const boundsRequest = isFoodMode
         ? Promise.all(
-            foodCategorySlugs().map((slug) =>
+            boundsCategories.map((slug) =>
               getPlacesInBounds(
-                {
-                  west: requestViewport.west,
-                  south: requestViewport.south,
-                  east: requestViewport.east,
-                  north: requestViewport.north,
-                  category: slug,
-                  minRating: minRating || undefined
-                },
+                { ...boundsParams, category: slug },
                 { signal: controller.signal }
               )
             )
           ).then((responses) => ({
             items: mergeUniquePlaces(
               responses.map((data) => Array.isArray(data?.items) ? data.items : [])
-            )
+            ),
+            total: responses.reduce((sum, data) => sum + (Number(data?.total) || 0), 0),
+            hasMore: responses.some((data) => Boolean(data?.hasMore))
           }))
-        : getPlacesInBounds(
-            {
-              west: requestViewport.west,
-              south: requestViewport.south,
-              east: requestViewport.east,
-              north: requestViewport.north,
-              category,
-              minRating: minRating || undefined
-            },
-            { signal: controller.signal }
-          );
+        : getPlacesInBounds(boundsParams, { signal: controller.signal });
 
       boundsRequest
         .then((data) => {
@@ -925,6 +1004,15 @@ export default function MapPage() {
           ].slice(0, MAX_LOADED_VIEWPORTS);
 
           setPlaces((current) => mergeProgressivePlaces(current, items));
+          setListPagination({
+            kind: isFoodMode ? 'bounds-food' : 'bounds',
+            offset: PLACE_PAGE_SIZE,
+            total: Number(data?.total) || null,
+            hasMore: Boolean(data?.hasMore),
+            params: isFoodMode
+              ? { bounds: boundsParams, categories: boundsCategories }
+              : { bounds: boundsParams }
+          });
         })
         .catch((error) => {
           if (!active || error?.name === 'AbortError') return;
