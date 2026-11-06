@@ -43,6 +43,7 @@ const AdminMissions = lazy(() => import('./pages/admin/AdminMissions.jsx'));
 const AdminAudit = lazy(() => import('./pages/admin/AdminAudit.jsx'));
 const AdminBranding = lazy(() => import('./pages/admin/AdminBranding.jsx'));
 const AdminDeveloperApi = lazy(() => import('./pages/admin/AdminDeveloperApi.jsx'));
+const AdminLocalSeoPage = lazy(() => import('./pages/admin/AdminLocalSeoPage.jsx'));
 const DeveloperDocs = lazy(() => import('./pages/DeveloperDocs.jsx'));
 const EmbedRequestPage = lazy(() => import('./pages/EmbedRequestPage.jsx'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage.jsx'));
@@ -152,6 +153,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: withSuspense(HomePage) },
       { path: 'map', element: withSuspense(MapPage) },
+      { path: 'local-map/:slug', element: withSuspense(MapPage) },
       { path: 'developers/embed', element: withRole(EmbedRequestPage) },
       { path: 'phong-tro', element: <Navigate to="/map?vertical=housing&category=bat-dong-san" replace /> },
       { path: 'an-uong', element: <Navigate to="/map?vertical=food" replace /> },
@@ -208,7 +210,8 @@ export const router = createBrowserRouter([
       { path: 'admin/audit', element: withRole(AdminAudit, ['ADMIN']) },
       { path: 'admin/brand', element: withRole(AdminBranding, ['ADMIN']) },
       { path: 'admin/halo-sync', element: withRole(AdminHaloSync, ['ADMIN']) },
-      { path: 'admin/developer-api', element: withRole(AdminDeveloperApi, ['ADMIN']) }
+      { path: 'admin/developer-api', element: withRole(AdminDeveloperApi, ['ADMIN']) },
+      { path: 'admin/local-seo', element: withRole(AdminLocalSeoPage, ['ADMIN']) }
     ]
   }
 ]);

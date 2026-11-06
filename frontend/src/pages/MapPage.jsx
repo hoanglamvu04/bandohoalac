@@ -56,6 +56,7 @@ import {
   getTripDirections,
   getHousingListings,
   getMapLayers,
+  getLocalSeoPage,
   getNearbyPlaces,
   getPlace,
   getPlaceMe,
@@ -67,6 +68,7 @@ import { LOCAL_BASEMAP_OPTIONS as BASEMAP_OPTIONS } from '../localBasemap.js';
 import { getBestBrowserLocation } from '../utils/geolocation.js';
 import { distanceMeters, formatOpenStatus, isPlaceOpenNow } from '../utils/placeDiscovery.js';
 import { REGION_PRESETS } from '../mapConfig.js';
+import '../local-seo-map.css';
 
 const LAYERS = [
   { type: 'TERRAIN', label: 'Địa hình', icon: Mountain, tone: 'green' },
@@ -492,11 +494,12 @@ function stripHousingIntent(value) {
 
 export default function MapPage() {
   const location = useLocation();
-  const inEmbed = location.pathname === '/embed' || location.pathname.startsWith('/embed/');
+  const inEmbed = location.pathname === '/embed' || location.pathname.startsWith('/embed/') || location.pathname.startsWith('/local-map/');
   const { isModerator, user } = useAuth();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [places, setPlaces] = useState([]);
+  const [localSeoView, setLocalSeoView] = useState(null);
   const [visiblePlaceCount, setVisiblePlaceCount] = useState(PLACE_PAGE_SIZE);
   const [listPagination, setListPagination] = useState({
     kind: 'none',
@@ -572,6 +575,9 @@ export default function MapPage() {
   const regionId = searchParams.get('region') || 'all';
   const requestedPlaceId = searchParams.get('place') || '';
   const sharedTripParam = searchParams.get('trip') || '';
+  const localSeoSlug = location.pathname.startsWith('/local-map/')
+    ? decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() || '')
+    : '';
   const focusRegion = REGION_PRESETS.find((item) => item.id === regionId) || REGION_PRESETS[0];
   const categoryBySlug = useMemo(
     () => new Map(categories.map((item) => [item.slug, item])),
@@ -827,6 +833,49 @@ export default function MapPage() {
   }, [requestedPlaceId]);
 
   useEffect(() => {
+    if (!localSeoSlug) {
+      setLocalSeoView(null);
+      return undefined;
+    }
+
+    let active = true;
+    setLocalSeoView({ loading: true, page: null, places: [], error: '' });
+
+    getLocalSeoPage(localSeoSlug)
+      .then((result) => {
+        if (!active) return;
+        const items = Array.isArray(result?.places) ? result.places : [];
+        setLocalSeoView(result);
+        setPlaces(items);
+        setPlaceScope('all');
+        setNearbyRadius(0);
+        setSelectedId(null);
+        setVisiblePlaceCount(Math.max(PLACE_PAGE_SIZE, items.length));
+        setListPagination({
+          kind: 'local-seo',
+          offset: items.length,
+          total: items.length,
+          hasMore: false,
+          params: null
+        });
+        setLeftOpen(true);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setLocalSeoView({
+          loading: false,
+          page: null,
+          places: [],
+          error: error.message || 'Không thể tải dữ liệu bản đồ địa phương.'
+        });
+        setPlaces([]);
+      });
+
+    return () => { active = false; };
+  }, [localSeoSlug]);
+
+  useEffect(() => {
+    if (localSeoSlug) return;
     // Region/filter changes start a new progressive discovery session. Within
     // that session, panning keeps already loaded places instead of replacing
     // them on every bounds request.
@@ -864,6 +913,7 @@ export default function MapPage() {
   }, [searchParams]);
 
   useEffect(() => {
+    if (localSeoSlug) return undefined;
     if (!viewport) return undefined;
 
     const needle = query.trim();
@@ -1347,6 +1397,8 @@ export default function MapPage() {
   // The list can now hold thousands of paged records. Keep MapLibre's GeoJSON
   // source lean by sending only places in the current viewport plus selection.
   const mapPlaces = useMemo(() => {
+    if (localSeoSlug) return filteredPlaces;
+
     const visible = viewport
       ? filteredPlaces.filter((place) => placeInsideViewport(place, viewport))
       : filteredPlaces.slice(0, 250);
@@ -1359,7 +1411,7 @@ export default function MapPage() {
     }
 
     return visible;
-  }, [filteredPlaces, viewport, selectedPlace]);
+  }, [filteredPlaces, viewport, selectedPlace, localSeoSlug]);
 
   const selectedImages = useMemo(() => {
     const preferred = selectedPlace?.cardImages?.length
@@ -2602,9 +2654,9 @@ export default function MapPage() {
   return (
     <main
       className={
-        leftOpen && !isMobileMapViewport()
+        (leftOpen && !isMobileMapViewport()
           ? 'hm-workspace hm-workspace-split'
-          : 'hm-workspace'
+          : 'hm-workspace') + (localSeoSlug ? ' hm-local-seo-map-mode' : '')
       }
       aria-label="Bản đồ và danh sách địa điểm Hòa Lạc"
     >
@@ -2624,7 +2676,21 @@ export default function MapPage() {
         basemapMode={basemapMode}
         onViewportChange={setViewport}
         focusRegion={focusRegion}
+        fitPlacesKey={localSeoView?.page?.slug
+          ? localSeoView.page.slug + ':' + (localSeoView.page.updatedAt || '')
+          : ''}
       />
+
+      {localSeoSlug && (
+        <div className="hm-local-seo-map-banner">
+          <div>
+            <small>HOLA LOCAL MAP · {localSeoView?.places?.length || 0} ĐỊA ĐIỂM</small>
+            <strong>{localSeoView?.page?.title || (localSeoView?.error ? 'Không thể mở bản đồ' : 'Đang tải bản đồ địa phương...')}</strong>
+            {localSeoView?.error && <span>{localSeoView.error}</span>}
+          </div>
+          <a href={'/khu-vuc/' + encodeURIComponent(localSeoSlug)} target="_top" rel="noopener">Trang SEO khu vực ↗</a>
+        </div>
+      )}
 
       <header className="hm-map-topbar">
         <button

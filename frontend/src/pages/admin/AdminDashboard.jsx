@@ -79,6 +79,13 @@ const moderatorModules = [
 
 const adminModules = [
   {
+    to: '/admin/local-seo',
+    title: 'Local SEO',
+    description: 'Quản lý landing page khu vực và danh mục; chỉ xuất bản khi dữ liệu địa điểm đạt ngưỡng chất lượng.',
+    icon: MapPinned,
+    tone: 'green'
+  },
+  {
     to: '/admin/ingestion',
     title: 'Auto Ingestion',
     description: 'Tự thu thập địa điểm, ảnh, provenance và tạo hàng đợi xác minh theo lịch.',

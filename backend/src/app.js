@@ -5,9 +5,11 @@ import morgan from 'morgan';
 import { env } from './config/env.js';
 import { listPublishedPlaceSitemapEntries } from './services/place.service.js';
 import { listExploreSitemapEntries } from './services/explore.service.js';
+import { listLocalSeoSitemapEntries } from './services/localSeo.service.js';
 import {
   getExploreArticleSeoPage,
   getExploreHubSeoPage,
+  getLocalSeoLandingPage,
   getPlaceSeoPage,
   redirectLegacyPlaceSeoPage
 } from './controllers/seoPages.controller.js';
@@ -46,6 +48,7 @@ import haloHolaRoutes from './routes/haloHola.routes.js';
 import exploreRoutes from './routes/explore.routes.js';
 import housingRoutes from './routes/housing.routes.js';
 import embedRoutes from './routes/embed.routes.js';
+import localSeoRoutes from './routes/localSeo.routes.js';
 
 const SITEMAP_ORIGIN = 'https://maps.dothihoalac.vn';
 const SITEMAP_IMAGE_NAMESPACE = 'http://www.google.com/schemas/sitemap-image/1.1';
@@ -184,6 +187,27 @@ export function createApp() {
       next(error);
     }
   });
+
+  app.get('/api/sitemap-local-seo.xml', async (_req, res, next) => {
+    try {
+      const rows = await listLocalSeoSitemapEntries();
+      const urls = rows.map((page) => renderSitemapUrl({
+        path: '/khu-vuc/' + encodeURIComponent(page.slug),
+        updatedAt: page.updated_at,
+        image: page.cover_image
+      })).join('\n');
+
+      res.set('Content-Type', 'application/xml; charset=utf-8');
+      res.set('Cache-Control', 'public, max-age=60, must-revalidate');
+      res.send('<?xml version="1.0" encoding="UTF-8"?>\n' +
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="' +
+        SITEMAP_IMAGE_NAMESPACE + '">\n' + urls + '\n</urlset>');
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.use('/api/local-seo', localSeoRoutes);
   app.use('/api/explore', exploreRoutes);
   app.use('/api/housing', housingRoutes);
   app.use('/api/embed', embedRoutes);
@@ -214,6 +238,7 @@ export function createApp() {
   // owned by the React SPA so the original interactive HOLA Maps homepage loads.
   app.get('/kham-pha', getExploreHubSeoPage);
   app.get('/kham-pha/:slug', getExploreArticleSeoPage);
+  app.get('/khu-vuc/:slug', getLocalSeoLandingPage);
   app.get('/dia-diem/:slug', getPlaceSeoPage);
   app.get('/place/:id', redirectLegacyPlaceSeoPage);
 
