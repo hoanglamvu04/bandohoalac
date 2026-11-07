@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { createApp } from '../src/app.js';
 import { pool } from '../src/database/pool.js';
 import { SERVICE_AREA_GEOJSON_STRING } from '../src/config/mapCoverage.js';
-import { escapeHtml, renderExploreHubSeoPage, renderPlaceSeoPage } from '../src/services/seoHtml.service.js';
+import { escapeHtml, renderExploreHubSeoPage, renderLocalSeoLandingPage, renderPlaceSeoPage } from '../src/services/seoHtml.service.js';
+import { listAdminLocalSeoPages, updateLocalSeoPageStatus } from '../src/services/localSeo.service.js';
 
 let server;
 let baseUrl;
@@ -98,7 +99,7 @@ test('SEO: Explore hub returns crawlable article links and filtered views are no
   assert.match(html, /class="explore-categories"/);
   assert.match(html, /class="explore-featured"/);
   assert.match(html, /class="explore-grid"/);
-  assert.match(html, /seo-rendered\.css\?v=20261105-explore-ssr-v4/);
+  assert.match(html, /seo-rendered\.css\?v=20261106-local-seo-v1/);
   assert.match(html, /CollectionPage/);
 
   const filtered = await fetch(url('/kham-pha?category=cafe'));
@@ -230,4 +231,105 @@ test('SEO: user-controlled place content is escaped in HTML and JSON-LD', () => 
   assert.doesNotMatch(html, /<script>alert/);
   assert.doesNotMatch(html, /<img[^>]+onerror=/i);
   assert.doesNotMatch(html, /href="javascript:/);
+});
+
+
+test('Local SEO: all five starter pages remain drafts until inventory and map quality gates pass', async () => {
+  const slugs = [
+    'cafe-hoa-lac',
+    'quan-an-thach-that',
+    'check-in-quoc-oai',
+    'homestay-ba-vi',
+    'dich-vu-quanh-dai-hoc-fpt'
+  ];
+  const { rows } = await pool.query(
+    'SELECT slug, status, map_supported FROM local_seo_pages WHERE slug = ANY($1::text[]) ORDER BY slug',
+    [slugs]
+  );
+  assert.equal(rows.length, slugs.length);
+  assert.ok(rows.every((row) => row.status === 'DRAFT'));
+
+  for (const slug of slugs) {
+    const response = await fetch(url('/khu-vuc/' + slug));
+    assert.equal(response.status, 404, slug + ' must not be indexable before approval');
+    assert.match(response.headers.get('x-robots-tag') || '', /noindex/i);
+
+    const mapData = await fetch(url('/api/local-seo/' + slug));
+    assert.equal(mapData.status, 404, slug + ' map data must remain private before publication');
+  }
+
+  const sitemap = await fetch(url('/api/sitemap-local-seo.xml'));
+  assert.equal(sitemap.status, 200);
+  const xml = await sitemap.text();
+  for (const slug of slugs) {
+    assert.doesNotMatch(xml, new RegExp('/khu-vuc/' + slug));
+  }
+});
+
+test('Local SEO: quality dashboard flags regions outside current map coverage', async () => {
+  const items = await listAdminLocalSeoPages();
+  const quocOai = items.find((item) => item.slug === 'check-in-quoc-oai');
+  const baVi = items.find((item) => item.slug === 'homestay-ba-vi');
+
+  assert.ok(quocOai);
+  assert.ok(baVi);
+  assert.equal(quocOai.mapSupported, false);
+  assert.equal(baVi.mapSupported, false);
+  assert.equal(quocOai.canPublish, false);
+  assert.equal(baVi.canPublish, false);
+  assert.ok(quocOai.quality.blockers.some((blocker) => blocker.includes('bản đồ tương tác')));
+  assert.ok(baVi.quality.blockers.some((blocker) => blocker.includes('bản đồ tương tác')));
+  for (const item of items) {
+    assert.ok(item.quality.wordCount >= item.minWordCount, item.slug + ' must have substantive editorial copy');
+    assert.ok(item.quality.sectionCount >= item.minSections, item.slug + ' must have distinct sections');
+  }
+
+  await assert.rejects(
+    () => updateLocalSeoPageStatus(Number(quocOai.id), 'PUBLISHED', 1),
+    (error) => error.statusCode === 409
+  );
+  const afterAttempt = await pool.query(
+    'SELECT status FROM local_seo_pages WHERE id = $1',
+    [Number(quocOai.id)]
+  );
+  assert.equal(afterAttempt.rows[0]?.status, 'DRAFT');
+});
+
+test('Local SEO: server renderer outputs canonical content, real place cards and a first-party interactive map', () => {
+  const html = renderLocalSeoLandingPage({
+    page: {
+      slug: 'cafe-hoa-lac',
+      title: 'Cafe Hòa Lạc: tìm quán phù hợp',
+      seoTitle: 'Cafe Hòa Lạc | HOLA Maps',
+      seoDescription: 'Danh sách cafe thực tế tại Hòa Lạc.',
+      excerpt: 'Tìm cafe theo nhu cầu học tập và làm việc.',
+      areaName: 'Hòa Lạc',
+      updatedAt: '2026-11-06T08:00:00.000Z',
+      coverImage: 'https://example.com/cafe-cover.jpg',
+      mapSupported: true,
+      body: [
+        { heading: 'Chọn quán theo mục đích', paragraphs: ['Nội dung biên tập riêng cho khu vực.'] },
+        { heading: 'Kiểm tra thông tin', paragraphs: ['Đối chiếu địa chỉ và giờ hoạt động.'] },
+        { heading: 'Mở bản đồ', paragraphs: ['Kiểm tra vị trí trước khi đến.'] }
+      ]
+    },
+    places: [{
+      id: '987654',
+      slug: 'cafe-thu-nghiem',
+      name: 'Cafe thử nghiệm',
+      category: 'Cafe',
+      address: 'Hòa Lạc, Hà Nội',
+      rating: 4.5,
+      reviews: 12,
+      coverImage: 'https://example.com/cafe.jpg'
+    }]
+  });
+
+  assert.match(html, /<link rel="canonical" href="https:\/\/maps\.dothihoalac\.vn\/khu-vuc\/cafe-hoa-lac"/);
+  assert.match(html, /<h1>Cafe Hòa Lạc: tìm quán phù hợp<\/h1>/);
+  assert.match(html, /CollectionPage/);
+  assert.match(html, /ItemList/);
+  assert.match(html, /<iframe src="\/local-map\/cafe-hoa-lac"/);
+  assert.match(html, /Cafe thử nghiệm/);
+  assert.doesNotMatch(html, /<meta name="robots" content="noindex/);
 });

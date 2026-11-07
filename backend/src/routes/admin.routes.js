@@ -161,6 +161,8 @@ import {
   updateIngestionSourceAdmin
 } from '../controllers/adminIngestion.controller.js';
 import { updateIngestionSourceSchema } from '../validators/ingestion.validators.js';
+import { getAdminLocalSeoPages, updateAdminLocalSeoPageStatus } from '../controllers/adminLocalSeo.controller.js';
+import { updateLocalSeoPageStatusSchema } from '../validators/localSeo.validators.js';
 
 const router = Router();
 const ctvStaff = authorize('CTV', 'MODERATOR', 'ADMIN');
@@ -280,5 +282,8 @@ router.post('/developer-api/keys/:id/revoke', adminOnly, revokeDeveloperApiKeyAd
 router.get('/developer-api/endpoints', adminOnly, listDeveloperApiEndpointsAdmin);
 router.patch('/developer-api/endpoints/:key', adminOnly, validateBody(updateDeveloperApiEndpointSchema), updateDeveloperApiEndpointAdmin);
 router.get('/developer-api/logs', adminOnly, listDeveloperApiLogsAdmin);
+
+router.get('/local-seo', adminOnly, getAdminLocalSeoPages);
+router.patch('/local-seo/:id/status', adminOnly, validateBody(updateLocalSeoPageStatusSchema), updateAdminLocalSeoPageStatus);
 
 export default router;

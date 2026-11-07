@@ -82,6 +82,33 @@ EOF
 write_embed_location "= /embed"
 write_embed_location "^~ /embed/"
 
+
+# First-party local SEO map embeds are self-framed only. They use the same
+# React map page but do not require a third-party embed grant or public key.
+write_local_map_location() {
+  local location_match="$1"
+  cat >> "$SNIPPET" <<EOF
+location $location_match {
+  root "$APP_DIR/frontend/dist";
+  try_files /index.html =404;
+
+  # This route is intended only for same-origin HOLA Local SEO page iframes.
+  # A location-level add_header replaces inherited X-Frame-Options: DENY.
+  add_header Content-Security-Policy "frame-ancestors 'self'; object-src 'none'; base-uri 'self'" always;
+  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+  add_header Permissions-Policy "camera=(self), geolocation=(self), microphone=(), payment=(), usb=()" always;
+  add_header Cache-Control "private, no-store" always;
+}
+
+EOF
+}
+
+write_local_map_location "= /local-map"
+write_local_map_location "^~ /local-map/"
+
+
 # Public SEO documents must reach Express before the SPA index.html fallback.
 # Express returns complete HTML with route-specific metadata and visible content.
 write_seo_proxy_location() {
@@ -103,6 +130,7 @@ EOF
 
 write_seo_proxy_location "= /kham-pha"
 write_seo_proxy_location "^~ /kham-pha/"
+write_seo_proxy_location "^~ /khu-vuc/"
 write_seo_proxy_location "^~ /dia-diem/"
 write_seo_proxy_location "^~ /place/"
 

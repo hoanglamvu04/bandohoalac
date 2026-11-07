@@ -7,8 +7,10 @@ import {
   getExploreArticleBySlug,
   listExploreArticles
 } from '../services/explore.service.js';
+import { getLocalSeoPageBySlug } from '../services/localSeo.service.js';
 import {
   renderExploreArticleSeoPage,
+  renderLocalSeoLandingPage,
   renderExploreHubSeoPage,
   renderPlaceSeoPage,
   renderSeoNotFoundPage
@@ -21,9 +23,14 @@ function notFound(res) {
   res.type('html').send(renderSeoNotFoundPage());
 }
 
-function sendSeoHtml(res, html, maxAge = 300) {
+function sendSeoHtml(res, html, maxAge = 300, staleWhileRevalidate = 1800) {
   res.set('Content-Type', 'text/html; charset=utf-8');
-  res.set('Cache-Control', 'public, max-age=' + maxAge + ', stale-while-revalidate=1800');
+  res.set(
+    'Cache-Control',
+    staleWhileRevalidate > 0
+      ? 'public, max-age=' + maxAge + ', stale-while-revalidate=' + staleWhileRevalidate
+      : 'public, max-age=' + maxAge + ', must-revalidate'
+  );
   res.set('X-Content-Type-Options', 'nosniff');
   res.send(html);
 }
@@ -72,4 +79,10 @@ export const getExploreArticleSeoPage = asyncHandler(async (req, res) => {
   const result = await getExploreArticleBySlug(req.params.slug);
   if (!result?.article) return notFound(res);
   return sendSeoHtml(res, renderExploreArticleSeoPage(result));
+});
+
+export const getLocalSeoLandingPage = asyncHandler(async (req, res) => {
+  const result = await getLocalSeoPageBySlug(req.params.slug);
+  if (!result) return notFound(res);
+  return sendSeoHtml(res, renderLocalSeoLandingPage(result), 60, 0);
 });

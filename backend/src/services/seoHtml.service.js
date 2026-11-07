@@ -88,7 +88,7 @@ function renderShell(options) {
     '<meta name="robots" content="' + robots + '">',
     '<link rel="canonical" href="' + escapeHtml(canonical) + '">',
     '<link rel="icon" href="/pwa-icon.svg" type="image/svg+xml">',
-    '<link rel="stylesheet" href="/seo-rendered.css?v=20261105-explore-ssr-v4">',
+    '<link rel="stylesheet" href="/seo-rendered.css?v=20261106-local-seo-v1">',
     '<meta property="og:locale" content="vi_VN"><meta property="og:site_name" content="' + SITE_NAME + '">',
     '<meta property="og:type" content="' + type + '">',
     '<meta property="og:title" content="' + escapeHtml(title) + '">',
@@ -272,6 +272,127 @@ export function renderPlaceSeoPage(place) {
     description,
     canonical,
     image: coverImage,
+    jsonLd,
+    body
+  });
+}
+
+export function renderLocalSeoLandingPage({ page, places = [] }) {
+  const canonical = SITE_URL + '/khu-vuc/' + encodeURIComponent(page.slug);
+  const description = compactText(page.seoDescription || page.excerpt, page.title);
+  const image = safePublicUrl(page.coverImage) || DEFAULT_IMAGE;
+  const mapHref = '/local-map/' + encodeURIComponent(page.slug);
+  const breadcrumbs = [
+    { name: SITE_NAME, url: SITE_URL + '/' },
+    { name: 'Khám phá Hòa Lạc', url: SITE_URL + '/kham-pha' },
+    { name: cleanText(page.title) }
+  ];
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        '@id': canonical + '#collection',
+        name: cleanText(page.title),
+        description,
+        url: canonical,
+        about: { '@type': 'Place', name: cleanText(page.areaName) },
+        mainEntity: {
+          '@type': 'ItemList',
+          '@id': canonical + '#places',
+          name: 'Địa điểm thực tế tại ' + cleanText(page.areaName),
+          numberOfItems: places.length,
+          itemListElement: places.map((place, index) => ({
+            '@type': 'ListItem',
+            position: index + 1,
+            name: cleanText(place.name),
+            url: place.slug
+              ? SITE_URL + '/dia-diem/' + encodeURIComponent(place.slug)
+              : SITE_URL + '/map?place=' + encodeURIComponent(place.id)
+          }))
+        }
+      },
+      breadcrumbJsonLd(breadcrumbs, canonical)
+    ]
+  };
+
+  const sections = (Array.isArray(page.body) ? page.body : []).map((section, index) => {
+    const heading = cleanText(section?.heading);
+    const paragraphs = Array.isArray(section?.paragraphs)
+      ? section.paragraphs.map((paragraph) => '<p>' + escapeHtml(paragraph) + '</p>').join('')
+      : '';
+    const bullets = Array.isArray(section?.bullets) && section.bullets.length
+      ? '<ul>' + section.bullets.map((bullet) => '<li>' + escapeHtml(bullet) + '</li>').join('') + '</ul>'
+      : '';
+    return '<section id="phan-' + (index + 1) + '">' +
+      (heading ? '<h2>' + escapeHtml(heading) + '</h2>' : '') +
+      paragraphs + bullets + '</section>';
+  }).join('');
+
+  const placeCards = places.length
+    ? '<section class="seo-related-places"><div class="seo-section-heading">' +
+      '<span>ĐỊA ĐIỂM ĐÃ XUẤT BẢN</span><h2>Địa điểm thực tế tại ' +
+      escapeHtml(page.areaName) + '</h2><p>Danh sách lấy từ hồ sơ địa điểm HOLA MAP và được lọc theo khu vực, danh mục.</p></div>' +
+      '<div class="seo-place-grid">' + places.map(renderPlaceCard).join('') + '</div></section>'
+    : '';
+
+  const mapSection = page.mapSupported
+    ? [
+      '<section class="seo-local-map" aria-labelledby="seo-local-map-title">',
+      '<div class="seo-local-map-heading"><span>HOLA MAPS · BẢN ĐỒ TƯƠNG TÁC</span>',
+      '<h2 id="seo-local-map-title">Xem các địa điểm trên bản đồ</h2>',
+      '<p>Chọn điểm ghim để xem địa điểm, kiểm tra vị trí và khám phá khu vực xung quanh.</p></div>',
+      '<div class="seo-local-map-frame-wrap">',
+      '<iframe src="' + escapeHtml(mapHref) + '" title="Bản đồ địa điểm ' + escapeHtml(page.areaName) +
+        ' trên HOLA Maps" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>',
+      '</div><a class="seo-local-map-open" href="' + escapeHtml(mapHref) +
+        '" target="_blank" rel="noopener">Mở bản đồ toàn màn hình →</a>',
+      '</section>'
+    ].join('')
+    : '';
+
+  const sidebar = renderEditorialSidebar({
+    eyebrow: 'HOLA LOCAL GUIDE',
+    title: 'Khám phá địa điểm đã có dữ liệu thực tế.',
+    description: 'Danh sách chỉ hiển thị hồ sơ đạt điều kiện chất lượng. Mở từng địa điểm để kiểm tra thông tin và thời điểm xác minh.',
+    primaryHref: mapHref,
+    primaryLabel: 'Mở bản đồ tương tác',
+    secondaryHref: '/kham-pha',
+    secondaryLabel: 'Xem cẩm nang Hòa Lạc',
+    links: [
+      { label: 'Khám phá tất cả địa điểm', href: '/map' },
+      { label: 'Đóng góp thông tin địa phương', href: '/contribute' }
+    ]
+  });
+
+  const body = [
+    '<main class="seo-content seo-local-page">',
+    renderBreadcrumbs(breadcrumbs),
+    '<div class="seo-editorial-layout">',
+    '<article class="seo-editorial-main">',
+    '<header class="seo-page-heading"><span class="seo-eyebrow">HOLA LOCAL SEO · ' + escapeHtml(page.areaName) + '</span>',
+    '<h1>' + escapeHtml(page.title) + '</h1>',
+    '<p class="seo-lead">' + escapeHtml(page.excerpt) + '</p>',
+    '<div class="seo-page-meta"><span>' + escapeHtml(page.areaName) + '</span>',
+    '<span>' + places.length + ' địa điểm thực tế</span>',
+    page.updatedAt ? '<span>Cập nhật ' + escapeHtml(formatDate(page.updatedAt)) + '</span>' : '',
+    '</div></header>',
+    '<div class="seo-article-body">' + sections + '</div>',
+    mapSection,
+    '</article>',
+    sidebar,
+    '</div>',
+    placeCards,
+    '<section class="seo-local-data-note"><strong>Về chất lượng dữ liệu</strong>',
+    '<p>Danh sách này sử dụng hồ sơ địa điểm đã xuất bản, có tọa độ hợp lệ và vượt qua ngưỡng chất lượng của HOLA Maps. Thông tin có thể thay đổi; hãy kiểm tra lần xác minh gần nhất và liên hệ địa điểm khi cần xác nhận trước chuyến đi.</p></section>',
+    '</main>'
+  ].join('');
+
+  return renderShell({
+    title: page.seoTitle || page.title,
+    description,
+    canonical,
+    image,
     jsonLd,
     body
   });

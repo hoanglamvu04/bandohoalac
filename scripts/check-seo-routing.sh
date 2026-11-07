@@ -17,6 +17,8 @@ if grep -Fq "app.get('/', getHomeSeoPage);" "$APP"; then
 fi
 grep -Fq "app.get('/kham-pha', getExploreHubSeoPage);" "$APP"
 grep -Fq "app.get('/kham-pha/:slug', getExploreArticleSeoPage);" "$APP"
+grep -Fq "app.get('/khu-vuc/:slug', getLocalSeoLandingPage);" "$APP"
+grep -Fq "listLocalSeoSitemapEntries" "$APP"
 grep -Fq "app.get('/dia-diem/:slug', getPlaceSeoPage);" "$APP"
 grep -Fq "app.get('/place/:id', redirectLegacyPlaceSeoPage);" "$APP"
 grep -Fq "listPublishedPlaceSitemapEntries" "$APP"
@@ -26,6 +28,7 @@ grep -Fq "AS cover_image" "$EXPLORE_SERVICE"
 grep -Fq "AS cover_image" "$PLACE_SERVICE"
 grep -Fq "sitemap_lastmod" "$EXPLORE_SERVICE"
 grep -Fq "api/sitemap-explore.xml" "$SITEMAP_INDEX"
+grep -Fq "api/sitemap-local-seo.xml" "$SITEMAP_INDEX"
 grep -Fq "api/sitemap-places.xml" "$SITEMAP_INDEX"
 grep -Fq "Sitemap: https://maps.dothihoalac.vn/sitemap.xml" "$ROBOTS"
 test -s "$SITEMAP_INDEX"
@@ -37,6 +40,9 @@ if grep -Fxq 'write_seo_proxy_location "= /"' "$NGINX"; then
 fi
 grep -Fq 'write_seo_proxy_location "= /kham-pha"' "$NGINX"
 grep -Fq 'write_seo_proxy_location "^~ /kham-pha/"' "$NGINX"
+grep -Fq 'write_seo_proxy_location "^~ /khu-vuc/"' "$NGINX"
+grep -Fq 'write_local_map_location "= /local-map"' "$NGINX"
+grep -Fq 'write_local_map_location "^~ /local-map/"' "$NGINX"
 grep -Fq 'write_seo_proxy_location "^~ /dia-diem/"' "$NGINX"
 grep -Fq 'write_seo_proxy_location "^~ /place/"' "$NGINX"
 

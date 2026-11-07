@@ -9,4 +9,7 @@
   <sitemap>
     <loc>https://maps.dothihoalac.vn/api/sitemap-explore.xml</loc>
   </sitemap>
+  <sitemap>
+    <loc>https://maps.dothihoalac.vn/api/sitemap-local-seo.xml</loc>
+  </sitemap>
 </sitemapindex>

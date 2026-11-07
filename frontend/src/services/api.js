@@ -362,6 +362,18 @@ export function getMyFavorites() {
   return unwrap(client.get('/places/favorites/me'));
 }
 
+export function getLocalSeoPage(slug) {
+  return unwrap(client.get('/local-seo/' + encodeURIComponent(slug)));
+}
+
+export function getAdminLocalSeoPages() {
+  return unwrap(client.get('/admin/local-seo'));
+}
+
+export function updateAdminLocalSeoPageStatus(id, status) {
+  return unwrap(client.patch('/admin/local-seo/' + encodeURIComponent(id) + '/status', { status }));
+}
+
 export function getMyCollections() {
   return unwrap(client.get('/collections/mine'));
 }
