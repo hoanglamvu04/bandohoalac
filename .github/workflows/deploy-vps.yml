@@ -1,143 +1,18 @@
-name: Deploy Hola Maps to VPS
+name: VPS update instructions (manual owner-managed)
 
 on:
-  workflow_run:
-    workflows: ["Hola Maps CI"]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: hola-maps-production
-  cancel-in-progress: true
-
 jobs:
-  deploy:
-    name: Deploy production
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository)
+  instructions:
+    name: No automatic deployment
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || '' }}
-
     steps:
-      - name: Configure SSH
-        shell: bash
+      - name: Explain manual VPS update
         run: |
-          set -euo pipefail
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
-
-      - name: Pull, build and restart
-        shell: bash
-        run: |
-          ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "DEPLOY_SHA='$DEPLOY_SHA' bash -se" <<'REMOTE'
-            set -euo pipefail
-
-            APP_DIR=/var/www/bandohoalac
-
-            cd "$APP_DIR"
-
-            echo "==> Sync source"
-            git fetch origin main
-            git checkout main
-
-            if [ -n "${DEPLOY_SHA:-}" ]; then
-              MAIN_SHA="$(git rev-parse origin/main)"
-              if [ "$MAIN_SHA" != "$DEPLOY_SHA" ]; then
-                echo "CI result is stale because main moved to $MAIN_SHA; skipping this deploy."
-                exit 0
-              fi
-              git reset --hard "$DEPLOY_SHA"
-            else
-              git reset --hard origin/main
-            fi
-
-            bash scripts/ensure-production-security-env.sh
-            bash scripts/harden-production-security.sh
-
-            echo "==> Canonical domain check"
-            DOMAIN_MARKER="$APP_DIR/.maps-domain-migrated"
-            if [ ! -f "$DOMAIN_MARKER" ]; then
-              if getent ahostsv4 maps.dothihoalac.vn >/dev/null 2>&1; then
-                echo "DNS for maps.dothihoalac.vn resolves; attempting one-time domain migration"
-                if bash scripts/migrate-production-domain-to-maps.sh; then
-                  touch "$DOMAIN_MARKER"
-                  echo "Canonical domain migration completed"
-                else
-                  echo "WARN: maps domain migration is not ready yet; keeping the existing domain for this deploy"
-                fi
-              else
-                echo "DNS for maps.dothihoalac.vn is not ready; keeping map.dothihoalac.vn for now"
-              fi
-            else
-              echo "Canonical maps domain migration already completed"
-            fi
-
-            echo "==> Legacy map.dothihoalac.vn 301 redirect"
-            REDIRECT_MARKER="$APP_DIR/.map-domain-301-v1"
-            if [ ! -f "$REDIRECT_MARKER" ]; then
-              bash scripts/enforce-legacy-map-redirect.sh
-              touch "$REDIRECT_MARKER"
-              echo "Legacy domain now redirects permanently to maps.dothihoalac.vn"
-            else
-              echo "Legacy domain 301 redirect already configured"
-            fi
-
-            echo "==> Recheck production headers"
-            bash scripts/harden-production-security.sh
-
-            echo "==> Ensure image/search runtime tools"
-            if command -v apt-get >/dev/null 2>&1; then
-              if [ "$(id -u)" -eq 0 ]; then
-                command -v cwebp >/dev/null 2>&1 || {
-                  apt-get update -qq || true
-                  apt-get install -y webp postgresql-contrib >/dev/null 2>&1 || true
-                }
-              elif command -v sudo >/dev/null 2>&1; then
-                command -v cwebp >/dev/null 2>&1 || {
-                  sudo apt-get update -qq || true
-                  sudo apt-get install -y webp postgresql-contrib >/dev/null 2>&1 || true
-                }
-              fi
-            fi
-            command -v cwebp >/dev/null 2>&1 || {
-              echo "ERROR: cwebp is required to strip metadata from user-uploaded images." >&2
-              exit 1
-            }
-
-            echo "==> Install dependencies"
-            npm ci
-            npm ci --prefix backend
-            npm ci --prefix frontend --no-audit --no-fund
-
-            echo "==> Apply database schema"
-            npm run db:migrate
-
-            echo "==> Nightly database backup schedule"
-            bash scripts/install-backup-cron.sh || echo "WARN: backup schedule skipped"
-
-            echo "==> Backfill optimized place images"
-            npm run images:backfill-variants --prefix backend -- --limit=250 || true
-
-            echo "==> Build frontend"
-            npm run build
-
-            echo "==> Restart backend"
-            pm2 restart bandohoalac-api --update-env
-            pm2 save
-
-            echo "==> Install approved iframe embed gateway"
-            bash scripts/install-embed-gateway.sh
-
-            echo "==> Health check"
-            sleep 2
-            curl --fail --silent --show-error http://127.0.0.1:5003/api/health
-            echo
-          REMOTE
+          echo "Automatic VPS deployment is disabled by project owner request."
+          echo "No SSH connection, git reset, migration, build or PM2 restart is performed."
+          echo "Update the VPS manually from /var/www/bandohoalac using the reviewed main branch."
