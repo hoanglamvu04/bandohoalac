@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import '../place-trust.css';
 import {
+  AlertTriangle,
   ArrowLeft,
   BadgeCheck,
+  CheckCircle2,
   Building2,
   Camera,
   Clock3,
@@ -22,10 +25,13 @@ import { Link, useParams } from 'react-router-dom';
 import {
   addFavorite,
   client,
+  confirmPlaceActive,
+  createContribution,
   getHousingListing,
   getNearbyPlaces,
   getPlace,
   getPlaceBySlug,
+  getPlaceTrust,
   getPlaceMe,
   removeFavorite
 } from '../services/api.js';
@@ -95,6 +101,12 @@ export default function PlaceDetailV2() {
   const [favorite, setFavorite] = useState(false);
   const [favoriteBusy, setFavoriteBusy] = useState(false);
   const [housingDetail, setHousingDetail] = useState(null);
+  const [trustSummary, setTrustSummary] = useState(null);
+  const [trustBusy, setTrustBusy] = useState(false);
+  const [reportField, setReportField] = useState('');
+  const [reportSuggestedValue, setReportSuggestedValue] = useState('');
+  const [reportReason, setReportReason] = useState('');
+  const [reportBusy, setReportBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -103,6 +115,10 @@ export default function PlaceDetailV2() {
     setNearby([]);
     setHaloSpot(null);
     setHousingDetail(null);
+    setTrustSummary(null);
+    setReportField('');
+    setReportSuggestedValue('');
+    setReportReason('');
     setActiveImage(0);
     setFavorite(false);
 
@@ -111,6 +127,9 @@ export default function PlaceDetailV2() {
         if (!active) return;
         setPlace(data);
         setStatus('ready');
+        getPlaceTrust(data.id)
+          .then((trust) => { if (active) setTrustSummary(trust); })
+          .catch(() => { if (active) setTrustSummary({ loadError: true }); });
 
         if (Number.isFinite(Number(data?.lat)) && Number.isFinite(Number(data?.lng))) {
           getNearbyPlaces(data.lat, data.lng, 8000)
@@ -245,6 +264,69 @@ export default function PlaceDetailV2() {
     }
   }
 
+  async function confirmPlaceStillActive() {
+    if (!user) {
+      showToast('Đăng nhập để xác nhận địa điểm vẫn đang hoạt động.', 'info');
+      return;
+    }
+    if (trustBusy) return;
+
+    setTrustBusy(true);
+    try {
+      const trust = await confirmPlaceActive(place.id);
+      setTrustSummary(trust);
+      showToast('Cảm ơn bạn đã xác nhận tình trạng địa điểm.', 'success');
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setTrustBusy(false);
+    }
+  }
+
+  function openPlaceReport(field) {
+    if (!user) {
+      showToast('Đăng nhập để báo sai thông tin địa điểm.', 'info');
+      return;
+    }
+    setReportField(field);
+    setReportSuggestedValue('');
+    setReportReason('');
+  }
+
+  async function submitPlaceReport(event) {
+    event?.preventDefault?.();
+    if (!reportField || !reportReason.trim() || reportBusy) return;
+
+    const placeField = reportField === 'ADDRESS'
+      ? 'address'
+      : reportField === 'OPENING_HOURS'
+        ? 'openingHours'
+        : 'phone';
+    const suggestedValue = reportSuggestedValue.trim();
+    const placeCorrection = suggestedValue ? { [placeField]: suggestedValue } : undefined;
+
+    setReportBusy(true);
+    try {
+      await createContribution({
+        type: 'REPORT_WRONG_INFO',
+        placeId: place.id,
+        fieldKey: reportField,
+        suggestedValue: suggestedValue || undefined,
+        place: placeCorrection,
+        reason: reportReason.trim()
+      });
+      showToast('Đã gửi báo cáo. Thông tin sẽ được HOLA kiểm tra trước khi cập nhật.', 'success');
+      setReportField('');
+      setReportSuggestedValue('');
+      setReportReason('');
+      getPlaceTrust(place.id).then(setTrustSummary).catch(() => {});
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setReportBusy(false);
+    }
+  }
+
   async function sharePlace() {
     const shareData = {
       title: place.name + ' | Hola Maps',
@@ -281,7 +363,7 @@ export default function PlaceDetailV2() {
 
       <div className="place-v2-topbar">
         <Link to="/map" className="place-v2-back"><ArrowLeft size={18} /> Bản đồ</Link>
-        <span className="place-v2-source"><BadgeCheck size={15} /> {place.source === 'ADMIN' ? 'Hola Maps' : 'Dữ liệu cộng đồng'}</span>
+        <span className="place-v2-source"><BadgeCheck size={15} /> {place.source === 'ADMIN' ? 'Nguồn: HOLA MAP' : 'Nguồn: cộng đồng'}</span>
       </div>
 
       <section className="place-v2-hero">
@@ -332,6 +414,127 @@ export default function PlaceDetailV2() {
         <div><MapPin size={19} /><span>Khu vực</span><strong>{place.address || 'Hòa Lạc'}</strong></div>
         <div><Star size={19} /><span>Đánh giá</span><strong>{rating > 0 ? rating.toFixed(1) + '/5' : 'Mới'}</strong></div>
         <div><Users size={19} /><span>Ảnh HALO</span><strong>{haloSpot?.mediaCount || 0}</strong></div>
+      </section>
+
+      <section className="place-v2-card place-trust-card">
+        <div className="place-v2-section-title">
+          <ShieldCheck size={19} />
+          <h2>Độ tin cậy thông tin</h2>
+          <span className={trustSummary?.loadError || trustSummary?.freshness?.isStale ? 'place-trust-status stale' : 'place-trust-status fresh'}>
+            {trustSummary?.loadError
+              ? 'Không tải được'
+              : trustSummary?.freshness?.status === 'FRESH'
+                ? 'Dữ liệu còn mới'
+                : trustSummary?.freshness?.status === 'STALE'
+                  ? 'Cần xác minh lại'
+                  : trustSummary
+                    ? 'Chưa xác minh'
+                    : 'Đang kiểm tra'}
+          </span>
+        </div>
+
+        {trustSummary?.loadError && (
+          <div className="place-trust-warning"><AlertTriangle size={17} /><span>Chưa thể tải lịch sử xác minh. Bạn vẫn có thể báo sai thông tin hoặc thử tải lại trang.</span></div>
+        )}
+        {trustSummary?.freshness?.isStale && (
+          <div className="place-trust-warning">
+            <AlertTriangle size={17} />
+            <span>
+              {trustSummary.verificationSource === 'LEGACY'
+                ? 'Mốc xác minh cũ đã quá ' + trustSummary.freshness.ageDays + ' ngày; hệ thống chưa lưu nguồn xác minh.'
+                : trustSummary.lastVerifiedAt
+                  ? 'Thông tin chưa được HOLA xác minh trong ' + trustSummary.freshness.ageDays + ' ngày.'
+                  : 'Địa điểm chưa có lịch sử xác minh chính thức từ HOLA.'}
+              {' '}Bạn có thể giúp cập nhật tình trạng mới nhất.
+            </span>
+          </div>
+        )}
+
+        <div className="place-trust-sources">
+          <article>
+            <span className="place-trust-source-label hola">{trustSummary?.verificationSource === 'LEGACY' ? 'Mốc xác minh cũ' : 'HOLA MAP xác minh'}</span>
+            <strong>{trustSummary?.loadError ? 'Không tải được' : trustSummary?.lastVerifiedAt ? new Date(trustSummary.lastVerifiedAt).toLocaleDateString('vi-VN') : 'Chưa có mốc xác minh'}</strong>
+            <small>
+              {trustSummary?.verificationSource === 'HOLA'
+                ? (trustSummary.verifiedBy ? 'Kiểm tra bởi ' + trustSummary.verifiedBy : 'Đội ngũ HOLA kiểm tra')
+                : trustSummary?.verificationSource === 'LEGACY'
+                  ? 'Mốc xác minh cũ; chưa lưu nguồn/người xác minh'
+                  : 'Chưa có xác minh chính thức'}
+            </small>
+          </article>
+          <article>
+            <span className="place-trust-source-label owner">Chủ địa điểm xác nhận</span>
+            <strong>{trustSummary?.loadError ? 'Không tải được' : trustSummary?.owner?.lastConfirmedAt ? new Date(trustSummary.owner.lastConfirmedAt).toLocaleDateString('vi-VN') : 'Chưa xác nhận'}</strong>
+            <small>{trustSummary?.loadError ? 'Không tải được lịch sử' : trustSummary?.owner?.confirmedBy ? 'Xác nhận bởi ' + trustSummary.owner.confirmedBy : 'Chỉ chủ địa điểm đã được HOLA duyệt mới xác nhận được'}</small>
+          </article>
+          <article>
+            <span className="place-trust-source-label community">Cộng đồng đóng góp</span>
+            <strong>{trustSummary?.loadError ? 'Không tải được' : Number(trustSummary?.community?.confirmations90d || 0) + ' xác nhận / 90 ngày'}</strong>
+            <small>
+              {trustSummary?.community?.lastConfirmedAt
+                ? 'Xác nhận gần nhất ' + new Date(trustSummary.community.lastConfirmedAt).toLocaleDateString('vi-VN') + ' · '
+                : ''}
+              {Number(trustSummary?.community?.approvedUpdates90d || 0)} cập nhật đã duyệt · {Number(trustSummary?.community?.verifiedChecks90d || 0)} lượt kiểm tra cộng đồng / 90 ngày
+            </small>
+          </article>
+        </div>
+
+        {!!trustSummary?.community?.pendingReports && (
+          <p className="place-trust-pending">
+            <AlertTriangle size={14} />
+            Có {trustSummary.community.pendingReports} báo cáo thông tin đang chờ HOLA kiểm tra.
+          </p>
+        )}
+
+        <div className="place-trust-actions">
+          <button type="button" className="place-trust-confirm" onClick={confirmPlaceStillActive} disabled={trustBusy}>
+            <CheckCircle2 size={16} />
+            {trustBusy ? 'Đang ghi nhận...' : 'Xác nhận địa điểm vẫn hoạt động'}
+          </button>
+          <div className="place-trust-report-buttons">
+            <button type="button" onClick={() => openPlaceReport('ADDRESS')}>Báo sai địa chỉ</button>
+            <button type="button" onClick={() => openPlaceReport('OPENING_HOURS')}>Báo sai giờ mở cửa</button>
+            <button type="button" onClick={() => openPlaceReport('PHONE')}>Báo sai số điện thoại</button>
+          </div>
+        </div>
+
+        {reportField && (
+          <form className="place-trust-report-form" onSubmit={submitPlaceReport}>
+            <div className="place-trust-report-head">
+              <div>
+                <b>{reportField === 'ADDRESS' ? 'Báo sai địa chỉ' : reportField === 'OPENING_HOURS' ? 'Báo sai giờ mở cửa' : 'Báo sai số điện thoại'}</b>
+                <small>Thông tin gửi đi sẽ vào hàng chờ kiểm duyệt, chưa thay đổi dữ liệu công khai.</small>
+              </div>
+              <button type="button" onClick={() => setReportField('')} aria-label="Đóng biểu mẫu">×</button>
+            </div>
+            <label>
+              Thông tin chính xác đề xuất (không bắt buộc)
+              <input
+                value={reportSuggestedValue}
+                onChange={(event) => setReportSuggestedValue(event.target.value)}
+                maxLength={reportField === 'ADDRESS' ? 300 : reportField === 'OPENING_HOURS' ? 120 : 30}
+                placeholder={reportField === 'ADDRESS' ? 'Địa chỉ đúng...' : reportField === 'OPENING_HOURS' ? 'Ví dụ: 08:00–22:00' : 'Số điện thoại đúng...'}
+              />
+            </label>
+            <label>
+              Mô tả vấn đề <span>*</span>
+              <textarea
+                value={reportReason}
+                onChange={(event) => setReportReason(event.target.value)}
+                maxLength={500}
+                rows={3}
+                required
+                placeholder="Mô tả ngắn vì sao thông tin hiện tại không chính xác..."
+              />
+            </label>
+            <div className="place-trust-report-form-actions">
+              <button type="button" onClick={() => setReportField('')} disabled={reportBusy}>Hủy</button>
+              <button type="submit" disabled={reportBusy || !reportReason.trim()}>
+                {reportBusy ? 'Đang gửi...' : 'Gửi báo cáo'}
+              </button>
+            </div>
+          </form>
+        )}
       </section>
 
       {place.categorySlug === 'bat-dong-san' && (
@@ -448,7 +651,7 @@ export default function PlaceDetailV2() {
           <h2>Bạn đang quản lý địa điểm này?</h2>
           <p>Xác nhận quyền quản lý để gửi thông tin chính thức và giúp dữ liệu địa điểm luôn đúng hơn.</p>
         </div>
-        <Link to={'/claim-place/' + encodeURIComponent(place.id)}>Xác nhận địa điểm</Link>
+        <Link to={'/claim-place/' + encodeURIComponent(place.id)}>Xác minh quyền quản lý</Link>
       </section>
 
       {haloSpot?.media?.length > 0 && (

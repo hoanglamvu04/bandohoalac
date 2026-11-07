@@ -34,7 +34,9 @@ const ISSUE_LABELS = {
   MISSING_CONTACT: 'Thiếu liên hệ',
   MISSING_IMAGES: 'Thiếu ảnh',
   STALE_IMAGES: 'Ảnh quá cũ',
-  STALE_PLACE: 'Lâu chưa xác minh'
+  STALE_PLACE: 'Quá 180 ngày chưa xác minh',
+  NEVER_VERIFIED: 'Chưa từng xác minh',
+  NEVER_VERIFIED: 'Chưa từng xác minh'
 };
 
 const REVISION_LABELS = {
@@ -131,8 +133,13 @@ export default function AdminDataTrust() {
   async function verify(place) {
     setBusy('verify-' + place.id);
     try {
-      await verifyPlaceQuality(place.id);
-      showToast('Đã xác minh dữ liệu địa điểm còn chính xác.', 'success');
+      const result = await verifyPlaceQuality(place.id);
+      showToast(
+        result?.verificationSource === 'HOLA'
+          ? 'HOLA đã xác minh dữ liệu địa điểm.'
+          : 'Đã ghi nhận kiểm tra từ cộng đồng; mốc xác minh chính thức HOLA chưa thay đổi.',
+        'success'
+      );
       await load();
     } catch (error) {
       showToast(error.message, 'error');
@@ -189,7 +196,7 @@ export default function AdminDataTrust() {
           <section className="data-trust-stats">
             <article><Sparkles /><span><small>Địa điểm cần xử lý</small><b>{summary.needsAttention || 0}</b></span></article>
             <article><ImageOff /><span><small>Thiếu ảnh</small><b>{summary.missingImages || 0}</b></span></article>
-            <article><Clock3 /><span><small>Lâu chưa xác minh</small><b>{summary.stalePlaces || 0}</b></span></article>
+            <article><Clock3 /><span><small>Chưa xác minh / quá cũ</small><b>{summary.stalePlaces || 0}</b></span></article>
             <article><CameraOff /><span><small>Ảnh quá cũ</small><b>{summary.staleImages || 0}</b></span></article>
             <article className={risky.length ? 'warn' : ''}><ShieldAlert /><span><small>Đóng góp rủi ro</small><b>{risky.length}</b></span></article>
           </section>
@@ -213,7 +220,7 @@ export default function AdminDataTrust() {
               <div><span className="eyebrow">DATA QUALITY</span><h2>Địa điểm cần làm mới</h2></div>
               <div className="quality-filter-row">
                 <button className={filter === 'ALL' ? 'active' : ''} onClick={() => setFilter('ALL')}>Tất cả</button>
-                {['MISSING_IMAGES', 'MISSING_HOURS', 'STALE_PLACE', 'STALE_IMAGES'].map((key) => <button key={key} className={filter === key ? 'active' : ''} onClick={() => setFilter(key)}>{ISSUE_LABELS[key]}</button>)}
+                {['MISSING_IMAGES', 'MISSING_HOURS', 'STALE_PLACE', 'NEVER_VERIFIED', 'STALE_IMAGES'].map((key) => <button key={key} className={filter === key ? 'active' : ''} onClick={() => setFilter(key)}>{ISSUE_LABELS[key]}</button>)}
               </div>
             </div>
 
@@ -222,7 +229,7 @@ export default function AdminDataTrust() {
                 <article key={place.id}>
                   <div className="quality-score"><b>{place.qualityScore}</b><small>/100</small></div>
                   <div className="quality-place-copy"><small>{place.category || 'Chưa phân loại'} · #{place.id}</small><h3>{place.name}</h3><p>{place.address || 'Chưa có địa chỉ'}</p><div>{place.issues.map((issue) => <span key={issue}>{ISSUE_LABELS[issue] || issue}</span>)}</div></div>
-                  <div className="quality-place-meta"><span>{place.imageCount} ảnh</span><span>Xác minh: {place.verifiedAgeDays ?? '—'} ngày</span></div>
+                  <div className="quality-place-meta"><span>{place.imageCount} ảnh</span><span>Xác minh: {place.verifiedAgeDays === null ? 'Chưa từng' : place.verifiedAgeDays + ' ngày'}</span></div>
                   <div className="quality-place-actions">
                     <button onClick={() => openHistory(place)}><History size={15} /> Lịch sử</button>
                     {canVerify && <button className="primary" disabled={busy === 'verify-' + place.id} onClick={() => verify(place)}><BadgeCheck size={15} /> Đã kiểm tra</button>}

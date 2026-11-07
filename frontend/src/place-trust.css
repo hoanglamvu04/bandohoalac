@@ -1,0 +1,43 @@
+.place-trust-card { margin: 18px 0 22px; }
+.place-trust-card > .place-v2-section-title { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+.place-trust-card > .place-v2-section-title h2 { margin-right:auto; }
+.place-trust-status { padding:6px 9px; border-radius:999px; font-size:10px; font-weight:900; }
+.place-trust-status.fresh { color:#246447; background:#eaf5ed; }
+.place-trust-status.stale { color:#9a592e; background:#fff1e5; }
+.place-trust-warning { display:flex; align-items:flex-start; gap:9px; margin:13px 0; padding:12px 13px; border:1px solid #f0ddc8; border-radius:12px; background:#fff9f2; color:#87542e; font-size:12px; line-height:1.55; }
+.place-trust-warning svg { flex:0 0 auto; margin-top:1px; }
+.place-trust-sources { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin:14px 0; }
+.place-trust-sources article { min-width:0; display:grid; align-content:start; gap:6px; padding:13px; border:1px solid #e5ece7; border-radius:13px; background:#fbfcfa; }
+.place-trust-source-label { width:max-content; max-width:100%; padding:5px 7px; border-radius:999px; font-size:9px; font-weight:900; }
+.place-trust-source-label.hola { color:#235d45; background:#e7f2e9; }
+.place-trust-source-label.owner { color:#315e79; background:#eaf2f8; }
+.place-trust-source-label.community { color:#765b8d; background:#f2edf7; }
+.place-trust-sources strong { color:#203f34; font-size:13px; line-height:1.4; overflow-wrap:anywhere; }
+.place-trust-sources small { color:#78877f; font-size:10px; line-height:1.45; }
+.place-trust-pending { display:flex; align-items:center; gap:7px; margin:10px 0; color:#9a6033; font-size:11px; }
+.place-trust-actions { display:grid; gap:11px; padding-top:13px; border-top:1px solid #edf1ed; }
+.place-trust-confirm { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:42px; padding:0 14px; border:0; border-radius:11px; background:#174d3d; color:#fff; font-size:12px; font-weight:850; cursor:pointer; }
+.place-trust-confirm:disabled { opacity:.6; cursor:wait; }
+.place-trust-report-buttons { display:flex; flex-wrap:wrap; gap:7px; }
+.place-trust-report-buttons button { min-height:34px; padding:0 10px; border:1px solid #e2e9e4; border-radius:9px; background:#fff; color:#536b5d; font-size:10px; font-weight:800; cursor:pointer; }
+.place-trust-report-form { display:grid; gap:11px; margin-top:13px; padding:14px; border:1px solid #dce8df; border-radius:13px; background:#f8fbf8; }
+.place-trust-report-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.place-trust-report-head b,.place-trust-report-head small { display:block; }
+.place-trust-report-head b { color:#1b4938; font-size:13px; }
+.place-trust-report-head small { margin-top:4px; color:#74847b; font-size:10px; line-height:1.5; }
+.place-trust-report-head button { width:28px; height:28px; border:0; border-radius:8px; background:#eaf0eb; color:#426052; font-size:20px; cursor:pointer; }
+.place-trust-report-form label { display:grid; gap:6px; color:#405a4c; font-size:11px; font-weight:800; }
+.place-trust-report-form label span { color:#b34b3f; }
+.place-trust-report-form input,.place-trust-report-form textarea { width:100%; box-sizing:border-box; border:1px solid #dce6df; border-radius:9px; padding:10px 11px; background:#fff; color:#243d32; font:inherit; font-size:12px; outline:none; }
+.place-trust-report-form input:focus,.place-trust-report-form textarea:focus { border-color:#6e9b7d; box-shadow:0 0 0 3px rgba(76,132,94,.1); }
+.place-trust-report-form textarea { resize:vertical; }
+.place-trust-report-form-actions { display:flex; justify-content:flex-end; gap:8px; }
+.place-trust-report-form-actions button { min-height:35px; padding:0 12px; border:1px solid #dce6df; border-radius:9px; background:#fff; color:#536b5d; font-size:11px; font-weight:850; cursor:pointer; }
+.place-trust-report-form-actions button[type="submit"] { border-color:#174d3d; background:#174d3d; color:#fff; }
+.place-trust-report-form-actions button:disabled { opacity:.5; cursor:not-allowed; }
+@media(max-width:760px) {
+  .place-trust-sources { grid-template-columns:1fr; }
+  .place-trust-sources article { padding:11px; }
+  .place-trust-report-buttons { display:grid; grid-template-columns:1fr; }
+  .place-trust-report-buttons button { width:100%; }
+}

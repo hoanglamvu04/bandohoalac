@@ -33,6 +33,8 @@ export const createContributionSchema = z.object({
     website: z.string().trim().max(200).optional()
   }).optional(),
   reason: z.string().trim().max(500).optional(),
+  fieldKey: z.enum(['ADDRESS', 'OPENING_HOURS', 'PHONE']).optional(),
+  suggestedValue: z.string().trim().max(1000).optional(),
   severity: z.enum(['INFO', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
   expiresHours: z.coerce.number().int().min(1).max(168).optional()
 }).superRefine((data, ctx) => {
@@ -54,6 +56,21 @@ export const createContributionSchema = z.object({
   }
   if (data.type !== 'CREATE_PLACE' && !isRoadStatus && !data.placeId) {
     ctx.addIssue({ code: 'custom', message: 'placeId is required for this contribution type.', path: ['placeId'] });
+  }
+
+  if (data.fieldKey && data.type !== 'REPORT_WRONG_INFO') {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'fieldKey chỉ được dùng khi báo sai thông tin địa điểm.',
+      path: ['fieldKey']
+    });
+  }
+  if (data.type === 'REPORT_WRONG_INFO' && data.fieldKey && !data.reason?.trim()) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Vui lòng mô tả lý do báo sai thông tin.',
+      path: ['reason']
+    });
   }
 
   if (isRoadStatus && !data.reason?.trim()) {

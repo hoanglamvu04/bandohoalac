@@ -50,6 +50,8 @@ export function buildContributionFingerprint({ type, placeId, payload = {} }) {
     website: normalizeText(place.website),
     openingHours: normalizeText(place.openingHours),
     price: normalizeText(place.price),
+    fieldKey: normalizeText(payload.fieldKey),
+    suggestedValue: normalizeText(payload.suggestedValue),
     reason: normalizeText(payload.reason)
   };
   return crypto.createHash('sha256').update(JSON.stringify(compact)).digest('hex');

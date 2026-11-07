@@ -12,7 +12,7 @@ export const getDataQualityAdmin = asyncHandler(async (req, res) => {
 
 export const verifyPlaceQualityAdmin = asyncHandler(async (req, res) => {
   const placeId = Number(req.params.id);
-  const place = await markPlaceVerified({ placeId, actorUserId: req.user.id });
+  const place = await markPlaceVerified({ placeId, actorUserId: req.user.id, actorRole: req.user.role });
   await writeAuditLog({
     actorUserId: req.user.id,
     action: 'PLACE_QUALITY_VERIFIED',

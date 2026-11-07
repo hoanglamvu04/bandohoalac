@@ -27,7 +27,7 @@ function normalizeSearch(value) {
 function scorePlace(row) {
   const issues = [];
   let score = 100;
-  const verifiedAge = ageDays(row.last_verified_at || row.updated_at || row.created_at);
+  const verifiedAge = ageDays(row.last_verified_at);
   const imageAge = ageDays(row.latest_image_at);
   const imageCount = Number(row.image_count || 0);
   const lat = Number(row.lat);
@@ -48,7 +48,9 @@ function scorePlace(row) {
   if (imageCount > 0 && imageAge !== null && imageAge > STALE_IMAGE_DAYS) {
     issues.push('STALE_IMAGES'); score -= 10;
   }
-  if (verifiedAge !== null && verifiedAge > STALE_DAYS) {
+  if (verifiedAge === null) {
+    issues.push('NEVER_VERIFIED'); score -= 20;
+  } else if (verifiedAge > STALE_DAYS) {
     issues.push('STALE_PLACE'); score -= 20;
   }
 
@@ -168,7 +170,8 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
     missingCoordinates: all.filter((item) => item.issues.includes('MISSING_COORDINATES')).length,
     outOfCoverage: all.filter((item) => item.issues.includes('OUT_OF_COVERAGE')).length,
     possibleDuplicates: all.filter((item) => item.issues.includes('POSSIBLE_DUPLICATE')).length,
-    stalePlaces: all.filter((item) => item.issues.includes('STALE_PLACE')).length,
+    stalePlaces: all.filter((item) => item.issues.includes('STALE_PLACE') || item.issues.includes('NEVER_VERIFIED')).length,
+    unverifiedPlaces: all.filter((item) => item.issues.includes('NEVER_VERIFIED')).length,
     staleImages: all.filter((item) => item.issues.includes('STALE_IMAGES')).length,
     averageScore: all.length
       ? Math.round(all.reduce((sum, item) => sum + item.qualityScore, 0) / all.length)
@@ -192,16 +195,36 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
   };
 }
 
-export async function markPlaceVerified({ placeId, actorUserId }) {
+export async function markPlaceVerified({ placeId, actorUserId, actorRole }) {
+  const source = ['ADMIN', 'MODERATOR'].includes(String(actorRole || '').toUpperCase())
+    ? 'HOLA'
+    : 'COMMUNITY';
+
   return withTransaction(async (client) => {
     const before = await capturePlaceSnapshot(placeId, client);
     if (!before) throw new AppError('Place not found.', 404);
 
+    if (source === 'HOLA') {
+      await client.query(
+        `UPDATE places
+         SET last_verified_at = NOW(), updated_at = NOW()
+         WHERE id = $1`,
+        [placeId]
+      );
+    }
+
     await client.query(
-      `UPDATE places
-       SET last_verified_at = NOW(), updated_at = NOW()
-       WHERE id = $1`,
-      [placeId]
+      `INSERT INTO place_verification_events (
+         place_id, actor_user_id, source, event_type, note
+       ) VALUES ($1, $2, $3, 'VERIFIED', $4)`,
+      [
+        placeId,
+        actorUserId || null,
+        source,
+        source === 'HOLA'
+          ? 'HOLA kiểm tra và xác minh dữ liệu địa điểm'
+          : 'Cộng tác viên xác minh dữ liệu địa điểm'
+      ]
     );
 
     const after = await capturePlaceSnapshot(placeId, client);
@@ -211,9 +234,15 @@ export async function markPlaceVerified({ placeId, actorUserId }) {
       beforeSnapshot: before,
       afterSnapshot: after,
       actorUserId,
-      reason: 'Xác minh dữ liệu địa điểm còn chính xác'
+      reason: source === 'HOLA'
+        ? 'HOLA xác minh dữ liệu địa điểm'
+        : 'Cộng đồng xác minh dữ liệu địa điểm'
     }, client);
 
-    return after;
+    return {
+      ...after,
+      verificationSource: source,
+      verificationRecordedAt: new Date().toISOString()
+    };
   });
 }

@@ -251,6 +251,12 @@ export default function AdminContributions() {
               {place.address && <p className="place-meta"><MapPin size={15} /> {place.address}</p>}
               {location && <p className="place-meta"><MapPin size={15} /> GPS: {Number(location.lat).toFixed(6)}, {Number(location.lng).toFixed(6)}</p>}
               {place.description && <p className="detail-description">{place.description}</p>}
+              {item.payload?.fieldKey && (
+                <div className="form-status info">
+                  Trường cần kiểm tra: {item.payload.fieldKey === 'ADDRESS' ? 'Địa chỉ' : item.payload.fieldKey === 'OPENING_HOURS' ? 'Giờ mở cửa' : 'Số điện thoại'}
+                  {item.payload.suggestedValue ? ' · Đề xuất: ' + item.payload.suggestedValue : ''}
+                </div>
+              )}
               {item.payload?.reason && <div className="form-status info">Nội dung báo cáo: {item.payload.reason}</div>}
 
               {['REPORT_FLOOD', 'REPORT_ROAD_CLOSURE', 'REPORT_ALERT'].includes(item.type) && (

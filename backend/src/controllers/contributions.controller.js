@@ -52,6 +52,8 @@ function publicVerificationPayload(payload = {}) {
     ...(place ? { place } : {}),
     ...(location ? { location } : {}),
     ...(payload?.reason ? { reason: payload.reason } : {}),
+    ...(payload?.fieldKey ? { fieldKey: payload.fieldKey } : {}),
+    ...(payload?.suggestedValue ? { suggestedValue: payload.suggestedValue } : {}),
     ...(payload?.severity ? { severity: payload.severity } : {}),
     ...(payload?.expiresAt ? { expiresAt: payload.expiresAt } : {}),
     photos: directPhotos.length ? directPhotos : assetPhotos
@@ -59,7 +61,7 @@ function publicVerificationPayload(payload = {}) {
 }
 
 export const create = asyncHandler(async (req, res) => {
-  const { type, placeId, location, place, reason, severity, expiresHours } = req.body;
+  const { type, placeId, location, place, reason, fieldKey, suggestedValue, severity, expiresHours } = req.body;
   const isRoadStatus = isRoadStatusContributionType(type);
   const normalizedSeverity = isRoadStatus ? (severity || 'MEDIUM') : undefined;
   const ttlHours = isRoadStatus
@@ -79,6 +81,8 @@ export const create = asyncHandler(async (req, res) => {
       location,
       place,
       reason,
+      fieldKey,
+      suggestedValue,
       ...(isRoadStatus ? {
         severity: normalizedSeverity,
         expiresAt,

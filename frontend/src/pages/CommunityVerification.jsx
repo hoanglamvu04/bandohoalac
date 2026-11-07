@@ -239,6 +239,15 @@ export default function CommunityVerification() {
                 </p>
               )}
               {place.description && <p className="community-verification-description">{place.description}</p>}
+              {item.payload?.fieldKey && (
+                <div className="community-verification-report">
+                  <AlertTriangle size={15} />
+                  <span>
+                    Trường cần kiểm tra: {item.payload.fieldKey === 'ADDRESS' ? 'Địa chỉ' : item.payload.fieldKey === 'OPENING_HOURS' ? 'Giờ mở cửa' : 'Số điện thoại'}
+                    {item.payload.suggestedValue ? ' · Đề xuất: ' + item.payload.suggestedValue : ''}
+                  </span>
+                </div>
+              )}
               {item.payload?.reason && (
                 <div className="community-verification-report">
                   <AlertTriangle size={15} />

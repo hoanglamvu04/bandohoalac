@@ -198,6 +198,14 @@ export function getPlace(id) {
   return unwrap(client.get('/places/' + encodeURIComponent(id)));
 }
 
+export function getPlaceTrust(id) {
+  return unwrap(client.get('/places/' + encodeURIComponent(id) + '/trust'));
+}
+
+export function confirmPlaceActive(id) {
+  return unwrap(client.post('/places/' + encodeURIComponent(id) + '/confirm-active'));
+}
+
 export function getPlaceBySlug(slug) {
   return unwrap(client.get('/places/slug/' + encodeURIComponent(slug)));
 }
@@ -280,6 +288,8 @@ export function createContribution({
   location,
   place,
   reason,
+  fieldKey,
+  suggestedValue,
   severity,
   expiresHours,
   photos = []
@@ -290,6 +300,8 @@ export function createContribution({
   if (location) formData.append('location', JSON.stringify(location));
   if (place) formData.append('place', JSON.stringify(place));
   if (reason) formData.append('reason', reason);
+  if (fieldKey) formData.append('fieldKey', fieldKey);
+  if (suggestedValue) formData.append('suggestedValue', suggestedValue);
   if (severity) formData.append('severity', severity);
   if (expiresHours) formData.append('expiresHours', String(expiresHours));
   photos.forEach((file) => formData.append('photos', file));
