@@ -1032,6 +1032,7 @@ export default function MapView({
   const appliedStyleKeyRef = useRef('');
   const locationNoticeTimerRef = useRef(null);
   const lastFocusRegionRef = useRef('');
+  const lastFocusedPlaceIdRef = useRef(null);
   const lastFitPlacesKeyRef = useRef('');
 
   const [interactiveReady, setInteractiveReady] = useState(false);
@@ -1641,8 +1642,26 @@ export default function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
-    const selected = validPlaces.find((place) => place.id === selectedPlaceId);
-    if (!map || !selected || route || !interactiveReady) return;
+    if (!map || !interactiveReady) return;
+
+    if (selectedPlaceId === null || selectedPlaceId === undefined || selectedPlaceId === '') {
+      // A closed inspector must not leave a selection-triggered flight running.
+      if (lastFocusedPlaceIdRef.current !== null) {
+        map.stop();
+        lastFocusedPlaceIdRef.current = null;
+      }
+      return;
+    }
+
+    const placeKey = String(selectedPlaceId);
+    // moveend refreshes the visible places and changes validPlaces. That
+    // must not launch another flyTo for the same selected place.
+    if (route || lastFocusedPlaceIdRef.current === placeKey) return;
+
+    const selected = validPlaces.find((place) => String(place.id) === placeKey);
+    if (!selected) return;
+
+    lastFocusedPlaceIdRef.current = placeKey;
     map.flyTo({
       center: [Number(selected.lng), Number(selected.lat)],
       zoom: Math.max(map.getZoom(), 14.5),

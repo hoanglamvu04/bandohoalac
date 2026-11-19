@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { getPlace } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { getHolaMapInstance } from '../mapInteractionBridge.js';
 
 function currentRoute() {
   if (typeof window === 'undefined') return { pathname: '', search: '' };
@@ -102,6 +103,7 @@ export default function MapPowerOverlay() {
             type="button"
             className="hm-map-preview-close"
             onClick={() => {
+              getHolaMapInstance()?.stop();
               setDismissedPlaceId(selectedPlaceId);
               setPlace(null);
             }}

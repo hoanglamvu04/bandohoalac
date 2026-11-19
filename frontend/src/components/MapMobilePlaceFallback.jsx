@@ -55,7 +55,14 @@ export default function MapMobilePlaceFallback() {
   }, [location.search]);
 
   useEffect(() => {
-    if (!queryPlaceId) return;
+    if (!queryPlaceId) {
+      // The native inspector has closed: do not resurrect the fallback card.
+      setActivePlaceId('');
+      setPlace(null);
+      setDismissedPlaceId('');
+      return;
+    }
+
     setActivePlaceId(String(queryPlaceId));
     setDismissedPlaceId('');
   }, [queryPlaceId]);
@@ -169,7 +176,10 @@ export default function MapMobilePlaceFallback() {
       <button
         type="button"
         className="hm-mobile-place-fallback-close"
-        onClick={() => setDismissedPlaceId(activePlaceId)}
+        onClick={() => {
+          getHolaMapInstance()?.stop();
+          setDismissedPlaceId(activePlaceId);
+        }}
         aria-label="Đóng thông tin địa điểm"
       >
         <X size={17} />

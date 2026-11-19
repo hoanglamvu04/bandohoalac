@@ -192,3 +192,90 @@ test('place list loads additional pages and virtualizes long result sets', async
   const afterSelection = await list.evaluate((node) => node.scrollTop);
   expect(Math.abs(afterSelection - beforeSelection)).toBeLessThanOrEqual(2);
 });
+
+
+test('mobile place dismissal preserves camera and does not reopen the fallback card', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const place = {
+    id: 9001,
+    name: 'Địa điểm kiểm thử camera mobile',
+    slug: 'dia-diem-kiem-thu-camera-mobile',
+    category: 'Cafe',
+    categorySlug: 'cafe',
+    address: 'Hòa Lạc, Hà Nội',
+    lat: 21.03,
+    lng: 105.52,
+    rating: 4.5,
+    reviews: 12,
+    images: [],
+    status: 'PUBLISHED'
+  };
+
+  await page.route('**/api/**', async (route) => {
+    const { pathname } = new URL(route.request().url());
+    const body = pathname === '/api/places/bounds'
+      ? { items: [place], total: 1, hasMore: false }
+      : pathname === '/api/places/9001'
+        ? place
+        : pathname.startsWith('/api/map-layers')
+          ? { type: 'FeatureCollection', features: [] }
+          : { items: [], data: [], ok: true };
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(body)
+    });
+  });
+
+  await page.goto('/map', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('.hm-place-row').first()).toBeVisible({ timeout: 20000 });
+  await expect.poll(() => page.evaluate(() => {
+    const map = window.__HOLA_MAP_INSTANCE__;
+    return Boolean(map && !map.isMoving());
+  }), { timeout: 20000 }).toBe(true);
+
+  await page.evaluate(() => {
+    const map = window.__HOLA_MAP_INSTANCE__;
+    const originalFlyTo = map.flyTo.bind(map);
+    window.__holaPlaceFocuses = 0;
+    map.flyTo = (options) => {
+      if (options?.duration === 450) {
+        window.__holaPlaceFocuses += 1;
+        // Keep the flight active so dismissal tests cancellation, not just
+        // the final stationary camera.
+        return originalFlyTo({ ...options, duration: 1400 });
+      }
+      return originalFlyTo(options);
+    };
+  });
+
+  await page.locator('.hm-mobile-list-toggle').click();
+  await page.locator('.hm-place-row').first().click();
+  await expect(page.locator('.hm-place-inspector.discovery-v3')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__holaPlaceFocuses)).toBe(1);
+
+  // The old effect restarted flyTo every time moveend refreshed validPlaces.
+  await page.evaluate(() => window.__HOLA_MAP_INSTANCE__.fire('moveend'));
+  await page.waitForTimeout(160);
+  expect(await page.evaluate(() => window.__holaPlaceFocuses)).toBe(1);
+
+  await page.locator('.hm-inspector-close').evaluate((button) => button.click());
+  await expect(page.locator('.hm-place-inspector.discovery-v3')).toHaveCount(0);
+  const cameraAtClose = await page.evaluate(() => {
+    const map = window.__HOLA_MAP_INSTANCE__;
+    const center = map.getCenter();
+    return { lng: center.lng, lat: center.lat, zoom: map.getZoom() };
+  });
+
+  await page.waitForTimeout(950);
+  const cameraAfterClose = await page.evaluate(() => {
+    const map = window.__HOLA_MAP_INSTANCE__;
+    const center = map.getCenter();
+    return { lng: center.lng, lat: center.lat, zoom: map.getZoom() };
+  });
+
+  expect(Math.abs(cameraAfterClose.lng - cameraAtClose.lng)).toBeLessThan(0.00001);
+  expect(Math.abs(cameraAfterClose.lat - cameraAtClose.lat)).toBeLessThan(0.00001);
+  expect(Math.abs(cameraAfterClose.zoom - cameraAtClose.zoom)).toBeLessThan(0.01);
+  await expect(page.locator('.hm-mobile-place-fallback')).toHaveCount(0);
+});
