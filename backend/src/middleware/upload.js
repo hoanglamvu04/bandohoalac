@@ -192,11 +192,34 @@ async function validateRequestFiles(req, next) {
   }
 }
 
+// Multer writes local originals before later request validators run.
+ // Always clean them if another middleware rejects the request or the client
+ // disconnects, even if no storage service was reached.
+export function registerTemporaryUploadCleanup(req, res) {
+  const files = Array.isArray(req.files)
+    ? req.files
+    : (req.file ? [req.file] : []);
+  if (!files.some((file) => file?.path)) return;
+  let started = false;
+  function cleanup() {
+    if (started) return;
+    started = true;
+    void Promise.all(files.map(removeTemporaryFile));
+  }
+  res.once('finish', () => {
+    if (res.statusCode >= 400) cleanup();
+  });
+  res.once('close', () => {
+    if (!res.writableEnded) cleanup();
+  });
+}
+
 function arrayMiddleware() {
   const middleware = uploader.array('photos', env.maxUploadFileCount);
   return function secureImageArray(req, res, next) {
     middleware(req, res, (error) => {
       if (error) return next(error);
+      registerTemporaryUploadCleanup(req, res);
       validateRequestFiles(req, next);
     });
   };
@@ -207,6 +230,7 @@ function singleMiddleware() {
   return function secureSingleImage(req, res, next) {
     middleware(req, res, (error) => {
       if (error) return next(error);
+      registerTemporaryUploadCleanup(req, res);
       validateRequestFiles(req, next);
     });
   };

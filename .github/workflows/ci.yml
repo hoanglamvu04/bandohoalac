@@ -132,6 +132,9 @@ jobs:
       - name: Audit backend production dependencies
         run: npm audit --omit=dev --audit-level=high
 
+      - name: Install image codec for EXIF privacy tests
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq webp
+
       - name: Migrate and seed
         run: npm run db:migrate:seed
 

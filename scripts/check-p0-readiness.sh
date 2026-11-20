@@ -2,6 +2,7 @@
 set -euo pipefail
 APP_DIR="${APP_DIR:-/var/www/bandohoalac}"
 BACKUP_DIR="${BACKUP_DIR:-$APP_DIR/backend/backups}"
+export BACKUP_DIR
 BACKUP_ENV_FILE="${HOLA_BACKUP_ENV_FILE:-/etc/hola-maps-backup.env}"
 
 cd "$APP_DIR"
@@ -19,8 +20,11 @@ test -r "$BACKUP_ENV_FILE" || { echo "[P0] offsite configuration missing" >&2; e
 source "$BACKUP_ENV_FILE"
 test -n "${HOLA_BACKUP_RCLONE_DEST:-}" || { echo "[P0] offsite remote is required" >&2; exit 1; }
 command -v rclone >/dev/null || { echo "[P0] rclone is required" >&2; exit 1; }
-rclone check "$BACKUP_DIR" "$HOLA_BACKUP_RCLONE_DEST" --one-way --size-only \
-  --include "/$(basename "$db")" --include "/$(basename "$media")"
+for local_file in "$db" "$media"; do
+  expected="$(sha256sum "$local_file" | cut -d ' ' -f1)"
+  actual="$(rclone cat "$HOLA_BACKUP_RCLONE_DEST/$(basename "$local_file")" | sha256sum | cut -d ' ' -f1)"
+  [[ "$expected" == "$actual" ]] || { echo "[P0] remote checksum mismatch for $(basename "$local_file")" >&2; exit 1; }
+done
 
 curl --fail --silent --show-error --max-time 12 https://maps.dothihoalac.vn/api/health >/dev/null
 (cd backend && node src/scripts/publicLaunchAudit.js)
