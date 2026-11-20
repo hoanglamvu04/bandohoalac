@@ -41,8 +41,8 @@ const mapNavItems = [
   },
   {
     to: '/map?vertical=housing&category=bat-dong-san',
-    label: 'Bản đồ phòng trọ',
-    description: 'Giá thuê, còn phòng, tiện ích và khoảng cách FPT',
+    label: 'Bản đồ bất động sản',
+    description: 'Tin bán, cho thuê, giá và diện tích đã được duyệt',
     icon: Home,
     mode: 'housing'
   },
@@ -265,6 +265,10 @@ export default function Navbar() {
           <UserRound size={16} />
           Trang cá nhân
         </Link>
+        <Link to="/dang-tin-bat-dong-san" onClick={() => setMobileAccountOpen(false)}>
+          <Building2 size={16} />
+          Đăng tin bất động sản
+        </Link>
         <Link to="/security" onClick={() => setMobileAccountOpen(false)}>
           <ShieldCheck size={16} />
           Bảo mật tài khoản
@@ -373,6 +377,19 @@ export default function Navbar() {
                   </Link>
                 );
               })}
+              <Link
+                className="nav-estate-map-action"
+                to="/dang-tin-bat-dong-san"
+                role="menuitem"
+                onClick={() => setMapMenuOpen(false)}
+              >
+                <Plus size={17} />
+                <span>
+                  <b>Đăng tin bất động sản</b>
+                  <small>Chọn vị trí, nhập giá và gửi chờ duyệt</small>
+                </span>
+                <ChevronRight size={15} />
+              </Link>
             </div>
           )}
         </div>
@@ -391,6 +408,10 @@ export default function Navbar() {
       <div className="nav-actions premium-nav-actions compact-nav-actions">
         <Link className="nav-partner-entry" to="/doi-tac"><Building2 size={16}/>Đối tác</Link>
         <Link className="nav-cta" to="/contribute"><Plus size={17}/>Đóng góp</Link>
+        <Link className="nav-estate-entry" to="/dang-tin-bat-dong-san" aria-label="Đăng tin bất động sản chờ duyệt">
+          <Building2 size={16} />
+          <span>Đăng tin BĐS</span>
+        </Link>
 
         {!installed && installPrompt && (
           <button className="nav-install compact-install-button" type="button" onClick={installApp}>

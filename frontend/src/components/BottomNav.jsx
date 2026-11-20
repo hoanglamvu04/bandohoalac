@@ -24,7 +24,16 @@ export default function BottomNav() {
   return (
     <nav className="bottom-nav" aria-label="Điều hướng di động">
       {items.map(([to, label, Icon]) => (
-        <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => isActive ? 'bottom-link active' : 'bottom-link'}>
+        <NavLink
+          key={to}
+          to={to}
+          end={to === '/'}
+          className={({ isActive }) => [
+            'bottom-link',
+            isActive ? 'active' : '',
+            to === '/dang-tin-bat-dong-san' ? 'bottom-estate-entry' : ''
+          ].filter(Boolean).join(' ')}
+        >
           <Icon size={20} />
           <span>{label}</span>
         </NavLink>

@@ -35,8 +35,8 @@ import AdvertisementCarousel from '../components/AdvertisementCarousel.jsx';
 const FEATURE_CARDS = [
   {
     icon: Home,
-    title: 'Tìm phòng trọ',
-    text: 'Phòng trọ và nhà ở quanh Hòa Lạc, ưu tiên dữ liệu có thể xác minh.',
+    title: 'Bất động sản',
+    text: 'Khám phá nhà đất cần bán và cho thuê tại Hòa Lạc trên bản đồ.',
     tone: 'blue',
     to: '/map?vertical=housing&category=bat-dong-san'
   },

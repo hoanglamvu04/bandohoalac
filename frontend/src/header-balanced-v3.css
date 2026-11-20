@@ -291,3 +291,84 @@
     color: #91a39d;
   }
 }
+
+
+/* Property submissions: a compact desktop CTA without crowding the header. */
+@media (min-width: 1181px) {
+  .balanced-product-navbar .compact-nav-actions .nav-estate-entry {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 44px;
+    padding: 0 13px;
+    white-space: nowrap;
+    border: 1px solid #b9d8c8;
+    border-radius: 12px;
+    background: #eef8f2;
+    color: #196449;
+    font-size: 12px;
+    font-weight: 850;
+    text-decoration: none;
+    transition: background .16s ease, border-color .16s ease;
+  }
+  .balanced-product-navbar .compact-nav-actions .nav-estate-entry:hover {
+    background: #e1f1e7;
+    border-color: #85bc9a;
+  }
+}
+
+/* At narrower widths, use the existing map menu; never compress nav controls. */
+@media (max-width: 1180px) {
+  .balanced-product-navbar .nav-estate-entry,
+  .reference-navbar .nav-estate-entry {
+    display: none !important;
+  }
+}
+@media (min-width: 761px) {
+  .balanced-product-navbar .nav-estate-map-action {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) 16px;
+    align-items: center;
+    gap: 9px;
+    min-height: 57px;
+    margin: 9px 5px 3px;
+    padding: 9px 10px;
+    border: 1px solid #bdddc9;
+    border-radius: 12px;
+    background: #eaf6ef;
+    color: #175e43;
+    text-decoration: none;
+  }
+  .balanced-product-navbar .nav-estate-map-action > span {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+  }
+  .balanced-product-navbar .nav-estate-map-action b {
+    font-size: 12px;
+    font-weight: 900;
+  }
+  .balanced-product-navbar .nav-estate-map-action small {
+    color: #547a64;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+  .balanced-product-navbar .nav-estate-map-action:hover {
+    background: #dcf0e4;
+  }
+}
+@media (max-width: 760px) {
+  .bottom-nav .bottom-estate-entry {
+    background: #ebf7ef;
+    color: #176949 !important;
+  }
+  .bottom-nav .bottom-estate-entry.active {
+    background: #dff1e7 !important;
+    color: #11623f !important;
+  }
+  .bottom-nav .bottom-estate-entry.active span,
+  .bottom-nav .bottom-estate-entry.active svg {
+    color: #11623f !important;
+  }
+}
