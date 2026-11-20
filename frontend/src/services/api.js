@@ -332,16 +332,19 @@ export function submitSoftLaunchFeedback(payload) {
   return unwrap(client.post('/soft-launch/feedback', payload, { skipRefreshRetry: true }));
 }
 
-export function getAdminSoftLaunchFeedback(params = {}) {
-  return unwrap(client.get('/admin/soft-launch/feedback', { params: cleanParams(params) }));
+export function getAdminSoftLaunchFeedback(params = {}, options = {}) {
+  return unwrap(client.get('/admin/soft-launch/feedback', {
+    params: cleanParams(params),
+    signal: options.signal
+  }));
 }
 
 export function reviewAdminSoftLaunchFeedback(id, payload) {
   return unwrap(client.patch('/admin/soft-launch/feedback/' + encodeURIComponent(id), payload));
 }
 
-export function getAdminSoftLaunchVitals() {
-  return unwrap(client.get('/admin/soft-launch/vitals'));
+export function getAdminSoftLaunchVitals(options = {}) {
+  return unwrap(client.get('/admin/soft-launch/vitals', { signal: options.signal }));
 }
 
 export function getAdminOperationsOverview() {
