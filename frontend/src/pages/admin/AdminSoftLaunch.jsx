@@ -262,7 +262,11 @@ export default function AdminSoftLaunch() {
                         disabled={savingId === item.id}
                         value={draft.status || item.status}
                         onChange={(e) => setDrafts((prev) => ({
-                          ...prev, [item.id]: { ...prev[item.id], status: e.target.value }
+                          ...prev, [item.id]: {
+                            ...prev[item.id],
+                            expectedVersion: prev[item.id]?.expectedVersion ?? item.version,
+                            status: e.target.value
+                          }
                         }))}>
                         {Object.entries(STATUS_NAMES).map(([code, label]) =>
                           <option key={code} value={code}>{label}</option>)}
@@ -275,7 +279,11 @@ export default function AdminSoftLaunch() {
                         disabled={savingId === item.id}
                         value={draft.note === undefined ? item.note || '' : draft.note}
                         onChange={(e) => setDrafts((prev) => ({
-                          ...prev, [item.id]: { ...prev[item.id], note: e.target.value }
+                          ...prev, [item.id]: {
+                            ...prev[item.id],
+                            expectedVersion: prev[item.id]?.expectedVersion ?? item.version,
+                            note: e.target.value
+                          }
                         }))}/>
                     </label>
                     <button type="button" disabled={loading || savingId !== null || Boolean(conflicts[item.id])}
