@@ -15,6 +15,7 @@ const PublicCollectionPage = lazy(() => import('./pages/PublicCollectionPage.jsx
 const SecurityPage = lazy(() => import('./pages/SecurityPage.jsx'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard.jsx'));
 const Contribute = lazy(() => import('./pages/Contribute.jsx'));
+const RealEstateSubmissionPage = lazy(() => import('./pages/RealEstateSubmissionPage.jsx'));
 const CommunityVerification = lazy(() => import('./pages/CommunityVerification.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
 const Register = lazy(() => import('./pages/Register.jsx'));
@@ -173,6 +174,7 @@ export const router = createBrowserRouter([
       { path: 'dia-diem/:slug', element: withSuspense(PlaceDetail) },
       { path: 'place/:id', element: withSuspense(PlaceDetail) },
       { path: 'contribute', element: withSuspense(Contribute) },
+      { path: 'dang-tin-bat-dong-san', element: withSuspense(RealEstateSubmissionPage) },
       { path: 'verify', element: withRole(CommunityVerification) },
       { path: 'profile', element: withRole(ProfilePage) },
       { path: 'collections', element: withRole(CollectionsPage) },

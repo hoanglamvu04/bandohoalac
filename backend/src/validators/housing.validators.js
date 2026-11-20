@@ -7,6 +7,9 @@ export const housingListQuerySchema = z.object({
   q: z.string().trim().max(160).optional(),
   minRent: numericString.optional(),
   maxRent: numericString.optional(),
+  minPrice: numericString.optional(),
+  maxPrice: numericString.optional(),
+  listingType: z.enum(['SALE', 'RENT']).optional(),
   minArea: numericString.optional(),
   maxArea: numericString.optional(),
   minAvailableRooms: numericString.optional(),
@@ -22,7 +25,7 @@ export const housingListQuerySchema = z.object({
   balcony: booleanString.optional(),
   parking: booleanString.optional(),
   pets: booleanString.optional(),
-  sort: z.enum(['recommended', 'rent_asc', 'rent_desc', 'distance', 'area_desc', 'freshest']).optional(),
+  sort: z.enum(['recommended', 'rent_asc', 'rent_desc', 'price_asc', 'price_desc', 'distance', 'area_desc', 'freshest']).optional(),
   limit: numericString.optional(),
   offset: numericString.optional()
 });

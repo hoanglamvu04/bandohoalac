@@ -280,6 +280,14 @@ export default function AddPlace() {
   async function submit(event) {
     event.preventDefault();
 
+    if (form.categorySlug === 'bat-dong-san') {
+      setStatus({
+        type: 'error',
+        message: 'Tin bất động sản cần giá, diện tích và vị trí. Hãy dùng mẫu Đăng tin BĐS chuyên biệt bên dưới.'
+      });
+      return;
+    }
+
     if (!form.name.trim()) {
       setStatus({ type: 'error', message: 'Vui lòng nhập tên địa điểm.' });
       return;
@@ -384,6 +392,13 @@ export default function AddPlace() {
         </div>
         <span className="reward-pill">Tối đa +20 điểm</span>
       </div>
+      {form.categorySlug === 'bat-dong-san' && (
+        <div className="form-status info">
+          <strong>Đăng bán hoặc cho thuê bất động sản?</strong>
+          <p>HOLA Maps có mẫu riêng để điền tổng giá, diện tích, loại tài sản và chọn vị trí. Tin chỉ lên bản đồ sau khi quản trị viên duyệt.</p>
+          <Link className="primary-action" to="/dang-tin-bat-dong-san">Mở mẫu đăng tin BĐS</Link>
+        </div>
+      )}
 
       <div className="form-section">
         <div className="section-title">

@@ -34,6 +34,13 @@ function sourceForRole(role) {
   return 'USER';
 }
 
+function assertRealEstateReviewer(contribution, reviewer) {
+  if (contribution.payload?.place?.realEstate &&
+      !['ADMIN', 'MODERATOR'].includes(reviewer.role)) {
+    throw new AppError('Tin bất động sản cần quản trị viên duyệt trực tiếp.', 403);
+  }
+}
+
 async function applyContributionToPlace(contribution, client) {
   const payload = contribution.payload || {};
   const place = payload.place || {};
@@ -55,12 +62,40 @@ async function applyContributionToPlace(contribution, client) {
       lng: payload.location?.lng,
       phone: place.phone,
       website: place.website,
-      priceLevel: place.price,
+      priceLevel: place.realEstate
+        ? new Intl.NumberFormat('vi-VN').format(
+            place.realEstate.transactionType === 'SALE'
+              ? Number(place.realEstate.totalPriceVnd)
+              : Number(place.realEstate.monthlyRentVnd)
+          ) + ' đ' + (place.realEstate.transactionType === 'RENT' ? '/tháng' : '')
+        : place.price,
       openingHours: place.openingHours,
       status: 'PUBLISHED',
       source: sourceForRole(contributor?.role),
       createdBy: contribution.user_id
     }, client);
+
+    if (place.realEstate) {
+      const listing = place.realEstate;
+      if (place.categorySlug !== 'bat-dong-san') {
+        throw new AppError('Danh mục tin bất động sản không hợp lệ.', 400);
+      }
+      await client.query(
+        `INSERT INTO housing_listings (
+          place_id, listing_type, property_type, total_price_vnd,
+          monthly_rent, area_m2, contact_name, availability_status, verification_source
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'UNKNOWN', 'COMMUNITY')`,
+        [
+          placeId,
+          listing.transactionType,
+          listing.propertyType,
+          listing.transactionType === 'SALE' ? Number(listing.totalPriceVnd) : null,
+          listing.transactionType === 'RENT' ? Number(listing.monthlyRentVnd) : null,
+          Number(listing.areaM2),
+          listing.contactName || null
+        ]
+      );
+    }
 
     if (Array.isArray(payload.photoAssets) && payload.photoAssets.length) {
       await addPlaceImageAssets(placeId, payload.photoAssets, contribution.user_id, client);
@@ -166,6 +201,7 @@ export async function approveContribution(contributionId, reviewer, review = {})
     if (contribution.status !== 'PENDING') throw new AppError('Contribution has already been reviewed.', 409);
 
     assertCtvCanModerate(reviewer, contribution);
+    assertRealEstateReviewer(contribution, reviewer);
 
     const score = evaluateContributionScore(review.scoreBreakdown);
     const scoreNote = String(review.scoreNote || '').trim().slice(0, 1000) || null;
@@ -257,6 +293,7 @@ export async function rejectContribution(contributionId, reviewer, reason) {
     if (contribution.status !== 'PENDING') throw new AppError('Contribution has already been reviewed.', 409);
 
     assertCtvCanModerate(reviewer, contribution);
+    assertRealEstateReviewer(contribution, reviewer);
 
     await markContributionReviewed(contributionId, {
       status: 'REJECTED',

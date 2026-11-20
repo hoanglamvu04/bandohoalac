@@ -4,6 +4,7 @@ import {
   client, getAdminContributions, rejectContribution
 } from '../../services/api.js';
 import { useToast } from '../../context/ToastContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 import '../../contribution-scoring.css';
 
 const TYPE_LABELS = {
@@ -89,6 +90,7 @@ function contributionPhotos(item) {
 
 export default function AdminContributions() {
   const { showToast } = useToast();
+  const { user } = useAuth();
   const [status, setStatus] = useState('PENDING');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -140,7 +142,16 @@ export default function AdminContributions() {
   }
 
   async function handleApprove(item) {
-    const draft = scoreDrafts[item.id] || emptyDraft();
+    const isRealEstate = Boolean(item.payload?.place?.realEstate);
+    if (isRealEstate && !window.confirm(
+      'Bạn đã kiểm tra giá, vị trí, thông tin liên hệ? Duyệt sẽ xuất bản tin bất động sản lên bản đồ.'
+    )) return;
+    const draft = isRealEstate
+      ? {
+          scores: Object.fromEntries(SCORE_CRITERIA.map((criterion) => [criterion.key, 0])),
+          note: 'Tin bất động sản: duyệt thủ công, không cấp điểm.'
+        }
+      : scoreDrafts[item.id] || emptyDraft();
     if (!draftComplete(draft)) {
       showToast('Hãy chấm đủ 5 tiêu chí trước khi duyệt.', 'error');
       return;
@@ -155,9 +166,11 @@ export default function AdminContributions() {
       });
       const isRoadStatus = ['REPORT_FLOOD', 'REPORT_ROAD_CLOSURE', 'REPORT_ALERT'].includes(item.type);
       showToast(
-        isRoadStatus
-          ? `Đã xác minh tình trạng và cộng +${total}/${MAX_POINTS} điểm chất lượng.`
-          : `Đã duyệt đóng góp và cộng +${total}/${MAX_POINTS} điểm chất lượng.`,
+        isRealEstate
+          ? 'Đã duyệt tin bất động sản. Tin hiện có thể xem trên bản đồ.'
+          : isRoadStatus
+            ? `Đã xác minh tình trạng và cộng +${total}/${MAX_POINTS} điểm chất lượng.`
+            : `Đã duyệt đóng góp và cộng +${total}/${MAX_POINTS} điểm chất lượng.`,
         'success'
       );
       setItems((current) => current.filter((entry) => entry.id !== item.id));
@@ -227,6 +240,9 @@ export default function AdminContributions() {
       <div className="contribution-list">
         {items.map((item) => {
           const place = item.payload?.place || {};
+          const isRealEstate = Boolean(place.realEstate);
+          const canReviewRealEstate = ['ADMIN', 'MODERATOR'].includes(user?.role);
+          const estate = place.realEstate;
           const location = item.payload?.location;
           const photos = contributionPhotos(item);
           const draft = scoreDrafts[item.id] || emptyDraft();
@@ -251,6 +267,23 @@ export default function AdminContributions() {
               {place.address && <p className="place-meta"><MapPin size={15} /> {place.address}</p>}
               {location && <p className="place-meta"><MapPin size={15} /> GPS: {Number(location.lat).toFixed(6)}, {Number(location.lng).toFixed(6)}</p>}
               {place.description && <p className="detail-description">{place.description}</p>}
+              {isRealEstate && (
+                <div className="form-status info">
+                  <strong>TIN BẤT ĐỘNG SẢN · {estate.transactionType === 'SALE' ? 'CẦN BÁN' : 'CHO THUÊ'}</strong>
+                  <div>
+                    Loại: {({ LAND: 'Đất', HOUSE: 'Nhà', APARTMENT: 'Căn hộ', VILLA: 'Biệt thự', COMMERCIAL: 'Mặt bằng', OTHER: 'Khác' })[estate.propertyType] || estate.propertyType}
+                    {' · '}Diện tích: {estate.areaM2} m²
+                  </div>
+                  <div>
+                    {estate.transactionType === 'SALE' ? 'Tổng giá bán' : 'Giá thuê/tháng'}:
+                    {' '}{new Intl.NumberFormat('vi-VN').format(
+                      estate.transactionType === 'SALE' ? estate.totalPriceVnd : estate.monthlyRentVnd
+                    )} đ
+                  </div>
+                  <div>Liên hệ: {estate.contactName || item.userName} · {place.phone}</div>
+                  <small>Tin chỉ được tạo trên bản đồ khi Admin/Moderator duyệt. Hãy kiểm tra vị trí, thông tin liên hệ và giá trước khi đăng.</small>
+                </div>
+              )}
               {item.payload?.fieldKey && (
                 <div className="form-status info">
                   Trường cần kiểm tra: {item.payload.fieldKey === 'ADDRESS' ? 'Địa chỉ' : item.payload.fieldKey === 'OPENING_HOURS' ? 'Giờ mở cửa' : 'Số điện thoại'}
@@ -309,7 +342,7 @@ export default function AdminContributions() {
                 </section>
               )}
 
-              {status === 'PENDING' && (
+              {status === 'PENDING' && !isRealEstate && (
                 <section className="contribution-score-panel">
                   <div className="score-panel-head">
                     <div>
@@ -382,17 +415,23 @@ export default function AdminContributions() {
                 <div className="legacy-score-note">Đóng góp này được duyệt trước khi áp dụng cơ chế chấm điểm chất lượng.</div>
               )}
 
+              {status === 'PENDING' && isRealEstate && (
+                <div className="form-status info">
+                  <ShieldCheck size={15} /> Duyệt tin bất động sản không cộng điểm thưởng.
+                  {!canReviewRealEstate && ' Chỉ Admin hoặc Moderator có quyền duyệt tin.'}
+                </div>
+              )}
               {status === 'PENDING' && (
                 <div className="contribution-actions">
                   <button
                     className="primary-action"
-                    disabled={busyId === item.id || !isComplete}
+                    disabled={busyId === item.id || (isRealEstate ? !canReviewRealEstate : !isComplete)}
                     onClick={() => handleApprove(item)}
-                    title={!isComplete ? 'Hãy chấm đủ 5 tiêu chí trước' : ''}
+                    title={isRealEstate ? 'Kiểm tra thông tin và đăng công khai' : (!isComplete ? 'Hãy chấm đủ 5 tiêu chí trước' : '')}
                   >
-                    <Check size={17} /> Duyệt +{total} điểm
+                    <Check size={17} /> {isRealEstate ? 'Duyệt & đăng bản đồ' : 'Duyệt +' + total + ' điểm'}
                   </button>
-                  <button className="secondary-action" disabled={busyId === item.id} onClick={() => setRejectingId(item.id)}>
+                  <button className="secondary-action" disabled={busyId === item.id || (isRealEstate && !canReviewRealEstate)} onClick={() => setRejectingId(item.id)}>
                     <X size={17} /> Từ chối
                   </button>
                 </div>

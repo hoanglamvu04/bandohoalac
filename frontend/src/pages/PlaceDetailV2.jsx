@@ -78,6 +78,18 @@ function formatHousingRent(value) {
   return formatHousingMoney(number) + '/tháng';
 }
 
+function realEstatePropertyLabel(type) {
+  return ({ LAND: 'Đất', HOUSE: 'Nhà ở', APARTMENT: 'Căn hộ', VILLA: 'Biệt thự', COMMERCIAL: 'Mặt bằng', OTHER: 'Bất động sản' })[type] || 'Bất động sản';
+}
+
+function salePriceLabel(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return 'Chưa cập nhật';
+  if (n >= 1000000000) return (n / 1000000000).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + ' tỷ đồng';
+  if (n >= 1000000) return (n / 1000000).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' triệu đồng';
+  return formatHousingMoney(n);
+}
+
 function housingFreshness(value) {
   if (!value) return 'Chưa có mốc xác minh';
   const date = new Date(value);
@@ -541,7 +553,7 @@ export default function PlaceDetailV2() {
         <section className="place-v2-card place-v2-housing-card">
           <div className="place-v2-section-title">
             <Building2 size={19} />
-            <h2>Thông tin phòng trọ</h2>
+            <h2>{housingDetail?.housing?.listingType === 'SALE' ? 'Thông tin bất động sản cần bán' : 'Thông tin phòng trọ'}</h2>
             <span className={
               'place-v2-housing-status ' +
               (housingDetail?.housing?.availabilityStatus === 'FULL'
@@ -551,8 +563,10 @@ export default function PlaceDetailV2() {
                   : '')
             }>
               <BadgeCheck size={13} />
-              {housingDetail?.housing?.availabilityStatus === 'AVAILABLE'
-                ? 'Còn phòng'
+              {housingDetail?.housing?.listingType === 'SALE'
+                ? 'Tin cần bán'
+                : housingDetail?.housing?.availabilityStatus === 'AVAILABLE'
+                  ? 'Còn phòng'
                 : housingDetail?.housing?.availabilityStatus === 'LIMITED'
                   ? 'Sắp hết'
                   : housingDetail?.housing?.availabilityStatus === 'FULL'
@@ -565,8 +579,10 @@ export default function PlaceDetailV2() {
             <>
               <div className="place-v2-housing-summary">
                 <div>
-                  <small>Giá thuê</small>
-                  <strong>{formatHousingRent(housingDetail.housing.monthlyRent)}</strong>
+                  <small>{housingDetail.housing.listingType === 'SALE' ? 'Tổng giá bán' : 'Giá thuê'}</small>
+                  <strong>{housingDetail.housing.listingType === 'SALE'
+                    ? salePriceLabel(housingDetail.housing.totalPriceVnd)
+                    : formatHousingRent(housingDetail.housing.monthlyRent)}</strong>
                 </div>
                 <div>
                   <small>Diện tích</small>
@@ -577,15 +593,16 @@ export default function PlaceDetailV2() {
                   <strong>{distanceLabel(housingDetail.distanceToFptM) || 'Chưa tính'}</strong>
                 </div>
                 <div>
-                  <small>Phòng trống</small>
-                  <strong>
-                    {housingDetail.housing.availableRooms !== null
+                  <small>{housingDetail.housing.listingType === 'SALE' ? 'Loại tài sản' : 'Phòng trống'}</small>
+                  <strong>{housingDetail.housing.listingType === 'SALE'
+                    ? realEstatePropertyLabel(housingDetail.housing.propertyType)
+                    : housingDetail.housing.availableRooms !== null
                       ? housingDetail.housing.availableRooms + (housingDetail.housing.totalRooms !== null ? '/' + housingDetail.housing.totalRooms : '')
-                      : 'Chưa cập nhật'}
-                  </strong>
+                      : 'Chưa cập nhật'}</strong>
                 </div>
               </div>
 
+              {housingDetail.housing.listingType !== 'SALE' && (
               <div className="place-v2-housing-amenities">
                 {[
                   [housingDetail.housing.hasAirConditioner, 'Điều hòa'],
@@ -599,7 +616,15 @@ export default function PlaceDetailV2() {
                   <span key={label}>{label}</span>
                 ))}
               </div>
+              )}
 
+              {housingDetail.housing.listingType === 'SALE' ? (
+                <div className="place-v2-housing-detail-grid">
+                  <p><strong>Loại tài sản:</strong> {realEstatePropertyLabel(housingDetail.housing.propertyType)}</p>
+                  {housingDetail.housing.contactName && <p><strong>Người liên hệ:</strong> {housingDetail.housing.contactName}</p>}
+                  <p><strong>Lưu ý:</strong> Giá do người đăng cung cấp. Vui lòng tự kiểm tra pháp lý và quyền sở hữu trước giao dịch.</p>
+                </div>
+              ) : (
               <div className="place-v2-housing-detail-grid">
                 <p><strong>Tiền cọc:</strong> {formatHousingMoney(housingDetail.housing.depositAmount)}</p>
                 <p><strong>Điện:</strong> {housingDetail.housing.electricityPricePerKwh ? formatHousingMoney(housingDetail.housing.electricityPricePerKwh) + '/kWh' : 'Chưa cập nhật'}</p>
@@ -610,6 +635,7 @@ export default function PlaceDetailV2() {
                 {housingDetail.housing.curfewNote && <p><strong>Giờ giấc:</strong> {housingDetail.housing.curfewNote}</p>}
                 {housingDetail.housing.availabilityNote && <p><strong>Tình trạng:</strong> {housingDetail.housing.availabilityNote}</p>}
               </div>
+              )}
 
               <div className="place-v2-housing-verified">
                 <ShieldCheck size={14} /> {housingFreshness(housingDetail.housing.lastVerifiedAt)}
@@ -618,8 +644,7 @@ export default function PlaceDetailV2() {
             </>
           ) : (
             <p>
-              Địa điểm này đã thuộc danh mục Bất động sản nhưng chưa có hồ sơ Housing V2.
-              Chủ trọ hoặc cộng đồng có thể tiếp tục bổ sung giá, tình trạng phòng và tiện ích.
+              Bất động sản này chưa có hồ sơ giá và diện tích chi tiết.
             </p>
           )}
         </section>

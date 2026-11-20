@@ -44,6 +44,10 @@ function mapHousingRow(row) {
     distanceToFptM: Number(row.distance_to_fpt_m) || 0,
     updatedAt: row.updated_at,
     housing: hasStructuredHousing ? {
+      listingType: row.listing_type || 'RENT',
+      propertyType: row.property_type || null,
+      totalPriceVnd: numberOrNull(row.total_price_vnd),
+      contactName: row.contact_name || null,
       monthlyRent: numberOrNull(row.monthly_rent),
       depositAmount: numberOrNull(row.deposit_amount),
       areaM2: numberOrNull(row.area_m2),
@@ -121,6 +125,10 @@ const BASE_SELECT = `
       ST_SetSRID(ST_MakePoint(105.52522, 21.01354), 4326)::geography
     ))::int AS distance_to_fpt_m,
     hl.place_id AS housing_place_id,
+    hl.listing_type,
+    hl.property_type,
+    hl.total_price_vnd,
+    hl.contact_name,
     hl.monthly_rent,
     hl.deposit_amount,
     hl.area_m2,
@@ -155,6 +163,11 @@ export async function listHousingListings(filters = {}) {
   ];
   const params = [];
 
+  if (filters.listingType) {
+    params.push(filters.listingType);
+    conditions.push('hl.listing_type = $' + params.length);
+  }
+
   if (filters.q) {
     params.push(String(filters.q).trim());
     const ref = '$' + params.length;
@@ -167,6 +180,8 @@ export async function listHousingListings(filters = {}) {
   const numericFilters = [
     ['minRent', 'hl.monthly_rent >='],
     ['maxRent', 'hl.monthly_rent <='],
+    ['minPrice', 'hl.total_price_vnd >='],
+    ['maxPrice', 'hl.total_price_vnd <='],
     ['minArea', 'hl.area_m2 >='],
     ['maxArea', 'hl.area_m2 <='],
     ['minAvailableRooms', 'hl.available_rooms >=']
@@ -240,6 +255,8 @@ export async function listHousingListings(filters = {}) {
       p.updated_at DESC`,
     rent_asc: 'hl.monthly_rent ASC NULLS LAST, p.updated_at DESC',
     rent_desc: 'hl.monthly_rent DESC NULLS LAST, p.updated_at DESC',
+    price_asc: 'hl.total_price_vnd ASC NULLS LAST, p.updated_at DESC',
+    price_desc: 'hl.total_price_vnd DESC NULLS LAST, p.updated_at DESC',
     distance: 'distance_to_fpt_m ASC, p.updated_at DESC',
     area_desc: 'hl.area_m2 DESC NULLS LAST, p.updated_at DESC',
     freshest: 'hl.last_verified_at DESC NULLS LAST, p.updated_at DESC'

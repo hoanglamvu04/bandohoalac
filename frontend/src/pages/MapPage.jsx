@@ -463,6 +463,24 @@ function formatHousingRent(value) {
   return new Intl.NumberFormat('vi-VN').format(amount) + 'đ/tháng';
 }
 
+function formatHousingSalePrice(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) return 'Liên hệ giá';
+  if (amount >= 1000000000) return (amount / 1000000000).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + ' tỷ';
+  if (amount >= 1000000) return (amount / 1000000).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' triệu';
+  return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
+}
+
+function formatHousingPrice(housing) {
+  return housing?.listingType === 'SALE'
+    ? formatHousingSalePrice(housing.totalPriceVnd)
+    : formatHousingRent(housing?.monthlyRent);
+}
+
+function realEstatePropertyLabel(type) {
+  return ({ LAND: 'Đất', HOUSE: 'Nhà ở', APARTMENT: 'Căn hộ', VILLA: 'Biệt thự', COMMERCIAL: 'Mặt bằng', OTHER: 'Bất động sản' })[type] || 'Bất động sản';
+}
+
 function housingAvailabilityLabel(status) {
   if (status === 'AVAILABLE') return 'Còn phòng';
   if (status === 'LIMITED') return 'Sắp hết';
@@ -590,6 +608,11 @@ export default function MapPage() {
   const verticalMode = searchParams.get('vertical') || '';
   const isHousingMode = verticalMode === 'housing';
   const isFoodMode = verticalMode === 'food';
+  const housingListingType = searchParams.get('listingType') || '';
+  const housingSubmissionLink = viewport
+    ? '/dang-tin-bat-dong-san?lat=' + ((Number(viewport.north) + Number(viewport.south)) / 2).toFixed(6) +
+      '&lng=' + ((Number(viewport.east) + Number(viewport.west)) / 2).toFixed(6)
+    : '/dang-tin-bat-dong-san';
   const housingMinRent = searchParams.get('minRent') || '';
   const housingMaxRent = searchParams.get('maxRent') || '';
   const housingMaxDistanceFpt = searchParams.get('maxDistanceFpt') || '';
@@ -599,6 +622,7 @@ export default function MapPage() {
   const housingPrivateBathroom = searchParams.get('privateBathroom') === 'true';
   const housingParking = searchParams.get('parking') === 'true';
   const housingFilterSignature = [
+    housingListingType,
     housingMinRent,
     housingMaxRent,
     housingMaxDistanceFpt,
@@ -609,7 +633,7 @@ export default function MapPage() {
     housingParking ? '1' : '0'
   ].join(':');
   const activeCategoryLabel = isHousingMode
-    ? 'Phòng trọ'
+    ? 'Bất động sản'
     : isFoodMode && category === 'all'
       ? 'Ăn uống'
       : category === 'all'
@@ -619,6 +643,7 @@ export default function MapPage() {
     category !== 'all' && !isHousingMode,
     Boolean(minRating),
     sortMode !== 'relevant',
+    isHousingMode && Boolean(housingListingType),
     isHousingMode && Boolean(housingMinRent),
     isHousingMode && Boolean(housingMaxRent),
     isHousingMode && Boolean(housingMaxDistanceFpt),
@@ -642,7 +667,11 @@ export default function MapPage() {
       ? 'rent_asc'
       : sortMode === 'rent-desc'
         ? 'rent_desc'
-        : sortMode === 'fpt-distance'
+        : sortMode === 'price-asc'
+          ? 'price_asc'
+          : sortMode === 'price-desc'
+            ? 'price_desc'
+            : sortMode === 'fpt-distance'
           ? 'distance'
           : sortMode === 'recent'
             ? 'freshest'
@@ -650,6 +679,7 @@ export default function MapPage() {
 
     return {
       q: cleanQuery || undefined,
+      listingType: housingListingType || undefined,
       minRent: housingMinRent || undefined,
       maxRent: housingMaxRent || undefined,
       maxDistanceFpt: housingMaxDistanceFpt || undefined,
@@ -1336,6 +1366,20 @@ export default function MapPage() {
       return items.sort((a, b) =>
         Number(b.housing?.monthlyRent ?? Number.NEGATIVE_INFINITY) -
         Number(a.housing?.monthlyRent ?? Number.NEGATIVE_INFINITY)
+      );
+    }
+
+    if (sortMode === 'price-asc') {
+      return items.sort((a, b) =>
+        Number(a.housing?.totalPriceVnd ?? Number.POSITIVE_INFINITY) -
+        Number(b.housing?.totalPriceVnd ?? Number.POSITIVE_INFINITY)
+      );
+    }
+
+    if (sortMode === 'price-desc') {
+      return items.sort((a, b) =>
+        Number(b.housing?.totalPriceVnd ?? Number.NEGATIVE_INFINITY) -
+        Number(a.housing?.totalPriceVnd ?? Number.NEGATIVE_INFINITY)
       );
     }
 
@@ -2753,7 +2797,7 @@ export default function MapPage() {
             <span>{placeScope === 'near-me' ? 'Đang gần tôi' : 'Gần tôi'}</span>
           </button>
 
-          {isHousingMode ? (
+          {isHousingMode && housingListingType !== 'SALE' ? (
             <button
               type="button"
               className={housingAvailableOnly ? 'hm-quick-filter active hm-housing-available-filter' : 'hm-quick-filter hm-housing-available-filter'}
@@ -2813,7 +2857,7 @@ export default function MapPage() {
                 {isHousingMode ? (
                   <div className="hm-filter-mode-card housing">
                     <House size={18} />
-                    <span><b>Phòng trọ</b><small>Đang lọc riêng dữ liệu Housing trên bản đồ</small></span>
+                    <span><b>Bất động sản</b><small>Tin bán và cho thuê đã được kiểm duyệt</small></span>
                   </div>
                 ) : (
                   <MapFilterSelect
@@ -2841,6 +2885,12 @@ export default function MapPage() {
                 {isHousingMode && (
                   <div className="hm-map-housing-filters">
                     <div className="hm-filter-popover-grid housing-grid">
+                      <MapFilterSelect
+                        label="Giao dịch"
+                        value={housingListingType}
+                        options={[{ value: '', label: 'Tất cả tin' }, { value: 'SALE', label: 'Cần bán' }, { value: 'RENT', label: 'Cho thuê' }]}
+                        onChange={(value) => handleHousingFilterChange('listingType', value)}
+                      />
                       <MapFilterSelect
                         label="Giá từ"
                         value={housingMinRent}
@@ -2934,7 +2984,9 @@ export default function MapPage() {
                       ...(isHousingMode
                         ? [
                             { value: 'rent-asc', label: 'Giá thấp trước' },
-                            { value: 'rent-desc', label: 'Giá cao trước' },
+                            { value: 'rent-desc', label: 'Giá thuê cao trước' },
+                            { value: 'price-asc', label: 'Giá bán thấp trước' },
+                            { value: 'price-desc', label: 'Giá bán cao trước' },
                             { value: 'fpt-distance', label: 'Gần ĐH FPT trước' }
                           ]
                         : []),
@@ -2992,9 +3044,13 @@ export default function MapPage() {
           </button>
         </div>
 
-        <Link className="hm-add-place" to="/contribute" title="Thêm địa điểm">
+        <Link
+          className="hm-add-place"
+          to={isHousingMode || category === 'bat-dong-san' ? housingSubmissionLink : '/contribute'}
+          title={isHousingMode || category === 'bat-dong-san' ? 'Gửi tin bất động sản chờ duyệt' : 'Thêm địa điểm'}
+        >
           <Plus size={17} />
-          <span>Thêm địa điểm</span>
+          <span>{isHousingMode || category === 'bat-dong-san' ? 'Đăng tin BĐS' : 'Thêm địa điểm'}</span>
         </Link>
       </header>
 
@@ -3173,7 +3229,7 @@ export default function MapPage() {
         <div className="hm-panel-heading">
           <div>
             <span>{isHousingMode ? 'HOLA HOUSING' : isFoodMode ? 'HOLA FOOD' : 'HOLA MAPS ENGINE'}</span>
-            <h1>{isHousingMode ? 'Phòng trọ trên bản đồ' : isFoodMode ? 'Ăn uống trên bản đồ' : 'Bản đồ Hòa Lạc'}</h1>
+            <h1>{isHousingMode ? 'Bất động sản trên bản đồ' : isFoodMode ? 'Ăn uống trên bản đồ' : 'Bản đồ Hòa Lạc'}</h1>
           </div>
           <button
             type="button"
@@ -3191,7 +3247,7 @@ export default function MapPage() {
               {query.trim()
                 ? 'KẾT QUẢ TÌM KIẾM'
                 : isHousingMode
-                  ? 'PHÒNG TRỌ'
+                  ? 'BẤT ĐỘNG SẢN'
                   : isFoodMode
                     ? 'ĂN UỐNG'
                     : placeScope === 'near-me'
@@ -3331,10 +3387,12 @@ export default function MapPage() {
                   <em>{place.address || 'Hòa Lạc, Hà Nội'}</em>
                   {isHousingMode && place.housing && (
                     <span className="hm-housing-row">
-                      <strong>{formatHousingRent(place.housing.monthlyRent)}</strong>
+                      <strong>{formatHousingPrice(place.housing)}</strong>
                       {place.housing.areaM2 && <i>{place.housing.areaM2} m²</i>}
                       <i className={'availability ' + String(place.housing.availabilityStatus || 'UNKNOWN').toLowerCase()}>
-                        {housingAvailabilityLabel(place.housing.availabilityStatus)}
+                        {place.housing.listingType === 'SALE'
+                          ? 'Cần bán · ' + realEstatePropertyLabel(place.housing.propertyType)
+                          : housingAvailabilityLabel(place.housing.availabilityStatus)}
                       </i>
                       {Number(place.distanceToFptM) > 0 && <i>{formatDistance(place.distanceToFptM)} tới FPT</i>}
                     </span>
@@ -3562,10 +3620,10 @@ export default function MapPage() {
                 </span>
                 <span>
                   <b>{isHousingMode && selectedPlace.housing
-                    ? formatHousingRent(selectedPlace.housing.monthlyRent)
+                    ? formatHousingPrice(selectedPlace.housing)
                     : selectedDistance || selectedPlace.priceLevel || '—'}</b>
                   <small>{isHousingMode && selectedPlace.housing
-                    ? 'Giá thuê'
+                    ? (selectedPlace.housing.listingType === 'SALE' ? 'Giá bán' : 'Giá thuê')
                     : selectedDistance ? 'Khoảng cách' : 'Mức giá'}</small>
                 </span>
                 <span>
@@ -3581,8 +3639,10 @@ export default function MapPage() {
                   <div className="hm-inspector-housing-head">
                     <span className={'status ' + String(selectedPlace.housing.availabilityStatus || 'UNKNOWN').toLowerCase()}>
                       <House size={14} />
-                      {housingAvailabilityLabel(selectedPlace.housing.availabilityStatus)}
-                      {Number(selectedPlace.housing.availableRooms) > 0
+                      {selectedPlace.housing.listingType === 'SALE'
+                        ? 'Cần bán · ' + realEstatePropertyLabel(selectedPlace.housing.propertyType)
+                        : housingAvailabilityLabel(selectedPlace.housing.availabilityStatus)}
+                      {selectedPlace.housing.listingType !== 'SALE' && Number(selectedPlace.housing.availableRooms) > 0
                         ? ' · ' + selectedPlace.housing.availableRooms + ' phòng'
                         : ''}
                     </span>

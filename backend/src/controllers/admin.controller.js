@@ -3,6 +3,7 @@ import { AppError } from '../utils/AppError.js';
 import { listContributions, getContributionById } from '../services/contribution.service.js';
 import { approveContribution, rejectContribution } from '../services/admin.service.js';
 import { auditContextFromRequest, writeAuditLog } from '../services/audit.service.js';
+import { invalidatePlaceBoundsCache } from '../services/place.service.js';
 
 export const getContributions = asyncHandler(async (req, res) => {
   const { status, limit, offset } = req.query;
@@ -11,12 +12,20 @@ export const getContributions = asyncHandler(async (req, res) => {
     limit: Number(limit) || 50,
     offset: Number(offset) || 0
   });
-  res.json({ items });
+  res.json({
+    items: ['ADMIN', 'MODERATOR'].includes(req.user.role)
+      ? items
+      : items.filter((item) => !item.payload?.place?.realEstate)
+  });
 });
 
 export const getContribution = asyncHandler(async (req, res) => {
   const contribution = await getContributionById(Number(req.params.id));
   if (!contribution) throw new AppError('Contribution not found.', 404);
+  if (contribution.payload?.place?.realEstate &&
+      !['ADMIN', 'MODERATOR'].includes(req.user.role)) {
+    throw new AppError('Tin bất động sản chỉ được xem bởi quản trị viên.', 403);
+  }
   res.json(contribution);
 });
 
@@ -26,6 +35,7 @@ export const approve = asyncHandler(async (req, res) => {
     req.user,
     req.body || {}
   );
+  invalidatePlaceBoundsCache();
   await writeAuditLog({
     actorUserId: req.user.id,
     action: 'CONTRIBUTION_APPROVED',
