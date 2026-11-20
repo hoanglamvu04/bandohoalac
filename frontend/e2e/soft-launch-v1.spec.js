@@ -261,3 +261,55 @@ test('two Admin reviews show conflict, preserve draft when filter changes and pe
   await expect(page.getByText(item.message)).toBeVisible();
   await expect(page.getByLabel('Trạng thái phản hồi 1001')).toHaveValue('RESOLVED');
 });
+
+test('manual refresh keeps the original review version attached to an unsaved draft', async ({ page }) => {
+  const item = {
+    id: 1002, reference: '0e217750-ff08-4f14-860e-e776eb2ae34e',
+    category: 'BUG', area: 'MAP', status: 'NEW', version: 1,
+    note: '', message: 'Chế độ xem vệ tinh mở chậm trên thiết bị Android.',
+    createdAt: '2026-11-20T08:00:00Z'
+  };
+  const submitted = [];
+  await page.route('**/api/**', (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/api/auth/refresh') return route.fulfill({ json: {
+      token: 'test-session', user: { id: 11, role: 'ADMIN',
+        security: { adminTwoFactorSetupRequired: false } }
+    } });
+    if (url.pathname === '/api/admin/soft-launch/feedback/1002') {
+      const input = route.request().postDataJSON();
+      submitted.push(input);
+      return route.fulfill({ status: 409, json: {
+        error: 'Góp ý đã thay đổi.',
+        details: { code: 'FEEDBACK_VERSION_CONFLICT', current: {
+          id: item.id, status: item.status, note: item.note,
+          version: item.version, updatedAt: '2026-11-20T10:00:00Z'
+        } }
+      } });
+    }
+    if (url.pathname === '/api/admin/soft-launch/feedback') {
+      return route.fulfill({ json: { items: [{ ...item }], total: 1, page: 1, limit: 20 } });
+    }
+    return route.fulfill({ json: { items: [], ok: true } });
+  });
+
+  await page.goto('/admin/soft-launch');
+  await expect(page.getByText(item.message)).toBeVisible();
+  await page.getByLabel('Trạng thái phản hồi 1002').selectOption('RESOLVED');
+  await page.getByLabel('Ghi chú phản hồi 1002').fill('Tôi đã xử lý xong');
+  item.version = 2;
+  item.note = 'Admin A đang xác minh';
+  await page.getByRole('button', { name: 'Làm mới' }).click();
+  await expect(page.getByRole('button', { name: 'Làm mới' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Lưu xử lý' }).click();
+
+  const compare = page.getByRole('alert', { name: 'Xung đột góp ý 1002' });
+  await expect(compare).toBeVisible();
+  expect(submitted).toHaveLength(1);
+  expect(submitted[0].expectedVersion).toBe(1);
+  await expect(compare.getByText('Admin A đang xác minh')).toBeVisible();
+  await expect(compare.getByLabel('Bản nháp ghi chú 1002')).toHaveValue('Tôi đã xử lý xong');
+  await compare.getByRole('button', { name: 'Dùng dữ liệu mới nhất, bỏ nháp' }).click();
+  await expect(compare).toHaveCount(0);
+  await expect(page.getByLabel('Ghi chú phản hồi 1002')).toHaveValue('Admin A đang xác minh');
+});
