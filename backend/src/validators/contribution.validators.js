@@ -60,6 +60,7 @@ export const createContributionSchema = z.object({
     address: z.string().trim().max(300).optional(),
     description: z.string().trim().max(2000).optional(),
     price: z.string().trim().max(120).optional(),
+    realEstatePriceVnd: z.coerce.number().int().positive().max(1000000000000000).optional(),
     openingHours: z.string().trim().max(120).optional(),
     phone: z.string().trim().max(30).optional(),
     website: z.string().trim().max(200).optional(),
@@ -111,6 +112,14 @@ export const createContributionSchema = z.object({
   }
   if (data.type !== 'CREATE_PLACE' && !isRoadStatus && !data.placeId) {
     ctx.addIssue({ code: 'custom', message: 'placeId is required for this contribution type.', path: ['placeId'] });
+  }
+
+  if (data.place?.realEstatePriceVnd !== undefined && data.type !== 'UPDATE_PRICE') {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Thay đổi giá bất động sản phải đi qua yêu cầu cập nhật giá.',
+      path: ['place', 'realEstatePriceVnd']
+    });
   }
 
   if (data.fieldKey && data.type !== 'REPORT_WRONG_INFO') {

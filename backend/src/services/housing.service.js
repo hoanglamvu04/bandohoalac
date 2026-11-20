@@ -45,6 +45,9 @@ function mapHousingRow(row) {
     updatedAt: row.updated_at,
     housing: hasStructuredHousing ? {
       listingType: row.listing_type || 'RENT',
+      listingStatus: row.listing_status || 'ACTIVE',
+      lastConfirmedAt: row.last_confirmed_at || null,
+      expiresAt: row.expires_at || null,
       propertyType: row.property_type || null,
       totalPriceVnd: numberOrNull(row.total_price_vnd),
       contactName: row.contact_name || null,
@@ -126,6 +129,9 @@ const BASE_SELECT = `
     ))::int AS distance_to_fpt_m,
     hl.place_id AS housing_place_id,
     hl.listing_type,
+    hl.listing_status,
+    hl.last_confirmed_at,
+    hl.expires_at,
     hl.property_type,
     hl.total_price_vnd,
     hl.contact_name,
@@ -159,7 +165,9 @@ const BASE_SELECT = `
 export async function listHousingListings(filters = {}) {
   const conditions = [
     "p.status = 'PUBLISHED'",
-    "c.slug = 'bat-dong-san'"
+    "c.slug = 'bat-dong-san'",
+    "(hl.listing_status IS NULL OR hl.listing_status = 'ACTIVE')",
+    "(hl.expires_at IS NULL OR hl.expires_at > NOW())"
   ];
   const params = [];
 
@@ -308,7 +316,7 @@ export async function listHousingListings(filters = {}) {
 export async function getHousingListingByPlaceId(placeId) {
   const { rows } = await pool.query(
     BASE_SELECT +
-      " WHERE p.id = $1 AND p.status = 'PUBLISHED' AND c.slug = 'bat-dong-san' LIMIT 1",
+      " WHERE p.id = $1 AND p.status = 'PUBLISHED' AND c.slug = 'bat-dong-san' AND (hl.listing_status IS NULL OR hl.listing_status = 'ACTIVE') AND (hl.expires_at IS NULL OR hl.expires_at > NOW()) LIMIT 1",
     [placeId]
   );
 

@@ -1,0 +1,32 @@
+.estate-manager-page { min-height: 100vh; padding: clamp(24px,4vw,50px) 18px 100px; background: #f4f8f5; color: #193d30; }
+.estate-manager-wrap { max-width: 950px; margin: 0 auto; }
+.estate-manager-back { display: inline-flex; gap: 8px; align-items: center; font-weight: 750; font-size: 13px; color: #246a50; text-decoration: none; margin-bottom: 28px; }
+.estate-manager-header { margin-bottom: 28px; }
+.estate-manager-header > span { display: inline-flex; gap: 8px; align-items: center; color: #28734f; letter-spacing: .08em; font-size: 11px; font-weight: 850; }
+.estate-manager-header h1 { margin: 10px 0 12px; font-size: clamp(28px,4vw,40px); letter-spacing: -.025em; }
+.estate-manager-header p { max-width: 700px; font-size: 14px; line-height: 1.7; color: #557265; }
+.estate-manager-new { display: inline-flex; align-items: center; margin-top: 9px; border-radius: 11px; padding: 12px 17px; background: #166847; color: #fff; text-decoration: none; font-size: 13px; font-weight: 800; }
+.estate-manager-list { display: grid; gap: 18px; }
+.estate-manager-card, .estate-manager-empty { border-radius: 16px; padding: clamp(16px,3vw,26px); border: 1px solid #deebe2; background: #fff; box-shadow: 0 10px 30px rgba(17,67,39,.04); }
+.estate-manager-empty { text-align: center; padding: 45px 18px; color: #557366; }
+.estate-manager-empty h2 { color: #204735; }
+.estate-manager-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
+.estate-manager-card-head h2 { margin: 11px 0 7px; font-size: 20px; }
+.estate-manager-card-head p { margin: 0; color: #637e6e; font-size: 13px; }
+.estate-manager-card-head > a { flex: 0 0 auto; font-size: 12px; color: #176a4c; font-weight: 800; }
+.estate-manager-status { display: inline-flex; background: #e9edea; color: #566b5f; border-radius: 30px; padding: 5px 10px; font-size: 11px; font-weight: 850; }
+.estate-manager-status.active { background: #e2f4e8; color: #176844; }
+.estate-manager-metrics { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
+.estate-manager-metrics span { border: 1px solid #e2ece4; background: #f9fcf9; padding: 9px 12px; border-radius: 10px; font-size: 13px; }
+.estate-manager-expiry, .estate-manager-hidden-note { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #557160; padding: 10px 12px; background: #eff6ef; border-radius: 9px; line-height: 1.5; }
+.estate-manager-expiry.urgent { background: #fff2e2; color: #9b581c; }
+.estate-manager-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 20px; }
+.estate-manager-actions button, .estate-manager-price-form button { min-height: 39px; cursor: pointer; padding: 9px 12px; border-radius: 10px; border: 1px solid #bfd8c5; background: #f4f9f5; color: #176348; font-size: 12px; font-weight: 800; }
+.estate-manager-actions button:first-child, .estate-manager-price-form button { background: #176848; color: #fff; border-color: #176848; }
+.estate-manager-actions button:disabled, .estate-manager-price-form button:disabled { opacity: .55; cursor: not-allowed; }
+.estate-manager-price-form { border-top: 1px solid #e3ece5; padding-top: 17px; display: grid; gap: 8px; }
+.estate-manager-price-form label { font-size: 13px; font-weight: 800; }
+.estate-manager-price-form > div { display: flex; gap: 9px; }
+.estate-manager-price-form input { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid #ccdcd0; border-radius: 9px; font-size: 14px; }
+.estate-manager-error { padding: 14px; background: #fff1ef; color: #a14235; border-radius: 10px; margin-bottom: 20px; }
+@media (max-width: 650px) { .estate-manager-page { padding: 19px 12px 85px; } .estate-manager-card-head { flex-direction: column; } .estate-manager-card-head h2 { font-size: 18px; } .estate-manager-price-form > div { flex-direction: column; } .estate-manager-price-form button { width: 100%; } }

@@ -302,7 +302,8 @@ export async function submitCommunityVerification({
     if (contribution.status !== 'PENDING') {
       throw new AppError('Đóng góp này đã được xử lý nên không còn nhận xác minh cộng đồng.', 409);
     }
-    if (contribution.payload?.place?.realEstate) {
+    if (contribution.payload?.place?.realEstate ||
+        contribution.payload?.place?.realEstatePriceVnd !== undefined) {
       throw new AppError('Tin bất động sản cần quản trị viên duyệt, không nhận xác minh cộng đồng.', 403);
     }
     if (Number(contribution.user_id) === Number(userId)) {
@@ -395,6 +396,7 @@ export async function listCommunityVerificationQueue(userId, {
       AND mine.user_id = $1
      WHERE c.status = 'PENDING'
        AND c.payload #> '{place,realEstate}' IS NULL
+       AND c.payload #> '{place,realEstatePriceVnd}' IS NULL
        AND c.user_id <> $1
        AND COALESCE(c.risk_score, 0) < 70
      ORDER BY
