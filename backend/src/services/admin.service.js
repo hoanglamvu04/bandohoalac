@@ -35,7 +35,8 @@ function sourceForRole(role) {
 }
 
 function assertRealEstateReviewer(contribution, reviewer) {
-  if (contribution.payload?.place?.realEstate &&
+  if ((contribution.payload?.place?.realEstate ||
+       contribution.payload?.place?.realEstatePriceVnd !== undefined) &&
       !['ADMIN', 'MODERATOR'].includes(reviewer.role)) {
     throw new AppError('Tin bất động sản cần quản trị viên duyệt trực tiếp.', 403);
   }
@@ -115,8 +116,10 @@ async function applyContributionToPlace(contribution, client) {
       await client.query(
         `INSERT INTO housing_listings (
           place_id, listing_type, property_type, total_price_vnd,
-          monthly_rent, area_m2, contact_name, availability_status, verification_source
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'UNKNOWN', 'COMMUNITY')`,
+          monthly_rent, area_m2, contact_name, availability_status, verification_source,
+          listing_status, last_confirmed_at, expires_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'UNKNOWN', 'COMMUNITY',
+                  'ACTIVE', NOW(), NOW() + INTERVAL '30 days')`,
         [
           placeId,
           listing.transactionType,
@@ -215,7 +218,36 @@ async function applyContributionToPlace(contribution, client) {
     await updatePlaceFields(placeId, { opening_hours: place.openingHours }, client);
     await recordChange(contribution.id, 'opening_hours', null, place.openingHours, client);
   }
-  if (contribution.type === 'UPDATE_PRICE' && place.price) {
+  if (contribution.type === 'UPDATE_PRICE' && place.realEstatePriceVnd !== undefined) {
+    const { rows } = await client.query(
+      'SELECT listing_type, listing_status FROM housing_listings WHERE place_id = $1 FOR UPDATE',
+      [placeId]
+    );
+    const listing = rows[0];
+    if (!listing || listing.listing_status !== 'ACTIVE') {
+      throw new AppError('Tin bất động sản không còn hoạt động hoặc không tồn tại.', 409);
+    }
+    const price = Number(place.realEstatePriceVnd);
+    if (!Number.isSafeInteger(price) || price <= 0 ||
+        (listing.listing_type === 'RENT' && price > 100000000)) {
+      throw new AppError('Giá bất động sản không hợp lệ.', 400);
+    }
+    const priceLabel = new Intl.NumberFormat('vi-VN').format(price) + ' đ' +
+      (listing.listing_type === 'RENT' ? '/tháng' : '');
+    if (listing.listing_type === 'SALE') {
+      await client.query(
+        'UPDATE housing_listings SET total_price_vnd = $1, updated_at = NOW() WHERE place_id = $2',
+        [price, placeId]
+      );
+    } else {
+      await client.query(
+        'UPDATE housing_listings SET monthly_rent = $1, updated_at = NOW() WHERE place_id = $2',
+        [price, placeId]
+      );
+    }
+    await updatePlaceFields(placeId, { price_level: priceLabel }, client);
+    await recordChange(contribution.id, 'real_estate_price_vnd', null, String(price), client);
+  } else if (contribution.type === 'UPDATE_PRICE' && place.price) {
     await updatePlaceFields(placeId, { price_level: place.price }, client);
     await recordChange(contribution.id, 'price_level', null, place.price, client);
   }
@@ -245,7 +277,10 @@ export async function approveContribution(contributionId, reviewer, review = {})
       }
     }
 
-    const isRealEstate = Boolean(contribution.payload?.place?.realEstate);
+    const isRealEstate = Boolean(
+      contribution.payload?.place?.realEstate ||
+      contribution.payload?.place?.realEstatePriceVnd !== undefined
+    );
     // Property moderation is not a gamified contribution. Force a zero score
     // server-side; never trust an arbitrary reviewer-provided score.
     const score = evaluateContributionScore(

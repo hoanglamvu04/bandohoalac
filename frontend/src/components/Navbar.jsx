@@ -269,6 +269,10 @@ export default function Navbar() {
           <Building2 size={16} />
           Đăng tin bất động sản
         </Link>
+        <Link to="/tin-bat-dong-san-cua-toi" onClick={() => setMobileAccountOpen(false)}>
+          <Home size={16} />
+          Quản lý tin bất động sản
+        </Link>
         <Link to="/security" onClick={() => setMobileAccountOpen(false)}>
           <ShieldCheck size={16} />
           Bảo mật tài khoản

@@ -222,6 +222,15 @@ export default function ProfilePage() {
       />
 
       <div className="profile-community-links">
+        <Link className="profile-rewards-entry" to="/tin-bat-dong-san-cua-toi">
+          <span className="profile-rewards-icon"><Building2 size={24} /></span>
+          <span>
+            <small>BẤT ĐỘNG SẢN · TIN CỦA TÔI</small>
+            <b>Quản lý tin đang bán hoặc cho thuê</b>
+            <em><ShieldCheck size={13} /> Xác nhận hiệu lực, tạm ẩn và cập nhật giá</em>
+          </span>
+          <ChevronRight size={20} />
+        </Link>
         <Link className="profile-rewards-entry collections" to="/collections">
           <span className="profile-rewards-icon"><Images size={24} /></span>
           <span>

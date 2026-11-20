@@ -176,6 +176,14 @@ export function getHousingListings(params = {}, options = {}) {
   }));
 }
 
+export function getMyHousingListings() {
+  return unwrap(client.get('/housing/mine'));
+}
+
+export function manageMyHousingListing(placeId, action) {
+  return unwrap(client.patch('/housing/' + encodeURIComponent(placeId) + '/manage', { action }));
+}
+
 export function getHousingListing(placeId, options = {}) {
   return unwrap(client.get('/housing/' + encodeURIComponent(placeId), {
     signal: options.signal

@@ -157,9 +157,14 @@ export default function AdminContributions() {
   }
 
   async function handleApprove(item) {
-    const isRealEstate = Boolean(item.payload?.place?.realEstate);
+    const isRealEstate = Boolean(
+      item.payload?.place?.realEstate ||
+      item.payload?.place?.realEstatePriceVnd !== undefined
+    );
     if (isRealEstate && !window.confirm(
-      'Bạn đã kiểm tra giá, vị trí, thông tin liên hệ? Duyệt sẽ xuất bản tin bất động sản lên bản đồ.'
+      item.payload?.place?.realEstatePriceVnd !== undefined
+        ? 'Bạn đã kiểm tra giá cập nhật? Duyệt sẽ thay giá công khai của tin bất động sản.'
+        : 'Bạn đã kiểm tra giá, vị trí, thông tin liên hệ? Duyệt sẽ xuất bản tin bất động sản lên bản đồ.'
     )) return;
     const draft = isRealEstate
       ? {
@@ -182,7 +187,9 @@ export default function AdminContributions() {
       const isRoadStatus = ['REPORT_FLOOD', 'REPORT_ROAD_CLOSURE', 'REPORT_ALERT'].includes(item.type);
       showToast(
         isRealEstate
-          ? 'Đã duyệt tin bất động sản. Tin hiện có thể xem trên bản đồ.'
+          ? (item.payload?.place?.realEstatePriceVnd !== undefined
+              ? 'Đã duyệt cập nhật giá bất động sản.'
+              : 'Đã duyệt tin bất động sản. Tin hiện có thể xem trên bản đồ.')
           : isRoadStatus
             ? `Đã xác minh tình trạng và cộng +${total}/${MAX_POINTS} điểm chất lượng.`
             : `Đã duyệt đóng góp và cộng +${total}/${MAX_POINTS} điểm chất lượng.`,
@@ -255,7 +262,8 @@ export default function AdminContributions() {
       <div className="contribution-list">
         {items.map((item) => {
           const place = item.payload?.place || {};
-          const isRealEstate = Boolean(place.realEstate);
+          const isPropertyPriceUpdate = place.realEstatePriceVnd !== undefined;
+          const isRealEstate = Boolean(place.realEstate || isPropertyPriceUpdate);
           const canReviewRealEstate = ['ADMIN', 'MODERATOR'].includes(user?.role);
           const estate = place.realEstate;
           const location = item.payload?.location;
@@ -282,7 +290,14 @@ export default function AdminContributions() {
               {place.address && <p className="place-meta"><MapPin size={15} /> {place.address}</p>}
               {location && <p className="place-meta"><MapPin size={15} /> GPS: {Number(location.lat).toFixed(6)}, {Number(location.lng).toFixed(6)}</p>}
               {place.description && <p className="detail-description">{place.description}</p>}
-              {isRealEstate && (
+              {isPropertyPriceUpdate && (
+                <div className="form-status info">
+                  <strong>YÊU CẦU THAY ĐỔI GIÁ BẤT ĐỘNG SẢN</strong>
+                  <p>Giá mới đề xuất: {new Intl.NumberFormat('vi-VN').format(Number(place.realEstatePriceVnd))} đ</p>
+                  <small>Chỉ Admin/Moderator được phép duyệt; giá công khai chỉ thay đổi sau khi duyệt.</small>
+                </div>
+              )}
+              {isRealEstate && estate && (
                 <div className="form-status info">
                   <strong>TIN BẤT ĐỘNG SẢN · {estate.transactionType === 'SALE' ? 'CẦN BÁN' : 'CHO THUÊ'}</strong>
                   <div>
@@ -463,7 +478,7 @@ export default function AdminContributions() {
                 <div className="contribution-actions">
                   <button
                     className="primary-action"
-                    disabled={busyId === item.id || (isRealEstate ? (!canReviewRealEstate || estate.publicContactConsent !== true || (!!photos.length && estate.imageRightsConfirmed !== true)) : !isComplete)}
+                    disabled={busyId === item.id || (isRealEstate ? (!canReviewRealEstate || (estate && (estate.publicContactConsent !== true || (!!photos.length && estate.imageRightsConfirmed !== true)))) : !isComplete)}
                     onClick={() => handleApprove(item)}
                     title={isRealEstate ? 'Kiểm tra thông tin và đăng công khai' : (!isComplete ? 'Hãy chấm đủ 5 tiêu chí trước' : '')}
                   >

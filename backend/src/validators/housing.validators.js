@@ -56,3 +56,8 @@ export const partnerHousingSchema = z.object({
   contactZalo: z.string().trim().max(120).nullable().optional(),
   availableFrom: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional()
 });
+
+export const housingManageActionSchema = z.object({
+  action: z.enum(['CONFIRM_ACTIVE', 'PAUSE', 'SOLD', 'RENTED'])
+});
+
