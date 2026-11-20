@@ -35,6 +35,19 @@ Before enabling the P0 cron, perform the regular code deploy and migration.
 - Arrange manual restore drills on a separate temporary PostgreSQL DB and a
   separate temporary media directory. Never restore over production to test.
 
+### Image privacy and backup verification
+
+- Production hosts require `cwebp` (`apt-get install webp` on Debian/Ubuntu).
+  User-uploaded images are re-encoded to WebP with `-metadata none` before
+  being stored on Cloudinary or in non-place local upload areas. Place images
+  use sanitized local variants, and originals must be deleted.
+- Nightly offsite backup scripts now compare actual SHA256 bytes read back
+  through `rclone cat`, not just the destination file sizes. This can consume
+  substantial transfer bandwidth, so monitor backup duration and traffic.
+- A Green CI means sanitizer and synthetic backup tests succeeded; live VPS
+  checks, Cloudinary provider exports (if configured) and restore drills
+  remain a separate public launch requirement.
+
 ## Install, backup, validate (one-time)
 
 \`\`\`bash
