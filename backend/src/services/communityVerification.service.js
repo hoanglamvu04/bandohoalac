@@ -291,10 +291,13 @@ export async function submitCommunityVerification({
 }) {
   return withTransaction(async (client) => {
     const contributionResult = await client.query(
-      `SELECT id, user_id, type, status, risk_score, payload
-       FROM contributions
-       WHERE id = $1
-       FOR UPDATE`,
+      `SELECT c.id, c.user_id, c.place_id, c.type, c.status, c.risk_score,
+              c.payload, pc.slug AS linked_category_slug
+       FROM contributions c
+       LEFT JOIN places p ON p.id = c.place_id
+       LEFT JOIN categories pc ON pc.id = p.category_id
+       WHERE c.id = $1
+       FOR UPDATE OF c`,
       [contributionId]
     );
     const contribution = contributionResult.rows[0];
@@ -303,6 +306,7 @@ export async function submitCommunityVerification({
       throw new AppError('Đóng góp này đã được xử lý nên không còn nhận xác minh cộng đồng.', 409);
     }
     if (contribution.type === 'UPDATE_PRICE' ||
+        contribution.linked_category_slug === 'bat-dong-san' ||
         (contribution.type === 'CREATE_PLACE' && contribution.payload?.place?.categorySlug === 'bat-dong-san') ||
         contribution.payload?.place?.realEstate ||
         contribution.payload?.place?.realEstatePriceVnd !== undefined) {
@@ -401,6 +405,11 @@ export async function listCommunityVerificationQueue(userId, {
        AND c.payload #> '{place,realEstatePriceVnd}' IS NULL
        AND (c.payload #>> '{place,categorySlug}') IS DISTINCT FROM 'bat-dong-san'
        AND c.type <> 'UPDATE_PRICE'
+       AND NOT EXISTS (
+         SELECT 1 FROM places related
+         JOIN categories related_category ON related_category.id = related.category_id
+         WHERE related.id = c.place_id AND related_category.slug = 'bat-dong-san'
+       )
        AND c.user_id <> $1
        AND COALESCE(c.risk_score, 0) < 70
      ORDER BY
