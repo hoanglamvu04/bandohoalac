@@ -34,7 +34,7 @@ function sourceForRole(role) {
   return 'USER';
 }
 
-async function assertRealEstateReviewer(contribution, reviewer, client) {
+export async function assertRealEstateReviewer(contribution, reviewer, client) {
   let isProperty = Boolean(
     contribution.payload?.place?.realEstate ||
     contribution.payload?.place?.realEstatePriceVnd !== undefined
