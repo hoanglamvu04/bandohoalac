@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ArrowRight, BookOpen, CheckCircle2, Database, LockKeyhole, MapPinned, ShieldCheck } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import SeoHead from '../components/SeoHead.jsx';
@@ -98,6 +99,10 @@ const PAGE_CONFIG = {
         body: 'Khi gửi tin bất động sản, bạn phải chủ động đồng ý để tên liên hệ và số điện thoại hiển thị trên tin sau khi quản trị viên duyệt. Hệ thống lưu bản ghi yêu cầu và thời điểm gửi làm bằng chứng xác nhận; nếu không đồng ý, bạn không thể đăng tin. Chỉ gửi ảnh thuộc quyền sử dụng của mình, không chứa giấy tờ tùy thân hoặc dữ liệu nhạy cảm.'
       },
       {
+        title: 'Góp ý thử nghiệm và thống kê hiệu năng',
+        body: 'Khi bạn chủ động gửi phản hồi thử nghiệm, nội dung mô tả được lưu tối đa 180 ngày và chỉ Admin được xem. Trình duyệt có thể gửi số liệu hiệu năng ẩn danh (LCP, CLS, ước lượng INP, thời gian sẵn sàng của bản đồ) theo nhóm trang, thiết bị và loại mạng, không gửi IP, tọa độ, tên tài khoản, URL chi tiết, cookie hay nội dung. Chỉ lưu tổng số mẫu theo giờ, xóa sau tối đa 35 ngày qua lịch dọn dữ liệu. Tính năng tôn trọng Do Not Track và Global Privacy Control khi được hỗ trợ.'
+      },
+      {
         title: 'Lựa chọn của bạn',
         body: 'Bạn có thể không cấp quyền vị trí, không tải ảnh lên hoặc liên hệ quản trị để yêu cầu hỗ trợ về tài khoản và nội dung đã đóng góp. Bạn có thể yêu cầu tạm ẩn hoặc gỡ tin đã đăng; lịch sử kiểm duyệt cần thiết vẫn được lưu để bảo vệ nền tảng.'
       }
@@ -128,6 +133,37 @@ const PAGE_CONFIG = {
     ]
   }
 };
+
+function PrivacyPerformanceChoice() {
+  const [disabled, setDisabled] = useState(() => {
+    try { return localStorage.getItem('hola_vitals_opt_out') === '1'; }
+    catch { return true; }
+  });
+  function toggle() {
+    try {
+      if (disabled) localStorage.removeItem('hola_vitals_opt_out');
+      else localStorage.setItem('hola_vitals_opt_out', '1');
+      setDisabled(!disabled);
+    } catch {
+      setDisabled(true);
+    }
+  }
+  return (
+    <section className="public-info-card" style={{ maxWidth: 780, margin: '24px auto' }}>
+      <div>
+        <h2>Quyền chọn thống kê hiệu năng</h2>
+        <p>Bạn có thể tắt đo hiệu năng ẩn danh bất cứ lúc nào trên trình duyệt này.
+          Việc tắt không ảnh hưởng tới bản đồ hay tài khoản của bạn.</p>
+        <button type="button" onClick={toggle} aria-pressed={!disabled}
+          style={{ borderRadius: 10, padding: '11px 15px', border: '1px solid #bcdcc6',
+            background: disabled ? '#f5faf6' : '#166b49', color: disabled ? '#26684a' : '#fff',
+            fontWeight: 750, cursor: 'pointer', marginTop: 10 }}>
+          {disabled ? 'Đang tắt thu thập hiệu năng · Bật lại' : 'Đang bật hiệu năng ẩn danh · Tắt'}
+        </button>
+      </div>
+    </section>
+  );
+}
 
 export default function PublicInfoPage() {
   const location = useLocation();
@@ -160,6 +196,8 @@ export default function PublicInfoPage() {
           </article>
         ))}
       </section>
+
+      {location.pathname === '/quyen-rieng-tu' && <PrivacyPerformanceChoice />}
 
       <section className="public-info-cta">
         <div>

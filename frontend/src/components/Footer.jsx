@@ -64,6 +64,7 @@ export default function Footer() {
 
         <div className="footer-column footer-contact-column">
           <h4>Hỗ trợ & tin cậy</h4>
+          <Link to="/gop-y">Gửi góp ý / báo lỗi</Link>
           <Link to="/huong-dan">Hướng dẫn sử dụng</Link>
           <Link to="/quy-dinh-cong-dong">Quy định cộng đồng</Link>
           <Link to="/nguon-du-lieu">Nguồn dữ liệu</Link>

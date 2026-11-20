@@ -12,6 +12,7 @@
     "ops:media:audit": "node src/scripts/auditLegacyMedia.js",
     "housing:expire": "node src/scripts/expireStaleHousingListings.js",
     "housing:remind": "node src/scripts/remindExpiringHousingListings.js",
+    "soft-launch:prune": "node src/scripts/pruneSoftLaunchData.js",
     "db:seed": "node src/database/seed.js",
     "test": "node --test tests/*.test.js",
     "db:seed:admin": "node src/database/seedAdmin.js",

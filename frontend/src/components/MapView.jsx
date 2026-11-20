@@ -1097,6 +1097,7 @@ export default function MapView({
         }
 
         maplibreRef.current = maplibre;
+        const mapStyleStartedAt = performance.now();
         const map = new maplibre.Map({
           container: containerRef.current,
           style: (hasLocalPmtiles || basemapMode === 'satellite')
@@ -1153,6 +1154,10 @@ export default function MapView({
             canUseSupplementalBuildings
           );
           setInteractiveReady(true);
+          // Anonymous time-to-map-style: no viewport, tile URLs or coordinates.
+          window.dispatchEvent(new CustomEvent('hola:map-style-ready', {
+            detail: { durationMs: performance.now() - mapStyleStartedAt }
+          }));
           notifyViewport();
           requestAnimationFrame(() => map.resize());
 

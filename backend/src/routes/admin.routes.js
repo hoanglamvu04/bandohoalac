@@ -16,6 +16,11 @@ import {
 import { getContributions, getContribution, getRealEstateDuplicates, approve, reject } from '../controllers/admin.controller.js';
 import { authenticate, authorize, requireAdminSecurity, requireCtvLevel } from '../middleware/auth.js';
 import { adminOperationsOverview } from '../controllers/operations.controller.js';
+import {
+  adminListFeedback, adminReviewFeedback, adminVitalOverview
+} from '../controllers/softLaunchV1.controller.js';
+import { feedbackListSchema, feedbackReviewSchema } from '../validators/softLaunch.validators.js';
+import { validateQuery } from '../validators/validate.js';
 import { validateBody } from '../validators/validate.js';
 import { rejectContributionSchema } from '../validators/admin.validators.js';
 import {
@@ -175,6 +180,9 @@ router.use(requireAdminSecurity);
 
 // Restricted to ADMIN + enforced 2FA by the shared admin router.
 router.get('/operations/overview', adminOnly, adminOperationsOverview);
+router.get('/soft-launch/feedback', adminOnly, validateQuery(feedbackListSchema), adminListFeedback);
+router.patch('/soft-launch/feedback/:id', adminOnly, validateBody(feedbackReviewSchema), adminReviewFeedback);
+router.get('/soft-launch/vitals', adminOnly, adminVitalOverview);
 
 router.get('/contributions', ctvStaff, getContributions);
 router.get('/contributions/:id', ctvStaff, getContribution);
