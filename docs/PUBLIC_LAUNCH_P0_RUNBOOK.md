@@ -71,6 +71,16 @@ copy, a **manual complete restore drill** is required.
 
 ## Restore drill + legacy image audit (additional mandatory gates)
 
+### PostgreSQL client compatibility
+
+The `pg_dump` and `pg_restore` command-line clients used for a backup
+must match the **major version of the production PostgreSQL server**.
+HOLA Maps currently targets PostgreSQL 16. A dump generated with newer
+client defaults (e.g. `transaction_timeout` from PostgreSQL 17) can pass
+archive integrity checks yet fail when restored to PG16. On Debian/Ubuntu,
+install `postgresql-client-16` and explicitly choose its binary directory
+when another version also exists. The GitHub restore rehearsal pins 16.
+
 ### Actual restore drill — empty test database only
 
 The tool never creates, drops or overwrites a database. Prepare a separate

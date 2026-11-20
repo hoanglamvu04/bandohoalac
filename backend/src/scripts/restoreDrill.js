@@ -31,9 +31,7 @@ export function assertSafeRestoreTarget(productionUrl, restoreUrl, confirmation)
   if (!/^hola_restore_[a-z0-9_]{3,48}$/.test(targetDb)) {
     throw new Error('Target database name must start with hola_restore_ and have a safe suffix.');
   }
-  if (targetDb === sourceDb &&
-      target.hostname === prod.hostname &&
-      (target.port || '5432') === (prod.port || '5432')) {
+  if (targetDb === sourceDb) {
     throw new Error('Refusing to restore into the production database.');
   }
   return { targetDb, target };

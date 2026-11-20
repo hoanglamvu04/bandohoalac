@@ -125,6 +125,8 @@ export async function collectLegacyMediaAudit({
     launchWarnings: [
       ...(kinds.LOCAL_RAW_PUBLIC ? ['Some public local images may expose raw metadata.'] : []),
       ...(kinds.CLOUDINARY_ORIGINAL_UNVERIFIED ? ['Cloudinary originals need independent review or provider-side export.'] : []),
+      ...(kinds.EXTERNAL_UNVERIFIED || kinds.LOCAL_OTHER_UNVERIFIED || kinds.INVALID_URL || kinds.MISSING_URL
+        ? ['Some public image URLs or WebP originals cannot be independently verified.'] : []),
       ...(disk?.rawFormatFiles ? ['Legacy original-format image files remain on local disk.'] : []),
       ...(Number(summary?.total || 0) > rows.length || disk?.truncated ? ['Audit sample was truncated: scan all items before launch.'] : [])
     ],

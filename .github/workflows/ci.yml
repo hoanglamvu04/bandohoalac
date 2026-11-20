@@ -132,8 +132,13 @@ jobs:
       - name: Audit backend production dependencies
         run: npm audit --omit=dev --audit-level=high
 
-      - name: Install image codec and PostgreSQL client for restore test
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq webp postgresql-client
+      - name: Install image codec and PG16 client for restore test
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq webp postgresql-client-16
+          echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
+          /usr/lib/postgresql/16/bin/pg_dump --version
+          /usr/lib/postgresql/16/bin/pg_restore --version
 
       - name: Migrate and seed
         run: npm run db:migrate:seed
