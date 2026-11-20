@@ -26,7 +26,11 @@ export const realEstateSubmissionSchema = z.object({
   areaM2: z.coerce.number().positive().max(99999.99),
   totalPriceVnd: z.coerce.number().int().positive().max(1000000000000000).optional(),
   monthlyRentVnd: z.coerce.number().int().positive().max(100000000).optional(),
-  contactName: z.string().trim().min(2).max(120)
+  contactName: z.string().trim().min(2).max(120),
+  publicContactConsent: z.literal(true, {
+    errorMap: () => ({ message: 'Bạn cần đồng ý công khai thông tin liên hệ khi tin được duyệt.' })
+  }),
+  imageRightsConfirmed: z.boolean().optional()
 }).superRefine((value, ctx) => {
   if (value.transactionType === 'SALE' && value.monthlyRentVnd !== undefined) {
     ctx.addIssue({ code: 'custom', message: 'Giá thuê không áp dụng cho tin cần bán.', path: ['monthlyRentVnd'] });

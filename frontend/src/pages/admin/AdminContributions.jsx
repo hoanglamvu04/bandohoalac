@@ -98,6 +98,7 @@ export default function AdminContributions() {
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [scoreDrafts, setScoreDrafts] = useState({});
+  const [duplicatesById, setDuplicatesById] = useState({});
 
   function load() {
     setLoading(true);
@@ -139,6 +140,20 @@ export default function AdminContributions() {
       ...current,
       [id]: { ...(current[id] || emptyDraft()), note }
     }));
+  }
+
+  async function checkDuplicates(id) {
+    setDuplicatesById((current) => ({ ...current, [id]: { loading: true } }));
+    try {
+      const response = await client.get('/admin/contributions/' + encodeURIComponent(id) + '/duplicates');
+      setDuplicatesById((current) => ({ ...current, [id]: {
+        loading: false, items: Array.isArray(response.data?.items) ? response.data.items : []
+      } }));
+    } catch (err) {
+      setDuplicatesById((current) => ({ ...current, [id]: {
+        loading: false, error: err.response?.data?.error || 'Không kiểm tra được tin gần vị trí này.'
+      } }));
+    }
   }
 
   async function handleApprove(item) {
@@ -281,6 +296,29 @@ export default function AdminContributions() {
                     )} đ
                   </div>
                   <div>Liên hệ: {estate.contactName || item.userName} · {place.phone}</div>
+                  <div>{estate.publicContactConsent === true ? '✓ Đã đồng ý công khai liên hệ' : '⚠ Chưa có xác nhận công khai liên hệ'}</div>
+                  {!!photos.length && <div>{estate.imageRightsConfirmed === true ? '✓ Đã xác nhận quyền ảnh' : '⚠ Chưa xác nhận quyền sử dụng ảnh'}</div>}
+                  {!photos.length && <div>⚠ Tin chưa có ảnh minh họa</div>}
+                  {!place.description?.trim() && <div>⚠ Tin chưa có mô tả tài sản</div>}
+                  {status === 'PENDING' && canReviewRealEstate && (
+                    <div className="estate-admin-duplicate-check">
+                      <button className="secondary-action" type="button" onClick={() => checkDuplicates(item.id)} disabled={duplicatesById[item.id]?.loading}>
+                        <MapPin size={14} /> {duplicatesById[item.id]?.loading ? 'Đang kiểm tra…' : 'Kiểm tra tin gần vị trí'}
+                      </button>
+                      {duplicatesById[item.id]?.error && <small>{duplicatesById[item.id].error}</small>}
+                      {duplicatesById[item.id]?.items && (
+                        <div>
+                          {duplicatesById[item.id].items.length === 0
+                            ? <small>Không tìm thấy bất động sản đã đăng trong phạm vi 100 m.</small>
+                            : duplicatesById[item.id].items.map((duplicate) => (
+                                <p key={duplicate.id}>
+                                  ⚠ {duplicate.distanceM} m · <a href={'/place/' + duplicate.id} target="_blank" rel="noreferrer">{duplicate.name}</a> · {duplicate.address || ''} · {duplicate.phone || ''}
+                                </p>
+                              ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <small>Tin chỉ được tạo trên bản đồ khi Admin/Moderator duyệt. Hãy kiểm tra vị trí, thông tin liên hệ và giá trước khi đăng.</small>
                 </div>
               )}
@@ -425,7 +463,7 @@ export default function AdminContributions() {
                 <div className="contribution-actions">
                   <button
                     className="primary-action"
-                    disabled={busyId === item.id || (isRealEstate ? !canReviewRealEstate : !isComplete)}
+                    disabled={busyId === item.id || (isRealEstate ? (!canReviewRealEstate || estate.publicContactConsent !== true || (!!photos.length && estate.imageRightsConfirmed !== true)) : !isComplete)}
                     onClick={() => handleApprove(item)}
                     title={isRealEstate ? 'Kiểm tra thông tin và đăng công khai' : (!isComplete ? 'Hãy chấm đủ 5 tiêu chí trước' : '')}
                   >

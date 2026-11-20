@@ -60,12 +60,18 @@ test('mobile sale request goes to PENDING moderation instead of publishing direc
   await page.locator('input[name="contactName"]').fill('Nguyễn An');
   await page.locator('input[name="phone"]').fill('0987654321');
   await page.locator('button.estate-confirm').click();
+  const submitButton = page.getByRole('button', { name: 'Gửi yêu cầu chờ duyệt' });
+  await expect(page.locator('input[name="publicContactConsent"]')).not.toBeChecked();
+  await submitButton.click();
+  await expect(page.getByTestId('estate-submission-form')).toBeVisible();
+  await page.locator('input[name="publicContactConsent"]').check();
   await page.getByRole('button', { name: 'Gửi yêu cầu chờ duyệt' }).click();
 
   await expect(page.getByTestId('estate-submitted')).toContainText('CHỜ DUYỆT');
   expect(submittedPayload).toContain('CREATE_PLACE');
   expect(submittedPayload).toContain('bat-dong-san');
   expect(submittedPayload).toContain('"transactionType":"SALE"');
+  expect(submittedPayload).toContain('"publicContactConsent":true');
   expect(submittedPayload).toContain('"totalPriceVnd":3500000000');
   expect(submittedPayload).toContain('21.01354');
 });

@@ -15,7 +15,8 @@ const base = {
       propertyType: 'HOUSE',
       areaM2: 90,
       totalPriceVnd: 3500000000,
-      contactName: 'Người đăng thử nghiệm'
+      contactName: 'Người đăng thử nghiệm',
+      publicContactConsent: true
     }
   }
 };
@@ -51,6 +52,12 @@ test('property submission cannot omit price, address or contact phone', () => {
   assert.equal(validate((data) => { delete data.place.realEstate.totalPriceVnd; }).success, false);
   assert.equal(validate((data) => { delete data.place.address; }).success, false);
   assert.equal(validate((data) => { delete data.place.phone; }).success, false);
+});
+
+test('property contact requires explicit public display consent', () => {
+  assert.equal(validate((data) => { delete data.place.realEstate.publicContactConsent; }).success, false);
+  assert.equal(validate((data) => { data.place.realEstate.publicContactConsent = false; }).success, false);
+  assert.equal(validate((data) => { data.place.realEstate.publicContactConsent = true; }).success, true);
 });
 
 test('generic property submissions cannot bypass required real estate details', () => {

@@ -13,7 +13,7 @@ import {
   adminRejectEmbedSchema,
   adminRotateEmbedSchema
 } from '../validators/embed.validators.js';
-import { getContributions, getContribution, approve, reject } from '../controllers/admin.controller.js';
+import { getContributions, getContribution, getRealEstateDuplicates, approve, reject } from '../controllers/admin.controller.js';
 import { authenticate, authorize, requireAdminSecurity, requireCtvLevel } from '../middleware/auth.js';
 import { validateBody } from '../validators/validate.js';
 import { rejectContributionSchema } from '../validators/admin.validators.js';
@@ -174,6 +174,7 @@ router.use(requireAdminSecurity);
 
 router.get('/contributions', ctvStaff, getContributions);
 router.get('/contributions/:id', ctvStaff, getContribution);
+router.get('/contributions/:id/duplicates', dataStaff, getRealEstateDuplicates);
 router.post('/contributions/:id/approve', ctvStaff, approve);
 router.post('/contributions/:id/reject', ctvStaff, validateBody(rejectContributionSchema), reject);
 router.post('/contributions/:id/ctv-audit', adminOnly, auditCtvModerationAdmin);

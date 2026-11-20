@@ -62,6 +62,11 @@ function publicVerificationPayload(payload = {}) {
 
 export const create = asyncHandler(async (req, res) => {
   const { type, placeId, location, place, reason, fieldKey, suggestedValue, severity, expiresHours } = req.body;
+  // Property photos can become publicly accessible after manual moderation.
+  // Never accept user-submitted assets without an explicit rights declaration.
+  if (place?.realEstate && (req.files || []).length > 0 && place.realEstate.imageRightsConfirmed !== true) {
+    throw new AppError('Bạn cần xác nhận quyền sử dụng ảnh bất động sản trước khi gửi.', 400);
+  }
   const isRoadStatus = isRoadStatusContributionType(type);
   const normalizedSeverity = isRoadStatus ? (severity || 'MEDIUM') : undefined;
   const ttlHours = isRoadStatus
