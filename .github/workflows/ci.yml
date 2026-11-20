@@ -132,11 +132,22 @@ jobs:
       - name: Audit backend production dependencies
         run: npm audit --omit=dev --audit-level=high
 
-      - name: Install image codec for EXIF privacy tests
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq webp
+      - name: Install image codec and PostgreSQL client for restore test
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq webp postgresql-client
 
       - name: Migrate and seed
         run: npm run db:migrate:seed
 
       - name: Test
         run: npm test
+
+      - name: Restore verified backup into isolated empty CI database
+        env:
+          BACKUP_DIR: /tmp/hola-restore-ci-backups
+          RESTORE_DRILL_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hola_restore_ci_check
+          RESTORE_DRILL_CONFIRM: RESTORE_IN_EMPTY_HOLA_RESTORE_DB
+        run: |
+          mkdir -p "$BACKUP_DIR"
+          npm run db:backup
+          node --input-type=module -e "import pg from 'pg'; const c=new pg.Client({connectionString:process.env.DATABASE_URL}); await c.connect(); await c.query('CREATE DATABASE hola_restore_ci_check'); await c.end();"
+          npm run ops:restore:drill
