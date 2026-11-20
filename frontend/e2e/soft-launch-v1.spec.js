@@ -45,7 +45,7 @@ test('Admin can review feedback and see anonymized mobile network summaries', as
     id: 701, reference: 'd0c3b8f3-5d1a-4db7-8dd5-36de2fb973c2',
     category: 'BUG', area: 'MAP',
     message: 'Bản đồ bị đứng khi đổi từ chế độ 2D sang ảnh vệ tinh.',
-    status: 'NEW', note: null, createdAt: '2026-11-20T08:00:00Z'
+    status: 'NEW', note: null, version: 1, createdAt: '2026-11-20T08:00:00Z'
   };
   let saved = null;
 
@@ -88,6 +88,7 @@ test('Admin can review feedback and see anonymized mobile network summaries', as
   await expect.poll(() => saved).not.toBeNull();
   expect(saved.status).toBe('IN_REVIEW');
   expect(saved.note).toContain('Đã tạo ticket');
+  expect(saved.expectedVersion).toBe(1);
 
   await page.getByRole('tab', { name: 'Hiệu năng thực tế' }).click();
   await expect(page.getByText('Tải nội dung chính')).toBeVisible();
@@ -108,8 +109,8 @@ test('guest is denied the private Admin feedback queue', async ({ page }) => {
 });
 
 test('feedback queue hides the previous filter and ignores a superseded response', async ({ page }) => {
-  const newItem = { id: 801, message: 'Mục đang chờ xử lý', status: 'NEW' };
-  const resolvedItem = { id: 802, message: 'Mục đã giải quyết', status: 'RESOLVED' };
+  const newItem = { id: 801, message: 'Mục đang chờ xử lý', status: 'NEW', version: 1 };
+  const resolvedItem = { id: 802, message: 'Mục đã giải quyết', status: 'RESOLVED', version: 1 };
   let releaseStale;
   const staleGate = new Promise((resolve) => { releaseStale = resolve; });
   let releaseResolved;
@@ -155,8 +156,8 @@ test('feedback queue hides the previous filter and ignores a superseded response
 });
 
 test('saving the last item on a page returns to the last available page', async ({ page }) => {
-  const firstItem = { id: 901, message: 'Một góp ý ở trang đầu', status: 'NEW' };
-  const lastItem = { id: 902, message: 'Góp ý cuối ở trang hai', status: 'NEW' };
+  const firstItem = { id: 901, message: 'Một góp ý ở trang đầu', status: 'NEW', version: 1 };
+  const lastItem = { id: 902, message: 'Góp ý cuối ở trang hai', status: 'NEW', version: 1 };
   let saved = false;
 
   await page.route('**/api/**', (route) => {
@@ -166,7 +167,8 @@ test('saving the last item on a page returns to the last available page', async 
         security: { adminTwoFactorSetupRequired: false } }
     } });
     if (url.pathname === '/api/admin/soft-launch/feedback/902') {
-      saved = route.request().postDataJSON().status === 'RESOLVED';
+      saved = route.request().postDataJSON().status === 'RESOLVED' &&
+        route.request().postDataJSON().expectedVersion === 1;
       return route.fulfill({ json: { id: 902, status: 'RESOLVED' } });
     }
     if (url.pathname === '/api/admin/soft-launch/feedback') {
@@ -185,4 +187,75 @@ test('saving the last item on a page returns to the last available page', async 
   await expect(page.getByText(firstItem.message)).toBeVisible();
   await expect(page.getByText('Trang 1 / 1')).toBeVisible();
   expect(saved).toBe(true);
+});
+
+test('two Admin reviews show conflict, preserve draft when filter changes and permit explicit retry', async ({ page }) => {
+  const item = {
+    id: 1001, reference: '31ecfc93-7de5-47dd-bbec-3e82df7ef802',
+    category: 'BUG', area: 'MAP',
+    message: 'Ứng dụng không hiện dữ liệu trên một số điện thoại.',
+    status: 'NEW', note: '', version: 1, createdAt: '2026-11-20T08:00:00Z'
+  };
+  const payloads = [];
+  await page.route('**/api/**', (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/api/auth/refresh') return route.fulfill({ json: {
+      token: 'test-session', user: { id: 11, role: 'ADMIN',
+        security: { adminTwoFactorSetupRequired: false } }
+    } });
+    if (url.pathname === '/api/admin/soft-launch/feedback/1001') {
+      const input = route.request().postDataJSON();
+      payloads.push(input);
+      if (input.expectedVersion !== item.version) {
+        // Another Admin has already moved the report out of the NEW filter.
+        item.status = 'IN_REVIEW';
+        item.note = 'Admin khác đang kiểm tra';
+        item.version = 2;
+        return route.fulfill({ status: 409, json: {
+          error: 'Góp ý đã được Admin khác cập nhật.',
+          details: { code: 'FEEDBACK_VERSION_CONFLICT',
+            current: { id: item.id, status: item.status,
+              note: item.note, version: item.version,
+              updatedAt: '2026-11-20T10:00:00Z' } }
+        } });
+      }
+      item.status = input.status;
+      item.note = input.note;
+      item.version += 1;
+      return route.fulfill({ json: { id: item.id, status: item.status,
+        version: item.version } });
+    }
+    if (url.pathname === '/api/admin/soft-launch/feedback') {
+      const filter = url.searchParams.get('status');
+      const items = (!filter || filter === item.status) ? [{ ...item }] : [];
+      return route.fulfill({ json: { items, total: items.length, page: 1, limit: 20 } });
+    }
+    return route.fulfill({ json: { items: [], ok: true } });
+  });
+
+  await page.goto('/admin/soft-launch');
+  await expect(page.getByText(item.message)).toBeVisible();
+  await page.getByLabel('Trạng thái phản hồi 1001').selectOption('RESOLVED');
+  await page.getByLabel('Ghi chú phản hồi 1001').fill('Đã tái hiện và khắc phục lỗi');
+  await page.getByRole('button', { name: 'Lưu xử lý' }).click();
+
+  const compare = page.getByRole('alert', { name: 'Xung đột góp ý 1001' });
+  await expect(compare).toBeVisible();
+  await expect(compare.getByText('Admin khác đang kiểm tra')).toBeVisible();
+  await expect(compare.getByLabel('Bản nháp trạng thái 1001')).toHaveValue('RESOLVED');
+  await expect(compare.getByLabel('Bản nháp ghi chú 1001'))
+    .toHaveValue('Đã tái hiện và khắc phục lỗi');
+  await expect(page.getByText(item.message)).toHaveCount(0);
+
+  await compare.getByRole('button', { name: 'Lưu bản nháp sau khi đối chiếu' }).click();
+  await expect(compare).toHaveCount(0);
+  expect(payloads).toHaveLength(2);
+  expect(payloads.map((x) => x.expectedVersion)).toEqual([1, 2]);
+  expect(item.version).toBe(3);
+  expect(item.status).toBe('RESOLVED');
+  expect(item.note).toBe('Đã tái hiện và khắc phục lỗi');
+
+  await page.getByLabel('Lọc trạng thái phản hồi').selectOption('ALL');
+  await expect(page.getByText(item.message)).toBeVisible();
+  await expect(page.getByLabel('Trạng thái phản hồi 1001')).toHaveValue('RESOLVED');
 });
