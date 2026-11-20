@@ -12,7 +12,8 @@ chmod 700 "$APP_DIR/backend/backups"
 
 (crontab -l 2>/dev/null | grep -Fv "$MARKER" || true; \
  printf '%s\n' "17 3 * * * APP_DIR=$APP_DIR bash $APP_DIR/scripts/p0-verified-backup.sh >> $APP_DIR/backend/backups/p0-backup.log 2>&1 $MARKER"; \
- printf '%s\n' "5 4 * * * cd $APP_DIR/backend && npm run housing:expire >> $APP_DIR/backend/backups/p0-expiry.log 2>&1 $MARKER") | crontab -
+ printf '%s\n' "5 4 * * * cd $APP_DIR/backend && npm run housing:expire >> $APP_DIR/backend/backups/p0-expiry.log 2>&1 $MARKER"; \
+ printf '%s\n' "12 9 * * * cd $APP_DIR/backend && npm run housing:remind >> $APP_DIR/backend/backups/p0-reminders.log 2>&1 $MARKER") | crontab -
 
-echo "[P0] installed nightly backup+offsite verification (03:17) and property expiry (04:05)"
+echo "[P0] installed backup (03:17), property expiry (04:05) and owner reminders (09:12)"
 echo "[P0] Configure /etc/hola-maps-backup.env, test backup now, then run launch readiness checks."

@@ -50,3 +50,17 @@ test('CTV cannot approve pre-consent legacy property submissions', async () => {
     (error) => error.statusCode === 403
   );
 });
+
+test('property closure reports and updates require Admin/Moderator, never CTV', async () => {
+  for (const type of ['REPORT_CLOSED', 'UPDATE_PLACE', 'ADD_PHOTO', 'FIX_LOCATION']) {
+    const contribution = { type, place_id: 101, payload: {} };
+    await assert.rejects(
+      () => assertRealEstateReviewer(contribution, { role: 'CTV' }, fakeDb('bat-dong-san')),
+      (error) => error.statusCode === 403
+    );
+    assert.equal(
+      await assertRealEstateReviewer(contribution, { role: 'MODERATOR' }, fakeDb('bat-dong-san')),
+      true
+    );
+  }
+});

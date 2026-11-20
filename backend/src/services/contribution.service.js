@@ -46,6 +46,7 @@ const LIST_SELECT = `
     cvs.confidence AS community_confidence,
     cvs.updated_at AS community_updated_at,
     p.name AS place_name,
+    pc.slug AS place_category_slug,
     rv.name AS reviewer_name, rv.role AS reviewer_role,
     rv.ctv_level AS reviewer_ctv_level, rv.ctv_trust_score AS reviewer_ctv_trust_score,
     cma.verdict AS ctv_audit_verdict, cma.note AS ctv_audit_note,
@@ -77,6 +78,7 @@ const LIST_SELECT = `
    END
   LEFT JOIN community_verification_states cvs ON cvs.contribution_id = ct.id
   LEFT JOIN places p ON p.id = ct.place_id
+  LEFT JOIN categories pc ON pc.id = p.category_id
   LEFT JOIN users rv ON rv.id = ct.reviewed_by
   LEFT JOIN ctv_moderation_audits cma ON cma.contribution_id = ct.id
 `;
@@ -168,6 +170,7 @@ function mapRow(row) {
               : 'STANDARD_REVIEW',
     placeId: row.place_id,
     placeName: row.place_name,
+    placeCategorySlug: row.place_category_slug || null,
     type: row.type,
     status: row.status,
     payload: row.payload,
