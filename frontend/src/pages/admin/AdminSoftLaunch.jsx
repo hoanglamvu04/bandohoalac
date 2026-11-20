@@ -87,7 +87,7 @@ export default function AdminSoftLaunch() {
     const payload = {
       status: draft.status || item.status,
       note: draft.note !== undefined ? draft.note : item.note || '',
-      expectedVersion: retryVersion ?? item.version
+      expectedVersion: retryVersion ?? draft.expectedVersion ?? item.version
     };
     if (!Number.isInteger(payload.expectedVersion)) {
       setError('Thiếu phiên bản góp ý. Hãy tải lại trang trước khi lưu.');
@@ -113,7 +113,8 @@ export default function AdminSoftLaunch() {
           Number.isInteger(err.details?.current?.version)) {
         // Keep the original draft even when the latest status no longer matches the filter.
         setDrafts((previous) => ({
-          ...previous, [item.id]: { status: payload.status, note: payload.note }
+          ...previous, [item.id]: { status: payload.status, note: payload.note,
+            expectedVersion: payload.expectedVersion }
         }));
         setConflicts((previous) => ({
           ...previous, [item.id]: { item, latest: err.details.current }
@@ -196,7 +197,9 @@ export default function AdminSoftLaunch() {
                         value={draft.status ?? item.status}
                         disabled={savingId !== null}
                         onChange={(e) => setDrafts((prev) => ({
-                          ...prev, [item.id]: { ...prev[item.id], status: e.target.value }
+                          ...prev, [item.id]: { ...prev[item.id],
+                            expectedVersion: prev[item.id]?.expectedVersion ?? item.version,
+                            status: e.target.value }
                         }))}>
                         {Object.entries(STATUS_NAMES).map(([code, label]) =>
                           <option key={code} value={code}>{label}</option>)}
@@ -208,7 +211,9 @@ export default function AdminSoftLaunch() {
                         disabled={savingId !== null}
                         value={draft.note ?? item.note ?? ''}
                         onChange={(e) => setDrafts((prev) => ({
-                          ...prev, [item.id]: { ...prev[item.id], note: e.target.value }
+                          ...prev, [item.id]: { ...prev[item.id],
+                            expectedVersion: prev[item.id]?.expectedVersion ?? item.version,
+                            note: e.target.value }
                         }))}/>
                     </label>
                   </div>
