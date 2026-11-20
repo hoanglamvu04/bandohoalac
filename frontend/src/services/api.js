@@ -328,6 +328,10 @@ export function getMyContributions() {
   return unwrap(client.get('/contributions/me'));
 }
 
+export function getAdminOperationsOverview() {
+  return unwrap(client.get('/admin/operations/overview'));
+}
+
 export function getAdminContributions(params = {}) {
   return unwrap(client.get('/admin/contributions', { params: cleanParams(params) }));
 }

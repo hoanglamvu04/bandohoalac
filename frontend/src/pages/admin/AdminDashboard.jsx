@@ -79,6 +79,13 @@ const moderatorModules = [
 
 const adminModules = [
   {
+    to: '/admin/operations',
+    title: 'Giám sát vận hành',
+    description: 'PostgreSQL, lỗi API, P95 và rate limit trong 15 phút gần nhất.',
+    icon: Activity,
+    tone: 'cyan'
+  },
+  {
     to: '/admin/local-seo',
     title: 'Local SEO',
     description: 'Quản lý landing page khu vực và danh mục; chỉ xuất bản khi dữ liệu địa điểm đạt ngưỡng chất lượng.',

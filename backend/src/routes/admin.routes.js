@@ -15,6 +15,7 @@ import {
 } from '../validators/embed.validators.js';
 import { getContributions, getContribution, getRealEstateDuplicates, approve, reject } from '../controllers/admin.controller.js';
 import { authenticate, authorize, requireAdminSecurity, requireCtvLevel } from '../middleware/auth.js';
+import { adminOperationsOverview } from '../controllers/operations.controller.js';
 import { validateBody } from '../validators/validate.js';
 import { rejectContributionSchema } from '../validators/admin.validators.js';
 import {
@@ -171,6 +172,9 @@ const adminOnly = authorize('ADMIN');
 
 router.use(authenticate);
 router.use(requireAdminSecurity);
+
+// Restricted to ADMIN + enforced 2FA by the shared admin router.
+router.get('/operations/overview', adminOnly, adminOperationsOverview);
 
 router.get('/contributions', ctvStaff, getContributions);
 router.get('/contributions/:id', ctvStaff, getContribution);

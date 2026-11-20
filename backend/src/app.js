@@ -21,6 +21,8 @@ import {
   publicIntegrationRateLimiter
 } from './middleware/rateLimit.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
+import { observeApiRequests } from './services/softLaunchMetrics.service.js';
+import { publicReady } from './controllers/operations.controller.js';
 import { developerApiGateway } from './middleware/developerApi.js';
 import { resolveCorsOrigin, resolvePublicApiCorsOrigin } from './config/cors.js';
 
@@ -112,6 +114,9 @@ export function createApp() {
     next();
   });
 
+  // Fixed-cardinality, anonymous request metrics for soft-launch operations.
+  app.use(observeApiRequests);
+
   const appCors = cors({ origin: resolveCorsOrigin, credentials: true });
   const publicApiCors = cors({
     origin: resolvePublicApiCorsOrigin,
@@ -145,6 +150,10 @@ export function createApp() {
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, service: 'hola-maps-api' });
   });
+
+  // Readiness is distinct from liveness: a running API is not necessarily
+  // able to serve places/housing if PostgreSQL is unavailable.
+  app.get('/api/ready', publicReady);
 
   app.get('/api/sitemap-places.xml', async (_req, res, next) => {
     try {

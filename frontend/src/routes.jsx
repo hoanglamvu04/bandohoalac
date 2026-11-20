@@ -22,6 +22,7 @@ const Login = lazy(() => import('./pages/Login.jsx'));
 const Register = lazy(() => import('./pages/Register.jsx'));
 const PublicInfoPage = lazy(() => import('./pages/PublicInfoPage.jsx'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
+const AdminOperations = lazy(() => import('./pages/admin/AdminOperations.jsx'));
 const AdminContributions = lazy(() => import('./pages/admin/AdminContributions.jsx'));
 const AdminDataQualityV3 = lazy(() => import('./pages/admin/AdminDataQualityV3.jsx'));
 const AdminIngestion = lazy(() => import('./pages/admin/AdminIngestion.jsx'));
@@ -197,6 +198,7 @@ export const router = createBrowserRouter([
       { path: 'quyen-rieng-tu', element: withSuspense(PublicInfoPage) },
       { path: 'nguon-du-lieu', element: withSuspense(PublicInfoPage) },
       { path: 'admin', element: withRole(AdminDashboard, STAFF_ROLES) },
+      { path: 'admin/operations', element: withRole(AdminOperations, ['ADMIN']) },
       { path: 'admin/contributions', element: withRole(AdminContributions, STAFF_ROLES) },
       { path: 'admin/data-quality', element: withRole(AdminDataQualityV3, STAFF_ROLES) },
       { path: 'admin/ingestion', element: withRole(AdminIngestion, ['ADMIN']) },

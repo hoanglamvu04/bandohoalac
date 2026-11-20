@@ -32,5 +32,7 @@ for local_file in "$db" "$media"; do
 done
 
 curl --fail --silent --show-error --max-time 12 https://maps.dothihoalac.vn/api/health >/dev/null
+# Liveness alone may be 200 even when PostgreSQL is unavailable.
+curl --fail --silent --show-error --max-time 12 https://maps.dothihoalac.vn/api/ready >/dev/null
 (cd backend && node src/scripts/publicLaunchAudit.js)
 echo "[P0] operational readiness checks passed; a manual restore drill and real-device acceptance are still mandatory."
