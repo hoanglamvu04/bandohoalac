@@ -39,3 +39,14 @@ test('Other location categories retain normal price moderation', async () => {
   const result = await assertRealEstateReviewer(contribution, { role: 'CTV' }, fakeDb('cafe'));
   assert.equal(result, false);
 });
+
+test('CTV cannot approve pre-consent legacy property submissions', async () => {
+  const contribution = {
+    type: 'CREATE_PLACE',
+    payload: { place: { name: 'Căn hộ cũ', categorySlug: 'bat-dong-san' } }
+  };
+  await assert.rejects(
+    () => assertRealEstateReviewer(contribution, { role: 'CTV' }, fakeDb('bat-dong-san')),
+    (error) => error.statusCode === 403
+  );
+});

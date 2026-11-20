@@ -303,6 +303,7 @@ export async function submitCommunityVerification({
       throw new AppError('Đóng góp này đã được xử lý nên không còn nhận xác minh cộng đồng.', 409);
     }
     if (contribution.type === 'UPDATE_PRICE' ||
+        (contribution.type === 'CREATE_PLACE' && contribution.payload?.place?.categorySlug === 'bat-dong-san') ||
         contribution.payload?.place?.realEstate ||
         contribution.payload?.place?.realEstatePriceVnd !== undefined) {
       throw new AppError('Tin bất động sản cần quản trị viên duyệt, không nhận xác minh cộng đồng.', 403);
@@ -398,6 +399,7 @@ export async function listCommunityVerificationQueue(userId, {
      WHERE c.status = 'PENDING'
        AND c.payload #> '{place,realEstate}' IS NULL
        AND c.payload #> '{place,realEstatePriceVnd}' IS NULL
+       AND (c.payload #>> '{place,categorySlug}') IS DISTINCT FROM 'bat-dong-san'
        AND c.type <> 'UPDATE_PRICE'
        AND c.user_id <> $1
        AND COALESCE(c.risk_score, 0) < 70

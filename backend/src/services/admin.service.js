@@ -37,7 +37,9 @@ function sourceForRole(role) {
 export async function assertRealEstateReviewer(contribution, reviewer, client) {
   let isProperty = Boolean(
     contribution.payload?.place?.realEstate ||
-    contribution.payload?.place?.realEstatePriceVnd !== undefined
+    contribution.payload?.place?.realEstatePriceVnd !== undefined ||
+    (contribution.type === 'CREATE_PLACE' &&
+     contribution.payload?.place?.categorySlug === 'bat-dong-san')
   );
   if (!isProperty && contribution.type === 'UPDATE_PRICE' && contribution.place_id) {
     const { rows } = await client.query(
@@ -289,6 +291,9 @@ export async function approveContribution(contributionId, reviewer, review = {})
     assertCtvCanModerate(reviewer, contribution);
     const isPropertyContribution = await assertRealEstateReviewer(contribution, reviewer, client);
     const submittedListing = contribution.payload?.place?.realEstate;
+    if (isPropertyContribution && contribution.type === 'CREATE_PLACE' && !submittedListing) {
+      throw new AppError('Tin bất động sản kiểu cũ thiếu xác nhận liên hệ và thông tin tài sản. Yêu cầu gửi lại.', 409);
+    }
     if (submittedListing) {
       if (submittedListing.publicContactConsent !== true) {
         throw new AppError('Tin chưa có xác nhận công khai thông tin liên hệ. Yêu cầu người đăng gửi lại.', 409);
