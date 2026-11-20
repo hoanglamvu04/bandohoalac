@@ -105,8 +105,8 @@ export default function RealEstateSubmissionPage() {
       setError('Vui lòng nhập giá hợp lệ bằng đồng Việt Nam.');
       return;
     }
-    if (!Number.isFinite(area) || area <= 0 || area > 1000000) {
-      setError('Diện tích phải lớn hơn 0 và không vượt quá 1.000.000 m².');
+    if (!Number.isFinite(area) || area <= 0 || area > 99999.99) {
+      setError('Diện tích phải lớn hơn 0 và không vượt quá 99.999,99 m².');
       return;
     }
 
@@ -239,7 +239,7 @@ export default function RealEstateSubmissionPage() {
                 </label>
                 <label>
                   Diện tích (m²)
-                  <input name="areaM2" required type="number" min="0.01" max="1000000" step="0.01" inputMode="decimal"
+                  <input name="areaM2" required type="number" min="0.01" max="99999.99" step="0.01" inputMode="decimal"
                     value={form.areaM2} onChange={updateField} placeholder="Ví dụ: 100" />
                 </label>
                 <label>

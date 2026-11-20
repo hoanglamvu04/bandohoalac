@@ -69,4 +69,6 @@ test('rejects out-of-area pins and unrealistic monetary values', () => {
   assert.equal(validate((data) => { data.location.lat = 10; }).success, false);
   assert.equal(validate((data) => { data.place.realEstate.totalPriceVnd = -1; }).success, false);
   assert.equal(validate((data) => { data.place.realEstate.areaM2 = 0; }).success, false);
+  assert.equal(validate((data) => { data.place.realEstate.areaM2 = 100000; }).success, false);
+  assert.equal(validate((data) => { delete data.place.realEstate.contactName; }).success, false);
 });
