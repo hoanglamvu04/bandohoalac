@@ -82,3 +82,24 @@
   .soft-launch-vital-row { grid-template-columns: 1fr auto; gap: 8px; }
   .soft-launch-vital-track { grid-column: 1 / -1; grid-row: 2; }
 }
+
+/* Review a concurrent Admin change without losing the operator's unsaved work. */
+.soft-launch-conflict { border: 1px solid #db9e3e; background: #fffaf0; border-radius: 12px; padding: 16px; margin-bottom: 18px; display: grid; gap: 12px; overflow-wrap: anywhere; }
+.soft-launch-conflict h3 { margin: 0; display: flex; align-items: center; gap: 8px; color: #80501b; font-size: 16px; }
+.soft-launch-conflict p { margin: 0; color: #715b3d; font-size: 12px; line-height: 1.6; }
+.soft-launch-conflict > small { color: #806644; }
+.soft-launch-conflict-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.soft-launch-conflict-server, .soft-launch-conflict-draft { background: #fff; border: 1px solid #ead9bb; border-radius: 10px; padding: 12px; display: grid; align-content: start; gap: 9px; min-width: 0; font-size: 12px; color: #3f5143; }
+.soft-launch-conflict-server span { white-space: pre-wrap; overflow-wrap: anywhere; }
+.soft-launch-conflict-server strong, .soft-launch-conflict-draft strong { color: #80501b; }
+.soft-launch-conflict-server small { color: #6f7a71; }
+.soft-launch-conflict-draft label { display: grid; gap: 6px; color: #4c654f; font-weight: 700; }
+.soft-launch-conflict-draft select, .soft-launch-conflict-draft textarea { width: 100%; min-width: 0; border: 1px solid #ceb994; border-radius: 8px; padding: 9px; color: #1f4133; background: #fff; font: inherit; font-weight: 400; }
+.soft-launch-conflict-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.soft-launch-conflict-actions button { border-radius: 9px; border: 1px solid #b89e75; padding: 10px 13px; font-size: 12px; font-weight: 750; cursor: pointer; background: white; color: #5c4b32; }
+.soft-launch-conflict-actions button:last-child { background: #176948; border-color: #176948; color: #fff; }
+.soft-launch-conflict-actions button:disabled { opacity: .55; cursor: not-allowed; }
+@media (max-width: 680px) {
+  .soft-launch-conflict-columns { grid-template-columns: 1fr; }
+  .soft-launch-conflict-actions button { flex: 1 1 100%; }
+}

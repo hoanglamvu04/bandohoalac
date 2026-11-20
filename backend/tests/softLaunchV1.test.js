@@ -22,8 +22,11 @@ test('soft launch rejects PII fields, raw URLs, hidden IDs and invalid performan
   assert.equal(feedbackSubmitSchema.safeParse({ ...feedback, email: 'person@example.com' }).success, false);
   assert.equal(feedbackSubmitSchema.safeParse({ ...feedback, lat: 21.014, lng: 105.5 }).success, false);
   assert.equal(feedbackSubmitSchema.safeParse({ ...feedback, message: 'short' }).success, false);
-  assert.equal(feedbackReviewSchema.safeParse({ status: 'IN_REVIEW', note: 'Đang xem' }).success, true);
-  assert.equal(feedbackReviewSchema.safeParse({ status: 'DELETE_ALL' }).success, false);
+  assert.equal(feedbackReviewSchema.safeParse({ status: 'IN_REVIEW', note: 'Đang xem', expectedVersion: 1 }).success, true);
+  assert.equal(feedbackReviewSchema.safeParse({ status: 'DELETE_ALL', expectedVersion: 1 }).success, false);
+  assert.equal(feedbackReviewSchema.safeParse({ status: 'NEW' }).success, false);
+  assert.equal(feedbackReviewSchema.safeParse({ status: 'NEW', expectedVersion: 0 }).success, false);
+  assert.equal(feedbackReviewSchema.safeParse({ status: 'NEW', expectedVersion: '1' }).success, false);
 
   const sample = {
     metric: 'LCP', routeGroup: 'MAP',
@@ -64,7 +67,7 @@ test('guest feedback is private and moderator cannot read Admin launch queue', a
     reference = item.reference;
 
     const stored = await pool.query(
-      'SELECT id, category, area, status FROM soft_launch_feedback WHERE public_reference=$1',
+      'SELECT id, category, area, status, version FROM soft_launch_feedback WHERE public_reference=$1',
       [reference]
     );
     assert.equal(stored.rows.length, 1);
@@ -97,8 +100,34 @@ test('guest feedback is private and moderator cannot read Admin launch queue', a
     const actor = await pool.query("SELECT id FROM users WHERE role IN ('ADMIN','MODERATOR') LIMIT 1");
     assert.ok(actor.rows[0], 'test seed needs one moderator or admin');
     const saved = await reviewSoftLaunchFeedback(stored.rows[0].id,
-      { status: 'RESOLVED', note: 'Đã kiểm tra trên điện thoại' }, actor.rows[0].id);
+      { status: 'RESOLVED', note: 'Đã kiểm tra trên điện thoại',
+        expectedVersion: stored.rows[0].version }, actor.rows[0].id);
     assert.equal(saved.status, 'RESOLVED');
+    assert.equal(saved.version, stored.rows[0].version + 1);
+
+    // Two Admin updates start from the same version: only one can win.
+    const decisions = await Promise.allSettled([
+      reviewSoftLaunchFeedback(stored.rows[0].id,
+        { status: 'IN_REVIEW', note: 'Admin A', expectedVersion: saved.version },
+        actor.rows[0].id),
+      reviewSoftLaunchFeedback(stored.rows[0].id,
+        { status: 'DISMISSED', note: 'Admin B', expectedVersion: saved.version },
+        actor.rows[0].id)
+    ]);
+    const winners = decisions.filter((result) => result.status === 'fulfilled');
+    const conflicts = decisions.filter((result) => result.status === 'rejected');
+    assert.equal(winners.length, 1);
+    assert.equal(conflicts.length, 1);
+    assert.equal(conflicts[0].reason.statusCode, 409);
+    assert.equal(conflicts[0].reason.details.code, 'FEEDBACK_VERSION_CONFLICT');
+    assert.equal(conflicts[0].reason.details.current.version, saved.version + 1);
+    const latest = await pool.query(
+      'SELECT status, internal_note, version FROM soft_launch_feedback WHERE id=$1',
+      [stored.rows[0].id]
+    );
+    assert.equal(latest.rows[0].status, winners[0].value.status);
+    assert.equal(latest.rows[0].version, saved.version + 1);
+    assert.equal(latest.rows[0].internal_note, winners[0].value.status === 'DISMISSED' ? 'Admin B' : 'Admin A');
 
     const vital = await fetch(origin + '/api/soft-launch/vitals', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

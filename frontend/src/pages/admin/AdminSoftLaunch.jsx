@@ -36,6 +36,7 @@ export default function AdminSoftLaunch() {
   const [refresh, setRefresh] = useState(0);
   const [savingId, setSavingId] = useState(null);
   const [drafts, setDrafts] = useState({});
+  const [conflicts, setConflicts] = useState({});
   const [error, setError] = useState('');
 
   const feedback = feedbackPage?.status === status && feedbackPage?.page === page
@@ -81,25 +82,66 @@ export default function AdminSoftLaunch() {
     setRefresh((value) => value + 1);
   }
 
-  async function save(item) {
+  async function save(item, retryVersion = null) {
     const draft = drafts[item.id] || {};
-    setSavingId(item.id); setError('');
+    const payload = {
+      status: draft.status || item.status,
+      note: draft.note !== undefined ? draft.note : item.note || '',
+      expectedVersion: retryVersion ?? draft.expectedVersion ?? item.version
+    };
+    if (!Number.isInteger(payload.expectedVersion)) {
+      setError('Thiếu phiên bản góp ý. Hãy tải lại trang trước khi lưu.');
+      return;
+    }
+    setSavingId(item.id);
+    setError('');
     try {
-      await reviewAdminSoftLaunchFeedback(item.id, {
-        status: draft.status || item.status,
-        note: draft.note !== undefined ? draft.note : item.note || ''
-      });
+      await reviewAdminSoftLaunchFeedback(item.id, payload);
       setDrafts((previous) => {
+        const next = { ...previous };
+        delete next[item.id];
+        return next;
+      });
+      setConflicts((previous) => {
         const next = { ...previous };
         delete next[item.id];
         return next;
       });
       reload();
     } catch (err) {
-      setError(err.message || 'Không thể cập nhật phản hồi.');
+      if (err.status === 409 && err.code === 'FEEDBACK_VERSION_CONFLICT' &&
+          Number.isInteger(err.details?.current?.version)) {
+        // Keep the original draft even when the latest status no longer matches the filter.
+        setDrafts((previous) => ({
+          ...previous, [item.id]: { status: payload.status, note: payload.note,
+            expectedVersion: payload.expectedVersion }
+        }));
+        setConflicts((previous) => ({
+          ...previous, [item.id]: { item, latest: err.details.current }
+        }));
+        setError('');
+        reload();
+      } else {
+        setError(err.message || 'Không thể cập nhật phản hồi.');
+      }
     } finally {
       setSavingId(null);
     }
+  }
+
+  function discardConflict(id) {
+    setConflicts((previous) => {
+      const next = { ...previous };
+      delete next[id];
+      return next;
+    });
+    setDrafts((previous) => {
+      const next = { ...previous };
+      delete next[id];
+      return next;
+    });
+    setError('');
+    reload();
   }
 
   const visibleVitals = useMemo(() => (vitals?.groups || [])
@@ -131,6 +173,62 @@ export default function AdminSoftLaunch() {
 
       {tab === 'feedback' ? (
         <section className="soft-launch-admin-section">
+          {Object.values(conflicts).map(({ item, latest }) => {
+            const draft = drafts[item.id] || {};
+            return (
+              <div key={item.id} className="soft-launch-conflict" role="alert"
+                aria-label={'Xung đột góp ý ' + item.id}>
+                <h3><AlertTriangle size={18}/> Góp ý đã được Admin khác cập nhật</h3>
+                <p>Không có thay đổi nào của bạn bị ghi đè. So sánh bản mới nhất với bản nháp
+                  trước khi quyết định lưu lại.</p>
+                <small>Mã góp ý: {item.reference}</small>
+                <div className="soft-launch-conflict-columns">
+                  <div className="soft-launch-conflict-server">
+                    <strong>Phiên bản mới nhất (#{latest.version})</strong>
+                    <span>Trạng thái: {STATUS_NAMES[latest.status] || latest.status}</span>
+                    <span>Ghi chú: {latest.note || 'Chưa có ghi chú'}</span>
+                    <small>Cập nhật: {latest.updatedAt
+                      ? new Date(latest.updatedAt).toLocaleString('vi-VN') : 'Mới nhận'}</small>
+                  </div>
+                  <div className="soft-launch-conflict-draft">
+                    <strong>Bản nháp của bạn</strong>
+                    <label>Trạng thái muốn lưu
+                      <select aria-label={'Bản nháp trạng thái ' + item.id}
+                        value={draft.status ?? item.status}
+                        disabled={savingId !== null}
+                        onChange={(e) => setDrafts((prev) => ({
+                          ...prev, [item.id]: { ...prev[item.id],
+                            expectedVersion: prev[item.id]?.expectedVersion ?? item.version,
+                            status: e.target.value }
+                        }))}>
+                        {Object.entries(STATUS_NAMES).map(([code, label]) =>
+                          <option key={code} value={code}>{label}</option>)}
+                      </select>
+                    </label>
+                    <label>Ghi chú muốn lưu
+                      <textarea rows={3} maxLength={1000}
+                        aria-label={'Bản nháp ghi chú ' + item.id}
+                        disabled={savingId !== null}
+                        value={draft.note ?? item.note ?? ''}
+                        onChange={(e) => setDrafts((prev) => ({
+                          ...prev, [item.id]: { ...prev[item.id],
+                            expectedVersion: prev[item.id]?.expectedVersion ?? item.version,
+                            note: e.target.value }
+                        }))}/>
+                    </label>
+                  </div>
+                </div>
+                <div className="soft-launch-conflict-actions">
+                  <button type="button" disabled={savingId !== null}
+                    onClick={() => discardConflict(item.id)}>Dùng dữ liệu mới nhất, bỏ nháp</button>
+                  <button type="button" disabled={savingId !== null}
+                    onClick={() => save(item, latest.version)}>
+                    {savingId === item.id ? 'Đang lưu...' : 'Lưu bản nháp sau khi đối chiếu'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
           <div className="soft-launch-admin-section-head">
             <div><h2>Hàng đợi phản hồi</h2><small>{feedback?.total ?? '—'} phản hồi phù hợp bộ lọc</small></div>
             <select aria-label="Lọc trạng thái phản hồi" value={status}
@@ -164,7 +262,11 @@ export default function AdminSoftLaunch() {
                         disabled={savingId === item.id}
                         value={draft.status || item.status}
                         onChange={(e) => setDrafts((prev) => ({
-                          ...prev, [item.id]: { ...prev[item.id], status: e.target.value }
+                          ...prev, [item.id]: {
+                            ...prev[item.id],
+                            expectedVersion: prev[item.id]?.expectedVersion ?? item.version,
+                            status: e.target.value
+                          }
                         }))}>
                         {Object.entries(STATUS_NAMES).map(([code, label]) =>
                           <option key={code} value={code}>{label}</option>)}
@@ -177,12 +279,16 @@ export default function AdminSoftLaunch() {
                         disabled={savingId === item.id}
                         value={draft.note === undefined ? item.note || '' : draft.note}
                         onChange={(e) => setDrafts((prev) => ({
-                          ...prev, [item.id]: { ...prev[item.id], note: e.target.value }
+                          ...prev, [item.id]: {
+                            ...prev[item.id],
+                            expectedVersion: prev[item.id]?.expectedVersion ?? item.version,
+                            note: e.target.value
+                          }
                         }))}/>
                     </label>
-                    <button type="button" disabled={loading || savingId !== null}
+                    <button type="button" disabled={loading || savingId !== null || Boolean(conflicts[item.id])}
                       onClick={() => save(item)}><CheckCircle2 size={15}/>
-                      {savingId === item.id ? 'Đang lưu...' : 'Lưu xử lý'}
+                      {savingId === item.id ? 'Đang lưu...' : conflicts[item.id] ? 'Đang có xung đột' : 'Lưu xử lý'}
                     </button>
                   </div>
                 </article>
