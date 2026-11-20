@@ -206,11 +206,13 @@ test('two Admin reviews show conflict, preserve draft when filter changes and pe
     if (url.pathname === '/api/admin/soft-launch/feedback/1001') {
       const input = route.request().postDataJSON();
       payloads.push(input);
-      if (input.expectedVersion !== item.version) {
-        // Another Admin has already moved the report out of the NEW filter.
+      if (payloads.length === 1) {
+        // Simulate a second Admin saving before this stale request arrives.
         item.status = 'IN_REVIEW';
         item.note = 'Admin khác đang kiểm tra';
         item.version = 2;
+      }
+      if (input.expectedVersion !== item.version) {
         return route.fulfill({ status: 409, json: {
           error: 'Góp ý đã được Admin khác cập nhật.',
           details: { code: 'FEEDBACK_VERSION_CONFLICT',
