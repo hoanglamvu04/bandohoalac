@@ -16,7 +16,8 @@ export const feedbackListSchema = z.object({
 
 export const feedbackReviewSchema = z.object({
   status: z.enum(['NEW', 'IN_REVIEW', 'RESOLVED', 'DISMISSED']),
-  note: z.string().trim().max(1000).nullable().optional()
+  note: z.string().trim().max(1000).nullable().optional(),
+  expectedVersion: z.number().int().min(1).max(2147483646)
 }).strict();
 
 export const vitalSampleSchema = z.object({
