@@ -36,8 +36,8 @@ function sendVital(metric, value, routeGroup) {
   const endpoint = API_URL + '/soft-launch/vitals';
 
   try {
-    const body = new Blob([payload], { type: 'application/json' });
-    if (navigator.sendBeacon?.(endpoint, body)) return;
+    // sendBeacon may include same-origin cookies. Fetch with keepalive and
+    // credentials:'omit' sends no session cookies or Authorization headers.
     void fetch(endpoint, { method: 'POST', credentials: 'omit',
       keepalive: true, headers: { 'Content-Type': 'application/json' },
       body: payload }).catch(() => {});
