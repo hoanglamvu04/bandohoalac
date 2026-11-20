@@ -132,13 +132,8 @@ jobs:
       - name: Audit backend production dependencies
         run: npm audit --omit=dev --audit-level=high
 
-      - name: Install image codec and PG16 client for restore test
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq webp postgresql-client-16
-          echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
-          /usr/lib/postgresql/16/bin/pg_dump --version
-          /usr/lib/postgresql/16/bin/pg_restore --version
+      - name: Install image codec
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq webp
 
       - name: Migrate and seed
         run: npm run db:migrate:seed
@@ -152,7 +147,25 @@ jobs:
           RESTORE_DRILL_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hola_restore_ci_check
           RESTORE_DRILL_CONFIRM: RESTORE_IN_EMPTY_HOLA_RESTORE_DB
         run: |
-          mkdir -p "$BACKUP_DIR"
+          mkdir -p "$BACKUP_DIR" "$RUNNER_TEMP/hola-pg16-tools"
+          # The GitHub service already uses PostGIS16; use its PG16 tools in
+          # a throwaway container. Runner apt may only ship newer clients.
+          docker image inspect postgis/postgis:16-3.4 >/dev/null
+          for tool in pg_dump pg_restore; do
+            cat > "$RUNNER_TEMP/hola-pg16-tools/$tool" <<'PG_TOOL'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          tool="$(basename "$0")"
+          exec docker run --rm --network host --user "$(id -u):$(id -g)" \
+            -v "$BACKUP_DIR:$BACKUP_DIR" \
+            -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE \
+            postgis/postgis:16-3.4 "$tool" "$@"
+          PG_TOOL
+            chmod +x "$RUNNER_TEMP/hola-pg16-tools/$tool"
+          done
+          export PATH="$RUNNER_TEMP/hola-pg16-tools:$PATH"
+          pg_dump --version
+          pg_restore --version
           npm run db:backup
           node --input-type=module -e "import pg from 'pg'; const c=new pg.Client({connectionString:process.env.DATABASE_URL}); await c.connect(); await c.query('CREATE DATABASE hola_restore_ci_check'); await c.end();"
           npm run ops:restore:drill
