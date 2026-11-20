@@ -69,6 +69,70 @@ Retention defaults to 14 days locally (maximum 90). Set a tested,
 appropriate remote retention policy independently. Even after a verified
 copy, a **manual complete restore drill** is required.
 
+## Restore drill + legacy image audit (additional mandatory gates)
+
+### PostgreSQL client compatibility
+
+The `pg_dump` and `pg_restore` command-line clients used for a backup
+must match the **major version of the production PostgreSQL server**.
+HOLA Maps currently targets PostgreSQL 16. A dump generated with newer
+client defaults (e.g. `transaction_timeout` from PostgreSQL 17) can pass
+archive integrity checks yet fail when restored to PG16. On Debian/Ubuntu,
+install `postgresql-client-16` and explicitly choose its binary directory
+when another version also exists. The GitHub restore rehearsal pins 16.
+
+### Actual restore drill — empty test database only
+
+The tool never creates, drops or overwrites a database. Prepare a separate
+**empty** PostgreSQL database named `hola_restore_<safe_suffix>` (and grant
+the drill operator the required schema/extension permissions). Set
+`RESTORE_DRILL_DATABASE_URL` through a protected shell environment or secret
+file, not a shared command history. The target must be different from the
+production `DATABASE_URL`.
+
+Then run from `backend/`:
+
+```bash
+RESTORE_DRILL_CONFIRM=RESTORE_IN_EMPTY_HOLA_RESTORE_DB npm run ops:restore:drill
+```
+
+The script validates the target DB name, confirms it contains no user tables,
+finds the newest valid timestamped dump inside `BACKUP_DIR` (defaults to
+`backend/backups`), verifies the SHA256 manifest and `pg_restore --list`,
+restores inside a single transaction and checks the `places`, `users`,
+`housing_listings` and `place_images` tables and counts.
+
+On success **promptly drop the isolated restored database** after reviewing
+the evidence. The restored data may include real users' personal information.
+Do not grant application traffic access to this test database, and do not
+restore directly over production under any circumstances.
+
+The CI backend job performs an actual restore rehearsal into
+`hola_restore_ci_check` from the seeded isolated PostGIS test database.
+That demonstrates the procedure works with the checked-in schema, but
+production backups must still be separately restored and audited.
+
+### Historical image privacy — read only
+
+```bash
+cd backend
+npm run ops:media:audit
+```
+
+Use `npm run ops:media:audit -- --strict` to return nonzero when the
+report includes risk warnings. The audit enumerates public place-image
+references, flags locally served raw JPEG/PNG files, treats **all Cloudinary
+originals as unverified** until the provider export and metadata history
+are independently assessed, and counts legacy raw files and recognizable
+metadata markers in `UPLOAD_DIR`. It never modifies images, downloads
+remote media, removes database records or prints image URLs.
+
+This is a **risk inventory**, not proof that older WebP files are safe:
+absence of a marker in the first 256 KiB does not prove the original has no
+sensitive metadata. Do not batch-delete or rewrite historical originals
+until offsite and restore tests pass and the new sanitized versions have
+been reconciled in the database.
+
 ## Public data and property moderation
 
 Run from the repository root:
