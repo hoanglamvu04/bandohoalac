@@ -56,6 +56,8 @@ export default function RealEstateSubmissionPage() {
   const [positionConfirmed, setPositionConfirmed] = useState(false);
   const [locating, setLocating] = useState(false);
   const [photos, setPhotos] = useState([]);
+  const [publicContactConsent, setPublicContactConsent] = useState(false);
+  const [imageRightsConfirmed, setImageRightsConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState(null);
   const [error, setError] = useState('');
@@ -109,6 +111,14 @@ export default function RealEstateSubmissionPage() {
       setError('Diện tích phải lớn hơn 0 và không vượt quá 99.999,99 m².');
       return;
     }
+    if (!publicContactConsent) {
+      setError('Cần đồng ý công khai số điện thoại liên hệ sau khi tin được duyệt.');
+      return;
+    }
+    if (photos.length > 0 && !imageRightsConfirmed) {
+      setError('Cần xác nhận quyền sử dụng ảnh trước khi gửi.');
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -117,6 +127,8 @@ export default function RealEstateSubmissionPage() {
         propertyType: form.propertyType,
         areaM2: area,
         contactName: form.contactName.trim(),
+        publicContactConsent,
+        imageRightsConfirmed,
         ...(form.transactionType === 'SALE'
           ? { totalPriceVnd: price }
           : { monthlyRentVnd: price })
@@ -280,7 +292,31 @@ export default function RealEstateSubmissionPage() {
                   {!!photos.length && <small>Đã chọn {photos.length} ảnh</small>}
                 </label>
               </div>
-              <p className="estate-contact-note">Số điện thoại sẽ được hiển thị công khai sau khi tin được duyệt. HOLA Maps không xác nhận tính pháp lý hoặc quyền sở hữu chỉ qua việc duyệt tin.</p>
+              <p className="estate-contact-note">HOLA Maps không xác nhận tính pháp lý hoặc quyền sở hữu chỉ qua việc duyệt tin. Không tải ảnh có giấy tờ tùy thân hoặc thông tin nhạy cảm.</p>
+              <div className="estate-consent-section">
+                <label className="estate-consent">
+                  <input
+                    type="checkbox"
+                    name="publicContactConsent"
+                    checked={publicContactConsent}
+                    onChange={(event) => setPublicContactConsent(event.target.checked)}
+                    required
+                  />
+                  <span>Tôi đồng ý để HOLA Maps <strong>công khai tên liên hệ và số điện thoại</strong> trên tin bất động sản sau khi quản trị viên duyệt. Tôi đã đọc <Link to="/quyen-rieng-tu">chính sách quyền riêng tư</Link>.</span>
+                </label>
+                {photos.length > 0 && (
+                  <label className="estate-consent">
+                    <input
+                      type="checkbox"
+                      name="imageRightsConfirmed"
+                      checked={imageRightsConfirmed}
+                      onChange={(event) => setImageRightsConfirmed(event.target.checked)}
+                      required
+                    />
+                    <span>Tôi có quyền sử dụng và công khai những ảnh đã chọn, không chứa dữ liệu riêng tư của người khác.</span>
+                  </label>
+                )}
+              </div>
             </section>
 
             {error && <div className="estate-form-error" role="alert">{error}</div>}

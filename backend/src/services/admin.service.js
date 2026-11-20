@@ -8,7 +8,7 @@ import {
   getContributionForUpdate, markContributionReviewed, recordChange, getContributionById
 } from './contribution.service.js';
 import { awardPointsForApproval, penalizeRejection } from './points.service.js';
-import { evaluateContributionScore } from './contributionScoring.service.js';
+import { evaluateContributionScore, CONTRIBUTION_SCORE_CRITERIA } from './contributionScoring.service.js';
 import { findUserById } from './user.service.js';
 import { deleteStoredAssets } from './storage.service.js';
 import { createNotification } from './notification.service.js';
@@ -51,6 +51,38 @@ async function applyContributionToPlace(contribution, client) {
     if (place.categorySlug) {
       const category = await findCategoryBySlug(place.categorySlug, client);
       categoryId = category?.id || null;
+    }
+
+    if (place.realEstate) {
+      const lockKey = [String(place.phone || '').replace(/[^0-9]/g, ''), String(place.name || '').trim().toLowerCase()].join(':');
+      await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [lockKey]);
+      // Block exact same-title, same-contact listings within a small radius,
+      // including concurrent approvals (the source contribution is locked).
+      // Other nearby apartments/properties are valid and remain reviewable.
+      const { rows: duplicateRows } = await client.query(
+        `SELECT p.id
+         FROM places p
+         JOIN categories c ON c.id = p.category_id
+         WHERE p.status = 'PUBLISHED'
+           AND c.slug = 'bat-dong-san'
+           AND lower(trim(p.name)) = lower(trim($1))
+           AND regexp_replace(COALESCE(p.phone,''), '[^0-9]', '', 'g')
+               = regexp_replace($2, '[^0-9]', '', 'g')
+           AND ST_DWithin(
+             p.location::geography,
+             ST_SetSRID(ST_MakePoint($3, $4),4326)::geography,
+             25
+           )
+         LIMIT 1`,
+        [place.name, place.phone, Number(payload.location?.lng), Number(payload.location?.lat)]
+      );
+      if (duplicateRows.length) {
+        throw new AppError(
+          'Tin bất động sản trùng tên, số liên hệ và vị trí với địa điểm #' + duplicateRows[0].id +
+          '. Hãy kiểm tra trước khi duyệt.',
+          409
+        );
+      }
     }
 
     const placeId = await createPlace({
@@ -202,8 +234,25 @@ export async function approveContribution(contributionId, reviewer, review = {})
 
     assertCtvCanModerate(reviewer, contribution);
     assertRealEstateReviewer(contribution, reviewer);
+    const submittedListing = contribution.payload?.place?.realEstate;
+    if (submittedListing) {
+      if (submittedListing.publicContactConsent !== true) {
+        throw new AppError('Tin chưa có xác nhận công khai thông tin liên hệ. Yêu cầu người đăng gửi lại.', 409);
+      }
+      if ((contribution.payload?.photos?.length || contribution.payload?.photoAssets?.length) &&
+          submittedListing.imageRightsConfirmed !== true) {
+        throw new AppError('Tin chưa xác nhận quyền sử dụng ảnh. Yêu cầu người đăng gửi lại.', 409);
+      }
+    }
 
-    const score = evaluateContributionScore(review.scoreBreakdown);
+    const isRealEstate = Boolean(contribution.payload?.place?.realEstate);
+    // Property moderation is not a gamified contribution. Force a zero score
+    // server-side; never trust an arbitrary reviewer-provided score.
+    const score = evaluateContributionScore(
+      isRealEstate
+        ? Object.fromEntries(CONTRIBUTION_SCORE_CRITERIA.map((criterion) => [criterion.key, 0]))
+        : review.scoreBreakdown
+    );
     const scoreNote = String(review.scoreNote || '').trim().slice(0, 1000) || null;
     const beforeSnapshot = contribution.place_id
       ? await capturePlaceSnapshot(contribution.place_id, client)
@@ -247,12 +296,14 @@ export async function approveContribution(contributionId, reviewer, review = {})
       amount: score.total
     }, client);
 
-    const missionAwards = await applyMissionBonusesForContribution({
-      contributionId,
-      userId: contribution.user_id,
-      type: contribution.type,
-      client
-    });
+    const missionAwards = isRealEstate
+      ? []
+      : await applyMissionBonusesForContribution({
+          contributionId,
+          userId: contribution.user_id,
+          type: contribution.type,
+          client
+        });
     const missionBonus = missionAwards.reduce(
       (total, item) => total + Number(item.perContributionBonus || 0) + Number(item.completionBonus || 0),
       0
@@ -263,7 +314,9 @@ export async function approveContribution(contributionId, reviewer, review = {})
       ? expertiseUpdate.unlockedBadges
       : [];
 
-    let notificationMessage = `Đóng góp của bạn đã được duyệt: +${points}/${score.maxPoints} điểm chất lượng.`;
+    let notificationMessage = isRealEstate
+      ? 'Tin bất động sản của bạn đã được duyệt và xuất hiện trên bản đồ.'
+      : `Đóng góp của bạn đã được duyệt: +${points}/${score.maxPoints} điểm chất lượng.`;
     if (missionBonus > 0) notificationMessage += ` Thưởng nhiệm vụ: +${missionBonus} điểm.`;
     if (unlockedBadges.length > 0) {
       notificationMessage += ` Mở huy hiệu: ${unlockedBadges.slice(0, 2).map((item) => item.title).join(', ')}.`;

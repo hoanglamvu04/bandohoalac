@@ -94,8 +94,12 @@ const PAGE_CONFIG = {
         body: 'Ảnh, đánh giá và thông tin địa điểm bạn gửi có thể được lưu để kiểm duyệt, hiển thị công khai hoặc xử lý các yêu cầu cập nhật dữ liệu.'
       },
       {
+        title: 'Tin bất động sản và thông tin liên hệ công khai',
+        body: 'Khi gửi tin bất động sản, bạn phải chủ động đồng ý để tên liên hệ và số điện thoại hiển thị trên tin sau khi quản trị viên duyệt. Hệ thống lưu bản ghi yêu cầu và thời điểm gửi làm bằng chứng xác nhận; nếu không đồng ý, bạn không thể đăng tin. Chỉ gửi ảnh thuộc quyền sử dụng của mình, không chứa giấy tờ tùy thân hoặc dữ liệu nhạy cảm.'
+      },
+      {
         title: 'Lựa chọn của bạn',
-        body: 'Bạn có thể không cấp quyền vị trí, không tải ảnh lên hoặc liên hệ quản trị để yêu cầu hỗ trợ về tài khoản và nội dung đã đóng góp.'
+        body: 'Bạn có thể không cấp quyền vị trí, không tải ảnh lên hoặc liên hệ quản trị để yêu cầu hỗ trợ về tài khoản và nội dung đã đóng góp. Bạn có thể yêu cầu tạm ẩn hoặc gỡ tin đã đăng; lịch sử kiểm duyệt cần thiết vẫn được lưu để bảo vệ nền tảng.'
       }
     ]
   },
