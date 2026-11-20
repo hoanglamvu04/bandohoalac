@@ -1,5 +1,6 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
+import { pool } from '../database/pool.js';
 import { createContribution, listContributionsByUser } from '../services/contribution.service.js';
 import { deleteStoredAssets, storeUploadedFiles } from '../services/storage.service.js';
 import {
@@ -66,6 +67,19 @@ export const create = asyncHandler(async (req, res) => {
   // Never accept user-submitted assets without an explicit rights declaration.
   if (place?.realEstate && (req.files || []).length > 0 && place.realEstate.imageRightsConfirmed !== true) {
     throw new AppError('Bạn cần xác nhận quyền sử dụng ảnh bất động sản trước khi gửi.', 400);
+  }
+  if (type === 'UPDATE_PRICE' && placeId && place?.realEstatePriceVnd === undefined) {
+    const { rows } = await pool.query(
+      `SELECT c.slug FROM places p JOIN categories c ON c.id = p.category_id
+       WHERE p.id = $1 LIMIT 1`,
+      [placeId]
+    );
+    if (rows[0]?.slug === 'bat-dong-san') {
+      throw new AppError(
+        'Tin bất động sản phải gửi giá dạng số, không được cập nhật bằng giá tự do.',
+        400
+      );
+    }
   }
   const isRoadStatus = isRoadStatusContributionType(type);
   const normalizedSeverity = isRoadStatus ? (severity || 'MEDIUM') : undefined;
