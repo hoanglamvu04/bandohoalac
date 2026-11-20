@@ -108,3 +108,17 @@
   .dqv3-section-title { align-items: flex-start; flex-direction: column; }
   .dqv3-section-title small { text-align: left; }
 }
+.dqv3-audit-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 12px 0 0;
+  padding: 11px 14px;
+  border: 1px solid #efd9a8;
+  border-radius: 12px;
+  background: #fff9ed;
+  color: #775624;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.dqv3-audit-note svg { flex: 0 0 auto; margin-top: 1px; }
