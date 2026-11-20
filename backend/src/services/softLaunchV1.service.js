@@ -20,7 +20,7 @@ export async function listSoftLaunchFeedback({ status, page, limit }, client = p
   const [listResult, countResult] = await Promise.all([
     client.query(
       'SELECT id, public_reference, category, area, message, status, internal_note, ' +
-      'created_at, updated_at, resolved_at FROM soft_launch_feedback ' + where +
+      'created_at, updated_at, resolved_at, version FROM soft_launch_feedback ' + where +
       ' ORDER BY created_at DESC, id DESC LIMIT $' + (params.length + 1) +
       ' OFFSET $' + (params.length + 2),
       [...params, limit, (page - 1) * limit]
@@ -41,7 +41,8 @@ export async function listSoftLaunchFeedback({ status, page, limit }, client = p
       note: row.internal_note,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
-      resolvedAt: row.resolved_at
+      resolvedAt: row.resolved_at,
+      version: row.version
     })),
     total: countResult.rows[0]?.total || 0,
     page,
@@ -49,7 +50,7 @@ export async function listSoftLaunchFeedback({ status, page, limit }, client = p
   };
 }
 
-export async function reviewSoftLaunchFeedback(id, { status, note }, adminId, client = pool) {
+export async function reviewSoftLaunchFeedback(id, { status, note, expectedVersion }, adminId, client = pool) {
   if (!/^[1-9]\d*$/.test(String(id))) {
     throw new AppError('Invalid feedback ID.', 400);
   }
@@ -60,13 +61,34 @@ export async function reviewSoftLaunchFeedback(id, { status, note }, adminId, cl
            reviewed_by = $4,
            resolved_at = CASE WHEN $2 IN ('RESOLVED','DISMISSED')
                             THEN COALESCE(resolved_at, NOW()) ELSE NULL END,
-           updated_at = NOW()
-     WHERE id = $1
-     RETURNING id, status, updated_at`,
-    [id, status, note === undefined ? null : note, adminId]
+           updated_at = NOW(),
+           version = version + 1
+     WHERE id = $1 AND version = $5
+     RETURNING id, status, updated_at, version`,
+    [id, status, note === undefined ? null : note, adminId, expectedVersion]
   );
-  if (!item) throw new AppError('Feedback not found.', 404);
-  return { id: item.id, status: item.status, updatedAt: item.updated_at };
+  if (!item) {
+    const { rows: [current] } = await client.query(
+      'SELECT id, status, internal_note, updated_at, version FROM soft_launch_feedback WHERE id = $1',
+      [id]
+    );
+    if (!current) throw new AppError('Feedback not found.', 404);
+    throw new AppError(
+      'Góp ý đã được Admin khác cập nhật. Hãy đối chiếu trước khi lưu lại.',
+      409,
+      {
+        code: 'FEEDBACK_VERSION_CONFLICT',
+        current: {
+          id: current.id,
+          status: current.status,
+          note: current.internal_note,
+          updatedAt: current.updated_at,
+          version: current.version
+        }
+      }
+    );
+  }
+  return { id: item.id, status: item.status, updatedAt: item.updated_at, version: item.version };
 }
 
 export async function recordSoftLaunchVital(input, client = pool) {
