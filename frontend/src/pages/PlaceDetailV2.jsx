@@ -297,7 +297,7 @@ export default function PlaceDetailV2() {
 
   function openPlaceReport(field) {
     if (!user) {
-      showToast('Đăng nhập để báo sai thông tin địa điểm.', 'info');
+      showToast('Đăng nhập để gửi báo cáo về thông tin địa điểm hoặc bất động sản.', 'info');
       return;
     }
     setReportField(field);
@@ -309,6 +309,7 @@ export default function PlaceDetailV2() {
     event?.preventDefault?.();
     if (!reportField || !reportReason.trim() || reportBusy) return;
 
+    const isInactiveListingReport = reportField === 'LISTING_INACTIVE';
     const placeField = reportField === 'ADDRESS'
       ? 'address'
       : reportField === 'OPENING_HOURS'
@@ -319,14 +320,20 @@ export default function PlaceDetailV2() {
 
     setReportBusy(true);
     try {
-      await createContribution({
-        type: 'REPORT_WRONG_INFO',
-        placeId: place.id,
-        fieldKey: reportField,
-        suggestedValue: suggestedValue || undefined,
-        place: placeCorrection,
-        reason: reportReason.trim()
-      });
+      await createContribution(isInactiveListingReport
+        ? {
+            type: 'REPORT_CLOSED',
+            placeId: place.id,
+            reason: reportReason.trim()
+          }
+        : {
+            type: 'REPORT_WRONG_INFO',
+            placeId: place.id,
+            fieldKey: reportField,
+            suggestedValue: suggestedValue || undefined,
+            place: placeCorrection,
+            reason: reportReason.trim()
+          });
       showToast('Đã gửi báo cáo. Thông tin sẽ được HOLA kiểm tra trước khi cập nhật.', 'success');
       setReportField('');
       setReportSuggestedValue('');
@@ -499,14 +506,21 @@ export default function PlaceDetailV2() {
         )}
 
         <div className="place-trust-actions">
-          <button type="button" className="place-trust-confirm" onClick={confirmPlaceStillActive} disabled={trustBusy}>
-            <CheckCircle2 size={16} />
-            {trustBusy ? 'Đang ghi nhận...' : 'Xác nhận địa điểm vẫn hoạt động'}
-          </button>
+          {place.categorySlug !== 'bat-dong-san' && (
+            <button type="button" className="place-trust-confirm" onClick={confirmPlaceStillActive} disabled={trustBusy}>
+              <CheckCircle2 size={16} />
+              {trustBusy ? 'Đang ghi nhận...' : 'Xác nhận địa điểm vẫn hoạt động'}
+            </button>
+          )}
           <div className="place-trust-report-buttons">
             <button type="button" onClick={() => openPlaceReport('ADDRESS')}>Báo sai địa chỉ</button>
             <button type="button" onClick={() => openPlaceReport('OPENING_HOURS')}>Báo sai giờ mở cửa</button>
             <button type="button" onClick={() => openPlaceReport('PHONE')}>Báo sai số điện thoại</button>
+            {place.categorySlug === 'bat-dong-san' && (
+              <button type="button" onClick={() => openPlaceReport('LISTING_INACTIVE')}>
+                Báo tin không còn hiệu lực
+              </button>
+            )}
           </div>
         </div>
 
@@ -514,20 +528,28 @@ export default function PlaceDetailV2() {
           <form className="place-trust-report-form" onSubmit={submitPlaceReport}>
             <div className="place-trust-report-head">
               <div>
-                <b>{reportField === 'ADDRESS' ? 'Báo sai địa chỉ' : reportField === 'OPENING_HOURS' ? 'Báo sai giờ mở cửa' : 'Báo sai số điện thoại'}</b>
+                <b>{reportField === 'LISTING_INACTIVE'
+                  ? 'Báo tin đã giao dịch hoặc không còn hiệu lực'
+                  : reportField === 'ADDRESS'
+                    ? 'Báo sai địa chỉ'
+                    : reportField === 'OPENING_HOURS'
+                      ? 'Báo sai giờ mở cửa'
+                      : 'Báo sai số điện thoại'}</b>
                 <small>Thông tin gửi đi sẽ vào hàng chờ kiểm duyệt, chưa thay đổi dữ liệu công khai.</small>
               </div>
               <button type="button" onClick={() => setReportField('')} aria-label="Đóng biểu mẫu">×</button>
             </div>
-            <label>
-              Thông tin chính xác đề xuất (không bắt buộc)
-              <input
-                value={reportSuggestedValue}
-                onChange={(event) => setReportSuggestedValue(event.target.value)}
-                maxLength={reportField === 'ADDRESS' ? 300 : reportField === 'OPENING_HOURS' ? 120 : 30}
-                placeholder={reportField === 'ADDRESS' ? 'Địa chỉ đúng...' : reportField === 'OPENING_HOURS' ? 'Ví dụ: 08:00–22:00' : 'Số điện thoại đúng...'}
-              />
-            </label>
+            {reportField !== 'LISTING_INACTIVE' && (
+              <label>
+                Thông tin chính xác đề xuất (không bắt buộc)
+                <input
+                  value={reportSuggestedValue}
+                  onChange={(event) => setReportSuggestedValue(event.target.value)}
+                  maxLength={reportField === 'ADDRESS' ? 300 : reportField === 'OPENING_HOURS' ? 120 : 30}
+                  placeholder={reportField === 'ADDRESS' ? 'Địa chỉ đúng...' : reportField === 'OPENING_HOURS' ? 'Ví dụ: 08:00–22:00' : 'Số điện thoại đúng...'}
+                />
+              </label>
+            )}
             <label>
               Mô tả vấn đề <span>*</span>
               <textarea
@@ -536,7 +558,9 @@ export default function PlaceDetailV2() {
                 maxLength={500}
                 rows={3}
                 required
-                placeholder="Mô tả ngắn vì sao thông tin hiện tại không chính xác..."
+                placeholder={reportField === 'LISTING_INACTIVE'
+                  ? 'Ví dụ: Chủ nhà xác nhận đã bán ngày 15/11; nguồn thông tin và thời điểm kiểm tra…'
+                  : 'Mô tả ngắn vì sao thông tin hiện tại không chính xác...'}
               />
             </label>
             <div className="place-trust-report-form-actions">

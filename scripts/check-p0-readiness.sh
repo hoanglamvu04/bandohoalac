@@ -7,7 +7,12 @@ BACKUP_ENV_FILE="${HOLA_BACKUP_ENV_FILE:-/etc/hola-maps-backup.env}"
 
 cd "$APP_DIR"
 command -v crontab >/dev/null || { echo "[P0] cron missing" >&2; exit 1; }
-crontab -l | grep -q 'HOLA_MAPS_P0' || { echo "[P0] nightly jobs not installed" >&2; exit 1; }
+for task in p0-backup.log p0-expiry.log p0-reminders.log; do
+  crontab -l | grep -F "$task" | grep -q 'HOLA_MAPS_P0' || {
+    echo "[P0] required job missing: $task" >&2
+    exit 1
+  }
+done
 
 db="$(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'hola-maps-*.dump' -mmin -2160 -printf '%T@ %p\n' | sort -rn | head -n 1 | cut -d' ' -f2-)"
 media="$(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'hola-maps-media-*.tar.gz' -mmin -2160 -printf '%T@ %p\n' | sort -rn | head -n 1 | cut -d' ' -f2-)"

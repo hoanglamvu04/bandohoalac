@@ -158,13 +158,16 @@ export default function AdminContributions() {
 
   async function handleApprove(item) {
     const isRealEstate = Boolean(
+      item.placeCategorySlug === 'bat-dong-san' ||
       item.payload?.place?.realEstate ||
       item.payload?.place?.realEstatePriceVnd !== undefined
     );
     if (isRealEstate && !window.confirm(
-      item.payload?.place?.realEstatePriceVnd !== undefined
-        ? 'Bạn đã kiểm tra giá cập nhật? Duyệt sẽ thay giá công khai của tin bất động sản.'
-        : 'Bạn đã kiểm tra giá, vị trí, thông tin liên hệ? Duyệt sẽ xuất bản tin bất động sản lên bản đồ.'
+      item.type === 'REPORT_CLOSED'
+        ? 'Bạn đã kiểm tra bằng chứng và liên hệ nếu cần? Duyệt sẽ tạm ẩn bất động sản khỏi toàn bộ bản đồ.'
+        : item.payload?.place?.realEstatePriceVnd !== undefined
+          ? 'Bạn đã kiểm tra giá cập nhật? Duyệt sẽ thay giá công khai của tin bất động sản.'
+          : 'Bạn đã kiểm tra giá, vị trí, thông tin liên hệ? Duyệt sẽ xuất bản tin bất động sản lên bản đồ.'
     )) return;
     const draft = isRealEstate
       ? {
@@ -187,9 +190,11 @@ export default function AdminContributions() {
       const isRoadStatus = ['REPORT_FLOOD', 'REPORT_ROAD_CLOSURE', 'REPORT_ALERT'].includes(item.type);
       showToast(
         isRealEstate
-          ? (item.payload?.place?.realEstatePriceVnd !== undefined
-              ? 'Đã duyệt cập nhật giá bất động sản.'
-              : 'Đã duyệt tin bất động sản. Tin hiện có thể xem trên bản đồ.')
+          ? (item.type === 'REPORT_CLOSED'
+              ? 'Đã duyệt báo cáo và tạm ẩn tin bất động sản.'
+              : item.payload?.place?.realEstatePriceVnd !== undefined
+                ? 'Đã duyệt cập nhật giá bất động sản.'
+                : 'Đã duyệt tin bất động sản. Tin hiện có thể xem trên bản đồ.')
           : isRoadStatus
             ? `Đã xác minh tình trạng và cộng +${total}/${MAX_POINTS} điểm chất lượng.`
             : `Đã duyệt đóng góp và cộng +${total}/${MAX_POINTS} điểm chất lượng.`,
@@ -263,7 +268,8 @@ export default function AdminContributions() {
         {items.map((item) => {
           const place = item.payload?.place || {};
           const isPropertyPriceUpdate = place.realEstatePriceVnd !== undefined;
-          const isRealEstate = Boolean(place.realEstate || isPropertyPriceUpdate);
+          const isRealEstate = Boolean(place.realEstate || isPropertyPriceUpdate ||
+            item.placeCategorySlug === 'bat-dong-san');
           const canReviewRealEstate = ['ADMIN', 'MODERATOR'].includes(user?.role);
           const estate = place.realEstate;
           const location = item.payload?.location;
@@ -480,9 +486,14 @@ export default function AdminContributions() {
                     className="primary-action"
                     disabled={busyId === item.id || (isRealEstate ? (!canReviewRealEstate || (estate && (estate.publicContactConsent !== true || (!!photos.length && estate.imageRightsConfirmed !== true)))) : !isComplete)}
                     onClick={() => handleApprove(item)}
-                    title={isRealEstate ? 'Kiểm tra thông tin và đăng công khai' : (!isComplete ? 'Hãy chấm đủ 5 tiêu chí trước' : '')}
+                    title={isRealEstate
+                      ? (item.type === 'REPORT_CLOSED' ? 'Kiểm tra bằng chứng rồi tạm ẩn tin' : 'Kiểm tra thông tin bất động sản')
+                      : (!isComplete ? 'Hãy chấm đủ 5 tiêu chí trước' : '')}
                   >
-                    <Check size={17} /> {isRealEstate ? 'Duyệt & đăng bản đồ' : 'Duyệt +' + total + ' điểm'}
+                    <Check size={17} /> {isRealEstate
+                      ? (item.type === 'REPORT_CLOSED' ? 'Duyệt & ẩn tin'
+                        : isPropertyPriceUpdate ? 'Duyệt cập nhật giá' : 'Duyệt & đăng bản đồ')
+                      : 'Duyệt +' + total + ' điểm'}
                   </button>
                   <button className="secondary-action" disabled={busyId === item.id || (isRealEstate && !canReviewRealEstate)} onClick={() => setRejectingId(item.id)}>
                     <X size={17} /> Từ chối

@@ -41,7 +41,7 @@ export async function assertRealEstateReviewer(contribution, reviewer, client) {
     (contribution.type === 'CREATE_PLACE' &&
      contribution.payload?.place?.categorySlug === 'bat-dong-san')
   );
-  if (!isProperty && contribution.type === 'UPDATE_PRICE' && contribution.place_id) {
+  if (!isProperty && contribution.place_id) {
     const { rows } = await client.query(
       `SELECT c.slug FROM places p JOIN categories c ON c.id=p.category_id
         WHERE p.id=$1 LIMIT 1`,
@@ -276,7 +276,30 @@ async function applyContributionToPlace(contribution, client) {
     await recordChange(contribution.id, 'price_level', null, place.price, client);
   }
   if (contribution.type === 'REPORT_CLOSED') {
+    const closed = await client.query(
+      `UPDATE housing_listings
+          SET listing_status = 'PAUSED', updated_at = NOW()
+        WHERE place_id = $1 AND listing_status = 'ACTIVE'
+        RETURNING place_id`,
+      [placeId]
+    );
     await updatePlaceFields(placeId, { status: 'ARCHIVED' }, client);
+    if (closed.rows.length) {
+      await recordChange(contribution.id, 'listing_status', 'ACTIVE', 'PAUSED', client);
+      const { rows: owners } = await client.query(
+        'SELECT created_by, name FROM places WHERE id=$1 AND created_by IS NOT NULL',
+        [placeId]
+      );
+      if (owners[0] && Number(owners[0].created_by) !== Number(contribution.user_id)) {
+        await createNotification({
+          userId: owners[0].created_by,
+          type: 'HOUSING_LISTING_HIDDEN',
+          title: 'Tin bất động sản đã được tạm ẩn',
+          message: 'Tin "' + owners[0].name + '" đã được tạm ẩn sau khi HOLA kiểm tra báo cáo. Nếu thông tin chưa chính xác, hãy liên hệ quản trị viên.',
+          data: { placeId: String(placeId), url: '/tin-bat-dong-san-cua-toi' }
+        }, client);
+      }
+    }
   }
 
   return { placeId };

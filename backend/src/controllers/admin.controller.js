@@ -16,7 +16,8 @@ export const getContributions = asyncHandler(async (req, res) => {
   res.json({
     items: ['ADMIN', 'MODERATOR'].includes(req.user.role)
       ? items
-      : items.filter((item) => !item.payload?.place?.realEstate &&
+      : items.filter((item) => item.placeCategorySlug !== 'bat-dong-san' &&
+          !item.payload?.place?.realEstate &&
           !(item.type === 'CREATE_PLACE' && item.payload?.place?.categorySlug === 'bat-dong-san') &&
           item.payload?.place?.realEstatePriceVnd === undefined)
   });
@@ -25,7 +26,8 @@ export const getContributions = asyncHandler(async (req, res) => {
 export const getContribution = asyncHandler(async (req, res) => {
   const contribution = await getContributionById(Number(req.params.id));
   if (!contribution) throw new AppError('Contribution not found.', 404);
-  if ((contribution.payload?.place?.realEstate ||
+  if ((contribution.placeCategorySlug === 'bat-dong-san' ||
+       contribution.payload?.place?.realEstate ||
        contribution.payload?.place?.realEstatePriceVnd !== undefined ||
        (contribution.type === 'CREATE_PLACE' && contribution.payload?.place?.categorySlug === 'bat-dong-san')) &&
       !['ADMIN', 'MODERATOR'].includes(req.user.role)) {
