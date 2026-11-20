@@ -138,6 +138,11 @@ const PLACE_PAGE_SIZE = 45;
 const VIRTUAL_LIST_OVERSCAN = 6;
 const VIEWPORT_PREFETCH_RATIO = 0.35;
 const MAX_LOADED_VIEWPORTS = 24;
+// Small pan gestures on mobile should reuse a padded, bounded GeoJSON view.
+// Keep the TTL short: road closures and flood alerts can change quickly.
+const MAP_LAYER_PREFETCH_RATIO = 0.15;
+const MAX_CACHED_LAYER_VIEWPORTS = 4;
+const MAP_LAYER_CACHE_TTL_MS = 60_000;
 
 function expandViewport(viewport, ratio = VIEWPORT_PREFETCH_RATIO) {
   const width = Math.max(0, Number(viewport.east) - Number(viewport.west));
@@ -582,7 +587,8 @@ export default function MapPage() {
   const lastPlacesRequestKeyRef = useRef('');
   const loadedPlaceBoundsRef = useRef([]);
   const boundsPaginationRef = useRef(new Map());
-  const lastLayersRequestKeyRef = useRef('');
+  const layerViewportCacheRef = useRef([]);
+  const layerCacheRefreshKeyRef = useRef(statusRefreshKey);
   const galleryTouchStartRef = useRef(null);
   const placeRowRefs = useRef(new Map());
   const placeListRef = useRef(null);
@@ -1225,8 +1231,15 @@ export default function MapPage() {
   ]);
 
   useEffect(() => {
+    // Manual road-status confirmation invalidates all cached map overlays.
+    if (layerCacheRefreshKeyRef.current !== statusRefreshKey) {
+      layerViewportCacheRef.current = [];
+      layerCacheRefreshKeyRef.current = statusRefreshKey;
+    }
+
     if (!viewport || !activeLayers.length) {
       setMapData({ type: 'FeatureCollection', features: [] });
+      setDataLoading(false);
       return undefined;
     }
 
@@ -1237,30 +1250,49 @@ export default function MapPage() {
 
     if (!visibleLayerTypes.length) {
       setMapData({ type: 'FeatureCollection', features: [] });
+      setDataLoading(false);
       return undefined;
     }
 
     const sortedTypes = [...visibleLayerTypes].sort();
-    const requestKey =
-      'layers:' + sortedTypes.join(',') + ':' + viewportKey(normalizedViewport);
+    const layersKey = sortedTypes.join(',');
+    const now = Date.now();
+    const cachedView = layerViewportCacheRef.current.find((entry) =>
+      entry.layersKey === layersKey &&
+      now - entry.loadedAt < MAP_LAYER_CACHE_TTL_MS &&
+      viewportContains(entry.bounds, normalizedViewport)
+    );
 
-    if (lastLayersRequestKeyRef.current === requestKey) {
+    if (cachedView) {
+      // Avoid a network round trip AND the GeoJSON source rebuild for small
+      // mobile pans. The map clips extra features outside the camera itself.
+      setMapData((current) => current === cachedView.data ? current : cachedView.data);
+      setDataLoading(false);
       return undefined;
     }
 
+    const requestBounds = expandViewport(normalizedViewport, MAP_LAYER_PREFETCH_RATIO);
+    const requestKey = layersKey + ':' + viewportKey(requestBounds);
     let active = true;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       setDataLoading(true);
 
       getMapLayers(
-        { types: sortedTypes, bounds: normalizedViewport },
+        { types: sortedTypes, bounds: requestBounds },
         { signal: controller.signal }
       )
         .then((data) => {
-          if (!active) return;
-          lastLayersRequestKeyRef.current = requestKey;
-          if (data?.type === 'FeatureCollection') setMapData(data);
+          if (!active || data?.type !== 'FeatureCollection') return;
+          const loadedAt = Date.now();
+          layerViewportCacheRef.current = [
+            { requestKey, layersKey, bounds: requestBounds, data, loadedAt },
+            ...layerViewportCacheRef.current.filter((entry) =>
+              entry.requestKey !== requestKey &&
+              loadedAt - entry.loadedAt < MAP_LAYER_CACHE_TTL_MS
+            )
+          ].slice(0, MAX_CACHED_LAYER_VIEWPORTS);
+          setMapData(data);
         })
         .catch((error) => {
           if (!active || error?.name === 'AbortError') return;
@@ -2472,7 +2504,6 @@ export default function MapPage() {
       setReportOpen(false);
       setReportReason('');
       setReportPhotos([]);
-      lastLayersRequestKeyRef.current = '';
       setStatusRefreshKey((value) => value + 1);
       showToast(
         'Đã đăng báo cáo cộng đồng. Người ở gần có thể xác nhận tình trạng này.',
@@ -2514,7 +2545,6 @@ export default function MapPage() {
         );
       }
 
-      lastLayersRequestKeyRef.current = '';
       setStatusRefreshKey((value) => value + 1);
     } catch (error) {
       showToast(error.message || 'Không thể xác nhận báo cáo.', 'error');

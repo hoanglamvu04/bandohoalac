@@ -36,7 +36,14 @@ const ISSUE_LABELS = {
   STALE_IMAGES: 'Ảnh quá cũ',
   STALE_PLACE: 'Quá 180 ngày chưa xác minh',
   NEVER_VERIFIED: 'Chưa từng xác minh',
-  NEVER_VERIFIED: 'Chưa từng xác minh'
+  INCOMPLETE_PROPERTY_PROFILE: 'Thiếu hồ sơ BĐS',
+  MISSING_PROPERTY_PRICE: 'Thiếu giá nhà đất',
+  MISSING_PROPERTY_AREA: 'Thiếu diện tích nhà đất',
+  MISSING_COORDINATES: 'Thiếu tọa độ',
+  OUT_OF_COVERAGE: 'Ngoài vùng phục vụ',
+  POSSIBLE_DUPLICATE: 'Địa điểm có thể trùng',
+  PROPERTY_NOT_ACTIVE: 'BĐS không còn hoạt động',
+  PROPERTY_EXPIRED: 'BĐS đã hết hạn'
 };
 
 const REVISION_LABELS = {
@@ -220,7 +227,9 @@ export default function AdminDataTrust() {
               <div><span className="eyebrow">DATA QUALITY</span><h2>Địa điểm cần làm mới</h2></div>
               <div className="quality-filter-row">
                 <button className={filter === 'ALL' ? 'active' : ''} onClick={() => setFilter('ALL')}>Tất cả</button>
-                {['MISSING_IMAGES', 'MISSING_HOURS', 'STALE_PLACE', 'NEVER_VERIFIED', 'STALE_IMAGES'].map((key) => <button key={key} className={filter === key ? 'active' : ''} onClick={() => setFilter(key)}>{ISSUE_LABELS[key]}</button>)}
+                {['MISSING_IMAGES', 'MISSING_HOURS', 'STALE_PLACE', 'NEVER_VERIFIED',
+                  'STALE_IMAGES', 'INCOMPLETE_PROPERTY_PROFILE', 'MISSING_PROPERTY_PRICE',
+                  'PROPERTY_EXPIRED', 'PROPERTY_NOT_ACTIVE'].map((key) => <button key={key} className={filter === key ? 'active' : ''} onClick={() => setFilter(key)}>{ISSUE_LABELS[key]}</button>)}
               </div>
             </div>
 

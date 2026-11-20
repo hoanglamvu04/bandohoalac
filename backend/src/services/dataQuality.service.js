@@ -24,7 +24,7 @@ function normalizeSearch(value) {
     .toLowerCase();
 }
 
-function scorePlace(row) {
+export function scorePlace(row) {
   const issues = [];
   let score = 100;
   const verifiedAge = ageDays(row.last_verified_at);
@@ -32,15 +32,44 @@ function scorePlace(row) {
   const imageCount = Number(row.image_count || 0);
   const lat = Number(row.lat);
   const lng = Number(row.lng);
-  const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
+  const hasCoordinates =
+    row.lat !== null && row.lat !== undefined &&
+    row.lng !== null && row.lng !== undefined &&
+    Number.isFinite(lat) && Number.isFinite(lng);
+  const isRealEstate = row.category_slug === 'bat-dong-san';
   const insideCoverage = hasCoordinates ? isInsideServiceCoverage(lng, lat) : false;
   const duplicateCount = Number(row.duplicate_count || 1);
 
-  if (!row.address) { issues.push('MISSING_ADDRESS'); score -= 12; }
-  if (!row.description) { issues.push('MISSING_DESCRIPTION'); score -= 8; }
+  if (!String(row.address || '').trim()) { issues.push('MISSING_ADDRESS'); score -= 12; }
+  if (!String(row.description || '').trim()) { issues.push('MISSING_DESCRIPTION'); score -= 8; }
   if (!row.category_id) { issues.push('MISSING_CATEGORY'); score -= 10; }
-  if (!row.opening_hours) { issues.push('MISSING_HOURS'); score -= 18; }
-  if (!row.phone && !row.website) { issues.push('MISSING_CONTACT'); score -= 7; }
+  // Homes/plots have no business opening hours, unlike cafés and shops.
+  if (!isRealEstate && !row.opening_hours) { issues.push('MISSING_HOURS'); score -= 18; }
+  if (isRealEstate ? !String(row.phone || '').trim() : (!row.phone && !row.website)) {
+    issues.push('MISSING_CONTACT'); score -= isRealEstate ? 15 : 7;
+  }
+  if (isRealEstate) {
+    if (!row.housing_listing_type || !row.housing_property_type) {
+      issues.push('INCOMPLETE_PROPERTY_PROFILE'); score -= 20;
+    } else {
+      const value = row.housing_listing_type === 'SALE'
+        ? Number(row.housing_total_price_vnd)
+        : Number(row.housing_monthly_rent);
+      if (!Number.isFinite(value) || value <= 0) {
+        issues.push('MISSING_PROPERTY_PRICE'); score -= 20;
+      }
+      if (!Number.isFinite(Number(row.housing_area_m2)) ||
+          Number(row.housing_area_m2) <= 0) {
+        issues.push('MISSING_PROPERTY_AREA'); score -= 10;
+      }
+    }
+    if (row.housing_listing_status && row.housing_listing_status !== 'ACTIVE') {
+      issues.push('PROPERTY_NOT_ACTIVE'); score -= 25;
+    }
+    if (row.housing_expires_at && new Date(row.housing_expires_at).getTime() <= Date.now()) {
+      issues.push('PROPERTY_EXPIRED'); score -= 30;
+    }
+  }
   if (!imageCount) { issues.push('MISSING_IMAGES'); score -= 25; }
   if (!hasCoordinates) { issues.push('MISSING_COORDINATES'); score -= 35; }
   if (hasCoordinates && !insideCoverage) { issues.push('OUT_OF_COVERAGE'); score -= 40; }
@@ -61,6 +90,8 @@ function scorePlace(row) {
     category: row.category_name,
     categorySlug: row.category_slug,
     status: row.status,
+    propertyListingStatus: isRealEstate ? row.housing_listing_status || null : null,
+    propertyExpiresAt: isRealEstate ? row.housing_expires_at || null : null,
     lat: hasCoordinates ? lat : null,
     lng: hasCoordinates ? lng : null,
     insideCoverage: hasCoordinates ? insideCoverage : null,
@@ -128,6 +159,13 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
          p.last_verified_at, p.created_at, p.updated_at,
          p.location,
          c.name AS category_name, c.slug AS category_slug,
+         hl.listing_type AS housing_listing_type,
+         hl.property_type AS housing_property_type,
+         hl.listing_status AS housing_listing_status,
+         hl.total_price_vnd AS housing_total_price_vnd,
+         hl.monthly_rent AS housing_monthly_rent,
+         hl.area_m2 AS housing_area_m2,
+         hl.expires_at AS housing_expires_at,
          ST_Y(p.location)::double precision AS lat,
          ST_X(p.location)::double precision AS lng,
          LOWER(REGEXP_REPLACE(TRIM(p.name), '\\s+', ' ', 'g')) AS normalized_name,
@@ -135,6 +173,7 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
          (SELECT MAX(pi.created_at) FROM place_images pi WHERE pi.place_id = p.id) AS latest_image_at
        FROM places p
        LEFT JOIN categories c ON c.id = p.category_id
+       LEFT JOIN housing_listings hl ON hl.place_id = p.id
        WHERE p.status = 'PUBLISHED'
      ),
      duplicate_counts AS (
@@ -152,7 +191,8 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
        GROUP BY a.id
      )
      SELECT enriched.*,
-            COALESCE(duplicate_counts.duplicate_count, 1)::int AS duplicate_count
+            COALESCE(duplicate_counts.duplicate_count, 1)::int AS duplicate_count,
+            (SELECT COUNT(*)::int FROM places WHERE status = 'PUBLISHED') AS published_total
      FROM enriched
      LEFT JOIN duplicate_counts ON duplicate_counts.id = enriched.id
      ORDER BY enriched.updated_at ASC
@@ -161,9 +201,12 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
   );
 
   const all = rows.map(scorePlace);
+  const actualPublished = Number(rows[0]?.published_total || 0);
   const needsAttention = all.filter((item) => item.issues.length > 0);
   const summary = {
-    totalPublished: all.length,
+    totalPublished: actualPublished,
+    auditedCount: all.length,
+    auditPartial: actualPublished > all.length,
     needsAttention: needsAttention.length,
     missingImages: all.filter((item) => item.issues.includes('MISSING_IMAGES')).length,
     missingHours: all.filter((item) => item.issues.includes('MISSING_HOURS')).length,
@@ -173,6 +216,10 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
     stalePlaces: all.filter((item) => item.issues.includes('STALE_PLACE') || item.issues.includes('NEVER_VERIFIED')).length,
     unverifiedPlaces: all.filter((item) => item.issues.includes('NEVER_VERIFIED')).length,
     staleImages: all.filter((item) => item.issues.includes('STALE_IMAGES')).length,
+    incompleteProperties: all.filter((item) => item.issues.includes('INCOMPLETE_PROPERTY_PROFILE')).length,
+    missingPropertyPrices: all.filter((item) => item.issues.includes('MISSING_PROPERTY_PRICE')).length,
+    expiredProperties: all.filter((item) => item.issues.includes('PROPERTY_EXPIRED') ||
+      item.issues.includes('PROPERTY_NOT_ACTIVE')).length,
     averageScore: all.length
       ? Math.round(all.reduce((sum, item) => sum + item.qualityScore, 0) / all.length)
       : 100

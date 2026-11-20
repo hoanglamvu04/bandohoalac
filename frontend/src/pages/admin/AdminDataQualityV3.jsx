@@ -32,12 +32,26 @@ export default function AdminDataQualityV3() {
           <div className="dqv3-score"><ShieldCheck size={20} /><b>{summary.averageScore ?? '—'}</b><small>/100</small></div>
         </div>
 
+        {summary.auditPartial && (
+          <p className="dqv3-audit-note" role="status">
+            <AlertTriangle size={16} />
+            Đã kiểm tra {summary.auditedCount?.toLocaleString('vi-VN')} trong số{' '}
+            {summary.totalPublished?.toLocaleString('vi-VN')} địa điểm. Các chỉ số
+            chất lượng bên dưới chỉ phản ánh mẫu đã kiểm tra, không phải toàn bộ dữ liệu.
+          </p>
+        )}
         <div className="dqv3-kpis">
           <article><MapPinned /><span><small>Public place</small><b>{summary.totalPublished ?? '—'}</b></span></article>
           <article className={summary.possibleDuplicates ? 'warn' : ''}><ScanSearch /><span><small>Có thể trùng</small><b>{summary.possibleDuplicates ?? 0}</b></span></article>
           <article className={summary.missingCoordinates ? 'warn' : ''}><AlertTriangle /><span><small>Thiếu tọa độ</small><b>{summary.missingCoordinates ?? 0}</b></span></article>
           <article className={summary.outOfCoverage ? 'warn' : ''}><MapPinned /><span><small>Ngoài vùng</small><b>{summary.outOfCoverage ?? 0}</b></span></article>
           <article><ImageOff /><span><small>Thiếu ảnh</small><b>{summary.missingImages ?? 0}</b></span></article>
+          <article className={summary.expiredProperties ? 'warn' : ''}>
+            <AlertTriangle /><span><small>BĐS sai trạng thái / hết hạn</small><b>{summary.expiredProperties ?? 0}</b></span>
+          </article>
+          <article className={summary.missingPropertyPrices || summary.incompleteProperties ? 'warn' : ''}>
+            <ScanSearch /><span><small>BĐS thiếu giá / hồ sơ</small><b>{(summary.missingPropertyPrices || 0) + (summary.incompleteProperties || 0)}</b></span>
+          </article>
         </div>
 
         <div className="dqv3-coverage">
