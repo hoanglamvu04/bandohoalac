@@ -1,4 +1,4 @@
-import { Building2, Home, Map, Plus, ShieldCheck, Trophy, UserRound } from 'lucide-react';
+import { Building2, Home, Map, MessageSquareWarning, Plus, ShieldCheck, Trophy, UserRound } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -9,6 +9,8 @@ export default function BottomNav() {
     && new URLSearchParams(location.search).get('vertical') === 'housing';
   const isEstateSubmission = location.pathname === '/dang-tin-bat-dong-san';
   const showEstateAction = isHousingMap || isEstateSubmission;
+  const showFeedbackOnMap = location.pathname === '/map' ||
+    location.pathname.startsWith('/local-map/') || location.pathname === '/halo';
   const partnerMemberships = user?.partnerAccess?.memberships || [];
   const isPartnerStaffOnly = partnerMemberships.length > 0
     && partnerMemberships.every((membership) => membership.role === 'STAFF');
@@ -24,7 +26,9 @@ export default function BottomNav() {
       ? ['/admin', 'Admin', ShieldCheck]
       : user?.partnerAccess?.hasAccess
         ? [partnerTarget, isPartnerStaffOnly ? 'Scanner' : 'Partner', Building2]
-        : ['/leaderboard', 'Xếp hạng', Trophy],
+        : showFeedbackOnMap
+          ? ['/gop-y', 'Báo lỗi', MessageSquareWarning]
+          : ['/leaderboard', 'Xếp hạng', Trophy],
     [user ? '/profile' : '/login', user ? 'Tôi' : 'Đăng nhập', UserRound]
   ];
 

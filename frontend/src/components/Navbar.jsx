@@ -28,7 +28,8 @@ import {
 
 const navItems = [
   { to: '/kham-pha', label: 'Khám phá', icon: Compass },
-  { to: '/leaderboard', label: 'Cộng đồng', icon: Trophy }
+  { to: '/leaderboard', label: 'Cộng đồng', icon: Trophy },
+  { to: '/gop-y', label: 'Góp ý', icon: BadgeCheck }
 ];
 
 const mapNavItems = [
@@ -272,6 +273,10 @@ export default function Navbar() {
         <Link to="/tin-bat-dong-san-cua-toi" onClick={() => setMobileAccountOpen(false)}>
           <Home size={16} />
           Quản lý tin bất động sản
+        </Link>
+        <Link to="/gop-y" onClick={() => setMobileAccountOpen(false)}>
+          <BadgeCheck size={16} />
+          Góp ý / báo lỗi
         </Link>
         <Link to="/security" onClick={() => setMobileAccountOpen(false)}>
           <ShieldCheck size={16} />

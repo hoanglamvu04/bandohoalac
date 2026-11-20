@@ -79,6 +79,13 @@ const moderatorModules = [
 
 const adminModules = [
   {
+    to: '/admin/soft-launch',
+    title: 'Soft Launch · Phản hồi',
+    description: 'Nhận báo lỗi, xử lý góp ý và theo dõi hiệu năng mobile/4G.',
+    icon: Activity,
+    tone: 'green'
+  },
+  {
     to: '/admin/operations',
     title: 'Giám sát vận hành',
     description: 'PostgreSQL, lỗi API, P95 và rate limit trong 15 phút gần nhất.',

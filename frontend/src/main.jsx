@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
 import { BrandProvider } from './context/BrandContext.jsx';
 import { registerHolaPwa } from './pwa.js';
+import { registerSoftLaunchVitals } from './softLaunchVitals.js';
 import './style.css';
 import './premium.css';
 import './modern-ui.css';
@@ -75,6 +76,8 @@ import './security-page.css';
 /* Stability V3 must remain the final map stylesheet so legacy overrides cannot
    reintroduce the 100% browser zoom clipping/overlap bugs. */
 import './map-stability-v3.css';
+
+registerSoftLaunchVitals();
 
 createRoot(document.getElementById('root')).render(
   <ToastProvider>

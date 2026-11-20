@@ -7,7 +7,7 @@ BACKUP_ENV_FILE="${HOLA_BACKUP_ENV_FILE:-/etc/hola-maps-backup.env}"
 
 cd "$APP_DIR"
 command -v crontab >/dev/null || { echo "[P0] cron missing" >&2; exit 1; }
-for task in p0-backup.log p0-expiry.log p0-reminders.log; do
+for task in p0-backup.log p0-expiry.log p0-reminders.log p0-soft-launch-prune.log; do
   crontab -l | grep -F "$task" | grep -q 'HOLA_MAPS_P0' || {
     echo "[P0] required job missing: $task" >&2
     exit 1

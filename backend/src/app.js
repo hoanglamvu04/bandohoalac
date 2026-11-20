@@ -51,6 +51,7 @@ import exploreRoutes from './routes/explore.routes.js';
 import housingRoutes from './routes/housing.routes.js';
 import embedRoutes from './routes/embed.routes.js';
 import localSeoRoutes from './routes/localSeo.routes.js';
+import softLaunchV1Routes from './routes/softLaunchV1.routes.js';
 
 const SITEMAP_ORIGIN = 'https://maps.dothihoalac.vn';
 const SITEMAP_IMAGE_NAMESPACE = 'http://www.google.com/schemas/sitemap-image/1.1';
@@ -216,6 +217,7 @@ export function createApp() {
     }
   });
 
+  app.use('/api/soft-launch', softLaunchV1Routes);
   app.use('/api/local-seo', localSeoRoutes);
   app.use('/api/explore', exploreRoutes);
   app.use('/api/housing', housingRoutes);

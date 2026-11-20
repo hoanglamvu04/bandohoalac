@@ -23,6 +23,8 @@ const Register = lazy(() => import('./pages/Register.jsx'));
 const PublicInfoPage = lazy(() => import('./pages/PublicInfoPage.jsx'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
 const AdminOperations = lazy(() => import('./pages/admin/AdminOperations.jsx'));
+const SoftLaunchFeedbackPage = lazy(() => import('./pages/SoftLaunchFeedbackPage.jsx'));
+const AdminSoftLaunch = lazy(() => import('./pages/admin/AdminSoftLaunch.jsx'));
 const AdminContributions = lazy(() => import('./pages/admin/AdminContributions.jsx'));
 const AdminDataQualityV3 = lazy(() => import('./pages/admin/AdminDataQualityV3.jsx'));
 const AdminIngestion = lazy(() => import('./pages/admin/AdminIngestion.jsx'));
@@ -176,6 +178,7 @@ export const router = createBrowserRouter([
       { path: 'dia-diem/:slug', element: withSuspense(PlaceDetail) },
       { path: 'place/:id', element: withSuspense(PlaceDetail) },
       { path: 'contribute', element: withSuspense(Contribute) },
+      { path: 'gop-y', element: withSuspense(SoftLaunchFeedbackPage) },
       { path: 'dang-tin-bat-dong-san', element: withSuspense(RealEstateSubmissionPage) },
       { path: 'tin-bat-dong-san-cua-toi', element: withRole(MyRealEstatePage) },
       { path: 'verify', element: withRole(CommunityVerification) },
@@ -199,6 +202,7 @@ export const router = createBrowserRouter([
       { path: 'nguon-du-lieu', element: withSuspense(PublicInfoPage) },
       { path: 'admin', element: withRole(AdminDashboard, STAFF_ROLES) },
       { path: 'admin/operations', element: withRole(AdminOperations, ['ADMIN']) },
+      { path: 'admin/soft-launch', element: withRole(AdminSoftLaunch, ['ADMIN']) },
       { path: 'admin/contributions', element: withRole(AdminContributions, STAFF_ROLES) },
       { path: 'admin/data-quality', element: withRole(AdminDataQualityV3, STAFF_ROLES) },
       { path: 'admin/ingestion', element: withRole(AdminIngestion, ['ADMIN']) },
