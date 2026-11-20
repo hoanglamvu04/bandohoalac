@@ -76,6 +76,9 @@ body.map-embed-active .halo-map-brand-card {
   /* Marker detail becomes a real mobile bottom sheet instead of a floating
      desktop inspector. This works in both native /map and HALO HOLA /embed. */
   body.map-route-active .hm-place-inspector.discovery-v3 {
+    /* Override legacy mobile-map-clean's display:none; the native sheet
+       must be visible whenever a place is selected. */
+    display: block !important;
     position: fixed !important;
     z-index: 1120 !important;
     top: auto !important;
