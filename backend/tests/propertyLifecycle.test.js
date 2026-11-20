@@ -41,28 +41,28 @@ test('property owner can confirm and close; stranger cannot; closed property is 
   let placeId = null;
   try {
     const user = await pool.query(
-      \`INSERT INTO users(name,email,password_hash,role)
-       VALUES($1,$2,'test-only-not-a-real-hash','USER') RETURNING id\`,
+      `INSERT INTO users(name,email,password_hash,role)
+       VALUES($1,$2,'test-only-not-a-real-hash','USER') RETURNING id`,
       ['Lifecycle QA', 'lifecycle-' + token + '@example.invalid']
     );
     userId = user.rows[0].id;
 
     const place = await pool.query(
-      \`INSERT INTO places(name,slug,description,category_id,address,location,
+      `INSERT INTO places(name,slug,description,category_id,address,location,
                           phone,status,source,created_by)
        VALUES($1,$2,'QA-only fixture',
          (SELECT id FROM categories WHERE slug='bat-dong-san'),
          'Test area, Hòa Lạc',
          ST_SetSRID(ST_MakePoint(105.52522,21.01354),4326),
-         '0987654321','PUBLISHED','USER',$3) RETURNING id\`,
+         '0987654321','PUBLISHED','USER',$3) RETURNING id`,
       ['P0 lifecycle fixture', 'p0-lifecycle-' + token, userId]
     );
     placeId = place.rows[0].id;
     await pool.query(
-      \`INSERT INTO housing_listings(
+      `INSERT INTO housing_listings(
         place_id,listing_type,property_type,total_price_vnd,area_m2,
         listing_status,expires_at
-      ) VALUES($1,'SALE','HOUSE',3000000000,80,'ACTIVE',NOW() + INTERVAL '30 days')\`,
+      ) VALUES($1,'SALE','HOUSE',3000000000,80,'ACTIVE',NOW() + INTERVAL '30 days')`,
       [placeId]
     );
 
@@ -78,8 +78,8 @@ test('property owner can confirm and close; stranger cannot; closed property is 
     assert.equal(close.listingStatus, 'SOLD');
 
     const data = await pool.query(
-      \`SELECT p.status, hl.listing_status
-       FROM places p JOIN housing_listings hl ON hl.place_id=p.id WHERE p.id=$1\`,
+      `SELECT p.status, hl.listing_status
+       FROM places p JOIN housing_listings hl ON hl.place_id=p.id WHERE p.id=$1`,
       [placeId]
     );
     assert.equal(data.rows[0].status, 'ARCHIVED');
