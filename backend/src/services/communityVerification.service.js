@@ -291,7 +291,7 @@ export async function submitCommunityVerification({
 }) {
   return withTransaction(async (client) => {
     const contributionResult = await client.query(
-      `SELECT id, user_id, type, status, risk_score
+      `SELECT id, user_id, type, status, risk_score, payload
        FROM contributions
        WHERE id = $1
        FOR UPDATE`,
@@ -301,6 +301,9 @@ export async function submitCommunityVerification({
     if (!contribution) throw new AppError('Contribution not found.', 404);
     if (contribution.status !== 'PENDING') {
       throw new AppError('Đóng góp này đã được xử lý nên không còn nhận xác minh cộng đồng.', 409);
+    }
+    if (contribution.payload?.place?.realEstate) {
+      throw new AppError('Tin bất động sản cần quản trị viên duyệt, không nhận xác minh cộng đồng.', 403);
     }
     if (Number(contribution.user_id) === Number(userId)) {
       throw new AppError('Bạn không thể tự xác minh đóng góp của chính mình.', 403);
@@ -391,6 +394,7 @@ export async function listCommunityVerificationQueue(userId, {
        ON mine.contribution_id = c.id
       AND mine.user_id = $1
      WHERE c.status = 'PENDING'
+       AND c.payload #> '{place,realEstate}' IS NULL
        AND c.user_id <> $1
        AND COALESCE(c.risk_score, 0) < 70
      ORDER BY
