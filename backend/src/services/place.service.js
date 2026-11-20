@@ -101,6 +101,7 @@ const CATEGORY_SEARCH_SQL =
   "lower(public.hola_unaccent(COALESCE(c.name, '')))";
 
 const placeBoundsCache = new Map();
+const pendingPlaceBounds = new Map();
 
 function normalizedCacheNumber(value) {
   const number = Number(value);
@@ -125,16 +126,16 @@ function placeBoundsCacheKey(args = {}) {
 
 export function invalidatePlaceBoundsCache() {
   placeBoundsCache.clear();
+  pendingPlaceBounds.clear();
 }
 
 export async function getPlacesInBoundsCached(args = {}) {
   const ttlMs = Math.max(Number(env.placeBoundsCacheTtlMs) || 30000, 1000);
   const maxEntries = Math.max(Number(env.placeBoundsCacheMaxEntries) || 400, 20);
   const key = placeBoundsCacheKey(args);
-  const now = Date.now();
   const cached = placeBoundsCache.get(key);
 
-  if (cached && cached.expiresAt > now) {
+  if (cached && cached.expiresAt > Date.now()) {
     placeBoundsCache.delete(key);
     placeBoundsCache.set(key, cached);
     return { ...cached.result, cacheStatus: 'HIT' };
@@ -142,16 +143,25 @@ export async function getPlacesInBoundsCached(args = {}) {
 
   if (cached) placeBoundsCache.delete(key);
 
-  const result = await getPlacesInBounds(args);
-  placeBoundsCache.set(key, { result, expiresAt: now + ttlMs });
+  const pending = pendingPlaceBounds.get(key);
+  if (pending) return { ...await pending, cacheStatus: 'HIT' };
 
-  while (placeBoundsCache.size > maxEntries) {
-    const oldestKey = placeBoundsCache.keys().next().value;
-    if (oldestKey === undefined) break;
-    placeBoundsCache.delete(oldestKey);
+  const request = getPlacesInBounds(args);
+  pendingPlaceBounds.set(key, request);
+
+  try {
+    const result = await request;
+    // Invalidation can detach this request while its database reads finish.
+    if (pendingPlaceBounds.get(key) === request) {
+      placeBoundsCache.set(key, { result, expiresAt: Date.now() + ttlMs });
+      while (placeBoundsCache.size > maxEntries) {
+        placeBoundsCache.delete(placeBoundsCache.keys().next().value);
+      }
+    }
+    return { ...result, cacheStatus: 'MISS' };
+  } finally {
+    if (pendingPlaceBounds.get(key) === request) pendingPlaceBounds.delete(key);
   }
-
-  return { ...result, cacheStatus: 'MISS' };
 }
 
 function addDiscoveryFilters({ conditions, params, q, category, minRating }) {
