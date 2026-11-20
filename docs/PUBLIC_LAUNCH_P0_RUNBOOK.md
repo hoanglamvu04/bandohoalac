@@ -1,0 +1,110 @@
+# HOLA Maps — P0 public launch hardening and operator runbook
+
+## Release policy
+
+Never confuse a green GitHub CI with a healthy VPS: PostgreSQL backups,
+object/media storage, DNS/HTTPS, PM2, public content quality, abuse moderation,
+restore drills and mobile testing must be checked on production.
+
+P0 modules:
+1. Explicit contact/asset rights consent; manual duplicate screening; no points for ads.
+2. Property owner controls + moderated price changes; 30-day freshness policy;
+   daily expiry archives canonical \`places\` to hide stale adverts everywhere.
+3. Local PostgreSQL and media backups, checksum/format verification, offsite
+   copy/verification, production data-quality audit and scheduled jobs.
+
+## One-time VPS prerequisites
+
+Production deploy is manual. Do not run demo seed on production.
+Before enabling the P0 cron, perform the regular code deploy and migration.
+
+- Install and verify \`pg_dump\`, \`pg_restore\`, \`tar\`, \`sha256sum\`,
+  \`cron\` and \`rclone\` availability.
+- Configure an **encrypted, independent** offsite rclone remote (prefer
+  \`rclone crypt\`; not another folder on the same VPS).
+- Create \`/etc/hola-maps-backup.env\` under the cron operator's account
+  with mode 0600, containing only a remote destination, for example:
+  \`HOLA_BACKUP_RCLONE_DEST=encrypted-backup:hola-maps\`.
+  Never commit remote access tokens or credentials to GitHub.
+- For \`UPLOAD_PROVIDER=local\`: the media backup script snapshots the
+  configured \`UPLOAD_DIR\`. Do not include uploads in git, public webroot
+  browsing or CI artifacts.
+- For \`UPLOAD_PROVIDER=cloudinary\`: the local media backup script **fails
+  intentionally**. A separate provider-side export (including the original
+  assets) and verified restore must be implemented and audited before launch.
+- Arrange manual restore drills on a separate temporary PostgreSQL DB and a
+  separate temporary media directory. Never restore over production to test.
+
+## Install, backup, validate (one-time)
+
+\`\`\`bash
+cd /var/www/bandohoalac
+bash scripts/install-p0-jobs.sh
+bash scripts/p0-verified-backup.sh
+bash scripts/check-p0-readiness.sh
+\`\`\`
+
+The installer is idempotent and installs:
+- 03:17 each day: DB dump, media tar.gz, local SHA256+format verification,
+  copy to offsite remote and remote-size cross-check.
+- 04:05 each day: archival of expired property listings via
+  \`node backend/src/scripts/expireStaleHousingListings.js\`.
+
+If offsite credentials are missing, local backups are produced but
+\`p0-verified-backup.sh\` and the readiness gate fail; that is intentional.
+Retention defaults to 14 days locally (maximum 90). Set a tested,
+appropriate remote retention policy independently. Even after a verified
+copy, a **manual complete restore drill** is required.
+
+## Public data and property moderation
+
+Run from the repository root:
+\`\`\`bash
+(cd backend && node src/scripts/publicLaunchAudit.js)
+\`\`\`
+
+The audit prints total published places, missing address, description, media,
+contact, stale official checks and published property-specific problems.
+If a published structured property has no phone or should have been archived,
+exit status is nonzero: resolve these before public promotion.
+
+Historical real estate imported before P0 is not automatically given a
+30-day expiry or retroactively assumed to have contact consent. Review
+those items and their original sources manually.
+
+Property owner:
+- \`GET /api/housing/mine\` (private).
+- \`PATCH /api/housing/:id/manage\` with \`CONFIRM_ACTIVE\`, \`PAUSE\`,
+  \`SOLD\` or \`RENTED\`. Closing archives the canonical place. Reopening
+  requires a new moderated submission; there is **no owner self-publish**.
+- Price changes are \`UPDATE_PRICE\` contributions with
+  \`place.realEstatePriceVnd\`, require ADMIN/MODERATOR approval and do not
+  award points/mission bonuses.
+- Newly approved properties expire 30 days from publication or most
+  recent owner confirmation. The daily job archives them; the public Housing
+  API excludes expired records immediately even before the job runs.
+
+## Manual launch acceptance matrix
+
+1. Guest: browse map and details but cannot submit or manage listings.
+2. Contributor: confirm map position, consent, photo rights and submit.
+   Expect PENDING and no premature public pin.
+3. Admin/Moderator (2FA where required): inspect nearby duplicates and
+   content, approve/reject, confirm public visibility or absence.
+4. Other contributor / CTV: cannot read private property moderation data,
+   approve property listings or manage others' properties.
+5. Owner: edit price by pending contribution, confirm active, pause,
+   mark SOLD/RENTED. Every status change must remove the public map pin.
+6. Stale property: run expiry job on test data; archived pin must not be
+   returned in public API or map; old valid rentals remain unchanged.
+7. Mobile: check 360x800, 390x844 and real Android+iOS Safari/Chrome.
+   Map select/dismiss must not trigger camera drift; forms must stay usable.
+8. Security: invalid IDs, rapid submissions, uploads with metadata,
+   replayed auth tokens, CORS/CSRF, IDOR, rate limiting, moderator scopes.
+9. Performance: cold cache and 4G/LTE map loading, slow API fallback,
+   peak-concurrency smoke test, PM2 auto-restart and Nginx TLS.
+10. Operational: offsite snapshots and an independent restore drill passed,
+    no critical errors or broken public sitemap links.
+
+Launch status remains **BLOCKED** until live VPS evidence and the manual
+matrix above are recorded, even if GitHub Actions reports PASS.
