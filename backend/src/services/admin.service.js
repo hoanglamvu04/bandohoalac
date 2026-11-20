@@ -34,12 +34,25 @@ function sourceForRole(role) {
   return 'USER';
 }
 
-function assertRealEstateReviewer(contribution, reviewer) {
-  if ((contribution.payload?.place?.realEstate ||
-       contribution.payload?.place?.realEstatePriceVnd !== undefined) &&
-      !['ADMIN', 'MODERATOR'].includes(reviewer.role)) {
+export async function assertRealEstateReviewer(contribution, reviewer, client) {
+  let isProperty = Boolean(
+    contribution.payload?.place?.realEstate ||
+    contribution.payload?.place?.realEstatePriceVnd !== undefined ||
+    (contribution.type === 'CREATE_PLACE' &&
+     contribution.payload?.place?.categorySlug === 'bat-dong-san')
+  );
+  if (!isProperty && contribution.type === 'UPDATE_PRICE' && contribution.place_id) {
+    const { rows } = await client.query(
+      `SELECT c.slug FROM places p JOIN categories c ON c.id=p.category_id
+        WHERE p.id=$1 LIMIT 1`,
+      [contribution.place_id]
+    );
+    isProperty = rows[0]?.slug === 'bat-dong-san';
+  }
+  if (isProperty && !['ADMIN', 'MODERATOR'].includes(reviewer.role)) {
     throw new AppError('Tin bất động sản cần quản trị viên duyệt trực tiếp.', 403);
   }
+  return isProperty;
 }
 
 async function applyContributionToPlace(contribution, client) {
@@ -248,6 +261,17 @@ async function applyContributionToPlace(contribution, client) {
     await updatePlaceFields(placeId, { price_level: priceLabel }, client);
     await recordChange(contribution.id, 'real_estate_price_vnd', null, String(price), client);
   } else if (contribution.type === 'UPDATE_PRICE' && place.price) {
+    const { rows: categoryRows } = await client.query(
+      `SELECT c.slug FROM places p JOIN categories c ON c.id=p.category_id
+        WHERE p.id=$1 LIMIT 1`,
+      [placeId]
+    );
+    if (categoryRows[0]?.slug === 'bat-dong-san') {
+      throw new AppError(
+        'Tin bất động sản cần cập nhật giá dạng số qua luồng chờ duyệt.',
+        400
+      );
+    }
     await updatePlaceFields(placeId, { price_level: place.price }, client);
     await recordChange(contribution.id, 'price_level', null, place.price, client);
   }
@@ -265,8 +289,11 @@ export async function approveContribution(contributionId, reviewer, review = {})
     if (contribution.status !== 'PENDING') throw new AppError('Contribution has already been reviewed.', 409);
 
     assertCtvCanModerate(reviewer, contribution);
-    assertRealEstateReviewer(contribution, reviewer);
+    const isPropertyContribution = await assertRealEstateReviewer(contribution, reviewer, client);
     const submittedListing = contribution.payload?.place?.realEstate;
+    if (isPropertyContribution && contribution.type === 'CREATE_PLACE' && !submittedListing) {
+      throw new AppError('Tin bất động sản kiểu cũ thiếu xác nhận liên hệ và thông tin tài sản. Yêu cầu gửi lại.', 409);
+    }
     if (submittedListing) {
       if (submittedListing.publicContactConsent !== true) {
         throw new AppError('Tin chưa có xác nhận công khai thông tin liên hệ. Yêu cầu người đăng gửi lại.', 409);
@@ -277,10 +304,7 @@ export async function approveContribution(contributionId, reviewer, review = {})
       }
     }
 
-    const isRealEstate = Boolean(
-      contribution.payload?.place?.realEstate ||
-      contribution.payload?.place?.realEstatePriceVnd !== undefined
-    );
+    const isRealEstate = isPropertyContribution;
     // Property moderation is not a gamified contribution. Force a zero score
     // server-side; never trust an arbitrary reviewer-provided score.
     const score = evaluateContributionScore(
@@ -381,7 +405,7 @@ export async function rejectContribution(contributionId, reviewer, reason) {
     if (contribution.status !== 'PENDING') throw new AppError('Contribution has already been reviewed.', 409);
 
     assertCtvCanModerate(reviewer, contribution);
-    assertRealEstateReviewer(contribution, reviewer);
+    await assertRealEstateReviewer(contribution, reviewer, client);
 
     await markContributionReviewed(contributionId, {
       status: 'REJECTED',
