@@ -22,10 +22,22 @@ test('small mobile map pans reuse geo overlay data; larger pans request a new vi
   });
 
   await page.goto('/map', { waitUntil: 'domcontentloaded' });
-  await expect.poll(async () => page.evaluate(() => {
-    const map = window.__HOLA_MAP_INSTANCE__;
-    return Boolean(map && map.isStyleLoaded() && !map.isMoving());
-  }), { timeout: 20000 }).toBe(true);
+  // The map normalizes URL parameters on mount and can briefly navigate.
+  // Wait for the actual workspace, and treat a replaced JS context as
+  // "not ready" instead of failing a performance test before it begins.
+  await expect(page.locator('body')).toHaveClass(/map-route-active/);
+  await expect(page.locator('.hm-map-shell')).toBeVisible();
+  await expect.poll(async () => {
+    try {
+      return await page.evaluate(() => {
+        const map = window.__HOLA_MAP_INSTANCE__;
+        return Boolean(map && map.isStyleLoaded() && !map.isMoving());
+      });
+    } catch (error) {
+      if (/execution context was destroyed|navigation/i.test(String(error))) return false;
+      throw error;
+    }
+  }, { timeout: 20000 }).toBe(true);
   await expect.poll(() => layerRequests, { timeout: 20000 }).toBeGreaterThan(0);
 
   // Wait for the initial style and region focus to settle before counting.
