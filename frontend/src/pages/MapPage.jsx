@@ -614,6 +614,8 @@ export default function MapPage() {
       '&lng=' + ((Number(viewport.east) + Number(viewport.west)) / 2).toFixed(6)
     : '/dang-tin-bat-dong-san';
   const housingMinRent = searchParams.get('minRent') || '';
+  const housingMinPrice = searchParams.get('minPrice') || '';
+  const housingMaxPrice = searchParams.get('maxPrice') || '';
   const housingMaxRent = searchParams.get('maxRent') || '';
   const housingMaxDistanceFpt = searchParams.get('maxDistanceFpt') || '';
   const housingAvailability = searchParams.get('availability') || '';
@@ -625,6 +627,8 @@ export default function MapPage() {
     housingListingType,
     housingMinRent,
     housingMaxRent,
+    housingMinPrice,
+    housingMaxPrice,
     housingMaxDistanceFpt,
     housingAvailability,
     housingAvailableOnly ? '1' : '0',
@@ -646,6 +650,8 @@ export default function MapPage() {
     isHousingMode && Boolean(housingListingType),
     isHousingMode && Boolean(housingMinRent),
     isHousingMode && Boolean(housingMaxRent),
+    isHousingMode && Boolean(housingMinPrice),
+    isHousingMode && Boolean(housingMaxPrice),
     isHousingMode && Boolean(housingMaxDistanceFpt),
     isHousingMode && Boolean(housingAvailability),
     isHousingMode && housingAvailableOnly,
@@ -682,6 +688,8 @@ export default function MapPage() {
       listingType: housingListingType || undefined,
       minRent: housingMinRent || undefined,
       maxRent: housingMaxRent || undefined,
+      minPrice: housingMinPrice || undefined,
+      maxPrice: housingMaxPrice || undefined,
       maxDistanceFpt: housingMaxDistanceFpt || undefined,
       availability: housingAvailability || undefined,
       availableOnly: housingAvailableOnly ? 'true' : undefined,
@@ -2223,8 +2231,11 @@ export default function MapPage() {
       rating: null,
       sort: null,
       place: null,
+      listingType: null,
       minRent: null,
       maxRent: null,
+      minPrice: null,
+      maxPrice: null,
       maxDistanceFpt: null,
       availability: null,
       availableOnly: null,
@@ -2318,7 +2329,14 @@ export default function MapPage() {
     setSelectedId(null);
     setPlaceScope('viewport');
     setPlaces([]);
+    if (key === 'listingType') setSortMode('relevant');
     syncDiscoveryParams({
+      ...(key === 'listingType' ? {
+        sort: null,
+        minRent: null, maxRent: null, minPrice: null, maxPrice: null,
+        availability: null, availableOnly: null,
+        privateBathroom: null, parking: null
+      } : {}),
       [key]: value,
       place: null
     });
@@ -2358,8 +2376,11 @@ export default function MapPage() {
       category: isHousingMode ? 'bat-dong-san' : null,
       rating: null,
       sort: null,
+      listingType: null,
       minRent: null,
       maxRent: null,
+      minPrice: null,
+      maxPrice: null,
       maxDistanceFpt: null,
       availability: null,
       availableOnly: null,
@@ -2797,7 +2818,18 @@ export default function MapPage() {
             <span>{placeScope === 'near-me' ? 'Đang gần tôi' : 'Gần tôi'}</span>
           </button>
 
-          {isHousingMode && housingListingType !== 'SALE' ? (
+          {isHousingMode && housingListingType === 'SALE' ? (
+            <button
+              type="button"
+              className="hm-quick-filter active"
+              onClick={() => handleHousingFilterChange('listingType', null)}
+              aria-label="Bỏ lọc tin cần bán"
+              title="Đang xem tin cần bán"
+            >
+              <House size={15} />
+              <span>Cần bán</span>
+            </button>
+          ) : isHousingMode ? (
             <button
               type="button"
               className={housingAvailableOnly ? 'hm-quick-filter active hm-housing-available-filter' : 'hm-quick-filter hm-housing-available-filter'}
@@ -2891,33 +2923,64 @@ export default function MapPage() {
                         options={[{ value: '', label: 'Tất cả tin' }, { value: 'SALE', label: 'Cần bán' }, { value: 'RENT', label: 'Cho thuê' }]}
                         onChange={(value) => handleHousingFilterChange('listingType', value)}
                       />
-                      <MapFilterSelect
-                        label="Giá từ"
-                        value={housingMinRent}
-                        options={[
-                          { value: '', label: 'Không giới hạn' },
-                          { value: '1000000', label: '1 triệu' },
-                          { value: '1500000', label: '1,5 triệu' },
-                          { value: '2000000', label: '2 triệu' },
-                          { value: '2500000', label: '2,5 triệu' },
-                          { value: '3000000', label: '3 triệu' }
-                        ]}
-                        onChange={(value) => handleHousingFilterChange('minRent', value)}
-                      />
-                      <MapFilterSelect
-                        label="Giá tối đa"
-                        value={housingMaxRent}
-                        options={[
-                          { value: '', label: 'Không giới hạn' },
-                          { value: '1500000', label: '1,5 triệu' },
-                          { value: '2000000', label: '2 triệu' },
-                          { value: '2500000', label: '2,5 triệu' },
-                          { value: '3000000', label: '3 triệu' },
-                          { value: '4000000', label: '4 triệu' },
-                          { value: '5000000', label: '5 triệu' }
-                        ]}
-                        onChange={(value) => handleHousingFilterChange('maxRent', value)}
-                      />
+                      {housingListingType === 'SALE' ? (
+                        <>
+                          <MapFilterSelect
+                            label="Giá bán từ"
+                            value={housingMinPrice}
+                            options={[
+                              { value: '', label: 'Không giới hạn' },
+                              { value: '1000000000', label: '1 tỷ' },
+                              { value: '2000000000', label: '2 tỷ' },
+                              { value: '3000000000', label: '3 tỷ' },
+                              { value: '5000000000', label: '5 tỷ' }
+                            ]}
+                            onChange={(value) => handleHousingFilterChange('minPrice', value)}
+                          />
+                          <MapFilterSelect
+                            label="Giá bán tối đa"
+                            value={housingMaxPrice}
+                            options={[
+                              { value: '', label: 'Không giới hạn' },
+                              { value: '2000000000', label: '2 tỷ' },
+                              { value: '3000000000', label: '3 tỷ' },
+                              { value: '5000000000', label: '5 tỷ' },
+                              { value: '10000000000', label: '10 tỷ' }
+                            ]}
+                            onChange={(value) => handleHousingFilterChange('maxPrice', value)}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <MapFilterSelect
+                            label="Giá từ"
+                            value={housingMinRent}
+                            options={[
+                              { value: '', label: 'Không giới hạn' },
+                              { value: '1000000', label: '1 triệu' },
+                              { value: '1500000', label: '1,5 triệu' },
+                              { value: '2000000', label: '2 triệu' },
+                              { value: '2500000', label: '2,5 triệu' },
+                              { value: '3000000', label: '3 triệu' }
+                            ]}
+                            onChange={(value) => handleHousingFilterChange('minRent', value)}
+                          />
+                          <MapFilterSelect
+                            label="Giá tối đa"
+                            value={housingMaxRent}
+                            options={[
+                              { value: '', label: 'Không giới hạn' },
+                              { value: '1500000', label: '1,5 triệu' },
+                              { value: '2000000', label: '2 triệu' },
+                              { value: '2500000', label: '2,5 triệu' },
+                              { value: '3000000', label: '3 triệu' },
+                              { value: '4000000', label: '4 triệu' },
+                              { value: '5000000', label: '5 triệu' }
+                            ]}
+                            onChange={(value) => handleHousingFilterChange('maxRent', value)}
+                          />
+                        </>
+                      )}
                       <MapFilterSelect
                         label="Tới ĐH FPT"
                         value={housingMaxDistanceFpt}
@@ -2931,7 +2994,7 @@ export default function MapPage() {
                         ]}
                         onChange={(value) => handleHousingFilterChange('maxDistanceFpt', value)}
                       />
-                      <MapFilterSelect
+                      {housingListingType !== 'SALE' && <MapFilterSelect
                         label="Tình trạng"
                         value={housingAvailability}
                         options={[
@@ -2942,10 +3005,10 @@ export default function MapPage() {
                           { value: 'UNKNOWN', label: 'Chưa xác nhận' }
                         ]}
                         onChange={(value) => handleHousingFilterChange('availability', value)}
-                      />
+                      />}
                     </div>
 
-                    <div className="hm-map-housing-toggles">
+                    {housingListingType !== 'SALE' && <div className="hm-map-housing-toggles">
                       {[
                         ['partnerOnly', 'HOLA Partner', housingPartnerOnly],
                         ['privateBathroom', 'Khép kín', housingPrivateBathroom],
@@ -2960,7 +3023,7 @@ export default function MapPage() {
                           <span>{label}</span>
                         </label>
                       ))}
-                    </div>
+                    </div>}
                   </div>
                 )}
 
@@ -3240,6 +3303,14 @@ export default function MapPage() {
             <X size={17} />
           </button>
         </div>
+
+        {isHousingMode && (
+          <Link className="hm-housing-publish-link" to={housingSubmissionLink}>
+            <Plus size={16} />
+            <span>Đăng bán hoặc cho thuê bất động sản</span>
+            <ChevronRight size={16} />
+          </Link>
+        )}
 
         <section className="hm-panel-section hm-place-results">
           <div className="hm-section-title">

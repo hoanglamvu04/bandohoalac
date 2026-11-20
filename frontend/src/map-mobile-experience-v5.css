@@ -256,3 +256,30 @@ body.map-embed-active .halo-map-brand-card {
     content: 'Đã định vị';
   }
 }
+
+
+/* Housing map: clear submission entry on desktop and mobile instead of only a + icon. */
+.hm-housing-publish-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 8px 14px 6px;
+  padding: 12px 13px;
+  background: #e5f3ea;
+  border: 1px solid #c6e0d0;
+  color: #1b6748;
+  border-radius: 12px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+}
+.hm-housing-publish-link span { flex: 1; }
+.hm-housing-publish-link:hover { background: #d7ebdf; }
+@media (max-width: 760px) {
+  body.map-route-active .hm-housing-publish-link {
+    margin: 8px 12px 6px;
+    padding: 13px;
+    min-height: 44px;
+  }
+}
