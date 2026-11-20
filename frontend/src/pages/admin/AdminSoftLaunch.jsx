@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Activity, AlertTriangle, CheckCircle2, ClipboardList, Gauge,
   RefreshCw, Smartphone, ShieldCheck
@@ -8,6 +8,8 @@ import {
   reviewAdminSoftLaunchFeedback
 } from '../../services/api.js';
 import '../../soft-launch-feedback.css';
+
+const FEEDBACK_PAGE_SIZE = 20;
 
 const STATUS_NAMES = {
   NEW: 'Chưa xử lý', IN_REVIEW: 'Đang xem xét',
@@ -27,33 +29,57 @@ export default function AdminSoftLaunch() {
   const [tab, setTab] = useState('feedback');
   const [status, setStatus] = useState('NEW');
   const [page, setPage] = useState(1);
-  const [feedback, setFeedback] = useState(null);
+  const [feedbackPage, setFeedbackPage] = useState(null);
   const [vitals, setVitals] = useState(null);
   const [selectedNetwork, setSelectedNetwork] = useState('ALL');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refresh, setRefresh] = useState(0);
   const [savingId, setSavingId] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true); setError('');
-    try {
-      if (tab === 'feedback') {
-        const result = await getAdminSoftLaunchFeedback({
-          status: status === 'ALL' ? undefined : status, page, limit: 20
-        });
-        setFeedback(result);
-      } else {
-        setVitals(await getAdminSoftLaunchVitals());
-      }
-    } catch (err) {
-      setError(err.message || 'Không thể tải dữ liệu.');
-    } finally {
-      setLoading(false);
-    }
-  }, [tab, status, page]);
+  const feedback = feedbackPage?.status === status && feedbackPage?.page === page
+    ? feedbackPage.result
+    : null;
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    async function load() {
+      setLoading(true);
+      setError('');
+      try {
+        if (tab === 'feedback') {
+          const result = await getAdminSoftLaunchFeedback({
+            status: status === 'ALL' ? undefined : status, page, limit: FEEDBACK_PAGE_SIZE
+          }, { signal });
+          if (signal.aborted) return;
+
+          const lastPage = Math.max(1, Math.ceil(result.total / FEEDBACK_PAGE_SIZE));
+          if (page > lastPage) {
+            setPage(lastPage);
+            return;
+          }
+          setFeedbackPage({ status, page, result });
+        } else {
+          const result = await getAdminSoftLaunchVitals({ signal });
+          if (!signal.aborted) setVitals(result);
+        }
+      } catch (err) {
+        if (!signal.aborted) setError(err.message || 'Không thể tải dữ liệu.');
+      } finally {
+        if (!signal.aborted) setLoading(false);
+      }
+    }
+
+    load();
+    return () => controller.abort();
+  }, [tab, status, page, refresh]);
+
+  function reload() {
+    setRefresh((value) => value + 1);
+  }
 
   async function save(item) {
     const draft = drafts[item.id] || {};
@@ -63,7 +89,12 @@ export default function AdminSoftLaunch() {
         status: draft.status || item.status,
         note: draft.note !== undefined ? draft.note : item.note || ''
       });
-      await load();
+      setDrafts((previous) => {
+        const next = { ...previous };
+        delete next[item.id];
+        return next;
+      });
+      reload();
     } catch (err) {
       setError(err.message || 'Không thể cập nhật phản hồi.');
     } finally {
@@ -84,7 +115,7 @@ export default function AdminSoftLaunch() {
           <p>Tiếp nhận lỗi từ người thử nghiệm và xem chất lượng tải trang theo
             nhóm thiết bị, loại mạng. Chỉ Admin được xem dữ liệu phản hồi.</p>
         </div>
-        <button className="soft-launch-admin-reload" type="button" onClick={load} disabled={loading}>
+        <button className="soft-launch-admin-reload" type="button" onClick={reload} disabled={loading}>
           <RefreshCw size={16}/> {loading ? 'Đang tải...' : 'Làm mới'}
         </button>
       </header>
@@ -130,6 +161,7 @@ export default function AdminSoftLaunch() {
                     <label>
                       Trạng thái
                       <select aria-label={'Trạng thái phản hồi ' + item.id}
+                        disabled={savingId === item.id}
                         value={draft.status || item.status}
                         onChange={(e) => setDrafts((prev) => ({
                           ...prev, [item.id]: { ...prev[item.id], status: e.target.value }
@@ -142,12 +174,13 @@ export default function AdminSoftLaunch() {
                       Ghi chú nội bộ (chỉ Admin)
                       <textarea rows={2} maxLength={1000}
                         aria-label={'Ghi chú phản hồi ' + item.id}
+                        disabled={savingId === item.id}
                         value={draft.note === undefined ? item.note || '' : draft.note}
                         onChange={(e) => setDrafts((prev) => ({
                           ...prev, [item.id]: { ...prev[item.id], note: e.target.value }
                         }))}/>
                     </label>
-                    <button type="button" disabled={savingId === item.id}
+                    <button type="button" disabled={loading || savingId !== null}
                       onClick={() => save(item)}><CheckCircle2 size={15}/>
                       {savingId === item.id ? 'Đang lưu...' : 'Lưu xử lý'}
                     </button>
@@ -155,14 +188,14 @@ export default function AdminSoftLaunch() {
                 </article>
               );
             })}
-            {!loading && !feedback?.items?.length &&
+            {!loading && feedback && !feedback.items.length &&
               <div className="soft-launch-feedback-empty">Chưa có phản hồi ở trạng thái này.</div>}
           </div>
           <div className="soft-launch-feedback-pages">
             <button type="button" disabled={page === 1 || loading}
               onClick={() => setPage((p) => p - 1)}>Trang trước</button>
-            <span>Trang {page} / {Math.max(1, Math.ceil((feedback?.total || 0) / 20))}</span>
-            <button type="button" disabled={loading || page * 20 >= (feedback?.total || 0)}
+            <span>Trang {page} / {Math.max(1, Math.ceil((feedback?.total || 0) / FEEDBACK_PAGE_SIZE))}</span>
+            <button type="button" disabled={loading || page * FEEDBACK_PAGE_SIZE >= (feedback?.total || 0)}
               onClick={() => setPage((p) => p + 1)}>Trang tiếp</button>
           </div>
         </section>

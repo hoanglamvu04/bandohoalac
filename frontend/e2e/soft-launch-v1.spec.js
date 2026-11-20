@@ -106,3 +106,83 @@ test('guest is denied the private Admin feedback queue', async ({ page }) => {
   await expect(page).toHaveURL(/\/login/);
   await expect(page.getByRole('heading', { name: 'Phản hồi & hiệu năng' })).toHaveCount(0);
 });
+
+test('feedback queue hides the previous filter and ignores a superseded response', async ({ page }) => {
+  const newItem = { id: 801, message: 'Mục đang chờ xử lý', status: 'NEW' };
+  const resolvedItem = { id: 802, message: 'Mục đã giải quyết', status: 'RESOLVED' };
+  let releaseStale;
+  const staleGate = new Promise((resolve) => { releaseStale = resolve; });
+  let releaseResolved;
+  const resolvedGate = new Promise((resolve) => { releaseResolved = resolve; });
+  let initialLoads = 0;
+
+  await page.route('**/api/**', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/api/auth/refresh') return route.fulfill({ json: {
+      token: 'test-session', user: { id: 11, role: 'ADMIN',
+        security: { adminTwoFactorSetupRequired: false } }
+    } });
+    if (url.pathname !== '/api/admin/soft-launch/feedback') {
+      return route.fulfill({ json: { items: [], ok: true } });
+    }
+    if (url.searchParams.get('status') === 'RESOLVED') {
+      await resolvedGate;
+      return route.fulfill({ json: { items: [resolvedItem], total: 1 } });
+    }
+    initialLoads += 1;
+    if (initialLoads > 1) await staleGate;
+    await route.fulfill({ json: { items: [newItem], total: 1 } });
+  });
+
+  try {
+    await page.goto('/admin/soft-launch');
+    await expect(page.getByText(newItem.message)).toBeVisible();
+    const reloadRequest = page.waitForRequest((req) => req.url().includes('/soft-launch/feedback?'));
+    await page.getByRole('button', { name: 'Làm mới' }).click();
+    const oldRequest = await reloadRequest;
+    const cancelled = page.waitForEvent('requestfailed', { predicate: (req) => req === oldRequest });
+    await page.getByLabel('Lọc trạng thái phản hồi').selectOption('RESOLVED');
+    await expect(page.getByText(newItem.message)).toHaveCount(0);
+    await cancelled;
+    releaseResolved();
+    await expect(page.getByText(resolvedItem.message)).toBeVisible();
+    releaseStale();
+    await expect(page.getByText(newItem.message)).toHaveCount(0);
+  } finally {
+    releaseStale();
+    releaseResolved();
+  }
+});
+
+test('saving the last item on a page returns to the last available page', async ({ page }) => {
+  const firstItem = { id: 901, message: 'Một góp ý ở trang đầu', status: 'NEW' };
+  const lastItem = { id: 902, message: 'Góp ý cuối ở trang hai', status: 'NEW' };
+  let saved = false;
+
+  await page.route('**/api/**', (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/api/auth/refresh') return route.fulfill({ json: {
+      token: 'test-session', user: { id: 11, role: 'ADMIN',
+        security: { adminTwoFactorSetupRequired: false } }
+    } });
+    if (url.pathname === '/api/admin/soft-launch/feedback/902') {
+      saved = route.request().postDataJSON().status === 'RESOLVED';
+      return route.fulfill({ json: { id: 902, status: 'RESOLVED' } });
+    }
+    if (url.pathname === '/api/admin/soft-launch/feedback') {
+      const secondPage = url.searchParams.get('page') === '2';
+      const items = secondPage ? (saved ? [] : [lastItem]) : [firstItem];
+      return route.fulfill({ json: { items, total: saved ? 20 : 21 } });
+    }
+    return route.fulfill({ json: { items: [], ok: true } });
+  });
+
+  await page.goto('/admin/soft-launch');
+  await page.getByRole('button', { name: 'Trang tiếp' }).click();
+  await expect(page.getByText(lastItem.message)).toBeVisible();
+  await page.getByLabel('Trạng thái phản hồi 902').selectOption('RESOLVED');
+  await page.getByRole('button', { name: 'Lưu xử lý' }).click();
+  await expect(page.getByText(firstItem.message)).toBeVisible();
+  await expect(page.getByText('Trang 1 / 1')).toBeVisible();
+  expect(saved).toBe(true);
+});
