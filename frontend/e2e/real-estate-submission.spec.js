@@ -12,7 +12,7 @@ test('unauthenticated visitors must sign in before submitting real estate', asyn
 
   await page.goto('/dang-tin-bat-dong-san', { waitUntil: 'domcontentloaded' });
   await expect(page.getByTestId('estate-login-required')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Đăng nhập' })).toBeVisible();
+  await expect(page.getByTestId('estate-login-required').getByRole('link', { name: 'Đăng nhập' })).toBeVisible();
   await expect(page.getByTestId('estate-submission-form')).toHaveCount(0);
 });
 
