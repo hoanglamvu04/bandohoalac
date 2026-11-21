@@ -1,7 +1,14 @@
 import { expect, test } from '@playwright/test';
 
-const fileSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">' +
-  '<rect width="40" height="40" fill="#4c8763"/></svg>';
+function fixtureSvg(label) {
+  return 'data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">' +
+    '<rect width="40" height="40" fill="#4c8763"/>' +
+    '<text x="10" y="25" fill="white">' + label + '</text></svg>'
+  );
+}
+const goodOne = fixtureSvg('1');
+const goodTwo = fixtureSvg('2');
 const property = {
   id: 777, slug: 'property-test-777', status: 'PUBLISHED',
   name: 'Nhà phố Hòa Lạc cần cho thuê',
@@ -9,14 +16,12 @@ const property = {
   category: 'Bất động sản', categorySlug: 'bat-dong-san',
   address: 'Hòa Lạc, Hà Nội', phone: '0987654321',
   lat: 21.01354, lng: 105.52522, source: 'USER',
-  images: ['/uploads/broken.jpg', '/uploads/good1.svg', '/uploads/good2.svg']
+  images: ['/uploads/broken.jpg', goodOne, goodTwo]
 };
 
 async function servePublicProperty(page, place = property) {
   await page.route('**/uploads/broken.jpg', (route) =>
     route.fulfill({ status: 404, body: 'Not found' }));
-  await page.route('**/uploads/good*.svg', (route) =>
-    route.fulfill({ status: 200, contentType: 'image/svg+xml', body: fileSvg }));
   await page.route('**/api/**', (route) => {
     const pathname = new URL(route.request().url()).pathname;
     if (pathname === '/api/auth/refresh') return route.fulfill({ status: 401, json: {} });
@@ -46,12 +51,12 @@ test('public rental detail skips missing first image, keeps gallery usable and l
   await expect(page.getByRole('heading', { name: 'Nhà phố Hòa Lạc cần cho thuê', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Thông tin bất động sản cho thuê' })).toBeVisible();
   await expect(page.getByText('Tin cho thuê')).toBeVisible();
-  await expect(page.getByTestId('place-primary-image')).toHaveAttribute('src', '/uploads/good1.svg');
+  await expect(page.getByTestId('place-primary-image')).toHaveAttribute('src', goodOne);
   await expect(page.getByRole('button', { name: 'Ảnh tiếp theo' })).toBeVisible();
   await page.getByRole('button', { name: 'Ảnh tiếp theo' }).click();
-  await expect(page.getByTestId('place-primary-image')).toHaveAttribute('src', '/uploads/good2.svg');
+  await expect(page.getByTestId('place-primary-image')).toHaveAttribute('src', goodTwo);
   await page.getByRole('button', { name: 'Ảnh trước' }).click();
-  await expect(page.getByTestId('place-primary-image')).toHaveAttribute('src', '/uploads/good1.svg');
+  await expect(page.getByTestId('place-primary-image')).toHaveAttribute('src', goodOne);
 });
 
 test('all missing VPS images show accessible fallback without hiding contact information', async ({ page }) => {
