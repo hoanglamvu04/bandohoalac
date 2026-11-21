@@ -78,6 +78,7 @@ function tracker() {
 
 export function disableXHubTracking() {
   sdk?.disable();
+  sdk = null; // A new consent grants a fresh in-memory anonymous session.
   lastRouteView = null;
   bridgeState = 'unknown';
   readinessPromise = null;
