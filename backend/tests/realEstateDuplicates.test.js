@@ -120,9 +120,19 @@ test('PostGIS matches published and pending nearby properties while excluding th
     assert.ok(result.items.some((x) =>
       x.id === refs.published && x.source === 'PUBLISHED' && x.risk === 'LIKELY_DUPLICATE'
     ));
+    const rawPending = await pool.query(
+      `SELECT id, status, type, payload #>> '{place,categorySlug}' AS category,
+              jsonb_typeof(payload #> '{location,lng}') AS lng_type,
+              jsonb_typeof(payload #> '{location,lat}') AS lat_type
+         FROM contributions WHERE id=$1`, [refs.pending]
+    );
     assert.ok(result.items.some((x) =>
       x.id === refs.pending && x.source === 'PENDING'
-    ));
+    ), 'pending candidate not found: ' + JSON.stringify({
+      expectedId: refs.pending,
+      returned: result.items,
+      stored: rawPending.rows
+    }));
     assert.equal(result.items.some((x) =>
       x.id === refs.current && x.source === 'PENDING'
     ), false);
