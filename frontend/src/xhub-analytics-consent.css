@@ -13,3 +13,17 @@
 .xhub-consent-compact button { padding: 8px 10px; border-radius: 24px; border: 1px solid #bdcfc0; background: #ffffffea; font: inherit; color: #375647; cursor: pointer; box-shadow: 0 1px 8px rgba(0,0,0,.07); }
 .xhub-consent-root button:focus-visible, .xhub-consent-root a:focus-visible { outline: 3px solid #e0a52b; outline-offset: 2px; }
 @media(min-width: 780px) { .xhub-consent-root { bottom: 16px; } }
+
+/* The fullscreen map has fixed right-hand trip controls and bottom overlays.
+   Keep its consent launcher small and anchored on the opposite edge. */
+body.map-route-active .xhub-consent-root {
+  left: max(10px, env(safe-area-inset-left));
+  right: auto;
+  width: min(300px, calc(100vw - 20px));
+}
+body.map-route-active .xhub-consent-compact { align-items: flex-start; }
+body.map-route-active .xhub-consent-compact button {
+  min-height: 32px;
+  padding: 6px 9px;
+  font-size: 11px;
+}
