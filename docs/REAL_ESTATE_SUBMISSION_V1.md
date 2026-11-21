@@ -90,3 +90,35 @@ or that CDN/Cloudinary URLs are reachable. Check `UPLOAD_PROVIDER`,
 `UPLOAD_DIR`, and `MAX_UPLOAD_FILE_SIZE_MB` on the deployed server
 before accepting photo submissions; the browser's 5 MB check mirrors
 the repository's **default**, not an arbitrary VPS override.
+
+
+## P0 moderation: near-duplicate review before publication
+
+When reviewing a `PENDING` real-estate `CREATE_PLACE` request, an
+Admin/Moderator can inspect **both published places and other pending
+real-estate requests** within 100 meters. The results are ordered by
+likely duplicate (matching normalized phone + accent-insensitive name
+within 25 m), requires review (matching phone or very near matching
+name) and nearby only.
+
+Multiple apartments, floors and land lots may legitimately share the
+same pin; **distance alone never automatically rejects a listing**.
+If nearby items exist, the reviewer must explicitly compare and
+acknowledge them; if the set changes at approval time, it must be
+reviewed again. A new backend check in the same approval transaction
+rejects requests without `nearbyListingsReviewed: true` with HTTP 409
+`PROPERTY_NEARBY_REVIEW_REQUIRED`. The pre-existing transactional
+advisory-lock/25-m exact duplicate guard is retained, so even an
+acknowledged exact duplicate is blocked.
+
+Only Admin/Moderator with the existing security gate can view the
+nearby review endpoint. Pending submissions are **never** published
+by this check, and their details must not be exposed via public
+search or map APIs. No migration is required.
+
+Release verification: use two separate normal user accounts to
+submit nearby properties; confirm the second appears in Admin's
+review-only list and never on the public map. Approve the first
+submission and confirm exactly one published pin/structured Housing
+record. Reject an identical second request; verify the status/reason
+appears for its owner and no second public pin is created.

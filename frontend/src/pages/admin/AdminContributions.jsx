@@ -99,6 +99,7 @@ export default function AdminContributions() {
   const [rejectReason, setRejectReason] = useState('');
   const [scoreDrafts, setScoreDrafts] = useState({});
   const [duplicatesById, setDuplicatesById] = useState({});
+  const [nearbyAcknowledged, setNearbyAcknowledged] = useState({});
 
   function load() {
     setLoading(true);
@@ -142,17 +143,28 @@ export default function AdminContributions() {
     }));
   }
 
-  async function checkDuplicates(id) {
+  async function checkDuplicates(id, preserveAcknowledgement = false) {
     setDuplicatesById((current) => ({ ...current, [id]: { loading: true } }));
+    if (!preserveAcknowledgement) {
+      setNearbyAcknowledged((current) => ({ ...current, [id]: false }));
+    }
     try {
       const response = await client.get('/admin/contributions/' + encodeURIComponent(id) + '/duplicates');
-      setDuplicatesById((current) => ({ ...current, [id]: {
-        loading: false, items: Array.isArray(response.data?.items) ? response.data.items : []
-      } }));
+      const next = {
+        loading: false,
+        checked: true,
+        items: Array.isArray(response.data?.items) ? response.data.items : []
+      };
+      setDuplicatesById((current) => ({ ...current, [id]: next }));
+      return next;
     } catch (err) {
-      setDuplicatesById((current) => ({ ...current, [id]: {
-        loading: false, error: err.response?.data?.error || 'Không kiểm tra được tin gần vị trí này.'
-      } }));
+      const next = {
+        loading: false,
+        checked: false,
+        error: err.response?.data?.error || 'Không kiểm tra được tin gần vị trí này.'
+      };
+      setDuplicatesById((current) => ({ ...current, [id]: next }));
+      return next;
     }
   }
 
@@ -162,6 +174,29 @@ export default function AdminContributions() {
       item.payload?.place?.realEstate ||
       item.payload?.place?.realEstatePriceVnd !== undefined
     );
+    if (isRealEstate && item.type === 'CREATE_PLACE' && item.payload?.place?.realEstate) {
+      // Re-check immediately before submitting, even if the queue was already
+      // examined earlier. Server repeats this gate transactionally.
+      const previous = duplicatesById[item.id];
+      const latest = await checkDuplicates(item.id, true);
+      if (!latest.checked) {
+        showToast(latest.error || 'Không thể kiểm tra tin gần vị trí, vui lòng thử lại.', 'error');
+        return;
+      }
+      const identity = (entry) => entry.source + ':' + entry.id;
+      const beforeIds = (previous?.items || []).map(identity).sort().join('|');
+      const latestIds = latest.items.map(identity).sort().join('|');
+      if ((!previous?.checked && latest.items.length > 0) ||
+          (previous?.checked && beforeIds !== latestIds)) {
+        setNearbyAcknowledged((current) => ({ ...current, [item.id]: false }));
+        showToast('Danh sách tin gần vị trí đã thay đổi. Hãy kiểm tra và xác nhận lại.', 'error');
+        return;
+      }
+      if (latest.items.length > 0 && !nearbyAcknowledged[item.id]) {
+        showToast('Có tin gần vị trí. Hãy xem danh sách và tích xác nhận trước khi duyệt.', 'error');
+        return;
+      }
+    }
     if (isRealEstate && !window.confirm(
       item.type === 'REPORT_CLOSED'
         ? 'Bạn đã kiểm tra bằng chứng và liên hệ nếu cần? Duyệt sẽ tạm ẩn bất động sản khỏi toàn bộ bản đồ.'
@@ -185,7 +220,9 @@ export default function AdminContributions() {
     try {
       await client.post('/admin/contributions/' + encodeURIComponent(item.id) + '/approve', {
         scoreBreakdown: draft.scores,
-        scoreNote: draft.note.trim() || undefined
+        scoreNote: draft.note.trim() || undefined,
+        ...(isRealEstate && item.type === 'CREATE_PLACE' && item.payload?.place?.realEstate
+          ? { nearbyListingsReviewed: true } : {})
       });
       const isRoadStatus = ['REPORT_FLOOD', 'REPORT_ROAD_CLOSURE', 'REPORT_ALERT'].includes(item.type);
       showToast(
@@ -322,20 +359,53 @@ export default function AdminContributions() {
                   {!photos.length && <div>⚠ Tin chưa có ảnh minh họa</div>}
                   {!place.description?.trim() && <div>⚠ Tin chưa có mô tả tài sản</div>}
                   {status === 'PENDING' && canReviewRealEstate && (
-                    <div className="estate-admin-duplicate-check">
-                      <button className="secondary-action" type="button" onClick={() => checkDuplicates(item.id)} disabled={duplicatesById[item.id]?.loading}>
-                        <MapPin size={14} /> {duplicatesById[item.id]?.loading ? 'Đang kiểm tra…' : 'Kiểm tra tin gần vị trí'}
+                    <div className="estate-admin-duplicate-check" data-testid={'estate-duplicate-check-' + item.id}>
+                      <button className="secondary-action" type="button"
+                        onClick={() => checkDuplicates(item.id)}
+                        disabled={duplicatesById[item.id]?.loading || busyId === item.id}>
+                        <MapPin size={14}/>
+                        {duplicatesById[item.id]?.loading
+                          ? 'Đang kiểm tra…' : 'Kiểm tra tin gần vị trí (100 m)'}
                       </button>
-                      {duplicatesById[item.id]?.error && <small>{duplicatesById[item.id].error}</small>}
-                      {duplicatesById[item.id]?.items && (
-                        <div>
-                          {duplicatesById[item.id].items.length === 0
-                            ? <small>Không tìm thấy bất động sản đã đăng trong phạm vi 100 m.</small>
-                            : duplicatesById[item.id].items.map((duplicate) => (
-                                <p key={duplicate.id}>
-                                  ⚠ {duplicate.distanceM} m · <a href={'/place/' + duplicate.id} target="_blank" rel="noreferrer">{duplicate.name}</a> · {duplicate.address || ''} · {duplicate.phone || ''}
+                      {duplicatesById[item.id]?.error && (
+                        <p role="alert">{duplicatesById[item.id].error}</p>
+                      )}
+                      {duplicatesById[item.id]?.checked && (
+                        <div className="estate-nearby-results">
+                          {!duplicatesById[item.id].items.length ? (
+                            <p>Không tìm thấy tin đang đăng hoặc chờ duyệt trong phạm vi 100 m.</p>
+                          ) : (
+                            <>
+                              <strong>Phát hiện {duplicatesById[item.id].items.length} tin gần đây — cần kiểm tra thủ công.</strong>
+                              <p>Gần nhau không có nghĩa là trùng tài sản. Đối chiếu tên, số liên hệ, vị trí và ảnh.</p>
+                              {duplicatesById[item.id].items.map((duplicate) => (
+                                <p key={duplicate.source + ':' + duplicate.id}>
+                                  {duplicate.risk === 'LIKELY_DUPLICATE' ? '⚠ Có dấu hiệu trùng · '
+                                    : duplicate.risk === 'REVIEW' ? 'Cần đối chiếu · ' : 'Gần vị trí · '}
+                                  {duplicate.distanceM} m ·{' '}
+                                  {duplicate.source === 'PUBLISHED'
+                                    ? <a href={'/place/' + duplicate.id}
+                                        target="_blank" rel="noreferrer">
+                                        {duplicate.name}
+                                      </a>
+                                    : <span>Đang chờ duyệt #{duplicate.id}: {duplicate.name}</span>}
+                                  {' · '}{duplicate.address || ''}
+                                  {duplicate.phone ? ' · ' + duplicate.phone : ''}
                                 </p>
                               ))}
+                              <label className="estate-nearby-acknowledgement">
+                                <input type="checkbox"
+                                  aria-label={'Tôi đã đối chiếu tin gần vị trí ' + item.id}
+                                  checked={Boolean(nearbyAcknowledged[item.id])}
+                                  disabled={busyId === item.id}
+                                  onChange={(event) => setNearbyAcknowledged((current) => ({
+                                    ...current, [item.id]: event.target.checked
+                                  }))}/>
+                                <span>Tôi đã đối chiếu các tin gần vị trí và xác nhận đây là bất động sản khác.
+                                  Tin trùng thật sự phải bị từ chối, không xuất bản.</span>
+                              </label>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>

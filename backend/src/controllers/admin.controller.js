@@ -4,7 +4,7 @@ import { listContributions, getContributionById } from '../services/contribution
 import { approveContribution, rejectContribution } from '../services/admin.service.js';
 import { auditContextFromRequest, writeAuditLog } from '../services/audit.service.js';
 import { invalidatePlaceBoundsCache } from '../services/place.service.js';
-import { pool } from '../database/pool.js';
+import { findNearbyPropertyCandidates } from '../services/realEstateDuplicates.service.js';
 
 export const getContributions = asyncHandler(async (req, res) => {
   const { status, limit, offset } = req.query;
@@ -43,25 +43,12 @@ export const getRealEstateDuplicates = asyncHandler(async (req, res) => {
   const location = contribution.payload?.location;
   if (!property?.realEstate || !location) return res.json({ items: [] });
 
-  const { rows } = await pool.query(
-    `SELECT p.id, p.name, p.address, p.phone,
-       ROUND(ST_Distance(p.location::geography,
-         ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography))::int AS distance_m
-       FROM places p
-       JOIN categories c ON c.id = p.category_id
-       WHERE p.status = 'PUBLISHED'
-         AND c.slug = 'bat-dong-san'
-         AND ST_DWithin(p.location::geography,
-           ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, 100)
-       ORDER BY distance_m ASC, p.id DESC
-       LIMIT 10`,
-    [Number(location.lng), Number(location.lat)]
-  );
+  const result = await findNearbyPropertyCandidates({
+    contributionId: contribution.id,
+    payload: contribution.payload
+  });
   res.set('Cache-Control', 'no-store');
-  res.json({ items: rows.map(row => ({
-    id: row.id, name: row.name, address: row.address,
-    phone: row.phone, distanceM: Number(row.distance_m)
-  })) });
+  res.json(result);
 });
 
 export const approve = asyncHandler(async (req, res) => {
