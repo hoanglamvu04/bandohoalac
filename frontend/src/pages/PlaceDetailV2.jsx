@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import '../place-trust.css';
+import '../place-v2-media-reliability.css';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -7,6 +8,8 @@ import {
   CheckCircle2,
   Building2,
   Camera,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   ExternalLink,
   Globe2,
@@ -110,6 +113,7 @@ export default function PlaceDetailV2() {
   const [nearby, setNearby] = useState([]);
   const [haloSpot, setHaloSpot] = useState(null);
   const [activeImage, setActiveImage] = useState(0);
+  const [failedImages, setFailedImages] = useState([]);
   const [favorite, setFavorite] = useState(false);
   const [favoriteBusy, setFavoriteBusy] = useState(false);
   const [housingDetail, setHousingDetail] = useState(null);
@@ -132,6 +136,7 @@ export default function PlaceDetailV2() {
     setReportSuggestedValue('');
     setReportReason('');
     setActiveImage(0);
+    setFailedImages([]);
     setFavorite(false);
 
     (slug ? getPlaceBySlug(slug) : getPlace(id))
@@ -203,6 +208,20 @@ export default function PlaceDetailV2() {
     ...(Array.isArray(place?.images) ? place.images : []),
     ...(Array.isArray(haloSpot?.media) ? haloSpot.media.map((item) => item?.url) : [])
   ]), [place, haloSpot]);
+
+  // A single missing VPS file must not leave a broken hero image on mobile.
+  const availableImages = useMemo(
+    () => images.filter((url) => !failedImages.includes(url)),
+    [images, failedImages]
+  );
+  const activeMediaIndex = Math.min(activeImage, Math.max(0, availableImages.length - 1));
+  const activeMediaUrl = availableImages[activeMediaIndex] || '';
+
+  function markImageUnavailable(url) {
+    if (!url) return;
+    setFailedImages((current) => current.includes(url) ? current : [...current, url]);
+  }
+
 
   if (status === 'loading') {
     return <main className="place-v2-state">Đang tải địa điểm...</main>;
@@ -408,20 +427,50 @@ export default function PlaceDetailV2() {
         </div>
       </section>
 
-      <section className="place-v2-gallery">
+      <section className="place-v2-gallery" aria-label="Thư viện ảnh địa điểm">
         <div className="place-v2-gallery-main">
-          {images.length ? (
-            <img src={images[Math.min(activeImage, images.length - 1)]} alt={place.name} />
+          {activeMediaUrl ? (
+            <img key={activeMediaUrl} src={activeMediaUrl} alt={place.name}
+              loading="eager" decoding="async" onError={() => markImageUnavailable(activeMediaUrl)}
+              data-testid="place-primary-image" />
           ) : (
-            <div className="place-v2-gallery-empty"><Images size={36} /> Chưa có ảnh địa điểm</div>
+            <div className="place-v2-gallery-empty" role="status"
+              data-testid="place-gallery-fallback">
+              <Images size={36} />
+              {images.length ? 'Ảnh đang không khả dụng. Vẫn có thể xem thông tin và liên hệ bên dưới.'
+                : 'Chưa có ảnh địa điểm'}
+            </div>
           )}
-          {images.length > 0 && <span className="place-v2-photo-count"><Camera size={15} /> {images.length} ảnh</span>}
+          {availableImages.length > 1 && (
+            <div className="place-v2-gallery-nav" aria-label="Chuyển ảnh">
+              <button type="button" aria-label="Ảnh trước"
+                onClick={() => setActiveImage((current) =>
+                  (Math.min(current, availableImages.length - 1) - 1 + availableImages.length) %
+                  availableImages.length)}>
+                <ChevronLeft size={20} />
+              </button>
+              <button type="button" aria-label="Ảnh tiếp theo"
+                onClick={() => setActiveImage((current) =>
+                  (Math.min(current, availableImages.length - 1) + 1) % availableImages.length)}>
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
+          {availableImages.length > 0 && (
+            <span className="place-v2-photo-count">
+              <Camera size={15} /> {activeMediaIndex + 1}/{availableImages.length} ảnh
+            </span>
+          )}
         </div>
-        {images.length > 1 && (
-          <div className="place-v2-thumbs">
-            {images.slice(0, 8).map((image, index) => (
-              <button key={image + index} className={index === activeImage ? 'active' : ''} onClick={() => setActiveImage(index)} type="button">
-                <img src={image} alt="" />
+        {availableImages.length > 1 && (
+          <div className="place-v2-thumbs" aria-label="Chọn ảnh">
+            {availableImages.slice(0, 8).map((image, index) => (
+              <button key={image + index} className={index === activeMediaIndex ? 'active' : ''}
+                aria-label={'Xem ảnh ' + (index + 1)}
+                aria-pressed={index === activeMediaIndex}
+                onClick={() => setActiveImage(index)} type="button">
+                <img src={image} alt="" loading="lazy" decoding="async"
+                  onError={() => markImageUnavailable(image)} />
               </button>
             ))}
           </div>
@@ -577,7 +626,10 @@ export default function PlaceDetailV2() {
         <section className="place-v2-card place-v2-housing-card">
           <div className="place-v2-section-title">
             <Building2 size={19} />
-            <h2>{housingDetail?.housing?.listingType === 'SALE' ? 'Thông tin bất động sản cần bán' : 'Thông tin phòng trọ'}</h2>
+            <h2>{housingDetail?.housing?.listingType === 'SALE'
+              ? 'Thông tin bất động sản cần bán'
+              : housingDetail?.housing?.propertyType
+                ? 'Thông tin bất động sản cho thuê' : 'Thông tin phòng trọ'}</h2>
             <span className={
               'place-v2-housing-status ' +
               (housingDetail?.housing?.availabilityStatus === 'FULL'
@@ -589,6 +641,8 @@ export default function PlaceDetailV2() {
               <BadgeCheck size={13} />
               {housingDetail?.housing?.listingType === 'SALE'
                 ? 'Tin cần bán'
+                : housingDetail?.housing?.propertyType
+                  ? 'Tin cho thuê'
                 : housingDetail?.housing?.availabilityStatus === 'AVAILABLE'
                   ? 'Còn phòng'
                 : housingDetail?.housing?.availabilityStatus === 'LIMITED'
@@ -617,8 +671,8 @@ export default function PlaceDetailV2() {
                   <strong>{distanceLabel(housingDetail.distanceToFptM) || 'Chưa tính'}</strong>
                 </div>
                 <div>
-                  <small>{housingDetail.housing.listingType === 'SALE' ? 'Loại tài sản' : 'Phòng trống'}</small>
-                  <strong>{housingDetail.housing.listingType === 'SALE'
+                  <small>{housingDetail.housing.propertyType ? 'Loại tài sản' : 'Phòng trống'}</small>
+                  <strong>{housingDetail.housing.propertyType
                     ? realEstatePropertyLabel(housingDetail.housing.propertyType)
                     : housingDetail.housing.availableRooms !== null
                       ? housingDetail.housing.availableRooms + (housingDetail.housing.totalRooms !== null ? '/' + housingDetail.housing.totalRooms : '')
