@@ -21,6 +21,7 @@ function batch(events = [event()]) {
 }
 async function withSiteRouter(options, callback) {
   const app = express();
+  app.use('/api/xhub-analytics', express.json({ limit: 16000 }));
   app.use(express.json({ limit: '1mb' }));
   app.use('/api/xhub-analytics', createXHubAnalyticsRouter(options));
   const server = app.listen(0, '127.0.0.1');
@@ -89,7 +90,7 @@ test('strict origin, consent, content and privacy validation block unsafe forwar
       path: '/place', entityType: 'place', entityKey: '42'
     })]))).status, 202);
     assert.equal((await post({ ...batch(), privateText: 'any contact data' })).status, 400);
-    assert.equal((await post({ ...batch(), ignored: 'x'.repeat(17000) })).status, 400);
+    assert.equal((await post({ ...batch(), ignored: 'x'.repeat(17000) })).status, 413);
     assert.equal((await post(batch([event('page_view', {
       occurredAt: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString()
     })]))).status, 400);
