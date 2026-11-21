@@ -7,11 +7,17 @@ import {
 import '../xhub-analytics-consent.css';
 
 // Optional, separate from the website's existing GA/soft-launch system.
-export default function XHubAnalyticsConsent() {
+export default function XHubAnalyticsConsent({ compactByDefault = false }) {
   const [choice, setChoice] = useState(() => getXHubConsent());
-  const [expanded, setExpanded] = useState(() => getXHubConsent() === 'unset');
+  const [expanded, setExpanded] = useState(() => !compactByDefault && getXHubConsent() === 'unset');
   const [disabledByBrowser, setDisabledByBrowser] = useState(() => isXHubPrivacyBlocked());
   const [available, setAvailable] = useState(null);
+
+  useEffect(() => {
+    // On the map, avoid covering search, trip-planner and navigation controls.
+    // A small accessible settings button still lets visitors opt in.
+    if (compactByDefault) setExpanded(false);
+  }, [compactByDefault]);
 
   useEffect(() => {
     const onStorage = (event) => {
@@ -19,13 +25,13 @@ export default function XHubAnalyticsConsent() {
       disableXHubTracking();
       const next = getXHubConsent();
       setChoice(next);
-      setExpanded(next === 'unset');
+      setExpanded(next === 'unset' && !compactByDefault);
       setAvailable(null);
     };
     window.addEventListener('storage', onStorage);
     setDisabledByBrowser(isXHubPrivacyBlocked());
     return () => window.removeEventListener('storage', onStorage);
-  }, []);
+  }, [compactByDefault]);
 
   async function decide(next) {
     if (!setXHubConsent(next)) return;
