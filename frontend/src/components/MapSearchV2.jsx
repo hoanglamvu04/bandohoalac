@@ -200,8 +200,7 @@ export default function MapSearchV2() {
 
   function openVertical(intent = verticalIntent) {
     if (!intent) return;
-    // One explicit user action, never the inferred category or query content.
-    void trackXHubEvent('search_used');
+    // One explicit vertical-filter action; do not double-count a search.
     void trackXHubEvent('filter_used');
 
     const next = new URLSearchParams(params);
