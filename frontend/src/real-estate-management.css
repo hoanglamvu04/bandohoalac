@@ -30,3 +30,24 @@
 .estate-manager-price-form input { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid #ccdcd0; border-radius: 9px; font-size: 14px; }
 .estate-manager-error { padding: 14px; background: #fff1ef; color: #a14235; border-radius: 10px; margin-bottom: 20px; }
 @media (max-width: 650px) { .estate-manager-page { padding: 19px 12px 85px; } .estate-manager-card-head { flex-direction: column; } .estate-manager-card-head h2 { font-size: 18px; } .estate-manager-price-form > div { flex-direction: column; } .estate-manager-price-form button { width: 100%; } }
+
+
+/* Owner's unpublished submissions are intentionally separate from live listings. */
+.estate-manager-review-queue { display: grid; gap: 14px; margin: 0 0 25px; }
+.estate-manager-review-intro h2 { margin: 0 0 6px; font-size: 19px; }
+.estate-manager-review-intro p { margin: 0; font-size: 13px; color: #668072; line-height: 1.6; }
+.estate-manager-review-list { display: grid; gap: 12px; }
+.estate-manager-review-card { padding: 18px; border: 1px solid #dedfd2; background: #fff; border-radius: 13px; overflow-wrap: anywhere; }
+.estate-manager-review-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; }
+.estate-manager-review-top small { color: #718276; font-size: 11px; }
+.estate-manager-status.waiting { color: #80622e; background: #fff1d9; }
+.estate-manager-status.rejected { color: #a33e34; background: #ffebe8; }
+.estate-manager-review-card h3 { font-size: 18px; margin: 12px 0 6px; }
+.estate-manager-review-card > p { margin: 0; color: #688174; font-size: 13px; }
+.estate-manager-review-meta { margin-top: 14px; font-size: 13px; font-weight: 750; color: #2e634b; line-height: 1.6; }
+.estate-manager-reject-reason { margin-top: 15px; background: #fff4f0; border-radius: 9px; border: 1px solid #efcbc0; padding: 13px; }
+.estate-manager-reject-reason strong { font-size: 12px; color: #8f3e31; }
+.estate-manager-reject-reason p { margin: 7px 0 10px; font-size: 13px; color: #6e4c42; line-height: 1.6; white-space: pre-wrap; }
+.estate-manager-reject-reason a { color: #176848; font-size: 12px; font-weight: 800; }
+.estate-manager-pending-note { display: flex; align-items: center; gap: 9px; margin: 13px 0 0; color: #736238; font-size: 12px; line-height: 1.6; }
+.estate-manager-pending-note svg { flex-shrink: 0; }

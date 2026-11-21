@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, BadgeCheck, CheckCircle2, LocateFixed, MapPin, Send, ShieldCheck } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import LocationPicker from '../components/LocationPicker.jsx';
@@ -17,6 +17,11 @@ const PROPERTY_TYPES = [
   { value: 'COMMERCIAL', label: 'Mặt bằng kinh doanh' },
   { value: 'OTHER', label: 'Bất động sản khác' }
 ];
+
+const MAX_PHOTOS = 8;
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // Default server upload limit.
+const DRAFT_LIFETIME_MS = 24 * 60 * 60 * 1000;
+const draftKey = (userId) => 'hola-maps-estate-draft-v1:' + userId;
 
 const INITIAL_FORM = {
   transactionType: 'SALE',
@@ -61,6 +66,95 @@ export default function RealEstateSubmissionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState(null);
   const [error, setError] = useState('');
+  const [savedDraft, setSavedDraft] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(null);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setSavedDraft(null);
+      return;
+    }
+    // Only an explicitly saved draft is restored on demand. Private contact
+    // details, browser consent and photo bytes are never persisted here.
+    try {
+      const key = draftKey(user.id);
+      const raw = sessionStorage.getItem(key);
+      if (!raw) {
+        setSavedDraft(null);
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      if (parsed.version !== 1 || !Number.isFinite(parsed.savedAt) ||
+          Date.now() - parsed.savedAt > DRAFT_LIFETIME_MS ||
+          parsed.savedAt > Date.now() || !parsed.form || !parsed.position ||
+          !isInsideServiceCoverage(parsed.position.lng, parsed.position.lat)) {
+        sessionStorage.removeItem(key);
+        setSavedDraft(null);
+        return;
+      }
+      setSavedDraft(parsed);
+    } catch {
+      setSavedDraft(null);
+    }
+  }, [user?.id]);
+
+  function saveDraft() {
+    if (!user?.id) return;
+    const { transactionType, propertyType, name, address, areaM2,
+      priceVnd, description } = form;
+    const next = {
+      version: 1,
+      savedAt: Date.now(),
+      form: { transactionType, propertyType, name, address, areaM2,
+        priceVnd, description },
+      position: { lat: position.lat, lng: position.lng }
+    };
+    try {
+      sessionStorage.setItem(draftKey(user.id), JSON.stringify(next));
+      setSavedDraft(next);
+      showToast('Đã lưu nháp cho phiên trình duyệt này.', 'success');
+    } catch {
+      setError('Trình duyệt không cho lưu nháp. Hãy giữ trang mở để tiếp tục.');
+    }
+  }
+
+  function restoreDraft() {
+    if (!savedDraft) return;
+    setForm((current) => ({ ...current, ...savedDraft.form }));
+    setPosition(savedDraft.position);
+    setPositionConfirmed(false); // Always re-confirm the map pin before submission.
+    setError('');
+    showToast('Đã khôi phục nháp. Hãy kiểm tra lại vị trí và thông tin liên hệ.', 'success');
+  }
+
+  function removeDraft() {
+    if (user?.id) {
+      try { sessionStorage.removeItem(draftKey(user.id)); } catch {
+        // Private browsing can reject storage operations.
+      }
+    }
+    setSavedDraft(null);
+  }
+
+  function updatePhotos(event) {
+    const selected = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (selected.length > MAX_PHOTOS) {
+      setError('Chỉ được chọn tối đa 8 ảnh. Hãy chọn lại, không có ảnh nào bị âm thầm bỏ qua.');
+      return;
+    }
+    if (selected.some((file) => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type))) {
+      setError('Chỉ nhận JPG, PNG hoặc WEBP. Ảnh HEIC cần được chuyển đổi trước khi gửi.');
+      return;
+    }
+    if (selected.some((file) => file.size <= 0 || file.size > MAX_PHOTO_BYTES)) {
+      setError('Mỗi ảnh phải có dung lượng từ 1 byte đến tối đa 5 MB.');
+      return;
+    }
+    setPhotos(selected);
+    setImageRightsConfirmed(false); // A new selection requires fresh rights confirmation.
+    setError('');
+  }
 
   function updateField(event) {
     const { name, value } = event.target;
@@ -115,12 +209,20 @@ export default function RealEstateSubmissionPage() {
       setError('Cần đồng ý công khai số điện thoại liên hệ sau khi tin được duyệt.');
       return;
     }
+    if (photos.length > MAX_PHOTOS || photos.some((file) =>
+      !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ||
+      file.size <= 0 || file.size > MAX_PHOTO_BYTES
+    )) {
+      setError('Danh sách ảnh không hợp lệ. Hãy chọn lại các ảnh JPG, PNG hoặc WEBP tối đa 5 MB.');
+      return;
+    }
     if (photos.length > 0 && !imageRightsConfirmed) {
       setError('Cần xác nhận quyền sử dụng ảnh trước khi gửi.');
       return;
     }
 
     setSubmitting(true);
+    setUploadProgress(photos.length > 0 ? 0 : null);
     try {
       const realEstate = {
         transactionType: form.transactionType,
@@ -145,13 +247,21 @@ export default function RealEstateSubmissionPage() {
           realEstate
         },
         photos
+      }, {
+        onUploadProgress: (event) => {
+          if (photos.length > 0 && Number.isFinite(event.total) && event.total > 0) {
+            setUploadProgress(Math.min(100, Math.round(event.loaded * 100 / event.total)));
+          }
+        }
       });
       setSubmittedId(result.id);
+      removeDraft();
       showToast('Đã gửi tin bất động sản vào hàng chờ duyệt.', 'success');
     } catch (err) {
       setError(err.message || 'Chưa gửi được tin. Vui lòng thử lại.');
     } finally {
       setSubmitting(false);
+      setUploadProgress(null);
     }
   }
 
@@ -190,6 +300,21 @@ export default function RealEstateSubmissionPage() {
           </section>
         ) : (
           <form className="estate-submit-form" onSubmit={submit} data-testid="estate-submission-form">
+            <aside className="estate-draft-tools" aria-label="Lưu nháp đăng tin">
+              <div>
+                <strong>Tiếp tục đăng tin sau?</strong>
+                <p>Chủ động lưu nháp trong phiên trình duyệt tối đa 24 giờ.
+                  Không lưu tên/số điện thoại liên hệ, ảnh hoặc xác nhận đồng ý.</p>
+                {savedDraft && <small>Đã lưu: {new Date(savedDraft.savedAt).toLocaleString('vi-VN')}</small>}
+              </div>
+              <div className="estate-draft-actions">
+                <button type="button" disabled={submitting} onClick={saveDraft}>Lưu nháp</button>
+                {savedDraft && <button type="button" disabled={submitting}
+                  onClick={restoreDraft}>Khôi phục nháp</button>}
+                {savedDraft && <button type="button" disabled={submitting}
+                  onClick={removeDraft}>Xóa nháp</button>}
+              </div>
+            </aside>
             <section className="estate-section">
               <div className="estate-section-title">
                 <span>01</span>
@@ -285,12 +410,26 @@ export default function RealEstateSubmissionPage() {
                   <input name="phone" required type="tel" maxLength={30} value={form.phone}
                     onChange={updateField} placeholder="09xxxxxxxx" />
                 </label>
-                <label className="estate-full">
-                  Ảnh tài sản (tối đa 8 ảnh, không bắt buộc)
-                  <input type="file" accept="image/jpeg,image/png,image/webp" multiple
-                    onChange={(event) => setPhotos(Array.from(event.target.files || []).slice(0, 8))} />
-                  {!!photos.length && <small>Đã chọn {photos.length} ảnh</small>}
-                </label>
+                <div className="estate-full estate-photo-field">
+                  <label htmlFor="estate-photo-input">Ảnh tài sản (tối đa 8 ảnh, không bắt buộc)</label>
+                  <input id="estate-photo-input" type="file" accept="image/jpeg,image/png,image/webp" multiple
+                    aria-label="Chọn ảnh tài sản" onChange={updatePhotos} />
+                  <small>JPG, PNG hoặc WEBP, tối đa 5 MB/ảnh. Ảnh được gửi cùng yêu cầu chờ duyệt.</small>
+                  {!!photos.length && <ul className="estate-photo-files" aria-label="Ảnh đã chọn">
+                    {photos.map((file, index) => (
+                      <li key={file.name + ':' + file.lastModified + ':' + index}>
+                        <span>{file.name}</span>
+                        <small>{Math.ceil(file.size / 1024)} KB</small>
+                        <button type="button" disabled={submitting}
+                          aria-label={'Xóa ảnh ' + file.name}
+                          onClick={() => {
+                            setPhotos((current) => current.filter((_, i) => i !== index));
+                            setImageRightsConfirmed(false);
+                          }}>Xóa</button>
+                      </li>
+                    ))}
+                  </ul>}
+                </div>
               </div>
               <p className="estate-contact-note">HOLA Maps không xác nhận tính pháp lý hoặc quyền sở hữu chỉ qua việc duyệt tin. Không tải ảnh có giấy tờ tùy thân hoặc thông tin nhạy cảm.</p>
               <div className="estate-consent-section">
@@ -320,6 +459,11 @@ export default function RealEstateSubmissionPage() {
             </section>
 
             {error && <div className="estate-form-error" role="alert">{error}</div>}
+            {submitting && <div className="estate-upload-status" role="status">
+              {uploadProgress !== null
+                ? 'Đang tải dữ liệu và ảnh: ' + uploadProgress + '% (sau đó chờ máy chủ xác nhận)'
+                : 'Đang gửi yêu cầu, vui lòng giữ trang mở.'}
+            </div>}
             <div className="estate-submit-actions">
               <span><ShieldCheck size={16} /> Gửi yêu cầu, chưa đăng công khai</span>
               <button type="submit" disabled={submitting}>

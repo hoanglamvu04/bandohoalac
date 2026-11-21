@@ -50,3 +50,43 @@ Restart only the live backend process using the VPS's existing service manager a
 - Existing rental and non-real-estate map workflows remain unaffected.
 
 This is moderation of user-provided listings, not certification of legal ownership, boundaries, prices or availability.
+
+
+## P0 real-estate submission hardening (V2)
+
+- `/tin-bat-dong-san-cua-toi` shows separate **PENDING** and **REJECTED**
+  property CREATE_PLACE requests from the **authenticated user's**
+  `GET /api/contributions/me` history. Rejected requests display the
+  moderation reason; pending requests have no link to a public listing.
+  Published housing still loads when the contribution-history endpoint fails.
+- `/dang-tin-bat-dong-san` supports an **explicit** session-only draft scoped
+  to the signed-in user's ID. Drafts expire after 24 hours. They contain the
+  property fields and chosen map pin, but **never** contact name/phone,
+  files, consent flags, or login credentials. The user must explicitly
+  restore the saved values and reconfirm the pin. A successful submission
+  clears this draft. The application does not auto-save to localStorage.
+- The photo picker rejects more than 8 files, unsupported MIME types and
+  files over the default 5 MB limit; it does not silently discard extra
+  images. Users can remove files and rights consent resets on changes.
+  Server-side file signature/dimension/size checks remain authoritative.
+- The submission screen displays best-effort upload progress while keeping
+  user-edited fields after a failure. The standard `POST /api/contributions`
+  multipart API and the existing approval / publishing transaction are
+  unchanged. No migration is needed.
+
+### V2 validation
+
+The Playwright suite verifies private draft storage and removal, multiple
+photo selection and rights consent, passing selected images through the
+multipart request, showing pending/rejected submissions with reasons, and
+keeping live listings visible if contribution history temporarily fails.
+
+For launch, run the production smoke test with a separate ordinary account:
+submit SALE and RENT, review the pending request with Admin 2FA, reject
+one with a reason, approve the other and confirm the public map pin and
+place detail. Also repeat with actual photo uploads via HTTPS, because
+a mocked browser test cannot prove the live VPS storage path is mounted
+or that CDN/Cloudinary URLs are reachable. Check `UPLOAD_PROVIDER`,
+`UPLOAD_DIR`, and `MAX_UPLOAD_FILE_SIZE_MB` on the deployed server
+before accepting photo submissions; the browser's 5 MB check mirrors
+the repository's **default**, not an arbitrary VPS override.

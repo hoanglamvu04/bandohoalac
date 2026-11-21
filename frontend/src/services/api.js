@@ -301,7 +301,7 @@ export function createContribution({
   severity,
   expiresHours,
   photos = []
-}) {
+}, options = {}) {
   const formData = new FormData();
   formData.append('type', type);
   if (placeId) formData.append('placeId', String(placeId));
@@ -314,7 +314,9 @@ export function createContribution({
   if (expiresHours) formData.append('expiresHours', String(expiresHours));
   photos.forEach((file) => formData.append('photos', file));
 
-  return unwrap(client.post('/contributions', formData));
+  return unwrap(client.post('/contributions', formData, {
+    onUploadProgress: options.onUploadProgress
+  }));
 }
 
 export function confirmRoadStatus(id, verdict) {
