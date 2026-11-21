@@ -19,6 +19,7 @@ import {
   X
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
+import { publicPlaceKey, trackXHubEvent } from '../lib/xhubAnalytics.js';
 import {
   addFavorite,
   getPlace,
@@ -73,6 +74,14 @@ export default function PlaceDetail() {
       .then((data) => setFavorite(Boolean(data?.favorite)))
       .catch(() => setFavorite(false));
   }, [id, user?.id]);
+
+  useEffect(() => {
+    if (status === 'ready' && publicPlaceKey(place?.id)) {
+      void trackXHubEvent('map_place_view', {
+        entityType: 'place', entityKey: String(place.id)
+      });
+    }
+  }, [status, place?.id]);
 
   const images = useMemo(() => (Array.isArray(place?.images) ? place.images.filter(Boolean) : []), [place]);
   const activeImage = images[activeImageIndex] || images[0] || null;
@@ -154,6 +163,11 @@ export default function PlaceDetail() {
         ? await removeFavorite(id)
         : await addFavorite(id);
       setFavorite(Boolean(data?.favorite));
+      if (!favorite && data?.favorite === true && publicPlaceKey(id)) {
+        void trackXHubEvent('favorite_added', {
+          entityType: 'place', entityKey: String(id)
+        });
+      }
       showToast(data?.favorite ? 'Đã lưu địa điểm.' : 'Đã bỏ lưu địa điểm.', 'success');
     } catch (error) {
       showToast(error.message, 'error');
@@ -443,6 +457,9 @@ export default function PlaceDetail() {
         {place.lat && place.lng && (
           <a
             href={'https://www.google.com/maps/search/?api=1&query=' + place.lat + ',' + place.lng}
+            onClick={() => publicPlaceKey(place.id) && void trackXHubEvent(
+              'map_directions_click', { entityType: 'place', entityKey: String(place.id) }
+            )}
             target="_blank"
             rel="noreferrer"
           >
@@ -525,6 +542,9 @@ export default function PlaceDetail() {
             <a
               className="primary-action wide premium-direction-button"
               href={'https://www.google.com/maps/search/?api=1&query=' + place.lat + ',' + place.lng}
+            onClick={() => publicPlaceKey(place.id) && void trackXHubEvent(
+              'map_directions_click', { entityType: 'place', entityKey: String(place.id) }
+            )}
               target="_blank"
               rel="noreferrer"
             >
