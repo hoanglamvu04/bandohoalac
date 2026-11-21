@@ -11,7 +11,7 @@ import { awardPointsForApproval, penalizeRejection } from './points.service.js';
 import { evaluateContributionScore, CONTRIBUTION_SCORE_CRITERIA } from './contributionScoring.service.js';
 import { findUserById } from './user.service.js';
 import { deleteStoredAssets } from './storage.service.js';
-import { findNearbyPropertyCandidates, normalizePropertyPhone } from './realEstateDuplicates.service.js';
+import { findNearbyPropertyCandidates, normalizePropertyPhone, normalizePropertyTitle } from './realEstateDuplicates.service.js';
 import { createNotification } from './notification.service.js';
 import { applyMissionBonusesForContribution } from './mission.service.js';
 import { refreshUserExpertise } from './expertise.service.js';
@@ -71,7 +71,7 @@ async function applyContributionToPlace(contribution, client) {
     if (place.realEstate) {
       const lockKey = [
         normalizePropertyPhone(place.phone),
-        String(place.name || '').trim().toLowerCase()
+        normalizePropertyTitle(place.name)
       ].join(':');
       await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [lockKey]);
       // Block exact same-title, same-contact listings within a small radius,
@@ -83,7 +83,7 @@ async function applyContributionToPlace(contribution, client) {
          JOIN categories c ON c.id = p.category_id
          WHERE p.status = 'PUBLISHED'
            AND c.slug = 'bat-dong-san'
-           AND lower(trim(p.name)) = lower(trim($1))
+           AND lower(public.hola_unaccent(trim(p.name))) = lower(public.hola_unaccent(trim($1)))
            AND (
              CASE
                WHEN regexp_replace(COALESCE(p.phone,''), '[^0-9]', '', 'g')
