@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Award, Camera, Check, Clock3, MapPin, ShieldCheck, Users, X } from 'lucide-react';
 import {
   client, getAdminContributions, rejectContribution
@@ -100,6 +101,47 @@ export default function AdminContributions() {
   const [scoreDrafts, setScoreDrafts] = useState({});
   const [duplicatesById, setDuplicatesById] = useState({});
   const [nearbyAcknowledged, setNearbyAcknowledged] = useState({});
+  const [publicationCheck, setPublicationCheck] = useState(null);
+
+  async function verifyPublishedHousing(placeId, expectedPhotoCount) {
+    setPublicationCheck({ placeId, status: 'checking' });
+    try {
+      // These are the actual public endpoints, not an Admin-only DB view.
+      const [placeResult, housingResult] = await Promise.all([
+        client.get('/places/' + encodeURIComponent(placeId)),
+        client.get('/housing/' + encodeURIComponent(placeId))
+      ]);
+      const place = placeResult.data;
+      const housingVisible = Boolean(housingResult.data?.item?.housing);
+      const lat = Number(place?.lat);
+      const lng = Number(place?.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        throw new Error('Tin công khai chưa có tọa độ hợp lệ.');
+      }
+      const boundsResult = await client.get('/places/bounds', {
+        params: {
+          north: lat + 0.005, south: lat - 0.005,
+          east: lng + 0.005, west: lng - 0.005,
+          category: 'bat-dong-san', limit: 200
+        }
+      });
+      const markerVisible = Array.isArray(boundsResult.data?.items) &&
+        boundsResult.data.items.some((item) => String(item.id) === String(placeId));
+      const photoCount = Array.isArray(place?.images) ? place.images.length : 0;
+      setPublicationCheck({
+        placeId, status: housingVisible && markerVisible &&
+          (expectedPhotoCount === 0 || photoCount > 0) ? 'ready' : 'warning',
+        markerVisible, housingVisible, photoCount, expectedPhotoCount,
+        name: place?.name || 'Bất động sản'
+      });
+    } catch (error) {
+      setPublicationCheck({
+        placeId, status: 'warning',
+        error: 'Tin đã được duyệt nhưng chưa xác minh đủ API công khai: ' +
+          (error?.response?.data?.error || error?.message || 'Không rõ lỗi')
+      });
+    }
+  }
 
   function load() {
     setLoading(true);
@@ -218,12 +260,26 @@ export default function AdminContributions() {
     const total = draftTotal(draft);
     setBusyId(item.id);
     try {
-      await client.post('/admin/contributions/' + encodeURIComponent(item.id) + '/approve', {
+      const approved = await client.post('/admin/contributions/' + encodeURIComponent(item.id) + '/approve', {
         scoreBreakdown: draft.scores,
         scoreNote: draft.note.trim() || undefined,
         ...(isRealEstate && item.type === 'CREATE_PLACE' && item.payload?.place?.realEstate
           ? { nearbyListingsReviewed: true } : {})
       });
+      if (item.type === 'CREATE_PLACE' && item.payload?.place?.realEstate) {
+        const publishedPlaceId = approved.data?.placeId;
+        if (publishedPlaceId) {
+          // Never turn a successful approval into an error when the separate
+          // public-read smoke check fails. Show a warning and links instead.
+          void verifyPublishedHousing(
+            publishedPlaceId,
+            contributionPhotos(item).length
+          );
+        } else {
+          setPublicationCheck({ status: 'warning',
+            error: 'Tin đã được duyệt nhưng API không trả mã địa điểm để kiểm tra.' });
+        }
+      }
       const isRoadStatus = ['REPORT_FLOOD', 'REPORT_ROAD_CLOSURE', 'REPORT_ALERT'].includes(item.type);
       showToast(
         isRealEstate
@@ -294,6 +350,49 @@ export default function AdminContributions() {
             <span>Hãy xem địa điểm, độ chính xác, độ mới, ảnh/không gian, độ đầy đủ và tín hiệu Community Verification trước khi duyệt. Đồng thuận cộng đồng không tự xuất bản dữ liệu.</span>
           </div>
         </div>
+      )}
+
+      {publicationCheck && (
+        <section className="estate-publication-check" role="status"
+          aria-label="Kiểm tra tin bất động sản sau duyệt"
+          data-testid="estate-publication-check">
+          <strong>
+            {publicationCheck.status === 'checking'
+              ? 'Đang kiểm tra bản đồ và API công khai…'
+              : publicationCheck.status === 'ready'
+                ? 'Tin đã được xác nhận trên API bản đồ và nhà đất'
+                : 'Tin đã được duyệt, cần kiểm tra công khai'}
+          </strong>
+          {publicationCheck.error && <p>{publicationCheck.error}</p>}
+          {publicationCheck.status !== 'checking' && !publicationCheck.error && (
+            <p>
+              Ghim bản đồ: {publicationCheck.markerVisible ? 'Đã tìm thấy' : 'Chưa xác nhận'}
+              {' · '}Hồ sơ nhà đất: {publicationCheck.housingVisible ? 'Có' : 'Chưa xác nhận'}
+              {' · '}Ảnh trong dữ liệu: {publicationCheck.photoCount}
+              {publicationCheck.expectedPhotoCount > 0 && publicationCheck.photoCount === 0
+                ? ' (đã gửi ảnh nhưng chưa thấy trong hồ sơ)' : ''}
+            </p>
+          )}
+          {publicationCheck.placeId && (
+            <div className="estate-publication-links">
+              <Link to={'/place/' + encodeURIComponent(publicationCheck.placeId)}>
+                Mở tin công khai
+              </Link>
+              <Link to={'/map?place=' + encodeURIComponent(publicationCheck.placeId) +
+                '&vertical=housing&category=bat-dong-san'}>
+                Xem ghim trên bản đồ
+              </Link>
+              <button type="button"
+                onClick={() => verifyPublishedHousing(publicationCheck.placeId,
+                  publicationCheck.expectedPhotoCount || 0)}
+                disabled={publicationCheck.status === 'checking'}>
+                Kiểm tra lại
+              </button>
+            </div>
+          )}
+          <small>Kiểm tra API chưa chứng minh ảnh đã tải thành công qua HTTPS/CDN;
+            cần mở trang chi tiết để xem ảnh thật.</small>
+        </section>
       )}
 
       {loading && <div className="loading-card">Đang tải danh sách...</div>}
