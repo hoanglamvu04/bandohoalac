@@ -122,3 +122,57 @@ review-only list and never on the public map. Approve the first
 submission and confirm exactly one published pin/structured Housing
 record. Reject an identical second request; verify the status/reason
 appears for its owner and no second public pin is created.
+
+
+## P0 publication/media verification after approval
+
+After an Admin approves a real-estate `CREATE_PLACE` request, the queue
+now displays a **separate, non-blocking** public-read check. It queries
+the real public `GET /api/places/:id`, `GET /api/housing/:id` and
+`GET /api/places/bounds` around the approved coordinates (category
+`bat-dong-san`) and shows whether the record and pin appear in those
+API results. It also reports the number of image URLs attached to the
+public place. Admins can open `/place/:id`, open
+`/map?place=:id&vertical=housing&category=bat-dong-san`, or retry
+the check without reopening moderation.
+
+**Important:** An error in this optional check does not undo a
+successful approval. A bounding-box result is subject to pagination,
+so "not found" prompts manual verification, not an automatic claim
+that the pin was deleted. Image URLs in the API do not prove a browser
+can actually retrieve the bytes.
+
+The public Place Detail V2 gallery now skips unavailable images,
+shows a clear fallback if all images fail, and supports next/previous
+keyboard-accessible buttons. The rental heading and badge distinguish
+structured rental properties from legacy room-only profiles.
+
+### Read-only production media audit
+
+Run from the VPS **backend working directory**, after deploy:
+
+```bash
+cd /var/www/bandohoalac && npm --prefix backend run housing:publication:audit
+```
+
+The audit checks up to 100 recently updated published property records
+(use `-- --limit=500` to scan up to 500). It reports whether each
+property has an active Housing profile, is in the service coverage
+boundary, and whether all known **local** image variants referenced by
+`place_images` exist and have nonzero size on disk. Reports use
+place IDs and issue codes, never contact data or image filenames.
+Nonzero release blockers produce exit code 2; the script changes
+nothing in the database or image storage.
+
+The audit intentionally **does not** fetch arbitrary remote URLs:
+Cloudinary and other remote hosts must be checked via real browser
+HTTPS after deploy. Also verify Nginx proxies `/uploads/` to the
+backend/static folder, and that `PUBLIC_BASE_URL`, `UPLOAD_DIR`,
+`UPLOAD_PROVIDER` and `cwebp` on VPS match production settings.
+A local file existing on disk does not prove Nginx/CDN delivery.
+
+Acceptance: approve a property with two distinct photos, inspect the
+new Admin verification banner, open the direct place and map links,
+try missing-image fallback on mobile, then run the CLI audit. In the
+case of local uploads, check the actual public image URLs with HTTPS
+HEAD/GET. No database migration is introduced here.
