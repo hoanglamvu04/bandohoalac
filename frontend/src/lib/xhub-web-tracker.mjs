@@ -22,11 +22,18 @@ export function createXHubWebTracker({
   let attribution=null;
   let queue=[];
   let running=false;
+  let activeController=null;
   const randomId=()=>root.crypto?.randomUUID?.()||null;
   const consented=()=>hasConsent()===true&&
     root.navigator?.globalPrivacyControl!==true&&
     root.navigator?.doNotTrack!=='1';
-  function reset(){queue=[];sessionId=null;attribution=null;}
+  function reset(){
+    activeController?.abort();
+    activeController=null;
+    queue=[];
+    sessionId=null;
+    attribution=null;
+  }
   const metric=(value,max)=>{
     if(typeof value!=='string')return undefined;
     const trimmed=value.trim().slice(0,max);
@@ -54,11 +61,14 @@ export function createXHubWebTracker({
     if(running||!queue.length)return {sent:0};
     if(!consented()){reset();return {sent:0};}
     running=true;
+    const controller=new AbortController();
+    activeController=controller;
     const batch=queue.splice(0,20);
     try{
       const response=await send(endpoint,{
         method:'POST',headers:{'Content-Type':'application/json'},
         credentials:'omit',cache:'no-store',keepalive:true,
+        signal:controller.signal,
         body:JSON.stringify({schemaVersion:1,events:batch})
       });
       if(!response?.ok)throw Error('Site bridge unavailable');
@@ -69,7 +79,10 @@ export function createXHubWebTracker({
       if(consented())queue=[...batch,...queue].slice(0,40);
       else reset();
       return {sent:0};
-    }finally{running=false;}
+    }finally{
+      if(activeController===controller)activeController=null;
+      running=false;
+    }
   }
   function track(name,{entityType,entityKey,engagementMs}={}){
     if(!consented()){reset();return false;}
