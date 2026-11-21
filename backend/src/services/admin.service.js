@@ -11,6 +11,7 @@ import { awardPointsForApproval, penalizeRejection } from './points.service.js';
 import { evaluateContributionScore, CONTRIBUTION_SCORE_CRITERIA } from './contributionScoring.service.js';
 import { findUserById } from './user.service.js';
 import { deleteStoredAssets } from './storage.service.js';
+import { findNearbyPropertyCandidates } from './realEstateDuplicates.service.js';
 import { createNotification } from './notification.service.js';
 import { applyMissionBonusesForContribution } from './mission.service.js';
 import { refreshUserExpertise } from './expertise.service.js';
@@ -318,6 +319,24 @@ export async function approveContribution(contributionId, reviewer, review = {})
       throw new AppError('Tin bất động sản kiểu cũ thiếu xác nhận liên hệ và thông tin tài sản. Yêu cầu gửi lại.', 409);
     }
     if (submittedListing) {
+      // Re-check on the server at approval time; an earlier UI check may
+      // have become stale while another reviewer approved a nearby listing.
+      const duplicates = await findNearbyPropertyCandidates({
+        contributionId,
+        payload: contribution.payload,
+        client
+      });
+      if (duplicates.items.length > 0 && review.nearbyListingsReviewed !== true) {
+        throw new AppError(
+          'Hãy kiểm tra các tin gần vị trí và xác nhận trước khi xuất bản.',
+          409,
+          {
+            code: 'PROPERTY_NEARBY_REVIEW_REQUIRED',
+            nearbyCount: duplicates.items.length,
+            requiresReview: duplicates.requiresReview
+          }
+        );
+      }
       if (submittedListing.publicContactConsent !== true) {
         throw new AppError('Tin chưa có xác nhận công khai thông tin liên hệ. Yêu cầu người đăng gửi lại.', 409);
       }
