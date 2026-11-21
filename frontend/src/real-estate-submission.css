@@ -88,3 +88,20 @@
 .estate-consent { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; color: #365849; font: 500 13px/1.65 inherit; font-family: inherit; font-size: 13px; line-height: 1.65; }
 .estate-consent input[type='checkbox'] { width: 18px; min-width: 18px; height: 18px; margin-top: 2px; accent-color: #176949; }
 .estate-consent a { color: #176949; font-weight: 800; text-underline-offset: 2px; }
+
+
+.estate-draft-tools { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; border: 1px solid #d3e5d7; padding: 15px 17px; background: #f9fcf9; border-radius: 13px; }
+.estate-draft-tools strong { font-size: 14px; color: #235b43; }
+.estate-draft-tools p { font-size: 12px; color: #698374; line-height: 1.6; margin: 6px 0; max-width: 570px; }
+.estate-draft-tools small { display: block; font-size: 11px; color: #527e62; }
+.estate-draft-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.estate-draft-actions button { background: #fff; border: 1px solid #b5d2bd; border-radius: 9px; color: #23684c; font-size: 12px; font-weight: 800; padding: 10px 12px; cursor: pointer; }
+.estate-draft-actions button:last-child:not(:first-child) { color: #a14a3c; border-color: #e1c7c2; }
+.estate-draft-actions button:disabled { opacity: .6; cursor: not-allowed; }
+.estate-photo-files { display: grid; gap: 8px; list-style: none; margin: 7px 0 0; padding: 0; }
+.estate-photo-files li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border: 1px solid #dce6de; background: #fff; border-radius: 9px; padding: 8px 10px; }
+.estate-photo-files li > span { flex: 1; min-width: 120px; overflow-wrap: anywhere; font-weight: 700; }
+.estate-photo-files li > small { color: #728276; }
+.estate-photo-files li > button { background: #fff4f2; color: #ac4c3c; border: 1px solid #ecd5cf; padding: 7px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+.estate-upload-status { border: 1px solid #b9d8c3; background: #eef8ef; color: #1c6247; border-radius: 10px; padding: 12px 15px; font-size: 13px; font-weight: 750; }
+@media (max-width: 660px) { .estate-draft-actions, .estate-draft-actions button { width: 100%; } }
