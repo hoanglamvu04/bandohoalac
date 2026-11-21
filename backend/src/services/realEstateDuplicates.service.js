@@ -8,7 +8,7 @@ export function normalizePropertyPhone(phone) {
   return /^84\d{9,10}$/.test(digits) ? '0' + digits.slice(2) : digits;
 }
 
-function normalizePropertyTitle(title) {
+export function normalizePropertyTitle(title) {
   return String(title || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
