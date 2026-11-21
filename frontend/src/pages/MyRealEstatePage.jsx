@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, CalendarClock, CheckCircle2, Home, MapPin, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { createContribution, getMyHousingListings, manageMyHousingListing } from '../services/api.js';
+import { createContribution, getMyContributions, getMyHousingListings, manageMyHousingListing } from '../services/api.js';
 import { useToast } from '../context/ToastContext.jsx';
 import '../real-estate-management.css';
 
@@ -23,21 +23,39 @@ function currency(value) {
 export default function MyRealEstatePage() {
   const { showToast } = useToast();
   const [items, setItems] = useState([]);
+  const [pendingSubmissions, setPendingSubmissions] = useState([]);
+  const [submissionsWarning, setSubmissionsWarning] = useState('');
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState('');
   const [priceDrafts, setPriceDrafts] = useState({});
 
   const load = useCallback(async () => {
-    try {
-      const response = await getMyHousingListings();
-      setItems(Array.isArray(response.items) ? response.items : []);
+    // Both endpoints are scoped to the signed-in owner. A failed history
+    // request must not hide already-published listings.
+    const [published, history] = await Promise.allSettled([
+      getMyHousingListings(),
+      getMyContributions()
+    ]);
+    if (published.status === 'fulfilled') {
+      setItems(Array.isArray(published.value.items) ? published.value.items : []);
       setError('');
-    } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Không tải được tin của bạn.');
-    } finally {
-      setLoading(false);
+    } else {
+      setError(published.reason?.message || 'Không tải được tin đã đăng của bạn.');
     }
+    if (history.status === 'fulfilled') {
+      const all = Array.isArray(history.value.items) ? history.value.items : [];
+      setPendingSubmissions(all.filter((entry) =>
+        entry.type === 'CREATE_PLACE' &&
+        entry.payload?.place?.categorySlug === 'bat-dong-san' &&
+        entry.payload?.place?.realEstate &&
+        ['PENDING', 'REJECTED'].includes(entry.status)
+      ));
+      setSubmissionsWarning('');
+    } else {
+      setSubmissionsWarning('Chưa tải được trạng thái tin chờ duyệt. Hãy thử tải lại trang.');
+    }
+    setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -101,12 +119,61 @@ export default function MyRealEstatePage() {
 
         {loading && <p>Đang tải tin của bạn…</p>}
         {error && <div className="estate-manager-error" role="alert">{error}</div>}
-        {!loading && !error && items.length === 0 && (
+        {submissionsWarning && <div className="estate-manager-error" role="alert">{submissionsWarning}</div>}
+        {!loading && !error && items.length === 0 && pendingSubmissions.length === 0 && (
           <div className="estate-manager-empty">
             <MapPin size={34} />
             <h2>Chưa có bất động sản đã đăng</h2>
             <p>Khi tin của bạn được duyệt, bạn có thể quản lý và cập nhật tình trạng tại đây.</p>
           </div>
+        )}
+
+        {!loading && pendingSubmissions.length > 0 && (
+          <section className="estate-manager-review-queue" aria-label="Tin đang xét duyệt"
+            data-testid="estate-owner-review-queue">
+            <div className="estate-manager-review-intro">
+              <h2>Yêu cầu đăng tin của bạn</h2>
+              <p>Đây là yêu cầu chưa được công khai trên bản đồ. Tin bị từ chối có lý do để bạn chỉnh sửa rồi gửi lại.</p>
+            </div>
+            <div className="estate-manager-review-list">
+              {pendingSubmissions.map((entry) => {
+                const estate = entry.payload.place.realEstate;
+                const property = entry.payload.place;
+                const price = estate.transactionType === 'SALE'
+                  ? estate.totalPriceVnd : estate.monthlyRentVnd;
+                const rejected = entry.status === 'REJECTED';
+                return (
+                  <article className="estate-manager-review-card" key={entry.id}
+                    data-testid={'estate-submission-' + entry.id}>
+                    <div className="estate-manager-review-top">
+                      <span className={rejected ? 'estate-manager-status rejected' : 'estate-manager-status waiting'}>
+                        {rejected ? 'Đã từ chối' : 'Chờ Admin duyệt'}
+                      </span>
+                      <small>Mã yêu cầu #{entry.id}</small>
+                    </div>
+                    <h3>{property.name}</h3>
+                    <p>{property.address || 'Hòa Lạc'}</p>
+                    <div className="estate-manager-review-meta">
+                      {estate.transactionType === 'SALE' ? 'Cần bán' : 'Cho thuê'}
+                      {' · '}{currency(price)}{estate.transactionType === 'RENT' ? '/tháng' : ''}
+                      {estate.areaM2 ? ' · ' + estate.areaM2 + ' m²' : ''}
+                    </div>
+                    {rejected ? (
+                      <div className="estate-manager-reject-reason">
+                        <strong>Lý do từ chối</strong>
+                        <p>{entry.rejectReason || 'Chưa có lý do chi tiết. Vui lòng liên hệ quản trị viên.'}</p>
+                        <Link to="/dang-tin-bat-dong-san">Tạo tin mới sau khi chỉnh sửa</Link>
+                      </div>
+                    ) : (
+                      <p className="estate-manager-pending-note">
+                        <ShieldCheck size={16}/> Đang được kiểm tra; chỉ xuất hiện trên bản đồ sau khi được duyệt.
+                      </p>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
         )}
 
         <div className="estate-manager-list">
