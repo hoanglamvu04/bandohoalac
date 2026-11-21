@@ -159,7 +159,7 @@ export default function App() {
 
       {!isMapRoute && !isPartnerScannerRoute && !isEmbedRoute && <Footer />}
       {!isPartnerScannerRoute && !isEmbedRoute && <BottomNav />}
-      {!isPartnerScannerRoute && !isEmbedRoute && <XHubAnalyticsConsent />}
+      {!isPartnerScannerRoute && !isEmbedRoute && <XHubAnalyticsConsent compactByDefault={isMapRoute} />}
     </div>
   );
 }
