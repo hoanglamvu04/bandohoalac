@@ -11,6 +11,8 @@ const sample = {
   location: { lat: 21.01354, lng: 105.52522 },
   place: {
     name: 'Nhà phố 3 tầng gần FPT',
+    categorySlug: 'bat-dong-san',
+    address: 'Hòa Lạc',
     phone: '0987654321',
     realEstate: { transactionType: 'SALE', propertyType: 'HOUSE' }
   }
