@@ -146,7 +146,10 @@ export async function trackXHubRoutePageView(pathname) {
   if (!publicAnalyticsPath(pathname) || !consentActive()) return false;
   if (!(await xhubBridgeAvailable()) || !consentActive()) return false;
   if (browser()?.location.pathname !== pathname || lastRouteView === pathname) return false;
+  // Mark before awaiting network work to avoid duplicate page_view when the
+  // consent button and React's route effect race on the same navigation.
+  lastRouteView = pathname;
   const result = await trackXHubEvent('page_view');
-  if (result) lastRouteView = pathname;
+  if (!result && lastRouteView === pathname) lastRouteView = null;
   return result;
 }
