@@ -186,7 +186,8 @@ export default function AdminContributions() {
       const identity = (entry) => entry.source + ':' + entry.id;
       const beforeIds = (previous?.items || []).map(identity).sort().join('|');
       const latestIds = latest.items.map(identity).sort().join('|');
-      if (!previous?.checked || beforeIds !== latestIds) {
+      if ((!previous?.checked && latest.items.length > 0) ||
+          (previous?.checked && beforeIds !== latestIds)) {
         setNearbyAcknowledged((current) => ({ ...current, [item.id]: false }));
         showToast('Danh sách tin gần vị trí đã thay đổi. Hãy kiểm tra và xác nhận lại.', 'error');
         return;
