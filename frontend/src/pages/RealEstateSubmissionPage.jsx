@@ -410,9 +410,9 @@ export default function RealEstateSubmissionPage() {
                   <input name="phone" required type="tel" maxLength={30} value={form.phone}
                     onChange={updateField} placeholder="09xxxxxxxx" />
                 </label>
-                <label className="estate-full">
-                  Ảnh tài sản (tối đa 8 ảnh, không bắt buộc)
-                  <input type="file" accept="image/jpeg,image/png,image/webp" multiple
+                <div className="estate-full estate-photo-field">
+                  <label htmlFor="estate-photo-input">Ảnh tài sản (tối đa 8 ảnh, không bắt buộc)</label>
+                  <input id="estate-photo-input" type="file" accept="image/jpeg,image/png,image/webp" multiple
                     aria-label="Chọn ảnh tài sản" onChange={updatePhotos} />
                   <small>JPG, PNG hoặc WEBP, tối đa 5 MB/ảnh. Ảnh được gửi cùng yêu cầu chờ duyệt.</small>
                   {!!photos.length && <ul className="estate-photo-files" aria-label="Ảnh đã chọn">
@@ -429,7 +429,7 @@ export default function RealEstateSubmissionPage() {
                       </li>
                     ))}
                   </ul>}
-                </label>
+                </div>
               </div>
               <p className="estate-contact-note">HOLA Maps không xác nhận tính pháp lý hoặc quyền sở hữu chỉ qua việc duyệt tin. Không tải ảnh có giấy tờ tùy thân hoặc thông tin nhạy cảm.</p>
               <div className="estate-consent-section">
