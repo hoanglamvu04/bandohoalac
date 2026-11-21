@@ -143,9 +143,11 @@ export default function AdminContributions() {
     }));
   }
 
-  async function checkDuplicates(id) {
+  async function checkDuplicates(id, preserveAcknowledgement = false) {
     setDuplicatesById((current) => ({ ...current, [id]: { loading: true } }));
-    setNearbyAcknowledged((current) => ({ ...current, [id]: false }));
+    if (!preserveAcknowledgement) {
+      setNearbyAcknowledged((current) => ({ ...current, [id]: false }));
+    }
     try {
       const response = await client.get('/admin/contributions/' + encodeURIComponent(id) + '/duplicates');
       const next = {
@@ -175,7 +177,7 @@ export default function AdminContributions() {
     if (isRealEstate && item.type === 'CREATE_PLACE' && item.payload?.place?.realEstate) {
       // Re-check immediately before submitting, even if the queue was already
       // examined earlier. Server repeats this gate transactionally.
-      const latest = await checkDuplicates(item.id);
+      const latest = await checkDuplicates(item.id, true);
       if (!latest.checked) {
         showToast(latest.error || 'Không thể kiểm tra tin gần vị trí, vui lòng thử lại.', 'error');
         return;
