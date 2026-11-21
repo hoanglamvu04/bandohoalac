@@ -177,9 +177,18 @@ export default function AdminContributions() {
     if (isRealEstate && item.type === 'CREATE_PLACE' && item.payload?.place?.realEstate) {
       // Re-check immediately before submitting, even if the queue was already
       // examined earlier. Server repeats this gate transactionally.
+      const previous = duplicatesById[item.id];
       const latest = await checkDuplicates(item.id, true);
       if (!latest.checked) {
         showToast(latest.error || 'Không thể kiểm tra tin gần vị trí, vui lòng thử lại.', 'error');
+        return;
+      }
+      const identity = (entry) => entry.source + ':' + entry.id;
+      const beforeIds = (previous?.items || []).map(identity).sort().join('|');
+      const latestIds = latest.items.map(identity).sort().join('|');
+      if (!previous?.checked || beforeIds !== latestIds) {
+        setNearbyAcknowledged((current) => ({ ...current, [item.id]: false }));
+        showToast('Danh sách tin gần vị trí đã thay đổi. Hãy kiểm tra và xác nhận lại.', 'error');
         return;
       }
       if (latest.items.length > 0 && !nearbyAcknowledged[item.id]) {
