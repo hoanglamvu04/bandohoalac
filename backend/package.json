@@ -10,6 +10,7 @@
     "db:backup": "node src/scripts/backupDatabase.js",
     "ops:restore:drill": "node src/scripts/restoreDrill.js",
     "ops:media:audit": "node src/scripts/auditLegacyMedia.js",
+    "housing:publication:audit": "node src/scripts/auditHousingPublication.js",
     "housing:expire": "node src/scripts/expireStaleHousingListings.js",
     "housing:remind": "node src/scripts/remindExpiringHousingListings.js",
     "soft-launch:prune": "node src/scripts/pruneSoftLaunchData.js",
