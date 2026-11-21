@@ -29,6 +29,10 @@ async function withSiteRouter(options, callback) {
   try {
     return await callback({
       status: async () => fetch(base + '/api/xhub-analytics/status'),
+      postWithoutOrigin: (body) => fetch(base + '/api/xhub-analytics', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }),
       post: (body, headers = {}) => fetch(base + '/api/xhub-analytics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Origin: ORIGIN, ...headers },
@@ -80,7 +84,7 @@ test('strict origin, consent, content and privacy validation block unsafe forwar
     assert.equal((await post(batch([event('page_view', { consent: false })]))).status, 400);
     assert.equal((await post(batch([event('search_used', { query: 'số điện thoại 0987' })]))).status, 400);
     assert.equal((await post(batch([event('page_view', { path: '/map?lat=21&lng=105' })]))).status, 400);
-    assert.equal((await post(batch([event('map_place_view', { entityType: 'place', entityKey: '0987654321' })]))).status, 400);
+    assert.equal((await post(batch([event('map_place_view', { entityType: 'place', entityKey: '+84 987 654 321' })]))).status, 400);
     assert.equal((await post(batch([event('map_place_view', {
       path: '/place', entityType: 'place', entityKey: '42'
     })]))).status, 202);
@@ -109,7 +113,8 @@ test('missing Origin is denied and burst is rate-limited before upstream', async
     enabled: true, approved: true, siteId: SITE_ID, siteToken: PRIVATE_TOKEN,
     publicHost: 'maps.dothihoalac.vn',
     send: async () => { count += 1; return { status: 202 }; }
-  }, async ({ post }) => {
+  }, async ({ post, postWithoutOrigin }) => {
+    assert.equal((await postWithoutOrigin(batch())).status, 403);
     const accepted = [];
     for (let i = 0; i < 26; i++) accepted.push((await post(batch())).status);
     assert.ok(accepted.includes(429));
