@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { pool } from '../src/database/pool.js';
+import { approveContribution } from '../src/services/admin.service.js';
 import {
   normalizePropertyPhone, rankPropertyCandidate, findNearbyPropertyCandidates
 } from '../src/services/realEstateDuplicates.service.js';
@@ -125,6 +126,17 @@ test('PostGIS matches published and pending nearby properties while excluding th
     assert.equal(result.items.some((x) =>
       x.id === refs.current && x.source === 'PENDING'
     ), false);
+    // Direct API approval attempts must not bypass the human review gate.
+    await assert.rejects(
+      () => approveContribution(refs.current, { id: refs.owner, role: 'ADMIN' }, {}),
+      (error) => error.statusCode === 409 &&
+        error.details?.code === 'PROPERTY_NEARBY_REVIEW_REQUIRED'
+    );
+    const unchanged = await pool.query(
+      'SELECT status, place_id FROM contributions WHERE id=$1', [refs.current]
+    );
+    assert.equal(unchanged.rows[0].status, 'PENDING');
+    assert.equal(unchanged.rows[0].place_id, null);
   } finally {
     for (const id of [refs.pending, refs.current]) {
       if (id) await pool.query('DELETE FROM contributions WHERE id=$1', [id]);
