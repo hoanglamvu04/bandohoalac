@@ -102,7 +102,7 @@ test('PostGIS matches published and pending nearby properties while excluding th
        RETURNING id`,
       ['property-duplicate-' + nonce, refs.owner]
     );
-    refs.published = place.rows[0].id;
+    refs.published = Number(place.rows[0].id);
     for (const entry of ['pending', 'current']) {
       const payload = entry === 'pending'
         ? { ...sample, place: { ...sample.place, name: 'Căn hộ 203', phone: '0911111111' } }
@@ -112,7 +112,7 @@ test('PostGIS matches published and pending nearby properties while excluding th
          VALUES($1,'CREATE_PLACE','PENDING',$2::jsonb) RETURNING id`,
         [refs.owner, JSON.stringify(payload)]
       );
-      refs[entry] = inserted.rows[0].id;
+      refs[entry] = Number(inserted.rows[0].id);
     }
     const result = await findNearbyPropertyCandidates({
       contributionId: refs.current, payload: sample
