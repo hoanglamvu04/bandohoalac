@@ -84,11 +84,14 @@ test('photo picker rejects excess, HEIC and large images without silently trunca
     { name: 'anh-2.png', mimeType: 'image/png', buffer: Buffer.from([0x89, 0x50]) }
   ]);
   await expect(page.locator('.estate-photo-files li')).toHaveCount(2);
-  await expect(page.getByLabel('imageRightsConfirmed')).toHaveCount(0);
+  await expect(page.locator('input[name="imageRightsConfirmed"]')).toBeVisible();
+  await page.locator('input[name="imageRightsConfirmed"]').check();
   await page.getByRole('button', { name: 'Xóa ảnh anh-1.jpg' }).click();
+  await expect(page.locator('input[name="imageRightsConfirmed"]')).not.toBeChecked();
   await expect(page.locator('.estate-photo-files li')).toHaveCount(1);
   await page.getByRole('button', { name: 'Xóa ảnh anh-2.png' }).click();
   await expect(page.locator('.estate-photo-files li')).toHaveCount(0);
+  await expect(page.locator('input[name="imageRightsConfirmed"]')).toHaveCount(0);
 });
 
 test('property photo submission includes actual selected file and explicit rights consent', async ({ page }) => {
