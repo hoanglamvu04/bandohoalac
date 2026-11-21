@@ -15,6 +15,7 @@ import { useSearchParams } from 'react-router-dom';
 import { getHousingListings, getNearbyPlaces, getPlaces } from '../services/api.js';
 import { getBestBrowserLocation } from '../utils/geolocation.js';
 import { focusHolaMapPoint } from '../mapInteractionBridge.js';
+import { trackXHubEvent } from '../lib/xhubAnalytics.js';
 
 function fold(value) {
   return String(value || '')
@@ -199,6 +200,9 @@ export default function MapSearchV2() {
 
   function openVertical(intent = verticalIntent) {
     if (!intent) return;
+    // One explicit user action, never the inferred category or query content.
+    void trackXHubEvent('search_used');
+    void trackXHubEvent('filter_used');
 
     const next = new URLSearchParams(params);
     next.delete('place');
@@ -221,6 +225,7 @@ export default function MapSearchV2() {
 
   function chooseResult(item) {
     if (!item) return;
+    void trackXHubEvent('search_used');
     setOpen(false);
 
     if (isRoad(item) || isLandmark(item)) {
