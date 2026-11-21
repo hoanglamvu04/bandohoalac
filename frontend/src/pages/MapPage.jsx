@@ -65,6 +65,7 @@ import {
   removeFavorite
 } from '../services/api.js';
 import { LOCAL_BASEMAP_OPTIONS as BASEMAP_OPTIONS } from '../localBasemap.js';
+import { publicPlaceKey, trackXHubEvent } from '../lib/xhubAnalytics.js';
 import { getBestBrowserLocation } from '../utils/geolocation.js';
 import { distanceMeters, formatOpenStatus, isPlaceOpenNow } from '../utils/placeDiscovery.js';
 import { REGION_PRESETS } from '../mapConfig.js';
@@ -1619,6 +1620,11 @@ export default function MapPage() {
         : await addFavorite(selectedPlace.id);
       const nextFavorite = Boolean(data?.favorite);
       setFavorite(nextFavorite);
+      if (nextFavorite && !favorite && publicPlaceKey(selectedPlace.id)) {
+        void trackXHubEvent('favorite_added', {
+          entityType: 'place', entityKey: String(selectedPlace.id)
+        });
+      }
       showToast(nextFavorite ? 'Đã lưu địa điểm.' : 'Đã bỏ lưu địa điểm.', 'success');
     } catch (error) {
       showToast(error.message || 'Không cập nhật được địa điểm đã lưu.', 'error');
@@ -2334,6 +2340,7 @@ export default function MapPage() {
   }
 
   function handleCategoryChange(value) {
+    void trackXHubEvent('filter_used');
     lastPlacesRequestKeyRef.current = '';
     loadedPlaceBoundsRef.current = [];
     setSelectedId(null);
@@ -2356,6 +2363,7 @@ export default function MapPage() {
   }
 
   function handleHousingFilterChange(key, value) {
+    void trackXHubEvent('filter_used');
     lastPlacesRequestKeyRef.current = '';
     loadedPlaceBoundsRef.current = [];
     setSelectedId(null);
@@ -2375,6 +2383,7 @@ export default function MapPage() {
   }
 
   function handleRatingChange(value) {
+    void trackXHubEvent('filter_used');
     lastPlacesRequestKeyRef.current = '';
     setSelectedId(null);
     setPlaceScope('viewport');
@@ -2383,6 +2392,7 @@ export default function MapPage() {
   }
 
   function handleOpenNowToggle() {
+    void trackXHubEvent('filter_used');
     const next = !openNow;
     setOpenNow(next);
     if (selectedPlace && next && isPlaceOpenNow(selectedPlace.openingHours) !== true) {
@@ -2392,6 +2402,7 @@ export default function MapPage() {
   }
 
   function handleSortChange(value) {
+    void trackXHubEvent('filter_used');
     setSortMode(value);
     syncDiscoveryParams({ sort: value === 'relevant' ? null : value });
   }
@@ -2688,6 +2699,11 @@ export default function MapPage() {
 
   async function startDirections(place) {
     if (!place) return;
+    if (publicPlaceKey(place.id) && (!place.resultType || place.resultType === 'place')) {
+      void trackXHubEvent('map_directions_click', {
+        entityType: 'place', entityKey: String(place.id)
+      });
+    }
 
     setTripRouteData(null);
     setTripPlannerOpen(false);
@@ -2805,6 +2821,11 @@ export default function MapPage() {
           <input
             value={query}
             onChange={(event) => handleQueryChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && query.trim().length >= 2) {
+                void trackXHubEvent('search_used');
+              }
+            }}
             placeholder="Tìm địa điểm, tuyến đường, khu vực..."
           />
           {query && (

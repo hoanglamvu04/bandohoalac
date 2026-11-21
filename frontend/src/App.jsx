@@ -4,6 +4,8 @@ import Navbar from './components/Navbar.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import Footer from './components/Footer.jsx';
 import RouteSeoRuntime from './components/RouteSeoRuntime.jsx';
+import XHubAnalyticsConsent from './components/XHubAnalyticsConsent.jsx';
+import { trackXHubRoutePageView } from './lib/xhubAnalytics.js';
 
 export default function App() {
   const location = useLocation();
@@ -14,6 +16,12 @@ export default function App() {
   const isMapRoute = location.pathname === '/map' || isHaloRoute || isEmbedRoute;
   const isProfileRoute = location.pathname === '/profile';
   const isPartnerScannerRoute = location.pathname === '/partner/scanner';
+
+  // WA-002: one page_view per actual SPA pathname, never query/search values.
+  // The tracker itself rejects non-public paths, non-consent and unavailable X-HUB.
+  useEffect(() => {
+    void trackXHubRoutePageView(location.pathname);
+  }, [location.pathname]);
 
   // Map layout classes drive the fixed-toolbar geometry. Apply them before
   // paint so the shared desktop header can never briefly sit above / intercept
@@ -151,6 +159,7 @@ export default function App() {
 
       {!isMapRoute && !isPartnerScannerRoute && !isEmbedRoute && <Footer />}
       {!isPartnerScannerRoute && !isEmbedRoute && <BottomNav />}
+      {!isPartnerScannerRoute && !isEmbedRoute && <XHubAnalyticsConsent compactByDefault={isMapRoute} />}
     </div>
   );
 }

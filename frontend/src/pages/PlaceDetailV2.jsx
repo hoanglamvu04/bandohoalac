@@ -43,6 +43,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import SeoHead from '../components/SeoHead.jsx';
 import PlaceContributionPanel from '../components/PlaceContributionPanel.jsx';
 import PlaceReviews from '../components/PlaceReviews.jsx';
+import { publicPlaceKey, trackXHubEvent } from '../lib/xhubAnalytics.js';
 
 function uniqueImages(values = []) {
   return Array.from(new Set(values.filter((value) => typeof value === 'string' && value.trim())));
@@ -204,6 +205,14 @@ export default function PlaceDetailV2() {
     };
   }, [user?.id, place?.id]);
 
+  useEffect(() => {
+    if (status === 'ready' && publicPlaceKey(place?.id)) {
+      void trackXHubEvent('map_place_view', {
+        entityType: 'place', entityKey: String(place.id)
+      });
+    }
+  }, [status, place?.id]);
+
   const images = useMemo(() => uniqueImages([
     ...(Array.isArray(place?.images) ? place.images : []),
     ...(Array.isArray(haloSpot?.media) ? haloSpot.media.map((item) => item?.url) : [])
@@ -287,6 +296,11 @@ export default function PlaceDetailV2() {
         ? await removeFavorite(place.id)
         : await addFavorite(place.id);
       setFavorite(Boolean(data?.favorite));
+      if (!favorite && data?.favorite === true && publicPlaceKey(place.id)) {
+        void trackXHubEvent('favorite_added', {
+          entityType: 'place', entityKey: String(place.id)
+        });
+      }
       showToast(data?.favorite ? 'Đã lưu địa điểm.' : 'Đã bỏ lưu địa điểm.', 'success');
     } catch (error) {
       showToast(error.message, 'error');
@@ -417,12 +431,17 @@ export default function PlaceDetailV2() {
         </div>
 
         <div className="place-v2-actions place-v2-actions-expanded">
-          {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer"><Navigation size={17} /> Chỉ đường</a>}
+          {mapsUrl && <a href={mapsUrl} target="_blank" rel="noreferrer"
+            onClick={() => publicPlaceKey(place.id) && void trackXHubEvent(
+              'map_directions_click', { entityType: 'place', entityKey: String(place.id) }
+            )}><Navigation size={17} /> Chỉ đường</a>}
           <button type="button" onClick={toggleFavorite} className={favorite ? 'active' : ''} disabled={favoriteBusy}>
             <Heart size={17} fill={favorite ? 'currentColor' : 'none'} /> {favorite ? 'Đã lưu' : 'Lưu'}
           </button>
           <button type="button" onClick={sharePlace}><Share2 size={17} /> Chia sẻ</button>
-          {place.phone && <a href={'tel:' + place.phone}><Phone size={17} /> Gọi</a>}
+          {place.phone && <a href={'tel:' + place.phone}
+            onClick={() => void trackXHubEvent('contact_click')}>
+            <Phone size={17} /> Gọi</a>}
           {website && <a href={website} target="_blank" rel="noreferrer"><Globe2 size={17} /> Website</a>}
         </div>
       </section>
@@ -743,7 +762,10 @@ export default function PlaceDetailV2() {
           <p><strong>Danh mục:</strong> {place.category || 'Địa điểm'}</p>
           <p><strong>Địa chỉ:</strong> {place.address || 'Chưa cập nhật'}</p>
           <p><strong>Tọa độ:</strong> {Number(place.lat).toFixed(5)}, {Number(place.lng).toFixed(5)}</p>
-          {mapsUrl && <a className="place-v2-inline-action" href={mapsUrl} target="_blank" rel="noreferrer"><Navigation size={16} /> Mở chỉ đường</a>}
+          {mapsUrl && <a className="place-v2-inline-action" href={mapsUrl} target="_blank" rel="noreferrer"
+            onClick={() => publicPlaceKey(place.id) && void trackXHubEvent(
+              'map_directions_click', { entityType: 'place', entityKey: String(place.id) }
+            )}><Navigation size={16} /> Mở chỉ đường</a>}
         </section>
       </div>
 

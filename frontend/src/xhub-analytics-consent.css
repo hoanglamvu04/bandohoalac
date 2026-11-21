@@ -1,0 +1,31 @@
+/* WA-002 consent UI is separate from existing cookie/auth and analytics flows. */
+.xhub-consent-root { position: fixed; z-index: 120; bottom: max(84px, calc(env(safe-area-inset-bottom) + 70px)); right: max(12px, env(safe-area-inset-right)); width: min(350px, calc(100vw - 24px)); font-family: inherit; color: #183b30; }
+.xhub-consent-panel { padding: 15px 17px; background: #fff; border: 1px solid #cbd9ce; border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,.13); display: grid; gap: 9px; font-size: 13px; }
+.xhub-consent-panel strong { font-size: 14px; }
+.xhub-consent-panel p { padding: 0; margin: 0; line-height: 1.55; }
+.xhub-consent-panel p[role=status] { color: #885d1f; }
+.xhub-consent-actions { display: flex; gap: 8px; }
+.xhub-consent-actions button { min-height: 39px; padding: 8px 10px; flex: 1; border: 1px solid #9cb8a8; border-radius: 8px; color: #1b5845; background: #f5f8f5; font: inherit; font-weight: 700; cursor: pointer; }
+.xhub-consent-actions button:last-child { color: #fff; background: #186145; }
+.xhub-consent-actions button:disabled { opacity: .45; cursor: not-allowed; }
+.xhub-consent-panel a { font-size: 12px; color: #186145; text-decoration: underline; }
+.xhub-consent-compact { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; font-size: 11px; color: #506c5c; }
+.xhub-consent-compact button { padding: 8px 10px; border-radius: 24px; border: 1px solid #bdcfc0; background: #ffffffea; font: inherit; color: #375647; cursor: pointer; box-shadow: 0 1px 8px rgba(0,0,0,.07); }
+.xhub-consent-root button:focus-visible, .xhub-consent-root a:focus-visible { outline: 3px solid #e0a52b; outline-offset: 2px; }
+@media(min-width: 780px) { .xhub-consent-root { bottom: 16px; } }
+
+/* The fullscreen map has fixed right-hand trip controls and bottom overlays.
+   Keep its consent launcher small and anchored on the opposite edge. */
+body.map-route-active .xhub-consent-root {
+  left: max(10px, env(safe-area-inset-left));
+  right: auto;
+  width: min(300px, calc(100vw - 20px));
+}
+body.map-route-active .xhub-consent-compact { align-items: flex-start; }
+body.map-route-active .xhub-consent-compact button {
+  min-height: 32px;
+  padding: 6px 9px;
+  font-size: 11px;
+}
+
+.xhub-consent-root.compact { width: max-content; max-width: calc(100vw - 24px); }
