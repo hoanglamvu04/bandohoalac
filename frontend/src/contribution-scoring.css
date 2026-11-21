@@ -8,3 +8,13 @@
 .estate-nearby-acknowledgement { display: flex; gap: 10px; align-items: flex-start; border: 1px solid #e7cfa4; background: #fff7e7; border-radius: 10px; padding: 12px; font-size: 12px; line-height: 1.6; cursor: pointer; }
 .estate-nearby-acknowledgement input { margin-top: 2px; width: 17px; height: 17px; flex: 0 0 17px; accent-color: #19664a; }
 .estate-nearby-acknowledgement span { flex: 1; }
+
+/* Post-approval check uses only public map/housing endpoints. */
+.estate-publication-check { margin: 14px 0 20px; border: 1px solid #b6d6c2; background: #f2f8f2; border-radius: 12px; padding: 16px 18px; color: #254b38; display: grid; gap: 10px; }
+.estate-publication-check strong { font-size: 15px; line-height: 1.5; }
+.estate-publication-check p { margin: 0; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.estate-publication-check small { font-size: 11px; color: #647a6b; line-height: 1.6; }
+.estate-publication-links { display: flex; gap: 9px; flex-wrap: wrap; }
+.estate-publication-links a, .estate-publication-links button { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 9px 12px; border: 1px solid #91b29c; border-radius: 8px; background: #fff; color: #1c6344; font: inherit; font-size: 12px; font-weight: 750; cursor: pointer; text-decoration: none; }
+.estate-publication-links button:disabled { opacity: .55; cursor: not-allowed; }
+@media (max-width: 640px) { .estate-publication-links > * { flex: 1 1 100%; } }
