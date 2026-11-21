@@ -46,7 +46,8 @@ export default function XHubAnalyticsConsent({ compactByDefault = false }) {
   }
 
   return (
-    <aside className="xhub-consent-root" aria-label="Tùy chọn phân tích ẩn danh"
+    <aside className={expanded ? 'xhub-consent-root' : 'xhub-consent-root compact'}
+      aria-label="Tùy chọn phân tích ẩn danh"
       data-testid="xhub-consent">
       {expanded ? (
         <div className="xhub-consent-panel">
