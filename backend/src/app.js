@@ -23,6 +23,7 @@ import {
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 import { observeApiRequests } from './services/softLaunchMetrics.service.js';
 import { publicReady } from './controllers/operations.controller.js';
+import { createXHubAnalyticsRouter } from './integrations/xhubAnalytics.routes.js';
 import { developerApiGateway } from './middleware/developerApi.js';
 import { resolveCorsOrigin, resolvePublicApiCorsOrigin } from './config/cors.js';
 
@@ -147,6 +148,19 @@ export function createApp() {
   app.use('/api/halo/v1/spots', mapReadRateLimiter);
   app.use('/api/halo/v1/places', mapReadRateLimiter);
   app.use('/api/halo/v1/posts', haloIntegrationRateLimiter);
+
+  // WA-002: independent from GA/soft-launch analytics, CMS, auth and maps.
+  // Disabled by default. Both approval switches and a provisioned backend-only
+  // source are required; a missing/invalid source never prevents API startup.
+  app.use('/api/xhub-analytics', createXHubAnalyticsRouter({
+    enabled: process.env.XHUB_WEB_ANALYTICS_ENABLED === 'true',
+    approved: process.env.XHUB_WEB_ANALYTICS_APPROVED === 'true',
+    siteId: process.env.XHUB_WEB_ANALYTICS_SITE_ID,
+    siteToken: process.env.XHUB_WEB_ANALYTICS_SITE_TOKEN,
+    publicHost: process.env.XHUB_WEB_ANALYTICS_PUBLIC_HOST,
+    baseUrl: process.env.XHUB_WEB_ANALYTICS_BASE_URL || undefined,
+    allowLocalhost: env.nodeEnv !== 'production'
+  }));
 
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, service: 'hola-maps-api' });
