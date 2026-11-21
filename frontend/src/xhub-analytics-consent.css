@@ -27,3 +27,5 @@ body.map-route-active .xhub-consent-compact button {
   padding: 6px 9px;
   font-size: 11px;
 }
+
+.xhub-consent-root.compact { width: max-content; max-width: calc(100vw - 24px); }
