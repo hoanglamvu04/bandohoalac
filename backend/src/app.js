@@ -131,6 +131,9 @@ export function createApp() {
     }
     return appCors(req, res, next);
   });
+  // Parse telemetry separately so even whitespace-heavy bodies are rejected
+  // at 16,000 RAW bytes, before the usual 1 MB JSON parser can consume them.
+  app.use('/api/xhub-analytics', express.json({ limit: 16000 }));
   app.use(express.json({ limit: '1mb' }));
   if (env.nodeEnv !== 'test') {
     app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
