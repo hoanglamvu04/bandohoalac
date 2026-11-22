@@ -44,9 +44,7 @@ export function createWa005PullAnalyticsRouter({
     // X-HUB calls this without browser context, Origin or auth cookies.
     // Global CORS must be mounted AFTER this route.
     if (req.get('Origin') !== undefined || req.get('Referer') !== undefined ||
-        req.get('Cookie') !== undefined || req.get('Sec-Fetch-Site') !== undefined ||
-        req.get('Sec-Fetch-Mode') !== undefined ||
-        req.get('Sec-Fetch-Dest') !== undefined) {
+        req.get('Cookie') !== undefined || req.get('Sec-Fetch-Site') !== undefined) {
       return res.status(403).json({ error: 'Browser access forbidden.' });
     }
     if (req.method !== 'GET') {
