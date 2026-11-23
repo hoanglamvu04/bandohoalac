@@ -187,6 +187,14 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
         AND b.location IS NOT NULL
         AND a.normalized_name <> ''
         AND b.normalized_name = a.normalized_name
+        -- A cafe and a home at the same coordinates are not duplicates.
+        AND b.category_slug IS NOT DISTINCT FROM a.category_slug
+        -- Different property types/sale-vs-rent units on one plot are also
+        -- distinct products. Manual moderation still reviews close candidates.
+        AND (a.category_slug IS DISTINCT FROM 'bat-dong-san' OR (
+          b.housing_property_type IS NOT DISTINCT FROM a.housing_property_type
+          AND b.housing_listing_type IS NOT DISTINCT FROM a.housing_listing_type
+        ))
         AND ST_DWithin(a.location::geography, b.location::geography, $1)
        GROUP BY a.id
      )
