@@ -4,12 +4,24 @@ import {
   listFeaturedPlaces, listHomeSections, getPlaceById, getPlaceBySlug, getNearbyPlaces, getPlacesInBoundsCached
 } from '../services/place.service.js';
 import { smartListPlaces } from '../services/smartPlaceSearch.service.js';
+import { travelTimeDiscovery } from '../services/travelTimeDiscovery.service.js';
 import { getPlaceTrustSummary, recordPlaceActiveConfirmation } from '../services/placeTrust.service.js';
 
 export const getPlaces = asyncHandler(async (req, res) => {
   const { q, category, minRating, limit, offset, radius } = req.query;
   const result = await smartListPlaces({ q, category, minRating, limit, offset, radius });
   res.json(result);
+});
+
+export const getTravelTimePlaces = asyncHandler(async (req, res) => {
+  const { anchor, minutes, category, limit } = req.query;
+  const response = await travelTimeDiscovery.search({
+    anchor, minutes: Number(minutes),
+    category: category === 'all' ? null : category,
+    limit: limit === undefined ? 12 : Number(limit)
+  });
+  res.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=15');
+  res.json(response);
 });
 
 export const getHomeSections = asyncHandler(async (req, res) => {

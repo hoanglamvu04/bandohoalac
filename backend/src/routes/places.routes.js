@@ -1,6 +1,7 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import {
-  getPlaces, getFeatured, getHomeSections, getPlace, getPlaceBySlugHandler, getNearby, getBounds,
+  getPlaces, getTravelTimePlaces, getFeatured, getHomeSections, getPlace, getPlaceBySlugHandler, getNearby, getBounds,
   getPlaceTrust, confirmPlaceActive
 } from '../controllers/places.controller.js';
 import { authenticate } from '../middleware/auth.js';
@@ -16,10 +17,19 @@ import {
   unfavorite
 } from '../controllers/placeEngagement.controller.js';
 import { reviewSchema } from '../validators/review.validators.js';
-import { nearbyQuerySchema, boundsQuerySchema, listPlacesQuerySchema } from '../validators/place.validators.js';
+import { nearbyQuerySchema, boundsQuerySchema, listPlacesQuerySchema, travelTimeQuerySchema } from '../validators/place.validators.js';
 
 const router = Router();
 
+// OSRM matrix is expensive; this endpoint has a stricter per-IP budget and
+// an in-memory bounded coalescing cache in its service.
+const travelTimeLimiter = rateLimit({
+  windowMs: 60_000, limit: 30,
+  standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Bạn đang tìm quá nhanh. Vui lòng thử lại sau.' }
+});
+router.get('/travel-time', travelTimeLimiter,
+  validateQuery(travelTimeQuerySchema), getTravelTimePlaces);
 router.get('/nearby', validateQuery(nearbyQuerySchema), getNearby);
 router.get('/bounds', validateQuery(boundsQuerySchema), getBounds);
 router.get('/favorites/me', authenticate, getFavorites);

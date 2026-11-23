@@ -169,6 +169,13 @@ export function getPlaces(params = {}, options = {}) {
   }));
 }
 
+export function getTravelTimePlaces(params = {}, options = {}) {
+  return unwrap(client.get('/places/travel-time', {
+    params: cleanParams(params),
+    signal: options.signal
+  }));
+}
+
 export function getHousingListings(params = {}, options = {}) {
   return unwrap(client.get('/housing', {
     params: cleanParams(params),

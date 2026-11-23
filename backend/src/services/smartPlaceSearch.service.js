@@ -1,6 +1,7 @@
 import { pool } from '../database/pool.js';
 import { SERVICE_AREA_GEOJSON_STRING } from '../config/mapCoverage.js';
 import { countPlaces, getNearbyPlaces, listPlaces } from './place.service.js';
+import { rankDiscoveryItems } from './smartDiscoveryRanking.service.js';
 
 const CATEGORY_ALIASES = [
   { slug: 'cafe', aliases: ['cafe', 'coffee', 'ca phe', 'quan ca phe'] },
@@ -220,7 +221,7 @@ export async function searchMapFeaturesByName(query, limit = 20) {
   return rows.map(mapFeatureRowToSearchItem);
 }
 
-async function resolveAnchor(anchorQuery) {
+export async function resolveAnchor(anchorQuery) {
   for (const candidate of anchorCandidates(anchorQuery)) {
     let matches = [];
 
@@ -326,7 +327,11 @@ export async function smartListPlaces({
     ]);
 
     return {
-      items: dedupeSearchItems([...placeItems, ...mapItems]),
+      items: rawQuery.length >= 2
+        ? rankDiscoveryItems(dedupeSearchItems([...placeItems, ...mapItems]), {
+          query: rawQuery, category: explicitCategory
+        })
+        : dedupeSearchItems([...placeItems, ...mapItems]),
       meta: {
         mode: 'unified-text',
         interpretedCategory: explicitCategory,
@@ -380,7 +385,11 @@ export async function smartListPlaces({
     preferredRadius: radius
   });
 
-  const items = nearbyResult.items;
+  const items = rankDiscoveryItems(nearbyResult.items, {
+    query: parsed.intent,
+    category: interpretedCategory,
+    nearAnchor: true
+  });
   const total = Number(items[0]?.totalCount) || null;
 
   return {

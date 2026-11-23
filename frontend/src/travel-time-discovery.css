@@ -1,0 +1,158 @@
+/* Smart Discovery V3. Contained within existing HOLA map sidebar. */
+.hm-travel-discovery {
+  margin: 10px 12px 12px;
+  border: 1px solid #d9e3d9;
+  background: #fcfdfb;
+  border-radius: 13px;
+  overflow: hidden;
+  color: #253e32;
+}
+.hm-travel-heading {
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  background: linear-gradient(120deg,#f0f8f1,#fbfcf7);
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+.hm-travel-heading-icon {
+  display: grid;
+  place-items: center;
+  color: #1a704c;
+  background: #e0efdf;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 10px;
+}
+.hm-travel-heading > span:nth-child(2) { flex: 1; display: grid; gap: 2px; }
+.hm-travel-heading strong { font-size: 12px; font-weight: 750; }
+.hm-travel-heading small { font-size: 10px; line-height: 1.4; color: #617567; }
+.hm-travel-heading > svg:last-child { transition: transform .2s; }
+.hm-travel-heading > svg.expanded { transform: rotate(180deg); }
+.hm-travel-body { padding: 12px; display: grid; gap: 12px; }
+.hm-travel-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.hm-travel-fields label { display: grid; gap: 5px; min-width: 0; }
+.hm-travel-fields label span { font-size: 10px; color: #53665a; font-weight: 700; }
+.hm-travel-fields select {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid #cddccf;
+  background: #fff;
+  color: #294333;
+  font-size: 11px;
+  font-family: inherit;
+}
+.hm-travel-minutes { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
+.hm-travel-minutes button {
+  border: 1px solid #d6e1d7;
+  background: #f6f8f5;
+  color: #496151;
+  border-radius: 8px;
+  padding: 8px 2px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hm-travel-minutes button[aria-pressed=true] {
+  color: #fff;
+  border-color: #176343;
+  background: #176343;
+}
+.hm-travel-run {
+  border: 0;
+  border-radius: 9px;
+  background: #176343;
+  color: white;
+  cursor: pointer;
+  padding: 11px;
+  font-weight: 750;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.hm-travel-run:disabled { opacity: .65; cursor: progress; }
+.hm-travel-results { display: grid; gap: 8px; }
+.hm-travel-result-summary {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #1e694c;
+  align-items: flex-start;
+  font-weight: 700;
+}
+.hm-travel-result-summary svg { flex-shrink: 0; }
+.hm-travel-result {
+  display: flex;
+  padding: 9px 0;
+  gap: 9px;
+  border-top: 1px solid #e6ece5;
+  min-width: 0;
+}
+.hm-travel-result-icon {
+  border-radius: 8px;
+  flex: 0 0 29px;
+  width: 29px;
+  height: 29px;
+  background: #edf4eb;
+  display: grid;
+  place-items: center;
+  color: #297254;
+}
+.hm-travel-result-copy { display: grid; flex: 1; min-width: 0; gap: 4px; }
+.hm-travel-result-copy > strong { font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.hm-travel-result-copy > small { color: #536a59; font-size: 10px; line-height: 1.4; }
+.hm-travel-links { display: flex; gap: 12px; align-items: center; }
+.hm-travel-links button, .hm-travel-links a,
+.hm-travel-clear {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: #176343;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.hm-travel-message, .hm-travel-footnote {
+  margin: 0;
+  color: #66786b;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.hm-travel-message[role=alert] { color: #a13d27; }
+.hm-travel-footnote svg { display: inline-block; vertical-align: middle; }
+.hm-travel-clear { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+.hm-travel-discovery button:focus-visible,
+.hm-travel-discovery select:focus-visible,
+.hm-travel-discovery a:focus-visible { outline: 2px solid #e19f30; outline-offset: 2px; }
+@media (max-width: 390px) {
+  .hm-travel-fields { grid-template-columns: 1fr; }
+}
+
+.hm-travel-suggestions { display: grid; gap: 6px; }
+.hm-travel-suggestions > small { font-size: 10px; color: #728575; font-weight: 700; }
+.hm-travel-suggestions > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.hm-travel-suggestions button {
+  border: 1px solid #c9d9d0;
+  border-radius: 24px;
+  background: #fff;
+  color: #285e47;
+  padding: 6px 8px;
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.hm-travel-suggestions button:hover { background: #eff7f0; }
