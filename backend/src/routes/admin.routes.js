@@ -13,7 +13,7 @@ import {
   adminRejectEmbedSchema,
   adminRotateEmbedSchema
 } from '../validators/embed.validators.js';
-import { getContributions, getContribution, getRealEstateDuplicates, approve, reject } from '../controllers/admin.controller.js';
+import { getContributions, getContribution, getRealEstateDuplicates, getPendingPropertyRiskQueue, approve, reject } from '../controllers/admin.controller.js';
 import { authenticate, authorize, requireAdminSecurity, requireCtvLevel } from '../middleware/auth.js';
 import { adminOperationsOverview } from '../controllers/operations.controller.js';
 import {
@@ -22,7 +22,7 @@ import {
 import { feedbackListSchema, feedbackReviewSchema } from '../validators/softLaunch.validators.js';
 import { validateQuery } from '../validators/validate.js';
 import { validateBody } from '../validators/validate.js';
-import { rejectContributionSchema } from '../validators/admin.validators.js';
+import { rejectContributionSchema, propertyRiskQueueSchema } from '../validators/admin.validators.js';
 import {
   archivePlaceAdmin,
   createPlaceAdmin,
@@ -185,6 +185,8 @@ router.patch('/soft-launch/feedback/:id', adminOnly, validateBody(feedbackReview
 router.get('/soft-launch/vitals', adminOnly, adminVitalOverview);
 
 router.get('/contributions', ctvStaff, getContributions);
+router.get('/contributions/property-risk-queue', dataStaff,
+  validateQuery(propertyRiskQueueSchema), getPendingPropertyRiskQueue);
 router.get('/contributions/:id', ctvStaff, getContribution);
 router.get('/contributions/:id/duplicates', dataStaff, getRealEstateDuplicates);
 router.post('/contributions/:id/approve', ctvStaff, approve);
