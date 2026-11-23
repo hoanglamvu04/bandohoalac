@@ -26,8 +26,11 @@ ALTER TABLE places ADD COLUMN IF NOT EXISTS housing_published_at TIMESTAMPTZ;
 CREATE OR REPLACE FUNCTION set_housing_publication_timestamp()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW.status = 'PUBLISHED'
-     AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM 'PUBLISHED') THEN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.status = 'PUBLISHED' THEN
+      NEW.housing_published_at = statement_timestamp();
+    END IF;
+  ELSIF NEW.status = 'PUBLISHED' AND OLD.status IS DISTINCT FROM 'PUBLISHED' THEN
     NEW.housing_published_at = statement_timestamp();
   END IF;
   RETURN NEW;
