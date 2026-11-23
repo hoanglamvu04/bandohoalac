@@ -159,6 +159,6 @@ test('Data Trust V3 warns distinct apartment units are not automatically duplica
   const results = page.getByTestId('estate-duplicate-check-6201');
   await results.getByRole('button', { name: 'Kiểm tra tin gần vị trí (100 m)' }).click();
   await expect(results).toContainText('Khác số căn/phòng/lô');
-  await expect(results).toContainText('gần nhau không có nghĩa là trùng');
-  await expect(results).not.toContainText('Tự động từ chối');
+  await expect(results).toContainText('Gần nhau không có nghĩa là trùng');
+  await expect(results).toContainText('không tự từ chối tin');
 });
