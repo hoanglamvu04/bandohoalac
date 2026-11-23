@@ -51,7 +51,7 @@ test('Smart Discovery V3 calculates real driving-time results and opens a map pi
   await expect(panel).toBeVisible();
   expect(requests).toHaveLength(0); // no eager OSRM requests
   await panel.getByRole('button', { name: /Khám phá theo phút lái xe/ }).click();
-  await panel.getByRole('button', { name: '5 phút' }).click();
+  await panel.getByRole('button', { name: '5 phút', exact: true }).click();
   await panel.getByLabel('Loại địa điểm theo thời gian').selectOption('cafe');
   await panel.getByRole('button', { name: 'Tìm địa điểm phù hợp' }).click();
 
