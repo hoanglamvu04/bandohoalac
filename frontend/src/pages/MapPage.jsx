@@ -44,6 +44,7 @@ import {
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import MapView from '../components/MapView.jsx';
 import TripPlanner from '../components/TripPlanner.jsx';
+import TravelTimeDiscovery from '../components/TravelTimeDiscovery.jsx';
 import CollectionPicker from '../components/CollectionPicker.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -65,6 +66,7 @@ import {
   removeFavorite
 } from '../services/api.js';
 import { LOCAL_BASEMAP_OPTIONS as BASEMAP_OPTIONS } from '../localBasemap.js';
+import { focusHolaMapPoint } from '../mapInteractionBridge.js';
 import { publicPlaceKey, trackXHubEvent } from '../lib/xhubAnalytics.js';
 import { getBestBrowserLocation } from '../utils/geolocation.js';
 import { distanceMeters, formatOpenStatus, isPlaceOpenNow } from '../utils/placeDiscovery.js';
@@ -2434,6 +2436,30 @@ export default function MapPage() {
     });
   }
 
+  function openTravelTimeResult(place) {
+    if (!place || !Number.isFinite(Number(place.lat)) ||
+        !Number.isFinite(Number(place.lng))) return;
+
+    // A result may be outside the previous viewport and its map layer may
+    // not have been loaded. Pin it into the existing progressive POI source.
+    setPlaces((current) => mergeProgressivePlaces(current, [place]));
+    setSelectedId(place.id);
+    setQuery('');
+    setCategory(place.categorySlug || 'all');
+    setMinRating('');
+    setOpenNow(false);
+    setPlaceScope('viewport');
+    setNearbyRadius(0);
+    setTripPlannerOpen(false);
+    syncDiscoveryParams({
+      place: place.id, q: null, category: place.categorySlug || null,
+      vertical: null, rating: null, open: null
+    });
+    focusHolaMapPoint({ lat: Number(place.lat), lng: Number(place.lng), zoom: 15 });
+    if (typeof window !== 'undefined' &&
+        window.matchMedia('(max-width: 760px)').matches) setLeftOpen(false);
+  }
+
   function togglePlaceSelection(place) {
     if (!place) return;
 
@@ -3362,6 +3388,12 @@ export default function MapPage() {
             <ChevronRight size={16} />
           </Link>
         )}
+
+        <TravelTimeDiscovery
+          defaultCategory={isHousingMode ? 'bat-dong-san' : isFoodMode ? 'an-uong' : 'all'}
+          onChoose={openTravelTimeResult}
+          onQuickSearch={handleQueryChange}
+        />
 
         <section className="hm-panel-section hm-place-results">
           <div className="hm-section-title">
