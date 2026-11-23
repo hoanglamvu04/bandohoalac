@@ -176,6 +176,11 @@ export async function listHousingListings(filters = {}) {
     conditions.push('hl.listing_type = $' + params.length);
   }
 
+  if (filters.propertyType) {
+    params.push(filters.propertyType);
+    conditions.push('hl.property_type = $' + params.length);
+  }
+
   if (filters.q) {
     params.push(String(filters.q).trim());
     const ref = '$' + params.length;

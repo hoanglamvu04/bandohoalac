@@ -183,6 +183,29 @@ export function getHousingListings(params = {}, options = {}) {
   }));
 }
 
+export function compareHousing(params = {}, options = {}) {
+  return unwrap(client.get('/housing/compare', {
+    params: { ids: (params.ids || []).join(',') },
+    signal: options.signal
+  }));
+}
+
+export function listHousingSavedSearches() {
+  return unwrap(client.get('/housing/saved-searches'));
+}
+
+export function createHousingSavedSearch(name, filters) {
+  return unwrap(client.post('/housing/saved-searches', { name, filters }));
+}
+
+export function toggleHousingSavedSearch(id, enabled) {
+  return unwrap(client.patch('/housing/saved-searches/' + encodeURIComponent(id), { enabled }));
+}
+
+export function deleteHousingSavedSearch(id) {
+  return unwrap(client.delete('/housing/saved-searches/' + encodeURIComponent(id)));
+}
+
 export function getMyHousingListings() {
   return unwrap(client.get('/housing/mine'));
 }

@@ -1,0 +1,112 @@
+/* Sprint 2: compact housing tools inside existing HOLA map sidebar. */
+.hm-housing-intel {
+  margin: 9px 12px 12px;
+  border: 1px solid #d5dfda;
+  border-radius: 12px;
+  background: #fff;
+  color: #24473a;
+  overflow: hidden;
+}
+.hm-housing-intel-heading {
+  background: linear-gradient(120deg,#edf6f2,#f8faf7);
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.hm-housing-intel-heading > svg:first-child {
+  color: #217957;
+  flex-shrink: 0;
+}
+.hm-housing-intel-heading > span { flex: 1; display: grid; gap: 3px; }
+.hm-housing-intel-heading strong { font-size: 12px; font-weight: 750; }
+.hm-housing-intel-heading small { font-size: 10px; color: #5e756b; line-height: 1.4; }
+.hm-housing-intel-heading > svg:last-child { transition: transform .2s; }
+.hm-housing-intel-heading > svg.expanded { transform: rotate(180deg); }
+.hm-housing-intel-body { display: grid; gap: 9px; padding: 12px; }
+.hm-intel-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+.hm-intel-section-head strong { font-weight: 750; }
+.hm-intel-section-head small { font-size: 10px; color: #728678; }
+.hm-intel-hint { font-size: 10px; line-height: 1.55; color: #5e7065; margin: 0; }
+.hm-intel-hint a { color: #17704d; text-decoration: underline; }
+.hm-intel-select-label { display: grid; gap: 5px; font-size: 11px; }
+.hm-intel-select-label > span { color: #475f53; font-size: 10px; font-weight: 750; }
+.hm-intel-select-label select, .hm-intel-select-label input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  border: 1px solid #ccd9ce;
+  border-radius: 8px;
+  background: #fff;
+  color: #2a4b37;
+  padding: 6px 9px;
+  font-family: inherit;
+  font-size: 11px;
+}
+.hm-intel-selected { display: flex; flex-wrap: wrap; gap: 5px; }
+.hm-intel-selected > span {
+  display: inline-flex; align-items: center; gap: 6px;
+  max-width: 100%; padding: 6px 7px; background: #eef5ef;
+  color: #266044; border-radius: 7px; font-size: 10px;
+}
+.hm-intel-selected > span > span {
+  max-width: 190px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.hm-intel-selected button {
+  display: inline-flex; border: 0; background: transparent;
+  color: #266044; padding: 2px; cursor: pointer;
+}
+.hm-intel-primary, .hm-intel-save {
+  border: 0; border-radius: 8px;
+  background: #1d704b; color: #fff;
+  cursor: pointer; width: 100%; min-height: 37px;
+  font-family: inherit; font-size: 11px; font-weight: 750;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+}
+.hm-intel-primary:disabled, .hm-intel-save:disabled { opacity: .48; cursor: not-allowed; }
+.hm-intel-save { background: #276f51; }
+.hm-intel-error { margin: 0; color: #a12e26; font-size: 11px; line-height: 1.5; }
+.hm-intel-divider { height: 1px; background: #e3eae6; margin: 5px 0; }
+.hm-intel-compare-scroll { max-width: 100%; overflow-x: auto; display: grid; gap: 8px; }
+.hm-intel-table { border-collapse: collapse; width: max-content; min-width: 100%; table-layout: auto; }
+.hm-intel-table th, .hm-intel-table td {
+  border: 1px solid #e1e8e2;
+  min-width: 120px; max-width: 170px;
+  font-size: 10px; line-height: 1.5; padding: 8px;
+  text-align: left; vertical-align: top; overflow-wrap: anywhere;
+}
+.hm-intel-table th:first-child { min-width: 95px; max-width: 125px; }
+.hm-intel-table thead th { background: #eef6f0; color: #274c36; }
+.hm-intel-table tbody th { background: #f8faf8; color: #526657; font-weight: 700; }
+.hm-intel-table a { color: #176644; text-decoration: underline; }
+.hm-intel-saved-list { display: grid; gap: 7px; }
+.hm-intel-saved-row {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 5px; border: 1px solid #e0e9e1; border-radius: 9px;
+  background: #f9fbf9; padding: 8px;
+}
+.hm-intel-saved-row > div { width: 100%; display: grid; gap: 3px; min-width: 0; }
+.hm-intel-saved-row strong { font-size: 11px; overflow-wrap: anywhere; }
+.hm-intel-saved-row small { font-size: 10px; color: #66806c; }
+.hm-intel-saved-row > button {
+  display: inline-flex; gap: 4px; align-items: center;
+  background: #fff; border: 1px solid #d2e0d5; border-radius: 6px;
+  padding: 5px 8px; font: inherit; font-size: 10px; font-weight: 700;
+  color: #216c4b; cursor: pointer;
+}
+.hm-intel-saved-row > button:last-child { margin-left: auto; color: #a13c3c; }
+.hm-housing-intel button:focus-visible, .hm-housing-intel select:focus-visible,
+.hm-housing-intel input:focus-visible, .hm-housing-intel a:focus-visible {
+  outline: 2px solid #bc9839; outline-offset: 2px;
+}

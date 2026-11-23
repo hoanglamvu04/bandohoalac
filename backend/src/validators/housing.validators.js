@@ -10,6 +10,7 @@ export const housingListQuerySchema = z.object({
   minPrice: numericString.optional(),
   maxPrice: numericString.optional(),
   listingType: z.enum(['SALE', 'RENT']).optional(),
+  propertyType: z.enum(['LAND', 'HOUSE', 'APARTMENT', 'VILLA', 'COMMERCIAL', 'OTHER']).optional(),
   minArea: numericString.optional(),
   maxArea: numericString.optional(),
   minAvailableRooms: numericString.optional(),
@@ -61,3 +62,51 @@ export const housingManageActionSchema = z.object({
   action: z.enum(['CONFIRM_ACTIVE', 'PAUSE', 'SOLD', 'RENTED'])
 });
 
+
+const numericFilter = z.coerce.number().finite().nonnegative().max(100000000000000);
+const areaFilter = z.coerce.number().finite().positive().max(100000);
+const booleanFilter = z.union([z.boolean(), z.enum(['true','false'])
+  .transform((v) => v === 'true')]);
+
+// Explicitly persisted server-side only after login. No GPS, IP, session,
+// phone, contact or arbitrary URL may be stored as search criteria.
+export const savedHousingFiltersSchema = z.object({
+  q: z.string().trim().min(2).max(100).optional(),
+  listingType: z.enum(['SALE', 'RENT']).optional(),
+  propertyType: z.enum(['LAND','HOUSE','APARTMENT','VILLA','COMMERCIAL','OTHER']).optional(),
+  minPrice: numericFilter.optional(),
+  maxPrice: numericFilter.optional(),
+  minRent: numericFilter.optional(),
+  maxRent: numericFilter.optional(),
+  minArea: areaFilter.optional(),
+  maxArea: areaFilter.optional(),
+  availability: z.enum(['AVAILABLE','LIMITED','FULL','UNKNOWN']).optional(),
+  availableOnly: booleanFilter.optional(),
+  partnerOnly: booleanFilter.optional(),
+  privateBathroom: booleanFilter.optional(),
+  parking: booleanFilter.optional(),
+  maxDistanceFpt: z.coerce.number().int().min(100).max(50000).optional()
+}).strict().superRefine((v, ctx) => {
+  for (const [min, max] of [['minPrice','maxPrice'], ['minRent','maxRent'], ['minArea','maxArea']]) {
+    if (v[min] !== undefined && v[max] !== undefined && v[min] > v[max]) {
+      ctx.addIssue({ code: 'custom', message: min + ' must not exceed ' + max, path: [min] });
+    }
+  }
+});
+
+export const createSavedHousingSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  filters: savedHousingFiltersSchema
+}).strict();
+
+export const updateSavedHousingStatusSchema = z.object({
+  enabled: z.boolean()
+}).strict();
+
+export const housingCompareQuerySchema = z.object({
+  ids: z.string().regex(/^\d{1,15}(,\d{1,15}){1,3}$/)
+}).strict();
+
+export const savedHousingSearchIdSchema = z.object({
+  id: z.string().regex(/^[1-9]\d{0,14}$/)
+}).strict();
