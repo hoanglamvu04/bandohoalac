@@ -61,7 +61,7 @@ export default function TravelTimeDiscovery({ defaultCategory = 'all', onChoose,
       if (!controller.signal.aborted) setData(result);
     } catch (reason) {
       if (!controller.signal.aborted) {
-        const status = reason?.response?.status;
+        const status = reason?.status ?? reason?.response?.status;
         setError(status === 503
           ? 'Máy chủ định tuyến chưa phản hồi. Vui lòng thử lại sau.'
           : status === 404
