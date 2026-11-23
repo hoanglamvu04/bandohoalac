@@ -1,4 +1,5 @@
 import { pool } from '../database/pool.js';
+import { AppError } from '../utils/AppError.js';
 
 const RADIUS_M = 100;
 const MAX_PER_SOURCE = 12;
@@ -285,5 +286,78 @@ export async function findNearbyPropertyCandidates({
     requiresReview: candidates.some((candidate) => candidate.risk !== 'NEARBY'),
     radiusM: RADIUS_M,
     version: 3
+  };
+}
+
+/**
+ * On-demand, read-only triage for staff. The underlying review endpoint is
+ * still the authority before each approval; a batch scan is NOT an approval.
+ *
+ * Caps database work at 10 pending contributions * 2 spatial lookups per call.
+ * No raw payload, phone, location or form data leave this staff-only API.
+ */
+export async function scanPendingPropertyRiskQueue({
+  limit = 10, offset = 0, client = pool
+} = {}) {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 10 ||
+      !Number.isInteger(offset) || offset < 0 || offset > 500) {
+    throw new AppError('Phạm vi rà soát tin không hợp lệ.', 400);
+  }
+  const { rows } = await client.query(
+    `SELECT id, created_at, payload
+       FROM contributions
+      WHERE status = 'PENDING'
+        AND type = 'CREATE_PLACE'
+        AND payload #>> '{place,categorySlug}' = 'bat-dong-san'
+        AND payload #> '{place,realEstate}' IS NOT NULL
+      ORDER BY created_at ASC, id ASC
+      LIMIT $1 OFFSET $2`,
+    [limit + 1, offset]
+  );
+
+  const prioritized = [];
+  const page = rows.slice(0, limit);
+  // Sequential bounds are intentional; no runaway parallel PostGIS queries.
+  for (const item of page) {
+    const result = await findNearbyPropertyCandidates({
+      contributionId: item.id,
+      payload: item.payload,
+      client
+    });
+    if (!result.items.length) continue;
+    const top = result.items[0];
+    prioritized.push({
+      contributionId: Number(item.id),
+      name: String(item.payload?.place?.name || '').slice(0, 140),
+      createdAt: item.created_at,
+      priority: top.risk === 'LIKELY_DUPLICATE'
+        ? 'HIGH' : top.risk === 'REVIEW' ? 'MEDIUM' : 'LOW',
+      candidateCount: result.items.length,
+      candidate: {
+        id: top.id,
+        source: top.source,
+        name: top.name,
+        risk: top.risk,
+        confidence: top.confidence,
+        distanceM: top.distanceM,
+        evidence: top.evidence
+      }
+    });
+  }
+  const priorityOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+  prioritized.sort((a, b) =>
+    priorityOrder[a.priority] - priorityOrder[b.priority] ||
+    (b.candidate?.confidence || 0) - (a.candidate?.confidence || 0) ||
+    a.contributionId - b.contributionId
+  );
+  return {
+    version: 3,
+    mode: 'READ_ONLY',
+    scannedCount: page.length,
+    needsAttention: prioritized.filter((item) => item.priority !== 'LOW').length,
+    items: prioritized,
+    offset,
+    limit,
+    hasMore: rows.length > limit
   };
 }
