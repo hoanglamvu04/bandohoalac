@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import {
   getEmbedApplicationsAdmin,
   createEmbedGrantAdmin,
@@ -185,8 +186,18 @@ router.patch('/soft-launch/feedback/:id', adminOnly, validateBody(feedbackReview
 router.get('/soft-launch/vitals', adminOnly, adminVitalOverview);
 
 router.get('/contributions', ctvStaff, getContributions);
+// A scan can run at most 20 bounded PostGIS lookups. Restrict burst even
+// for authenticated staff to protect production moderation latency.
+const propertyRiskScanLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 6,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Đã đạt giới hạn quét tin trong phút này.' }
+});
 router.get('/contributions/property-risk-queue', dataStaff,
-  validateQuery(propertyRiskQueueSchema), getPendingPropertyRiskQueue);
+  propertyRiskScanLimiter, validateQuery(propertyRiskQueueSchema),
+  getPendingPropertyRiskQueue);
 router.get('/contributions/:id', ctvStaff, getContribution);
 router.get('/contributions/:id/duplicates', dataStaff, getRealEstateDuplicates);
 router.post('/contributions/:id/approve', ctvStaff, approve);
