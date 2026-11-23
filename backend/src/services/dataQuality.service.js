@@ -168,7 +168,9 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
          hl.expires_at AS housing_expires_at,
          ST_Y(p.location)::double precision AS lat,
          ST_X(p.location)::double precision AS lng,
-         LOWER(REGEXP_REPLACE(TRIM(p.name), '\\s+', ' ', 'g')) AS normalized_name,
+         LOWER(public.hola_unaccent(
+           REGEXP_REPLACE(TRIM(p.name), '\\s+', ' ', 'g')
+         )) AS normalized_name,
          (SELECT COUNT(*)::int FROM place_images pi WHERE pi.place_id = p.id) AS image_count,
          (SELECT MAX(pi.created_at) FROM place_images pi WHERE pi.place_id = p.id) AS latest_image_at
        FROM places p
