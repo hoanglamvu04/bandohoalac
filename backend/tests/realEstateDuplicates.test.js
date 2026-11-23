@@ -5,8 +5,8 @@ import { pool } from '../src/database/pool.js';
 import { approveContribution } from '../src/services/admin.service.js';
 import {
   normalizePropertyPhone, normalizePropertyTitle, propertyTitleSimilarity,
-  propertyUnitKey, rankPropertyCandidate, findNearbyPropertyCandidates,
-  scanPendingPropertyRiskQueue
+  propertyUnitKey, rankPropertyCandidate, isBlockingExactPropertyDuplicate,
+  findNearbyPropertyCandidates, scanPendingPropertyRiskQueue
 } from '../src/services/realEstateDuplicates.service.js';
 
 const sample = {
@@ -41,6 +41,62 @@ test('phone and title comparisons do not confuse different units on the same plo
     id: 3, source: 'PENDING', name: 'Nhà phố khác',
     phone: '0987654321', distanceM: 80
   }, sample.place).risk, 'REVIEW');
+});
+
+
+test('Data Trust V4 recognizes explicit transaction/type conflicts and only hard-blocks exact structured duplicates', () => {
+  const submission = {
+    name: 'Nhà phố 3 tầng gần FPT',
+    phone: '0987654321',
+    realEstate: {
+      transactionType: 'SALE', propertyType: 'HOUSE',
+      areaM2: 100, totalPriceVnd: 3000000000
+    }
+  };
+  const candidate = {
+    name: 'Nha pho - 3 tang gan FPT!', phone: '+84 987 654 321',
+    listingType: 'SALE', propertyType: 'HOUSE',
+    areaM2: 101, totalPriceVnd: 3020000000, distanceM: 12
+  };
+  assert.equal(isBlockingExactPropertyDuplicate(candidate, submission), true,
+    'accents/punctuation alone cannot bypass the final exact-duplicate guard');
+
+  const rented = {
+    ...candidate, listingType: 'RENT',
+    totalPriceVnd: null, monthlyRent: 10000000
+  };
+  const rentRisk = rankPropertyCandidate(rented, submission);
+  assert.equal(rentRisk.risk, 'REVIEW', 'one agent may list sale and rent at the same address');
+  assert.equal(rentRisk.differentTransaction, true);
+  assert.ok(rentRisk.evidence.includes('DIFFERENT_TRANSACTION'));
+  assert.equal(isBlockingExactPropertyDuplicate(rented, submission), false);
+
+  const apartment = { ...candidate, propertyType: 'APARTMENT' };
+  const typeRisk = rankPropertyCandidate(apartment, submission);
+  assert.equal(typeRisk.risk, 'REVIEW');
+  assert.equal(typeRisk.differentPropertyType, true);
+  assert.ok(typeRisk.evidence.includes('DIFFERENT_PROPERTY_TYPE'));
+  assert.equal(isBlockingExactPropertyDuplicate(apartment, submission), false);
+
+  assert.equal(isBlockingExactPropertyDuplicate({
+    ...candidate, name: 'Căn 102 tòa A'
+  }, { ...submission, name: 'Căn 101 tòa A' }), false);
+  assert.equal(isBlockingExactPropertyDuplicate({ ...candidate, areaM2: 140 }, submission), false);
+  assert.equal(isBlockingExactPropertyDuplicate({
+    ...candidate, totalPriceVnd: 4500000000
+  }, submission), false);
+  assert.equal(isBlockingExactPropertyDuplicate({
+    ...candidate, distanceM: 27
+  }, submission), false);
+  assert.equal(isBlockingExactPropertyDuplicate({
+    ...candidate, phone: '0912345678'
+  }, submission), false);
+
+  const unrelated = rankPropertyCandidate({
+    ...rented, phone: '0912345678'
+  }, submission);
+  assert.equal(unrelated.risk, 'NEARBY',
+    'conflicting sale/rent with no other corroboration is just a nearby listing');
 });
 
 test('duplicate suggestions omit self, combine both sources, sort by risk', async () => {
@@ -264,7 +320,7 @@ test('Data Trust V3 carries only bounded staff-only matching details from both s
   const result = await findNearbyPropertyCandidates({
     contributionId: 90, payload: sample, client
   });
-  assert.equal(result.version, 3);
+  assert.equal(result.version, 4);
   assert.equal(result.items.length, 2);
   assert.equal(result.items[0].source, 'PUBLISHED');
   assert.equal(result.items[0].samePropertyType, true);
@@ -309,7 +365,7 @@ test('Data Trust V3 batch triage prioritizes genuine risk without exposing priva
   const triage = await scanPendingPropertyRiskQueue({
     client, limit: 2, offset: 0
   });
-  assert.equal(triage.version, 3);
+  assert.equal(triage.version, 4);
   assert.equal(triage.mode, 'READ_ONLY');
   assert.equal(triage.scannedCount, 2);
   assert.equal(triage.hasMore, true);

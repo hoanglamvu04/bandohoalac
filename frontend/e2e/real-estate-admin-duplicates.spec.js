@@ -211,3 +211,21 @@ test('Data Trust V3 lets Moderators scan a read-only risk queue before review', 
     .toContainText('Nhà phố 3 tầng gần FPT');
   expect(nearbyCount).toBe(1);
 });
+
+test('Data Trust V4 labels contradictory sale/rent and property types in Admin review', async ({ page }) => {
+  await serveAdmin(page, () => ({
+    version: 4, radiusM: 100, requiresReview: true,
+    items: [{
+      id: 9006, source: 'PUBLISHED', name: 'Nhà phố gần FPT',
+      distanceM: 4, risk: 'REVIEW', confidence: 39,
+      evidence: ['SAME_CONTACT', 'DIFFERENT_TRANSACTION', 'DIFFERENT_PROPERTY_TYPE']
+    }]
+  }), () => {});
+  await page.goto('/admin/contributions');
+  const results = page.getByTestId('estate-duplicate-check-6201');
+  await results.getByRole('button', { name: 'Kiểm tra tin gần vị trí (100 m)' }).click();
+  await expect(results).toContainText('Khác giao dịch bán/thuê');
+  await expect(results).toContainText('Khác loại bất động sản');
+  await expect(results).toContainText('Cần đối chiếu');
+  await expect(results).not.toContainText('Có dấu hiệu trùng');
+});

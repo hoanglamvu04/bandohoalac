@@ -105,6 +105,10 @@ export function rankPropertyCandidate(candidate, submitted) {
     a.transactionType === b.transactionType;
   const samePropertyType = Boolean(a.propertyType) &&
     a.propertyType === b.propertyType;
+  const differentTransaction = Boolean(a.transactionType && b.transactionType) &&
+    a.transactionType !== b.transactionType;
+  const differentPropertyType = Boolean(a.propertyType && b.propertyType) &&
+    a.propertyType !== b.propertyType;
   const similarArea = closeEnough(a.areaM2, b.areaM2, 0.06);
   const similarPrice = sameTransaction && closeEnough(
     a.transactionType === 'SALE' ? a.price : a.rent,
@@ -125,11 +129,14 @@ export function rankPropertyCandidate(candidate, submitted) {
     ? Math.max(0, Number(candidate.distanceM)) : RADIUS_M + 1;
   const strongTitle = titleSimilarity >= 0.88;
   const matchingProperty = sameTransaction && samePropertyType && similarArea && similarPrice;
-  const likely = !differentUnit && !conflictingDetails &&
+  // A shared agent can use the same contact, headline and coordinates for
+  // distinct sale/rental listings or different types of real estate.
+  const compatibleTypes = !differentTransaction && !differentPropertyType;
+  const likely = compatibleTypes && !differentUnit && !conflictingDetails &&
     samePhone && strongTitle && distanceM <= 25;
   const review = samePhone ||
-    (!differentUnit && strongTitle && distanceM <= 35) ||
-    (!differentUnit && titleSimilarity >= MIN_SIMILAR_TITLE &&
+    (compatibleTypes && !differentUnit && strongTitle && distanceM <= 35) ||
+    (compatibleTypes && !differentUnit && titleSimilarity >= MIN_SIMILAR_TITLE &&
       matchingProperty && distanceM <= 45);
   const risk = likely ? 'LIKELY_DUPLICATE' : review ? 'REVIEW' : 'NEARBY';
   const evidence = [];
@@ -138,6 +145,8 @@ export function rankPropertyCandidate(candidate, submitted) {
   else if (titleSimilarity >= MIN_SIMILAR_TITLE) evidence.push('SIMILAR_TITLE');
   if (sameTransaction) evidence.push('SAME_TRANSACTION');
   if (samePropertyType) evidence.push('SAME_PROPERTY_TYPE');
+  if (differentTransaction) evidence.push('DIFFERENT_TRANSACTION');
+  if (differentPropertyType) evidence.push('DIFFERENT_PROPERTY_TYPE');
   if (similarArea) evidence.push('SIMILAR_AREA');
   if (similarPrice) evidence.push('SIMILAR_PRICE');
   if (differentUnit) evidence.push('DIFFERENT_UNIT');
@@ -149,7 +158,8 @@ export function rankPropertyCandidate(candidate, submitted) {
     (sameTransaction ? 6 : 0) + (samePropertyType ? 7 : 0) +
     (similarArea ? 8 : 0) + (similarPrice ? 8 : 0) +
     (distanceM <= 25 ? 16 : distanceM <= 50 ? 10 : 3) -
-    (differentUnit ? 45 : 0) - (conflictingDetails ? 15 : 0)
+    (differentUnit ? 45 : 0) - (conflictingDetails ? 15 : 0) -
+    (differentTransaction ? 25 : 0) - (differentPropertyType ? 20 : 0)
   )));
 
   return {
@@ -159,6 +169,8 @@ export function rankPropertyCandidate(candidate, submitted) {
     titleSimilarity,
     sameTransaction,
     samePropertyType,
+    differentTransaction,
+    differentPropertyType,
     similarArea,
     similarPrice,
     differentUnit,
@@ -168,6 +180,19 @@ export function rankPropertyCandidate(candidate, submitted) {
     evidence,
     risk
   };
+}
+
+// Only genuinely near-identical, structured active listings are hard-blocked
+// during approval. Heuristic LIKELY_DUPLICATE alone NEVER implies rejection.
+// Different sale/rent types, property types, units, area or price are
+// handled by the human moderation workflow instead.
+export function isBlockingExactPropertyDuplicate(candidate, submitted) {
+  const match = rankPropertyCandidate(candidate, submitted);
+  const distance = Number(candidate?.distanceM);
+  return match.samePhone && match.sameTitle && match.sameTransaction &&
+    match.samePropertyType && match.similarArea && match.similarPrice &&
+    !match.differentUnit && !match.conflictingArea && !match.conflictingPrice &&
+    Number.isFinite(distance) && distance >= 0 && distance <= 25;
 }
 
 // Read-only, bounded suggestions. Same address or coordinates alone MUST
@@ -183,7 +208,7 @@ export async function findNearbyPropertyCandidates({
   const lng = Number(location?.lng);
   if (!place?.realEstate || !Number.isFinite(lat) || !Number.isFinite(lng) ||
       Math.abs(lat) > 90 || Math.abs(lng) > 180) {
-    return { items: [], requiresReview: false, radiusM: RADIUS_M, version: 3 };
+    return { items: [], requiresReview: false, radiusM: RADIUS_M, version: 4 };
   }
 
   const { rows: published } = await client.query(
@@ -285,7 +310,7 @@ export async function findNearbyPropertyCandidates({
     items: candidates,
     requiresReview: candidates.some((candidate) => candidate.risk !== 'NEARBY'),
     radiusM: RADIUS_M,
-    version: 3
+    version: 4
   };
 }
 
@@ -351,7 +376,7 @@ export async function scanPendingPropertyRiskQueue({
     a.contributionId - b.contributionId
   );
   return {
-    version: 3,
+    version: 4,
     mode: 'READ_ONLY',
     scannedCount: page.length,
     needsAttention: prioritized.filter((item) => item.priority !== 'LOW').length,
