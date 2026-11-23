@@ -14,6 +14,8 @@ const PROPERTY_EVIDENCE_LABELS = Object.freeze({
   SIMILAR_TITLE: 'Tên gần giống',
   SAME_TRANSACTION: 'Cùng bán/thuê',
   SAME_PROPERTY_TYPE: 'Cùng loại tài sản',
+  DIFFERENT_TRANSACTION: 'Khác giao dịch bán/thuê',
+  DIFFERENT_PROPERTY_TYPE: 'Khác loại bất động sản',
   SIMILAR_AREA: 'Diện tích gần bằng',
   SIMILAR_PRICE: 'Giá gần bằng',
   DIFFERENT_UNIT: 'Khác số căn/phòng/lô',
@@ -574,7 +576,7 @@ export default function AdminContributions() {
                           ) : (
                             <>
                               <strong>Phát hiện {duplicatesById[item.id].items.length} tin gần đây — cần kiểm tra thủ công.</strong>
-                              <p>Gần nhau không có nghĩa là trùng tài sản. V3 so khớp tên, loại, diện tích và giá để gợi ý; vẫn cần đối chiếu ảnh, số căn/phòng/lô và giấy tờ trước khi duyệt.</p>
+                              <p>Gần nhau không có nghĩa là trùng tài sản. V4 so khớp tên, loại, giao dịch, diện tích và giá để gợi ý; vẫn cần đối chiếu ảnh, số căn/phòng/lô và giấy tờ trước khi duyệt.</p>
                               <p className="estate-evidence-disclaimer">Điểm tín hiệu là mức ưu tiên rà soát, không phải xác suất trùng và không tự từ chối tin.</p>
                               {duplicatesById[item.id].items.map((duplicate) => (
                                 <p key={duplicate.source + ':' + duplicate.id}>
@@ -599,7 +601,7 @@ export default function AdminContributions() {
                                     <span className="estate-evidence-tags">
                                       {duplicate.evidence.map((signal) => (
                                         <span key={signal}
-                                          className={signal === 'DIFFERENT_UNIT' ? 'different-unit' : ''}>
+                                          className={['DIFFERENT_UNIT', 'DIFFERENT_TRANSACTION', 'DIFFERENT_PROPERTY_TYPE'].includes(signal) ? 'different-unit' : ''}>
                                           {PROPERTY_EVIDENCE_LABELS[signal] || signal}
                                         </span>
                                       ))}

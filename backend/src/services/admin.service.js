@@ -11,7 +11,10 @@ import { awardPointsForApproval, penalizeRejection } from './points.service.js';
 import { evaluateContributionScore, CONTRIBUTION_SCORE_CRITERIA } from './contributionScoring.service.js';
 import { findUserById } from './user.service.js';
 import { deleteStoredAssets } from './storage.service.js';
-import { findNearbyPropertyCandidates, normalizePropertyPhone, normalizePropertyTitle } from './realEstateDuplicates.service.js';
+import {
+  findNearbyPropertyCandidates, isBlockingExactPropertyDuplicate,
+  normalizePropertyPhone, normalizePropertyTitle
+} from './realEstateDuplicates.service.js';
 import { createNotification } from './notification.service.js';
 import { applyMissionBonusesForContribution } from './mission.service.js';
 import { refreshUserExpertise } from './expertise.service.js';
@@ -69,39 +72,63 @@ async function applyContributionToPlace(contribution, client) {
     }
 
     if (place.realEstate) {
-      const lockKey = [normalizePropertyPhone(place.phone), normalizePropertyTitle(place.name)].join(':');
+      const phone = normalizePropertyPhone(place.phone);
+      const lockKey = [phone, normalizePropertyTitle(place.name)].join(':');
+      // Keep the transaction advisory lock: concurrent approvals of the
+      // same normalized name/contact must not publish two identical listings.
       await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [lockKey]);
-      // Block exact same-title, same-contact listings within a small radius,
-      // including concurrent approvals (the source contribution is locked).
-      // Other nearby apartments/properties are valid and remain reviewable.
-      const { rows: duplicateRows } = await client.query(
-        `SELECT p.id
-         FROM places p
-         JOIN categories c ON c.id = p.category_id
-         WHERE p.status = 'PUBLISHED'
-           AND c.slug = 'bat-dong-san'
-           AND lower(public.hola_unaccent(trim(p.name))) = lower(public.hola_unaccent(trim($1)))
-           AND (
-             CASE
-               WHEN regexp_replace(COALESCE(p.phone,''), '[^0-9]', '', 'g')
-                    ~ '^84[0-9]{9,10}$'
-               THEN '0' || substring(
-                 regexp_replace(COALESCE(p.phone,''), '[^0-9]', '', 'g') FROM 3)
-               ELSE regexp_replace(COALESCE(p.phone,''), '[^0-9]', '', 'g')
-             END
-           ) = $2
-           AND ST_DWithin(
-             p.location::geography,
-             ST_SetSRID(ST_MakePoint($3, $4),4326)::geography,
-             25
-           )
-         LIMIT 1`,
-        [place.name, normalizePropertyPhone(place.phone), Number(payload.location?.lng), Number(payload.location?.lat)]
+
+      // The previous SQL-only check conflated SALE with RENT and different
+      // housing types. Instead compare active, structured nearby candidates
+      // using the SAME normalization and type/area/price policy as V4 review.
+      // No arbitrary LIMIT: a matching listing cannot hide past the first N.
+      const { rows: candidates } = await client.query(
+        `SELECT p.id, p.name, p.phone,
+                hl.listing_type, hl.property_type, hl.area_m2,
+                hl.total_price_vnd, hl.monthly_rent,
+                ROUND(ST_Distance(
+                  p.location::geography,
+                  ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
+                ))::int AS distance_m
+           FROM places p
+           JOIN categories c ON c.id = p.category_id
+           JOIN housing_listings hl ON hl.place_id = p.id
+          WHERE p.status = 'PUBLISHED'
+            AND c.slug = 'bat-dong-san'
+            AND (hl.listing_status IS NULL OR hl.listing_status = 'ACTIVE')
+            AND (hl.expires_at IS NULL OR hl.expires_at > NOW())
+            AND (
+              CASE
+                WHEN regexp_replace(COALESCE(p.phone,''), '[^0-9]', '', 'g')
+                     ~ '^84[0-9]{9,10}$'
+                THEN '0' || substring(
+                  regexp_replace(COALESCE(p.phone,''), '[^0-9]', '', 'g') FROM 3)
+                ELSE regexp_replace(COALESCE(p.phone,''), '[^0-9]', '', 'g')
+              END
+            ) = $1
+            AND ST_DWithin(
+              p.location::geography,
+              ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
+              25
+            )
+          ORDER BY p.id DESC`,
+        [phone, Number(payload.location?.lng), Number(payload.location?.lat)]
       );
-      if (duplicateRows.length) {
+      const duplicate = candidates.find((row) => isBlockingExactPropertyDuplicate({
+        name: row.name,
+        phone: row.phone,
+        listingType: row.listing_type,
+        propertyType: row.property_type,
+        areaM2: row.area_m2,
+        totalPriceVnd: row.total_price_vnd,
+        monthlyRent: row.monthly_rent,
+        distanceM: Number(row.distance_m)
+      }, place));
+      if (duplicate) {
         throw new AppError(
-          'Tin bất động sản trùng tên, số liên hệ và vị trí với địa điểm #' + duplicateRows[0].id +
-          '. Hãy kiểm tra trước khi duyệt.',
+          'Tin bất động sản trùng tên, số liên hệ, giao dịch, loại tài sản, ' +
+          'diện tích, giá và vị trí với tin #' + duplicate.id +
+          '. Nếu là căn/lô khác, vui lòng bổ sung mã căn/lô để đối chiếu.',
           409
         );
       }
