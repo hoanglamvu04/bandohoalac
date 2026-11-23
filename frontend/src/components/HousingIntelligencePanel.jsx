@@ -63,9 +63,10 @@ export default function HousingIntelligencePanel({
   const filterCount = Object.keys(cleanSavedFilters(currentFilters)).length;
 
   useEffect(() => {
+    setSaved([]);
+    setLoaded(false);
     if (!open || !user?.id) return undefined;
     let active = true;
-    setLoaded(false);
     listHousingSavedSearches()
       .then((data) => {
         if (active) setSaved(Array.isArray(data.items) ? data.items : []);
@@ -80,6 +81,7 @@ export default function HousingIntelligencePanel({
   function chooseProperty(id) {
     if (!id || selected.includes(id) || selected.length >= 4) return;
     comparingRef.current += 1;
+    setComparing(false);
     setSelected((current) => [...current, id]);
     setComparison(null);
     setComparisonError('');
@@ -87,6 +89,7 @@ export default function HousingIntelligencePanel({
 
   function removeProperty(id) {
     comparingRef.current += 1;
+    setComparing(false);
     setSelected((current) => current.filter((value) => value !== id));
     setComparison(null);
   }
