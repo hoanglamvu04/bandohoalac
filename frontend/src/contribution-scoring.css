@@ -18,3 +18,33 @@
 .estate-publication-links a, .estate-publication-links button { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 9px 12px; border: 1px solid #91b29c; border-radius: 8px; background: #fff; color: #1c6344; font: inherit; font-size: 12px; font-weight: 750; cursor: pointer; text-decoration: none; }
 .estate-publication-links button:disabled { opacity: .55; cursor: not-allowed; }
 @media (max-width: 640px) { .estate-publication-links > * { flex: 1 1 100%; } }
+
+/* Data Trust V3: transparent signals are not calibrated probabilities. */
+.estate-nearby-results .estate-evidence-disclaimer {
+  color: #6b6555;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.estate-evidence-score { font-weight: 750; color: #8f5634; }
+.estate-evidence-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 5px 0 0;
+}
+.estate-evidence-tags > span {
+  border: 1px solid #d1e1d6;
+  background: #f0f7f2;
+  color: #2d6649;
+  border-radius: 16px;
+  padding: 2px 7px;
+  font-size: 10px;
+  line-height: 1.45;
+  white-space: normal;
+}
+.estate-evidence-tags > .different-unit {
+  color: #885922;
+  border-color: #e8d7ae;
+  background: #fff5e2;
+}
