@@ -128,7 +128,7 @@ export async function generateSavedHousingAlerts(db = pool) {
          -- publication before the scan and commit just afterward.
          -- A unique notification index safely deduplicates repeated scans.
          AND p.housing_published_at >
-           GREATEST(s.created_at,
+           GREATEST(s.created_at, s.active_since,
              COALESCE(s.last_checked_at - INTERVAL '24 hours', s.created_at))
          AND p.housing_published_at <= $1::timestamptz
         JOIN categories c ON c.id = p.category_id AND c.slug = 'bat-dong-san'
