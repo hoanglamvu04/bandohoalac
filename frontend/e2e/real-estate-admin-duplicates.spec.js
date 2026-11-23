@@ -101,3 +101,64 @@ test('changed nearby results invalidate a previously acknowledged review', async
   await expect.poll(() => approved).not.toBeNull();
   expect(approved.nearbyListingsReviewed).toBe(true);
 });
+
+test('Data Trust V3 explains matching signals and invalidates acknowledgement when SAME candidate risk changes', async ({ page }) => {
+  let approved = null;
+  let riskVersion = 0;
+  await serveAdmin(page, () => ({
+    version: 3, radiusM: 100, requiresReview: true,
+    items: [{
+      id: 9001, source: 'PUBLISHED',
+      name: 'Nhà phố Hòa Lạc', address: 'Hòa Lạc', distanceM: 12,
+      phone: '0987654321',
+      risk: riskVersion === 0 ? 'REVIEW' : 'LIKELY_DUPLICATE',
+      confidence: riskVersion === 0 ? 69 : 92,
+      titleSimilarity: riskVersion === 0 ? 0.85 : 0.98,
+      evidence: riskVersion === 0
+        ? ['SIMILAR_TITLE', 'SAME_PROPERTY_TYPE']
+        : ['SAME_CONTACT', 'SAME_TITLE', 'SIMILAR_AREA', 'SIMILAR_PRICE']
+    }]
+  }), (body) => { approved = body; });
+
+  await page.goto('/admin/contributions');
+  const results = page.getByTestId('estate-duplicate-check-6201');
+  await results.getByRole('button', { name: 'Kiểm tra tin gần vị trí (100 m)' }).click();
+  await expect(results).toContainText('Tên gần giống');
+  await expect(results).toContainText('Điểm tín hiệu: 69/100');
+  await expect(results).toContainText('không phải xác suất trùng');
+  await results.getByLabel('Tôi đã đối chiếu tin gần vị trí 6201').check();
+
+  // The candidate still has the same published place ID, but its title /
+  // evidence changed during Admin review. Old UI compared IDs only.
+  riskVersion = 1;
+  await page.getByRole('button', { name: 'Duyệt & đăng bản đồ' }).click();
+  await expect(results).toContainText('Điểm tín hiệu: 92/100');
+  await expect(results).toContainText('Cùng số liên hệ');
+  await expect(results).toContainText('Giá gần bằng');
+  await expect(results.getByLabel('Tôi đã đối chiếu tin gần vị trí 6201'))
+    .not.toBeChecked();
+  expect(approved).toBeNull();
+
+  await results.getByLabel('Tôi đã đối chiếu tin gần vị trí 6201').check();
+  await page.getByRole('button', { name: 'Duyệt & đăng bản đồ' }).click();
+  await expect.poll(() => approved).not.toBeNull();
+  expect(approved.nearbyListingsReviewed).toBe(true);
+});
+
+test('Data Trust V3 warns distinct apartment units are not automatically duplicates', async ({ page }) => {
+  await serveAdmin(page, () => ({
+    version: 3, requiresReview: true, radiusM: 100,
+    items: [{
+      id: 9005, source: 'PUBLISHED', name: 'Căn 102',
+      distanceM: 0, risk: 'REVIEW', confidence: 24,
+      titleSimilarity: 0.87, differentUnit: true,
+      evidence: ['SAME_CONTACT','DIFFERENT_UNIT','SIMILAR_AREA','SIMILAR_PRICE']
+    }]
+  }), () => {});
+  await page.goto('/admin/contributions');
+  const results = page.getByTestId('estate-duplicate-check-6201');
+  await results.getByRole('button', { name: 'Kiểm tra tin gần vị trí (100 m)' }).click();
+  await expect(results).toContainText('Khác số căn/phòng/lô');
+  await expect(results).toContainText('gần nhau không có nghĩa là trùng');
+  await expect(results).not.toContainText('Tự động từ chối');
+});
