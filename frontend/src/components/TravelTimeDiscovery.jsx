@@ -19,7 +19,7 @@ const CATEGORIES = [
   { value: 'y-te', label: 'Y tế' }
 ];
 
-export default function TravelTimeDiscovery({ defaultCategory = 'all', onChoose }) {
+export default function TravelTimeDiscovery({ defaultCategory = 'all', onChoose, onQuickSearch }) {
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState('fpt');
   const [minutes, setMinutes] = useState(10);
@@ -89,6 +89,22 @@ export default function TravelTimeDiscovery({ defaultCategory = 'all', onChoose 
 
       {open && (
         <div className="hm-travel-body">
+          <div className="hm-travel-suggestions" aria-label="Tìm nhanh theo nhu cầu">
+            <small>Gợi ý tìm kiếm</small>
+            <div>
+              {[
+                ['Cà phê gần FPT', 'cafe gần FPT'],
+                ['Nhà trọ gần ĐHQG', 'nhà trọ gần ĐHQG'],
+                ['Quán ăn gần Khu CNC', 'quán ăn gần Khu CNC']
+              ].map(([label, term]) => (
+                <button type="button" key={term}
+                  onClick={() => { setOpen(false); onQuickSearch?.(term); }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="hm-travel-fields">
             <label>
               <span>Mốc xuất phát</span>
