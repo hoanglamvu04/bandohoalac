@@ -5,7 +5,8 @@ import { pool } from '../src/database/pool.js';
 import { approveContribution } from '../src/services/admin.service.js';
 import {
   normalizePropertyPhone, normalizePropertyTitle, propertyTitleSimilarity,
-  propertyUnitKey, rankPropertyCandidate, findNearbyPropertyCandidates
+  propertyUnitKey, rankPropertyCandidate, findNearbyPropertyCandidates,
+  scanPendingPropertyRiskQueue
 } from '../src/services/realEstateDuplicates.service.js';
 
 const sample = {
@@ -272,4 +273,84 @@ test('Data Trust V3 carries only bounded staff-only matching details from both s
   assert.ok(calls[0].sql.includes("hl.listing_status = 'ACTIVE'"));
   assert.ok(calls[1].sql.includes('realEstate,areaM2'));
   assert.deepEqual(calls[1].params, [105.52522, 21.01354, 100, 90, 12]);
+});
+
+test('Data Trust V3 batch triage prioritizes genuine risk without exposing private payload or phone', async () => {
+  const pending = [
+    { id: 601, created_at: '2026-11-23T00:00:00Z', payload: sample },
+    {
+      id: 602, created_at: '2026-11-23T00:01:00Z',
+      payload: { ...sample, place: {
+        ...sample.place, name: 'Căn 203 tại ĐHQG', phone: '0911111111',
+        realEstate: { transactionType: 'RENT', propertyType: 'APARTMENT' }
+      } }
+    },
+    { id: 603, created_at: '2026-11-23T00:02:00Z', payload: sample }
+  ];
+  const queries = [];
+  const client = {
+    async query(sql, params) {
+      queries.push({ sql, params });
+      if (sql.includes('FROM contributions\n')) {
+        assert.deepEqual(params, [3, 0]);
+        return { rows: pending };
+      }
+      if (sql.includes('FROM places p')) {
+        return { rows: [{
+          id: 991, name: 'Nhà phố 3 tầng gần FPT',
+          address: 'Hòa Lạc', phone: '0987654321', distance_m: 12,
+          listing_type: 'SALE', property_type: 'HOUSE'
+        }] };
+      }
+      return { rows: [] };
+    }
+  };
+
+  const triage = await scanPendingPropertyRiskQueue({
+    client, limit: 2, offset: 0
+  });
+  assert.equal(triage.version, 3);
+  assert.equal(triage.mode, 'READ_ONLY');
+  assert.equal(triage.scannedCount, 2);
+  assert.equal(triage.hasMore, true);
+  assert.deepEqual(triage.items.map(x => x.contributionId), [601, 602]);
+  assert.equal(triage.items[0].priority, 'HIGH');
+  assert.equal(triage.items[1].priority, 'LOW');
+  assert.equal(triage.needsAttention, 1);
+  assert.equal(queries.length, 5);
+  const response = JSON.stringify(triage);
+  for (const key of ['payload', 'phone', 'lat', 'lng', 'email',
+    'sessionId', 'contactName', 'totalPriceVnd']) {
+    assert.equal(response.includes('"' + key + '"'), false);
+  }
+  assert.equal(response.includes('0987654321'), false);
+  assert.equal(response.includes('0911111111'), false);
+});
+
+test('Data Trust V3 triage has strict bounded limits and no database writes', async () => {
+  let calls = 0;
+  const client = {
+    async query(sql, params) {
+      calls++;
+      assert.match(sql, /^SELECT /);
+      assert.deepEqual(params, [11, 20]);
+      return { rows: [] };
+    }
+  };
+  for (const value of [
+    { limit: 0, offset: 0 },
+    { limit: 11, offset: 0 },
+    { limit: -1, offset: 0 },
+    { limit: 10, offset: 501 },
+    { limit: 2.5, offset: 0 },
+    { limit: 1, offset: -10 }
+  ]) {
+    await assert.rejects(() => scanPendingPropertyRiskQueue({ ...value, client }),
+      error => error.statusCode === 400);
+  }
+  assert.equal(calls, 0);
+  const result = await scanPendingPropertyRiskQueue({ client, limit: 10, offset: 20 });
+  assert.equal(result.items.length, 0);
+  assert.equal(result.needsAttention, 0);
+  assert.equal(calls, 1);
 });
