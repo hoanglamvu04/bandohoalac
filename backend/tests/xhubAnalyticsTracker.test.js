@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
+import { createXHubWebTracker } from '../../frontend/src/lib/xhub-web-tracker.mjs';
 import {
   XHUB_CONSENT_KEY, disableXHubTracking, getXHubConsent,
   publicAnalyticsPath, publicPlaceKey, setXHubConsent,
@@ -130,4 +131,70 @@ test('copied browser SDK and HOLA adapter contain no server token or bearer head
     assert.equal(text.includes('XHUB_WEB_ANALYTICS_SITE_TOKEN'), false);
     assert.equal(text.includes('Authorization: Bearer'), false);
   }
+});
+
+test('WA-002 drains newly queued consented events after a busy successful flush', async () => {
+  const root = {
+    crypto: { randomUUID },
+    navigator: { doNotTrack: '0' },
+    location: { pathname: '/place', search: '' },
+    document: { referrer: '' }
+  };
+  const batches = [];
+  let unlockFirst;
+  const firstGate = new Promise((resolve) => { unlockFirst = resolve; });
+  const sdk = createXHubWebTracker({
+    root, hasConsent: () => true,
+    send: async (_url, options) => {
+      const batch = JSON.parse(options.body).events;
+      batches.push(batch);
+      if (batches.length === 1) await firstGate;
+      return { ok: true };
+    }
+  });
+  assert.equal(sdk.track('page_view'), true);
+  const firstFlush = sdk.flush();
+  assert.equal(sdk.track('map_place_view', {
+    entityType: 'place', entityKey: '42'
+  }), true);
+  assert.deepEqual(await sdk.flush(), { sent: 0 }, 'busy flush cannot race');
+  unlockFirst();
+  assert.deepEqual(await firstFlush, { sent: 1 });
+  // The completion of the first response should launch the queued batch.
+  for (let i = 0; i < 40 && (batches.length !== 2 || sdk.pending()); i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 3));
+  }
+  assert.equal(batches.length, 2);
+  assert.equal(sdk.pending(), 0);
+  assert.deepEqual(batches.flat().map((event) => event.name),
+    ['page_view', 'map_place_view']);
+  assert.equal(batches[1][0].entityKey, '42');
+  assert.ok(batches.flat().every((event) => event.consent === true));
+});
+
+test('WA-002 never retries a failed flush in a busy loop or after opt-out', async () => {
+  let attempts = 0;
+  let consent = true;
+  const sdk = createXHubWebTracker({
+    root: {
+      crypto: { randomUUID },
+      navigator: { doNotTrack: '0' },
+      location: { pathname: '/place', search: '' },
+      document: { referrer: '' }
+    },
+    hasConsent: () => consent,
+    send: async () => { attempts += 1; return { ok: false }; }
+  });
+  sdk.track('page_view');
+  assert.deepEqual(await sdk.flush(), { sent: 0 });
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  assert.equal(attempts, 1, 'failed send must remain deferred');
+  assert.equal(sdk.pending(), 1);
+  consent = false;
+  sdk.disable();
+  assert.equal(sdk.pending(), 0);
+  assert.equal(sdk.track('map_place_view', {
+    entityType: 'place', entityKey: '43'
+  }), false);
+  assert.equal(attempts, 1);
 });
