@@ -1,8 +1,17 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { AppError } from '../utils/AppError.js';
 import {
   compareHousingListings, listSavedHousingSearches, saveHousingSearch,
   setSavedHousingSearchEnabled, deleteSavedHousingSearch
 } from '../services/housingIntelligence.service.js';
+
+function savedSearchId(req) {
+  const id = String(req.params.id || '');
+  if (!/^[1-9]\d{0,14}$/.test(id)) {
+    throw new AppError('Mã bộ lọc không hợp lệ.', 400);
+  }
+  return id;
+}
 
 export const compareHousing = asyncHandler(async (req, res) => {
   const ids = req.query.ids.split(',');
@@ -25,14 +34,14 @@ export const createMySavedHousingSearch = asyncHandler(async (req, res) => {
 
 export const toggleMySavedHousingSearch = asyncHandler(async (req, res) => {
   const item = await setSavedHousingSearchEnabled(
-    req.user.id, req.params.id, req.body.enabled
+    req.user.id, savedSearchId(req), req.body.enabled
   );
   res.set('Cache-Control', 'private, no-store');
   res.json({ item });
 });
 
 export const removeMySavedHousingSearch = asyncHandler(async (req, res) => {
-  const result = await deleteSavedHousingSearch(req.user.id, req.params.id);
+  const result = await deleteSavedHousingSearch(req.user.id, savedSearchId(req));
   res.set('Cache-Control', 'private, no-store');
   res.json(result);
 });
