@@ -19,7 +19,9 @@ const contribution = {
   }
 };
 
-async function serveAdmin(page, getNearby, onApprove) {
+async function serveAdmin(page, getNearby, onApprove, getQueue = () => ({
+  version: 3, scannedCount: 0, needsAttention: 0, items: [], hasMore: false
+})) {
   await page.route('**/api/**', (route) => {
     const pathname = new URL(route.request().url()).pathname;
     if (pathname === '/api/auth/refresh') return route.fulfill({ json: {
@@ -30,6 +32,8 @@ async function serveAdmin(page, getNearby, onApprove) {
     } });
     if (pathname === '/api/admin/contributions' && route.request().method() === 'GET')
       return route.fulfill({ json: { items: [contribution] } });
+    if (pathname === '/api/admin/contributions/property-risk-queue')
+      return route.fulfill({ json: getQueue() });
     if (pathname === '/api/admin/contributions/6201/duplicates')
       return route.fulfill({ json: getNearby() });
     if (pathname === '/api/admin/contributions/6201/approve' && route.request().method() === 'POST') {
@@ -161,4 +165,49 @@ test('Data Trust V3 warns distinct apartment units are not automatically duplica
   await expect(results).toContainText('Khác số căn/phòng/lô');
   await expect(results).toContainText('Gần nhau không có nghĩa là trùng');
   await expect(results).toContainText('không tự từ chối tin');
+});
+
+test('Data Trust V3 lets Moderators scan a read-only risk queue before review', async ({ page }) => {
+  let scanCount = 0;
+  let nearbyCount = 0;
+  await serveAdmin(page,
+    () => {
+      nearbyCount++;
+      return { version: 3, radiusM: 100, items: [
+        { id: 9001, source: 'PUBLISHED',
+          name: 'Nhà phố 3 tầng gần FPT', risk: 'LIKELY_DUPLICATE',
+          distanceM: 12, confidence: 91, evidence: ['SAME_TITLE'] }
+      ] };
+    },
+    () => {},
+    () => {
+      scanCount++;
+      return { version: 3, mode: 'READ_ONLY', scannedCount: 10,
+        needsAttention: 1, hasMore: true, items: [{
+          contributionId: 6201,
+          name: 'Nhà phố Hòa Lạc QA',
+          candidateCount: 1,
+          priority: 'HIGH',
+          candidate: { source: 'PUBLISHED', id: 9001,
+            name: 'Nhà phố 3 tầng gần FPT', risk: 'LIKELY_DUPLICATE',
+            confidence: 91, distanceM: 12, evidence: ['SAME_TITLE'] }
+        }] };
+    }
+  );
+  await page.goto('/admin/contributions');
+  const queue = page.getByTestId('property-risk-queue');
+  await expect(queue).toBeVisible();
+  expect(scanCount).toBe(0, 'admin UI must not auto-launch expensive batch queries');
+  await queue.getByRole('button', { name: 'Quét & phân loại' }).click();
+  await expect(queue).toContainText('Đã quét 10 tin');
+  await expect(queue).toContainText('1 tin cần ưu tiên rà soát');
+  await expect(queue).toContainText('Ưu tiên cao');
+  await expect(queue).toContainText('điểm tín hiệu 91/100');
+  await expect(queue).toContainText('đây chỉ là danh sách ưu tiên theo trang');
+  expect(scanCount).toBe(1);
+  expect(nearbyCount).toBe(0);
+  await queue.getByRole('button', { name: 'Xem & đối chiếu' }).click();
+  await expect(page.getByTestId('estate-duplicate-check-6201'))
+    .toContainText('Nhà phố 3 tầng gần FPT');
+  expect(nearbyCount).toBe(1);
 });
