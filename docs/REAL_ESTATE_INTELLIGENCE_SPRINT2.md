@@ -76,8 +76,8 @@ mark per saved search. A 24-hour overlap prevents loss when approval
 commits overlap scans; the unique index on
 `notifications(user_id,savedSearchId,placeId)` guarantees
 idempotence. The user sees at most one notice per saved-search/listing
-pair even when the cron retries. Pausing skips future notices; resume
-does not backfill its paused interval.
+pair even when the cron retries. Pausing skips future notices; resuming advances `active_since` so
+the 24-hour scan overlap cannot backfill the paused interval.
 
 The existing `scripts/install-p0-jobs.sh` now adds
 `housing:match-alerts` every 10 minutes alongside its existing
