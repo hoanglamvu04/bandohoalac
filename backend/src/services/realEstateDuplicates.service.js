@@ -109,11 +109,23 @@ export function rankPropertyCandidate(candidate, submitted) {
     a.transactionType === 'SALE' ? a.price : a.rent,
     b.transactionType === 'SALE' ? b.price : b.rent, 0.07
   );
+  const comparableArea = normalizedPositive(a.areaM2) !== null &&
+    normalizedPositive(b.areaM2) !== null;
+  const conflictingArea = comparableArea &&
+    Math.max(a.areaM2, b.areaM2) / Math.min(a.areaM2, b.areaM2) >= 1.25;
+  const leftPrice = a.transactionType === 'SALE' ? a.price : a.rent;
+  const rightPrice = b.transactionType === 'SALE' ? b.price : b.rent;
+  const conflictingPrice = sameTransaction &&
+    normalizedPositive(leftPrice) !== null &&
+    normalizedPositive(rightPrice) !== null &&
+    Math.max(leftPrice, rightPrice) / Math.min(leftPrice, rightPrice) >= 1.4;
+  const conflictingDetails = conflictingArea || conflictingPrice;
   const distanceM = Number.isFinite(Number(candidate.distanceM))
     ? Math.max(0, Number(candidate.distanceM)) : RADIUS_M + 1;
   const strongTitle = titleSimilarity >= 0.88;
   const matchingProperty = sameTransaction && samePropertyType && similarArea && similarPrice;
-  const likely = !differentUnit && samePhone && strongTitle && distanceM <= 25;
+  const likely = !differentUnit && !conflictingDetails &&
+    samePhone && strongTitle && distanceM <= 25;
   const review = samePhone ||
     (!differentUnit && strongTitle && distanceM <= 35) ||
     (!differentUnit && titleSimilarity >= MIN_SIMILAR_TITLE &&
@@ -128,13 +140,15 @@ export function rankPropertyCandidate(candidate, submitted) {
   if (similarArea) evidence.push('SIMILAR_AREA');
   if (similarPrice) evidence.push('SIMILAR_PRICE');
   if (differentUnit) evidence.push('DIFFERENT_UNIT');
+  if (conflictingArea) evidence.push('DIFFERENT_AREA');
+  if (conflictingPrice) evidence.push('DIFFERENT_PRICE');
   if (distanceM <= 25) evidence.push('WITHIN_25M');
   const confidence = Math.max(0, Math.min(100, Math.round(
     (samePhone ? 28 : 0) + 24 * titleSimilarity +
     (sameTransaction ? 6 : 0) + (samePropertyType ? 7 : 0) +
     (similarArea ? 8 : 0) + (similarPrice ? 8 : 0) +
     (distanceM <= 25 ? 16 : distanceM <= 50 ? 10 : 3) -
-    (differentUnit ? 45 : 0)
+    (differentUnit ? 45 : 0) - (conflictingDetails ? 15 : 0)
   )));
 
   return {
@@ -147,6 +161,8 @@ export function rankPropertyCandidate(candidate, submitted) {
     similarArea,
     similarPrice,
     differentUnit,
+    conflictingArea,
+    conflictingPrice,
     confidence,
     evidence,
     risk
