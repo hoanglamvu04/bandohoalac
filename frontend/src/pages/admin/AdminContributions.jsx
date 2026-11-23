@@ -8,6 +8,30 @@ import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import '../../contribution-scoring.css';
 
+const PROPERTY_EVIDENCE_LABELS = Object.freeze({
+  SAME_CONTACT: 'Cùng số liên hệ',
+  SAME_TITLE: 'Tên trùng hoàn toàn',
+  SIMILAR_TITLE: 'Tên gần giống',
+  SAME_TRANSACTION: 'Cùng bán/thuê',
+  SAME_PROPERTY_TYPE: 'Cùng loại tài sản',
+  SIMILAR_AREA: 'Diện tích gần bằng',
+  SIMILAR_PRICE: 'Giá gần bằng',
+  DIFFERENT_UNIT: 'Khác số căn/phòng/lô',
+  WITHIN_25M: 'Cách nhau tối đa 25 m'
+});
+
+// Acknowledging a nearby result is valid only for the exact evidence seen.
+// Candidate IDs alone are insufficient: their title, price or risk can change.
+function nearbyReviewSignature(items) {
+  return JSON.stringify((items || []).map((item) => ({
+    source: item.source, id: item.id, name: item.name,
+    risk: item.risk, confidence: item.confidence,
+    distanceM: item.distanceM, evidence: item.evidence || []
+  })).sort((a, b) =>
+    String(a.source + ':' + a.id).localeCompare(String(b.source + ':' + b.id))
+  ));
+}
+
 const TYPE_LABELS = {
   CREATE_PLACE: 'Thêm địa điểm mới',
   UPDATE_PLACE: 'Cập nhật thông tin',
@@ -225,9 +249,8 @@ export default function AdminContributions() {
         showToast(latest.error || 'Không thể kiểm tra tin gần vị trí, vui lòng thử lại.', 'error');
         return;
       }
-      const identity = (entry) => entry.source + ':' + entry.id;
-      const beforeIds = (previous?.items || []).map(identity).sort().join('|');
-      const latestIds = latest.items.map(identity).sort().join('|');
+      const beforeIds = nearbyReviewSignature(previous?.items);
+      const latestIds = nearbyReviewSignature(latest.items);
       if ((!previous?.checked && latest.items.length > 0) ||
           (previous?.checked && beforeIds !== latestIds)) {
         setNearbyAcknowledged((current) => ({ ...current, [item.id]: false }));
@@ -476,7 +499,8 @@ export default function AdminContributions() {
                           ) : (
                             <>
                               <strong>Phát hiện {duplicatesById[item.id].items.length} tin gần đây — cần kiểm tra thủ công.</strong>
-                              <p>Gần nhau không có nghĩa là trùng tài sản. Đối chiếu tên, số liên hệ, vị trí và ảnh.</p>
+                              <p>Gần nhau không có nghĩa là trùng tài sản. V3 so khớp tên, loại, diện tích và giá để gợi ý; vẫn cần đối chiếu ảnh, số căn/phòng/lô và giấy tờ trước khi duyệt.</p>
+                              <p className="estate-evidence-disclaimer">Điểm tín hiệu là mức ưu tiên rà soát, không phải xác suất trùng và không tự từ chối tin.</p>
                               {duplicatesById[item.id].items.map((duplicate) => (
                                 <p key={duplicate.source + ':' + duplicate.id}>
                                   {duplicate.risk === 'LIKELY_DUPLICATE' ? '⚠ Có dấu hiệu trùng · '
@@ -490,6 +514,22 @@ export default function AdminContributions() {
                                     : <span>Đang chờ duyệt #{duplicate.id}: {duplicate.name}</span>}
                                   {' · '}{duplicate.address || ''}
                                   {duplicate.phone ? ' · ' + duplicate.phone : ''}
+                                  {Number.isFinite(duplicate.confidence) && (
+                                    <span className="estate-evidence-score"> · Điểm tín hiệu: {duplicate.confidence}/100</span>
+                                  )}
+                                  {Number.isFinite(duplicate.titleSimilarity) && (
+                                    <span> · Tên giống {Math.round(duplicate.titleSimilarity * 100)}%</span>
+                                  )}
+                                  {Array.isArray(duplicate.evidence) && duplicate.evidence.length > 0 && (
+                                    <span className="estate-evidence-tags">
+                                      {duplicate.evidence.map((signal) => (
+                                        <span key={signal}
+                                          className={signal === 'DIFFERENT_UNIT' ? 'different-unit' : ''}>
+                                          {PROPERTY_EVIDENCE_LABELS[signal] || signal}
+                                        </span>
+                                      ))}
+                                    </span>
+                                  )}
                                 </p>
                               ))}
                               <label className="estate-nearby-acknowledgement">
