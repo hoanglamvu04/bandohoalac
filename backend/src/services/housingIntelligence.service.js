@@ -79,7 +79,10 @@ export async function saveHousingSearch(userId, { name, filters }, transaction =
 export async function setSavedHousingSearchEnabled(userId, id, enabled, db = pool) {
   const { rows } = await db.query(
     `UPDATE housing_saved_searches
-        SET enabled = $3, updated_at = NOW(),
+        SET active_since = CASE
+              WHEN $3 = TRUE AND enabled = FALSE THEN NOW()
+              ELSE active_since END,
+            enabled = $3, updated_at = NOW(),
             -- Disabled periods are not backfilled when the user resumes.
             last_checked_at = CASE WHEN $3 = TRUE THEN NOW() ELSE last_checked_at END
       WHERE id = $1 AND user_id = $2
