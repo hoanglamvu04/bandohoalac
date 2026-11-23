@@ -45,6 +45,7 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import MapView from '../components/MapView.jsx';
 import TripPlanner from '../components/TripPlanner.jsx';
 import TravelTimeDiscovery from '../components/TravelTimeDiscovery.jsx';
+import HousingIntelligencePanel from '../components/HousingIntelligencePanel.jsx';
 import CollectionPicker from '../components/CollectionPicker.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -618,6 +619,9 @@ export default function MapPage() {
   const isHousingMode = verticalMode === 'housing';
   const isFoodMode = verticalMode === 'food';
   const housingListingType = searchParams.get('listingType') || '';
+  const housingPropertyType = searchParams.get('propertyType') || '';
+  const housingMinArea = searchParams.get('minArea') || '';
+  const housingMaxArea = searchParams.get('maxArea') || '';
   const housingSubmissionLink = viewport
     ? '/dang-tin-bat-dong-san?lat=' + ((Number(viewport.north) + Number(viewport.south)) / 2).toFixed(6) +
       '&lng=' + ((Number(viewport.east) + Number(viewport.west)) / 2).toFixed(6)
@@ -633,7 +637,7 @@ export default function MapPage() {
   const housingPrivateBathroom = searchParams.get('privateBathroom') === 'true';
   const housingParking = searchParams.get('parking') === 'true';
   const housingFilterSignature = [
-    housingListingType,
+    housingListingType, housingPropertyType, housingMinArea, housingMaxArea,
     housingMinRent,
     housingMaxRent,
     housingMinPrice,
@@ -657,6 +661,9 @@ export default function MapPage() {
     Boolean(minRating),
     sortMode !== 'relevant',
     isHousingMode && Boolean(housingListingType),
+    isHousingMode && Boolean(housingPropertyType),
+    isHousingMode && Boolean(housingMinArea),
+    isHousingMode && Boolean(housingMaxArea),
     isHousingMode && Boolean(housingMinRent),
     isHousingMode && Boolean(housingMaxRent),
     isHousingMode && Boolean(housingMinPrice),
@@ -695,6 +702,9 @@ export default function MapPage() {
     return {
       q: cleanQuery || undefined,
       listingType: housingListingType || undefined,
+      propertyType: housingPropertyType || undefined,
+      minArea: housingMinArea || undefined,
+      maxArea: housingMaxArea || undefined,
       minRent: housingMinRent || undefined,
       maxRent: housingMaxRent || undefined,
       minPrice: housingMinPrice || undefined,
@@ -2272,6 +2282,9 @@ export default function MapPage() {
       sort: null,
       place: null,
       listingType: null,
+      propertyType: null,
+      minArea: null,
+      maxArea: null,
       minRent: null,
       maxRent: null,
       minPrice: null,
@@ -2384,6 +2397,43 @@ export default function MapPage() {
     });
   }
 
+  function applySavedHousingFilters(filters = {}) {
+    const keys = [
+      'listingType', 'propertyType', 'minRent', 'maxRent',
+      'minPrice', 'maxPrice', 'minArea', 'maxArea',
+      'availability', 'availableOnly', 'partnerOnly', 'privateBathroom',
+      'parking', 'maxDistanceFpt'
+    ];
+    const next = Object.fromEntries(keys.map((key) => [
+      key, Object.prototype.hasOwnProperty.call(filters, key)
+        ? String(filters[key]) : null
+    ]));
+    lastPlacesRequestKeyRef.current = '';
+    loadedPlaceBoundsRef.current = [];
+    setPlaces([]);
+    setQuery(String(filters.q || ''));
+    setCategory('bat-dong-san');
+    setSortMode('relevant');
+    setMinRating('');
+    setOpenNow(false);
+    setSelectedId(null);
+    setPlaceScope('viewport');
+    setNearbyRadius(0);
+    syncDiscoveryParams({
+      ...next,
+      q: filters.q || null,
+      category: 'bat-dong-san',
+      vertical: 'housing',
+      sort: null,
+      rating: null,
+      open: null,
+      place: null
+    });
+    setLeftOpen(true);
+    if (typeof window !== 'undefined' &&
+        window.matchMedia('(max-width: 760px)').matches) setMobileSheetLevel('half');
+  }
+
   function handleRatingChange(value) {
     void trackXHubEvent('filter_used');
     lastPlacesRequestKeyRef.current = '';
@@ -2422,6 +2472,9 @@ export default function MapPage() {
       rating: null,
       sort: null,
       listingType: null,
+      propertyType: null,
+      minArea: null,
+      maxArea: null,
       minRent: null,
       maxRent: null,
       minPrice: null,
@@ -3000,6 +3053,46 @@ export default function MapPage() {
                         options={[{ value: '', label: 'Tất cả tin' }, { value: 'SALE', label: 'Cần bán' }, { value: 'RENT', label: 'Cho thuê' }]}
                         onChange={(value) => handleHousingFilterChange('listingType', value)}
                       />
+                      <MapFilterSelect
+                        label="Loại bất động sản"
+                        value={housingPropertyType}
+                        options={[
+                          { value: '', label: 'Mọi loại hình' },
+                          { value: 'LAND', label: 'Đất' },
+                          { value: 'HOUSE', label: 'Nhà' },
+                          { value: 'APARTMENT', label: 'Chung cư' },
+                          { value: 'VILLA', label: 'Biệt thự' },
+                          { value: 'COMMERCIAL', label: 'Mặt bằng thương mại' },
+                          { value: 'OTHER', label: 'Loại khác' }
+                        ]}
+                        onChange={(value) => handleHousingFilterChange('propertyType', value)}
+                      />
+                      <MapFilterSelect
+                        label="Diện tích từ"
+                        value={housingMinArea}
+                        options={[
+                          { value: '', label: 'Không giới hạn' },
+                          { value: '20', label: '20 m²' },
+                          { value: '40', label: '40 m²' },
+                          { value: '60', label: '60 m²' },
+                          { value: '100', label: '100 m²' },
+                          { value: '200', label: '200 m²' }
+                        ]}
+                        onChange={(value) => handleHousingFilterChange('minArea', value)}
+                      />
+                      <MapFilterSelect
+                        label="Diện tích tối đa"
+                        value={housingMaxArea}
+                        options={[
+                          { value: '', label: 'Không giới hạn' },
+                          { value: '50', label: '50 m²' },
+                          { value: '100', label: '100 m²' },
+                          { value: '200', label: '200 m²' },
+                          { value: '500', label: '500 m²' },
+                          { value: '1000', label: '1.000 m²' }
+                        ]}
+                        onChange={(value) => handleHousingFilterChange('maxArea', value)}
+                      />
                       {housingListingType === 'SALE' ? (
                         <>
                           <MapFilterSelect
@@ -3387,6 +3480,15 @@ export default function MapPage() {
             <span>Đăng bán hoặc cho thuê bất động sản</span>
             <ChevronRight size={16} />
           </Link>
+        )}
+
+        {isHousingMode && (
+          <HousingIntelligencePanel
+            user={user}
+            places={sidebarPlaces}
+            currentFilters={housingRequestParams({ includeQuery: true })}
+            onApplySavedSearch={applySavedHousingFilters}
+          />
         )}
 
         <TravelTimeDiscovery
