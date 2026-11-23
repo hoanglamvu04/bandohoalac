@@ -64,6 +64,7 @@ export function createXHubWebTracker({
     const controller=new AbortController();
     activeController=controller;
     const batch=queue.splice(0,20);
+    let delivered=false;
     try{
       const response=await send(endpoint,{
         method:'POST',headers:{'Content-Type':'application/json'},
@@ -72,6 +73,7 @@ export function createXHubWebTracker({
         body:JSON.stringify({schemaVersion:1,events:batch})
       });
       if(!response?.ok)throw Error('Site bridge unavailable');
+      delivered=true;
       return {sent:batch.length};
     }catch{
       // No persistent offline tracking. Keep a bounded retry queue in memory;
@@ -82,6 +84,10 @@ export function createXHubWebTracker({
     }finally{
       if(activeController===controller)activeController=null;
       running=false;
+      // A new event may have been queued while the previous POST was
+      // in flight. Drain it only after a successful send; failed batches
+      // remain bounded in memory and MUST NOT enter an infinite retry loop.
+      if(delivered&&queue.length&&consented())void flush();
     }
   }
   function track(name,{entityType,entityKey,engagementMs}={}){
