@@ -128,6 +128,8 @@ export default function AdminContributions() {
   const [duplicatesById, setDuplicatesById] = useState({});
   const [nearbyAcknowledged, setNearbyAcknowledged] = useState({});
   const [publicationCheck, setPublicationCheck] = useState(null);
+  const [riskQueue, setRiskQueue] = useState(null);
+  const [riskQueueLoading, setRiskQueueLoading] = useState(false);
 
   async function verifyPublishedHousing(placeId, expectedPhotoCount) {
     setPublicationCheck({ placeId, status: 'checking' });
@@ -234,6 +236,35 @@ export default function AdminContributions() {
       setDuplicatesById((current) => ({ ...current, [id]: next }));
       return next;
     }
+  }
+
+  async function scanPendingPropertyQueue() {
+    setRiskQueueLoading(true);
+    try {
+      const { data } = await client.get('/admin/contributions/property-risk-queue', {
+        params: { limit: '10', offset: '0' }
+      });
+      setRiskQueue({ ...data, error: null });
+    } catch (error) {
+      setRiskQueue({
+        items: [],
+        error: error.response?.data?.error || 'Chưa quét được tin đang chờ. Hãy thử lại.'
+      });
+    } finally {
+      setRiskQueueLoading(false);
+    }
+  }
+
+  function openRiskQueueItem(contributionId) {
+    const target = document.querySelector(
+      '[data-testid="estate-duplicate-check-' + contributionId + '"]'
+    );
+    if (!target) {
+      showToast('Tin này chưa nằm trong trang đang tải. Hãy tìm ở hàng chờ duyệt.', 'info');
+      return;
+    }
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    void checkDuplicates(contributionId);
   }
 
   async function handleApprove(item) {
@@ -377,7 +408,49 @@ export default function AdminContributions() {
         </div>
       )}
 
-      {publicationCheck && (
+      {status === 'PENDING' && ['ADMIN', 'MODERATOR'].includes(user?.role) && (
+         <section className="estate-risk-triage" aria-label="Hàng chờ ưu tiên rà soát bất động sản"
+           data-testid="property-risk-queue">
+           <div className="estate-risk-triage-header">
+             <div>
+               <strong>Rà soát nhanh tin bất động sản</strong>
+               <p>Quét tối đa 10 tin chờ duyệt cũ nhất và ưu tiên tin có tín hiệu giống nhau. Không tự duyệt, từ chối hoặc ẩn tin.</p>
+             </div>
+             <button type="button" className="secondary-action"
+               disabled={riskQueueLoading} onClick={scanPendingPropertyQueue}>
+               <ShieldCheck size={15}/>
+               {riskQueueLoading ? 'Đang quét…' : 'Quét & phân loại'}
+             </button>
+           </div>
+           {riskQueue?.error && <p role="alert">{riskQueue.error}</p>}
+           {riskQueue && !riskQueue.error && (
+             <div className="estate-risk-triage-results" role="status">
+               <p>Đã quét {riskQueue.scannedCount} tin · {riskQueue.needsAttention} tin cần ưu tiên rà soát.</p>
+               {riskQueue.items.length === 0 && <p>Chưa thấy tin gần vị trí trong lượt quét này.</p>}
+               {riskQueue.items.map((entry) => (
+                 <div className="estate-risk-triage-row" key={entry.contributionId}>
+                   <span className={'estate-risk-level ' + entry.priority.toLowerCase()}>
+                     {entry.priority === 'HIGH' ? 'Ưu tiên cao'
+                       : entry.priority === 'MEDIUM' ? 'Cần đối chiếu' : 'Cùng khu vực'}
+                   </span>
+                   <span><b>#{entry.contributionId}</b> {entry.name} · {entry.candidateCount} tin gần vị trí
+                     {' · '}{entry.candidate?.name || 'Chưa rõ'}
+                     {Number.isFinite(entry.candidate?.confidence)
+                       ? ' · điểm tín hiệu ' + entry.candidate.confidence + '/100' : ''}
+                   </span>
+                   <button type="button" className="secondary-action"
+                     onClick={() => openRiskQueueItem(entry.contributionId)}>
+                     Xem & đối chiếu
+                   </button>
+                 </div>
+               ))}
+               {riskQueue.hasMore && <p>Còn các tin chờ duyệt khác chưa được quét; đây chỉ là danh sách ưu tiên theo trang, không phải toàn bộ dữ liệu.</p>}
+             </div>
+           )}
+         </section>
+       )}
+
+       {publicationCheck && (
         <section className="estate-publication-check" role="status"
           aria-label="Kiểm tra tin bất động sản sau duyệt"
           data-testid="estate-publication-check">
