@@ -121,7 +121,12 @@ export async function generateSavedHousingAlerts(db = pool) {
         JOIN users u ON u.id = s.user_id AND u.account_status = 'ACTIVE'
         JOIN places p
           ON p.status = 'PUBLISHED'
-         AND p.housing_published_at > COALESCE(s.last_checked_at, s.created_at)
+         -- Overlap the last 24 hours: a review transaction may stamp its
+         -- publication before the scan and commit just afterward.
+         -- A unique notification index safely deduplicates repeated scans.
+         AND p.housing_published_at >
+           GREATEST(s.created_at,
+             COALESCE(s.last_checked_at - INTERVAL '24 hours', s.created_at))
          AND p.housing_published_at <= $1::timestamptz
         JOIN categories c ON c.id = p.category_id AND c.slug = 'bat-dong-san'
         JOIN housing_listings hl ON hl.place_id = p.id
