@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS housing_saved_searches (
   enabled BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  last_checked_at TIMESTAMPTZ
+  last_checked_at TIMESTAMPTZ,
+  active_since TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS housing_saved_searches_user_idx
