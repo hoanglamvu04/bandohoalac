@@ -83,7 +83,7 @@ test('Mobile discovery reports OSRM outages without inventing driving durations'
 
   await expect(panel.getByRole('alert'))
     .toContainText('Máy chủ định tuyến chưa phản hồi');
-  await expect(panel.getByText('phút lái xe', { exact: false })).toHaveCount(0);
+  await expect(panel.locator('.hm-travel-result')).toHaveCount(0);
   expect(requests).toHaveLength(1);
   expect(requests[0].anchor).toBe('dhqg');
 });
