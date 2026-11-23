@@ -3392,7 +3392,10 @@ export default function MapPage() {
         <TravelTimeDiscovery
           defaultCategory={isHousingMode ? 'bat-dong-san' : isFoodMode ? 'an-uong' : 'all'}
           onChoose={openTravelTimeResult}
-          onQuickSearch={handleQueryChange}
+          onQuickSearch={(term) => {
+            handleQueryChange(term);
+            void trackXHubEvent('search_used');
+          }}
         />
 
         <section className="hm-panel-section hm-place-results">
