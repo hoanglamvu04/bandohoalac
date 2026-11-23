@@ -4,7 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { pool } from '../src/database/pool.js';
 import { approveContribution } from '../src/services/admin.service.js';
 import {
-  normalizePropertyPhone, rankPropertyCandidate, findNearbyPropertyCandidates
+  normalizePropertyPhone, normalizePropertyTitle, propertyTitleSimilarity,
+  propertyUnitKey, rankPropertyCandidate, findNearbyPropertyCandidates
 } from '../src/services/realEstateDuplicates.service.js';
 
 const sample = {
@@ -156,4 +157,119 @@ test('PostGIS matches published and pending nearby properties while excluding th
     if (refs.published) await pool.query('DELETE FROM places WHERE id=$1', [refs.published]);
     if (refs.owner) await pool.query('DELETE FROM users WHERE id=$1', [refs.owner]);
   }
+});
+
+test('Data Trust V3 compares punctuation/accent-insensitive titles and unit numbers', () => {
+  assert.equal(normalizePropertyTitle('  NHÀ PHỐ - gần FPT!  '), 'nha pho gan fpt');
+  assert.equal(propertyTitleSimilarity('Nhà phố gần FPT', 'Nha pho gan FPT'), 1);
+  assert.ok(propertyTitleSimilarity('Nhà phố 3 tầng gần FPT',
+    'Bán nhà phố 3 tầng gần FPT') >= 0.78);
+  assert.ok(propertyTitleSimilarity('Đất 120 m² gần FPT',
+    'Phòng trọ cạnh ĐHQG') < 0.5);
+  assert.equal(propertyUnitKey('Căn 101 ở Hòa Lạc'), 'can:101');
+  assert.equal(propertyUnitKey('Phòng số 203 tại ĐHQG'), 'phong:203');
+  assert.equal(propertyUnitKey('Lô 28 Khu CNC'), 'lo:28');
+  assert.equal(propertyUnitKey('Nhà phố 3 tầng gần FPT'), null);
+});
+
+test('Data Trust V3 highlights comparable area/type/price, but does not auto-hide', () => {
+  const reference = {
+    name: 'Nhà phố 3 tầng gần FPT',
+    phone: '0987654321',
+    realEstate: {
+      transactionType: 'SALE', propertyType: 'HOUSE',
+      areaM2: 100, totalPriceVnd: 3000000000
+    }
+  };
+  const similar = rankPropertyCandidate({
+    id: 11, source: 'PUBLISHED',
+    name: 'Nha pho 3 tang gan FPT', phone: '+84 987654321',
+    listingType: 'SALE', propertyType: 'HOUSE',
+    areaM2: 101, totalPriceVnd: 3020000000, distanceM: 13
+  }, reference);
+  assert.equal(similar.risk, 'LIKELY_DUPLICATE');
+  assert.equal(similar.titleSimilarity, 1);
+  assert.equal(similar.samePropertyType, true);
+  assert.equal(similar.similarArea, true);
+  assert.equal(similar.similarPrice, true);
+  assert.equal(similar.differentUnit, false);
+  assert.ok(similar.confidence >= 75);
+  assert.ok(similar.evidence.includes('SAME_CONTACT'));
+  assert.ok(similar.evidence.includes('SIMILAR_AREA'));
+  assert.equal(JSON.stringify(similar.evidence).includes('0987654321'), false);
+
+  const different = rankPropertyCandidate({
+    id: 12, source: 'PENDING',
+    name: 'Nha pho 3 tang gan FPT', phone: '0987654321',
+    listingType: 'SALE', propertyType: 'HOUSE',
+    areaM2: 245, totalPriceVnd: 5600000000, distanceM: 10
+  }, reference);
+  assert.equal(different.risk, 'REVIEW',
+    'strongly different price and area require human review, not likely duplicate');
+  assert.equal(different.conflictingArea, true);
+  assert.equal(different.conflictingPrice, true);
+  assert.ok(different.evidence.includes('DIFFERENT_AREA'));
+  assert.ok(different.evidence.includes('DIFFERENT_PRICE'));
+  assert.ok(different.confidence < similar.confidence);
+});
+
+test('Data Trust V3 never conflates distinct apartment units at same coordinates', () => {
+  const reference = {
+    name: 'Căn 101 tòa nhà Hòa Lạc',
+    phone: '0912345678',
+    realEstate: {
+      transactionType: 'RENT', propertyType: 'APARTMENT',
+      areaM2: 40, monthlyRentVnd: 6000000
+    }
+  };
+  const otherUnit = rankPropertyCandidate({
+    id: 22, source: 'PUBLISHED',
+    name: 'Căn 102 tòa nhà Hòa Lạc', phone: '0912345678', distanceM: 0,
+    listingType: 'RENT', propertyType: 'APARTMENT',
+    areaM2: 40, monthlyRent: 6000000
+  }, reference);
+  assert.equal(otherUnit.differentUnit, true);
+  assert.equal(otherUnit.risk, 'REVIEW');
+  assert.ok(otherUnit.evidence.includes('DIFFERENT_UNIT'));
+
+  const unrelated = rankPropertyCandidate({
+    id: 23, source: 'PENDING',
+    name: 'Quán ăn gần trường FPT', phone: '0999999999', distanceM: 0,
+    listingType: 'RENT', propertyType: 'OTHER'
+  }, reference);
+  assert.equal(unrelated.risk, 'NEARBY',
+    'zero-meter proximity alone must not signal a duplicate');
+});
+
+test('Data Trust V3 carries only bounded staff-only matching details from both sources', async () => {
+  const calls = [];
+  const client = {
+    async query(sql, params) {
+      calls.push({ sql, params });
+      if (calls.length === 1) return { rows: [{
+        id: 100, name: 'Nhà phố 3 tầng gần FPT',
+        phone: '0987654321', address: 'Hòa Lạc', distance_m: 12,
+        listing_type: 'SALE', property_type: 'HOUSE',
+        area_m2: '102', total_price_vnd: '3200000000', monthly_rent: null
+      }] };
+      return { rows: [{
+        contribution_id: 101, name: 'Căn 203',
+        phone: '0911111111', address: 'Hòa Lạc', distance_m: 0,
+        listing_type: 'RENT', property_type: 'APARTMENT',
+        area_m2: '35', total_price_vnd: null, monthly_rent: '5000000'
+      }] };
+    }
+  };
+  const result = await findNearbyPropertyCandidates({
+    contributionId: 90, payload: sample, client
+  });
+  assert.equal(result.version, 3);
+  assert.equal(result.items.length, 2);
+  assert.equal(result.items[0].source, 'PUBLISHED');
+  assert.equal(result.items[0].samePropertyType, true);
+  assert.equal(result.items[1].source, 'PENDING');
+  assert.ok(calls[0].sql.includes('housing_listings'));
+  assert.ok(calls[0].sql.includes("hl.listing_status = 'ACTIVE'"));
+  assert.ok(calls[1].sql.includes('realEstate,areaM2'));
+  assert.deepEqual(calls[1].params, [105.52522, 21.01354, 100, 90, 12]);
 });
