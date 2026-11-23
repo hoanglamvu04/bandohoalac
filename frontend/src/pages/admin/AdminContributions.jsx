@@ -17,6 +17,8 @@ const PROPERTY_EVIDENCE_LABELS = Object.freeze({
   SIMILAR_AREA: 'Diện tích gần bằng',
   SIMILAR_PRICE: 'Giá gần bằng',
   DIFFERENT_UNIT: 'Khác số căn/phòng/lô',
+  DIFFERENT_AREA: 'Diện tích khác đáng kể',
+  DIFFERENT_PRICE: 'Giá khác đáng kể',
   WITHIN_25M: 'Cách nhau tối đa 25 m'
 });
 
