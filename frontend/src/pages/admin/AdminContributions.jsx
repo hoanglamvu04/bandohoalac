@@ -8,6 +8,32 @@ import { useToast } from '../../context/ToastContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import '../../contribution-scoring.css';
 
+const PROPERTY_EVIDENCE_LABELS = Object.freeze({
+  SAME_CONTACT: 'Cùng số liên hệ',
+  SAME_TITLE: 'Tên trùng hoàn toàn',
+  SIMILAR_TITLE: 'Tên gần giống',
+  SAME_TRANSACTION: 'Cùng bán/thuê',
+  SAME_PROPERTY_TYPE: 'Cùng loại tài sản',
+  SIMILAR_AREA: 'Diện tích gần bằng',
+  SIMILAR_PRICE: 'Giá gần bằng',
+  DIFFERENT_UNIT: 'Khác số căn/phòng/lô',
+  DIFFERENT_AREA: 'Diện tích khác đáng kể',
+  DIFFERENT_PRICE: 'Giá khác đáng kể',
+  WITHIN_25M: 'Cách nhau tối đa 25 m'
+});
+
+// Acknowledging a nearby result is valid only for the exact evidence seen.
+// Candidate IDs alone are insufficient: their title, price or risk can change.
+function nearbyReviewSignature(items) {
+  return JSON.stringify((items || []).map((item) => ({
+    source: item.source, id: item.id, name: item.name,
+    risk: item.risk, confidence: item.confidence,
+    distanceM: item.distanceM, evidence: item.evidence || []
+  })).sort((a, b) =>
+    String(a.source + ':' + a.id).localeCompare(String(b.source + ':' + b.id))
+  ));
+}
+
 const TYPE_LABELS = {
   CREATE_PLACE: 'Thêm địa điểm mới',
   UPDATE_PLACE: 'Cập nhật thông tin',
@@ -102,6 +128,8 @@ export default function AdminContributions() {
   const [duplicatesById, setDuplicatesById] = useState({});
   const [nearbyAcknowledged, setNearbyAcknowledged] = useState({});
   const [publicationCheck, setPublicationCheck] = useState(null);
+  const [riskQueue, setRiskQueue] = useState(null);
+  const [riskQueueLoading, setRiskQueueLoading] = useState(false);
 
   async function verifyPublishedHousing(placeId, expectedPhotoCount) {
     setPublicationCheck({ placeId, status: 'checking' });
@@ -210,6 +238,35 @@ export default function AdminContributions() {
     }
   }
 
+  async function scanPendingPropertyQueue() {
+    setRiskQueueLoading(true);
+    try {
+      const { data } = await client.get('/admin/contributions/property-risk-queue', {
+        params: { limit: '10', offset: '0' }
+      });
+      setRiskQueue({ ...data, error: null });
+    } catch (error) {
+      setRiskQueue({
+        items: [],
+        error: error.response?.data?.error || 'Chưa quét được tin đang chờ. Hãy thử lại.'
+      });
+    } finally {
+      setRiskQueueLoading(false);
+    }
+  }
+
+  function openRiskQueueItem(contributionId) {
+    const target = document.querySelector(
+      '[data-testid="estate-duplicate-check-' + contributionId + '"]'
+    );
+    if (!target) {
+      showToast('Tin này chưa nằm trong trang đang tải. Hãy tìm ở hàng chờ duyệt.', 'info');
+      return;
+    }
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    void checkDuplicates(contributionId);
+  }
+
   async function handleApprove(item) {
     const isRealEstate = Boolean(
       item.placeCategorySlug === 'bat-dong-san' ||
@@ -225,9 +282,8 @@ export default function AdminContributions() {
         showToast(latest.error || 'Không thể kiểm tra tin gần vị trí, vui lòng thử lại.', 'error');
         return;
       }
-      const identity = (entry) => entry.source + ':' + entry.id;
-      const beforeIds = (previous?.items || []).map(identity).sort().join('|');
-      const latestIds = latest.items.map(identity).sort().join('|');
+      const beforeIds = nearbyReviewSignature(previous?.items);
+      const latestIds = nearbyReviewSignature(latest.items);
       if ((!previous?.checked && latest.items.length > 0) ||
           (previous?.checked && beforeIds !== latestIds)) {
         setNearbyAcknowledged((current) => ({ ...current, [item.id]: false }));
@@ -352,7 +408,49 @@ export default function AdminContributions() {
         </div>
       )}
 
-      {publicationCheck && (
+      {status === 'PENDING' && ['ADMIN', 'MODERATOR'].includes(user?.role) && (
+         <section className="estate-risk-triage" aria-label="Hàng chờ ưu tiên rà soát bất động sản"
+           data-testid="property-risk-queue">
+           <div className="estate-risk-triage-header">
+             <div>
+               <strong>Rà soát nhanh tin bất động sản</strong>
+               <p>Quét tối đa 10 tin chờ duyệt cũ nhất và ưu tiên tin có tín hiệu giống nhau. Không tự duyệt, từ chối hoặc ẩn tin.</p>
+             </div>
+             <button type="button" className="secondary-action"
+               disabled={riskQueueLoading} onClick={scanPendingPropertyQueue}>
+               <ShieldCheck size={15}/>
+               {riskQueueLoading ? 'Đang quét…' : 'Quét & phân loại'}
+             </button>
+           </div>
+           {riskQueue?.error && <p role="alert">{riskQueue.error}</p>}
+           {riskQueue && !riskQueue.error && (
+             <div className="estate-risk-triage-results" role="status">
+               <p>Đã quét {riskQueue.scannedCount} tin · {riskQueue.needsAttention} tin cần ưu tiên rà soát.</p>
+               {riskQueue.items.length === 0 && <p>Chưa thấy tin gần vị trí trong lượt quét này.</p>}
+               {riskQueue.items.map((entry) => (
+                 <div className="estate-risk-triage-row" key={entry.contributionId}>
+                   <span className={'estate-risk-level ' + entry.priority.toLowerCase()}>
+                     {entry.priority === 'HIGH' ? 'Ưu tiên cao'
+                       : entry.priority === 'MEDIUM' ? 'Cần đối chiếu' : 'Cùng khu vực'}
+                   </span>
+                   <span><b>#{entry.contributionId}</b> {entry.name} · {entry.candidateCount} tin gần vị trí
+                     {' · '}{entry.candidate?.name || 'Chưa rõ'}
+                     {Number.isFinite(entry.candidate?.confidence)
+                       ? ' · điểm tín hiệu ' + entry.candidate.confidence + '/100' : ''}
+                   </span>
+                   <button type="button" className="secondary-action"
+                     onClick={() => openRiskQueueItem(entry.contributionId)}>
+                     Xem & đối chiếu
+                   </button>
+                 </div>
+               ))}
+               {riskQueue.hasMore && <p>Còn các tin chờ duyệt khác chưa được quét; đây chỉ là danh sách ưu tiên theo trang, không phải toàn bộ dữ liệu.</p>}
+             </div>
+           )}
+         </section>
+       )}
+
+       {publicationCheck && (
         <section className="estate-publication-check" role="status"
           aria-label="Kiểm tra tin bất động sản sau duyệt"
           data-testid="estate-publication-check">
@@ -476,7 +574,8 @@ export default function AdminContributions() {
                           ) : (
                             <>
                               <strong>Phát hiện {duplicatesById[item.id].items.length} tin gần đây — cần kiểm tra thủ công.</strong>
-                              <p>Gần nhau không có nghĩa là trùng tài sản. Đối chiếu tên, số liên hệ, vị trí và ảnh.</p>
+                              <p>Gần nhau không có nghĩa là trùng tài sản. V3 so khớp tên, loại, diện tích và giá để gợi ý; vẫn cần đối chiếu ảnh, số căn/phòng/lô và giấy tờ trước khi duyệt.</p>
+                              <p className="estate-evidence-disclaimer">Điểm tín hiệu là mức ưu tiên rà soát, không phải xác suất trùng và không tự từ chối tin.</p>
                               {duplicatesById[item.id].items.map((duplicate) => (
                                 <p key={duplicate.source + ':' + duplicate.id}>
                                   {duplicate.risk === 'LIKELY_DUPLICATE' ? '⚠ Có dấu hiệu trùng · '
@@ -490,6 +589,22 @@ export default function AdminContributions() {
                                     : <span>Đang chờ duyệt #{duplicate.id}: {duplicate.name}</span>}
                                   {' · '}{duplicate.address || ''}
                                   {duplicate.phone ? ' · ' + duplicate.phone : ''}
+                                  {Number.isFinite(duplicate.confidence) && (
+                                    <span className="estate-evidence-score"> · Điểm tín hiệu: {duplicate.confidence}/100</span>
+                                  )}
+                                  {Number.isFinite(duplicate.titleSimilarity) && (
+                                    <span> · Tên giống {Math.round(duplicate.titleSimilarity * 100)}%</span>
+                                  )}
+                                  {Array.isArray(duplicate.evidence) && duplicate.evidence.length > 0 && (
+                                    <span className="estate-evidence-tags">
+                                      {duplicate.evidence.map((signal) => (
+                                        <span key={signal}
+                                          className={signal === 'DIFFERENT_UNIT' ? 'different-unit' : ''}>
+                                          {PROPERTY_EVIDENCE_LABELS[signal] || signal}
+                                        </span>
+                                      ))}
+                                    </span>
+                                  )}
                                 </p>
                               ))}
                               <label className="estate-nearby-acknowledgement">

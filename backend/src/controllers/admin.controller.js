@@ -4,7 +4,7 @@ import { listContributions, getContributionById } from '../services/contribution
 import { approveContribution, rejectContribution } from '../services/admin.service.js';
 import { auditContextFromRequest, writeAuditLog } from '../services/audit.service.js';
 import { invalidatePlaceBoundsCache } from '../services/place.service.js';
-import { findNearbyPropertyCandidates } from '../services/realEstateDuplicates.service.js';
+import { findNearbyPropertyCandidates, scanPendingPropertyRiskQueue } from '../services/realEstateDuplicates.service.js';
 
 export const getContributions = asyncHandler(async (req, res) => {
   const { status, limit, offset } = req.query;
@@ -34,6 +34,15 @@ export const getContribution = asyncHandler(async (req, res) => {
     throw new AppError('Tin bất động sản chỉ được xem bởi quản trị viên.', 403);
   }
   res.json(contribution);
+});
+
+export const getPendingPropertyRiskQueue = asyncHandler(async (req, res) => {
+  const result = await scanPendingPropertyRiskQueue({
+    limit: Number(req.query.limit),
+    offset: Number(req.query.offset)
+  });
+  res.set('Cache-Control', 'private, no-store');
+  res.json(result);
 });
 
 export const getRealEstateDuplicates = asyncHandler(async (req, res) => {

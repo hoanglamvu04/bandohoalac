@@ -168,7 +168,9 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
          hl.expires_at AS housing_expires_at,
          ST_Y(p.location)::double precision AS lat,
          ST_X(p.location)::double precision AS lng,
-         LOWER(REGEXP_REPLACE(TRIM(p.name), '\\s+', ' ', 'g')) AS normalized_name,
+         LOWER(public.hola_unaccent(
+           REGEXP_REPLACE(TRIM(p.name), '\\s+', ' ', 'g')
+         )) AS normalized_name,
          (SELECT COUNT(*)::int FROM place_images pi WHERE pi.place_id = p.id) AS image_count,
          (SELECT MAX(pi.created_at) FROM place_images pi WHERE pi.place_id = p.id) AS latest_image_at
        FROM places p
@@ -187,6 +189,14 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
         AND b.location IS NOT NULL
         AND a.normalized_name <> ''
         AND b.normalized_name = a.normalized_name
+        -- A cafe and a home at the same coordinates are not duplicates.
+        AND b.category_slug IS NOT DISTINCT FROM a.category_slug
+        -- Different property types/sale-vs-rent units on one plot are also
+        -- distinct products. Manual moderation still reviews close candidates.
+        AND (a.category_slug IS DISTINCT FROM 'bat-dong-san' OR (
+          b.housing_property_type IS NOT DISTINCT FROM a.housing_property_type
+          AND b.housing_listing_type IS NOT DISTINCT FROM a.housing_listing_type
+        ))
         AND ST_DWithin(a.location::geography, b.location::geography, $1)
        GROUP BY a.id
      )
