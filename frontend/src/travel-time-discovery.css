@@ -141,3 +141,18 @@
 @media (max-width: 390px) {
   .hm-travel-fields { grid-template-columns: 1fr; }
 }
+
+.hm-travel-suggestions { display: grid; gap: 6px; }
+.hm-travel-suggestions > small { font-size: 10px; color: #728575; font-weight: 700; }
+.hm-travel-suggestions > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.hm-travel-suggestions button {
+  border: 1px solid #c9d9d0;
+  border-radius: 24px;
+  background: #fff;
+  color: #285e47;
+  padding: 6px 8px;
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.hm-travel-suggestions button:hover { background: #eff7f0; }
