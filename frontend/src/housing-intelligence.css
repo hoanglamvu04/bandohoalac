@@ -124,3 +124,5 @@
 .hm-intel-amenity-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; font-size: 11px; line-height: 1.5; }
 .hm-intel-amenity-row a { color: #1a6449; text-decoration: underline; overflow-wrap: anywhere; }
 .hm-intel-amenity-row small { color: #648070; flex: 0 0 auto; }
+
+.hm-intel-market .hm-intel-amenity-row small { text-align: right; max-width: 45%; }

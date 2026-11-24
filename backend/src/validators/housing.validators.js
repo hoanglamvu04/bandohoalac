@@ -28,7 +28,24 @@ export const housingListQuerySchema = z.object({
   pets: booleanString.optional(),
   sort: z.enum(['recommended', 'rent_asc', 'rent_desc', 'price_asc', 'price_desc', 'distance', 'area_desc', 'freshest']).optional(),
   limit: numericString.optional(),
-  offset: numericString.optional()
+  offset: numericString.optional(),
+  west: z.coerce.number().finite().min(-180).max(180).optional(),
+  east: z.coerce.number().finite().min(-180).max(180).optional(),
+  south: z.coerce.number().finite().min(-90).max(90).optional(),
+  north: z.coerce.number().finite().min(-90).max(90).optional()
+}).superRefine((params, context) => {
+  const keys = ['west','east','south','north'];
+  const count = keys.filter((key) => params[key] !== undefined).length;
+  if (count > 0 && count !== 4) {
+    context.addIssue({ code: 'custom', path: ['west'],
+      message: 'Cần cả bốn cạnh của vùng bản đồ.' });
+  }
+  if (count === 4 && (params.west >= params.east ||
+      params.south >= params.north ||
+      params.east - params.west > 0.6 || params.north - params.south > 0.6)) {
+    context.addIssue({ code: 'custom', path: ['west'],
+      message: 'Vùng tìm kiếm không hợp lệ hoặc quá rộng.' });
+  }
 });
 
 const nullableMoney = z.number().int().min(0).max(100000000).nullable().optional();

@@ -162,7 +162,7 @@ const BASE_SELECT = `
   LEFT JOIN housing_listings hl ON hl.place_id = p.id
 `;
 
-export async function listHousingListings(filters = {}) {
+export async function listHousingListings(filters = {}, db = pool) {
   const conditions = [
     "p.status = 'PUBLISHED'",
     "c.slug = 'bat-dong-san'",
@@ -178,7 +178,165 @@ export async function listHousingListings(filters = {}) {
 
   if (filters.propertyType) {
     params.push(filters.propertyType);
-    conditions.push('hl.property_type = $' + params.length);
+    conditions.push('hl.property_type = 
+  if (filters.q) {
+    params.push(String(filters.q).trim());
+    const ref = '$' + params.length;
+    const folded = 'lower(public.hola_unaccent(' + ref + '))';
+    conditions.push(
+      "(lower(public.hola_unaccent(COALESCE(p.name, '') || ' ' || COALESCE(p.address, '') || ' ' || COALESCE(p.description, '') || ' ' || COALESCE(hl.availability_note, '') || ' ' || COALESCE(hl.curfew_note, ''))) LIKE '%' || " + folded + " || '%')"
+    );
+  }
+
+  const numericFilters = [
+    ['minRent', 'hl.monthly_rent >='],
+    ['maxRent', 'hl.monthly_rent <='],
+    ['minPrice', 'hl.total_price_vnd >='],
+    ['maxPrice', 'hl.total_price_vnd <='],
+    ['minArea', 'hl.area_m2 >='],
+    ['maxArea', 'hl.area_m2 <='],
+    ['minAvailableRooms', 'hl.available_rooms >=']
+  ];
+
+  for (const [key, operator] of numericFilters) {
+    if (filters[key] === undefined) continue;
+    params.push(Number(filters[key]));
+    conditions.push(operator + ' $' + params.length);
+  }
+
+  if (filters.maxDistanceFpt !== undefined) {
+    params.push(Number(filters.maxDistanceFpt));
+    conditions.push(
+      `ST_DWithin(
+         p.location::geography,
+         ST_SetSRID(ST_MakePoint(105.52522, 21.01354), 4326)::geography,
+         $${params.length}
+       )`
+    );
+  }
+
+  if (filters.verifiedWithinDays !== undefined) {
+    params.push(Number(filters.verifiedWithinDays));
+    conditions.push("hl.last_verified_at >= NOW() - ($" + params.length + " * INTERVAL '1 day')");
+  }
+
+  if (filters.availability) {
+    params.push(filters.availability);
+    conditions.push('hl.availability_status = $' + params.length);
+  }
+
+  if (booleanValue(filters.availableOnly) === true) {
+    conditions.push("hl.availability_status IN ('AVAILABLE', 'LIMITED')");
+    conditions.push('COALESCE(hl.available_rooms, 1) > 0');
+  }
+
+  if (booleanValue(filters.partnerOnly) === true) {
+    conditions.push(
+      "EXISTS (SELECT 1 FROM place_partners pp WHERE pp.place_id = p.id AND pp.status = 'ACTIVE')"
+    );
+  }
+
+  const booleanFilters = [
+    ['airConditioner', 'hl.has_air_conditioner'],
+    ['waterHeater', 'hl.has_water_heater'],
+    ['privateBathroom', 'hl.has_private_bathroom'],
+    ['loft', 'hl.has_loft'],
+    ['balcony', 'hl.has_balcony'],
+    ['parking', 'hl.has_parking'],
+    ['pets', 'hl.allows_pets']
+  ];
+
+  for (const [key, column] of booleanFilters) {
+    const value = booleanValue(filters[key]);
+    if (value === null) continue;
+    params.push(value);
+    conditions.push(column + ' = $' + params.length);
+  }
+
+  const orderMap = {
+    recommended: `is_partner DESC,
+      CASE hl.availability_status
+        WHEN 'AVAILABLE' THEN 0
+        WHEN 'LIMITED' THEN 1
+        WHEN 'UNKNOWN' THEN 2
+        ELSE 3
+      END,
+      hl.last_verified_at DESC NULLS LAST,
+      p.rating_avg DESC,
+      p.updated_at DESC`,
+    rent_asc: 'hl.monthly_rent ASC NULLS LAST, p.updated_at DESC',
+    rent_desc: 'hl.monthly_rent DESC NULLS LAST, p.updated_at DESC',
+    price_asc: 'hl.total_price_vnd ASC NULLS LAST, p.updated_at DESC',
+    price_desc: 'hl.total_price_vnd DESC NULLS LAST, p.updated_at DESC',
+    distance: 'distance_to_fpt_m ASC, p.updated_at DESC',
+    area_desc: 'hl.area_m2 DESC NULLS LAST, p.updated_at DESC',
+    freshest: 'hl.last_verified_at DESC NULLS LAST, p.updated_at DESC'
+  };
+
+  const safeLimit = Math.min(Math.max(Number(filters.limit) || 30, 1), 100);
+  const safeOffset = Math.max(Number(filters.offset) || 0, 0);
+  const sort = orderMap[filters.sort] || orderMap.recommended;
+
+  params.push(safeLimit + 1);
+  const limitRef = '$' + params.length;
+  params.push(safeOffset);
+  const offsetRef = '$' + params.length;
+
+  const pagedBaseSelect = BASE_SELECT.replace(
+    /^SELECT/,
+    'SELECT COUNT(*) OVER() AS total_count,'
+  );
+  const sql = pagedBaseSelect +
+    ' WHERE ' + conditions.join(' AND ') +
+    ' ORDER BY ' + sort + ', p.id DESC' +
+    ' LIMIT ' + limitRef +
+    ' OFFSET ' + offsetRef;
+
+  const { rows } = await db.query(sql, params);
+  const hasMore = rows.length > safeLimit;
+  const pageRows = rows.slice(0, safeLimit);
+  const items = pageRows.map(mapHousingRow);
+  const total = Number(rows[0]?.total_count) || safeOffset + items.length;
+
+  return {
+    items,
+    meta: {
+      count: items.length,
+      total,
+      hasMore,
+      nextOffset: safeOffset + items.length,
+      structuredCount: items.filter((item) => item.housing).length,
+      partnerCount: items.filter((item) => item.isPartner).length,
+      fpt: {
+        name: 'Trường Đại học FPT',
+        lat: FPT_LAT,
+        lng: FPT_LNG
+      }
+    }
+  };
+}
+
+export async function getHousingListingByPlaceId(placeId) {
+  const { rows } = await pool.query(
+    BASE_SELECT +
+      " WHERE p.id = $1 AND p.status = 'PUBLISHED' AND c.slug = 'bat-dong-san' AND (hl.listing_status IS NULL OR hl.listing_status = 'ACTIVE') AND (hl.expires_at IS NULL OR hl.expires_at > NOW()) LIMIT 1",
+    [placeId]
+  );
+
+  return mapHousingRow(rows[0] || null);
+}
+ + params.length);
+  }
+
+  // Explicit on-demand viewport search only. Use indexed PostGIS spatial
+  // filtering BEFORE pagination; never filter a 30-item global page on client.
+  if (['west','south','east','north'].every((key) => filters[key] !== undefined)) {
+    params.push(Number(filters.west),Number(filters.south),
+      Number(filters.east),Number(filters.north));
+    const n = params.length;
+    conditions.push(
+      `ST_Intersects(p.location, ST_MakeEnvelope(${n - 3},${n - 2},${n - 1},${n},4326))`
+    );
   }
 
   if (filters.q) {
