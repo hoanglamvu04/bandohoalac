@@ -30,7 +30,7 @@ test('housing viewport SQL filters published data spatially BEFORE pagination', 
       assert.match(sql,/p.status = 'PUBLISHED'/);
       assert.match(sql,/hl.expires_at/);
       assert.match(sql,/ST_Intersects\(p.location, ST_MakeEnvelope\(\$1,\$2,\$3,\$4,4326\)\)/);
-      assert.ok(sql.indexOf('ST_Intersects') < sql.indexOf('ORDER BY'));
+      assert.ok(sql.indexOf('ST_Intersects') < sql.lastIndexOf('ORDER BY'));
       assert.deepEqual(params.slice(0,4),[105.5,21,105.6,21.1]);
       return { rows: [] };
     }

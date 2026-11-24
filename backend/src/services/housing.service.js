@@ -162,7 +162,7 @@ const BASE_SELECT = `
   LEFT JOIN housing_listings hl ON hl.place_id = p.id
 `;
 
-export async function listHousingListings(filters = {}) {
+export async function listHousingListings(filters = {}, db = pool) {
   const conditions = [
     "p.status = 'PUBLISHED'",
     "c.slug = 'bat-dong-san'",
@@ -292,7 +292,7 @@ export async function listHousingListings(filters = {}) {
     ' LIMIT ' + limitRef +
     ' OFFSET ' + offsetRef;
 
-  const { rows } = await pool.query(sql, params);
+  const { rows } = await db.query(sql, params);
   const hasMore = rows.length > safeLimit;
   const pageRows = rows.slice(0, safeLimit);
   const items = pageRows.map(mapHousingRow);
