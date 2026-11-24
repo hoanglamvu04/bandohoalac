@@ -17,7 +17,16 @@ const overview = {
       { group: 'housing', requests: 120, serverErrors: 2, rateLimited: 12, p95Ms: 1900 }
     ]
   },
-  warnings: [{ code: 'SLOW_API', severity: 'warning', message: 'Độ trễ API vượt ngưỡng.' }]
+  warnings: [{ code: 'SLOW_API', severity: 'warning', message: 'Độ trễ API vượt ngưỡng.' }],
+  launch: {
+    launchStatus: 'NOT_VERIFIED', dataGate: 'NEEDS_REVIEW',
+    counts: { publishedPlaces: 200, activeHousing: 30,
+      stalePublishedHousing: 2, missingHousingContact: 1,
+      legacyUnstructuredHousing: 3, publishedWithoutImages: 16 },
+    blockers: ['STALE_PUBLISHED_HOUSING','HOUSING_MISSING_CONTACT'],
+    manualGates: [{ code: 'OFFSITE_BACKUP_VERIFIED', status: 'UNVERIFIED' },
+      { code: 'PRODUCTION_RESTORE_DRILL', status: 'UNVERIFIED' }]
+  }
 };
 
 async function mockApi(page, role) {
@@ -50,6 +59,11 @@ test('mobile Admin sees safe operational metrics and can refresh', async ({ page
   await expect(page.getByText('Cần theo dõi', { exact: true })).toBeVisible();
   await expect(page.getByText('Độ trễ API vượt ngưỡng.')).toBeVisible();
   await expect(page.getByRole('row', { name: /Bất động sản/ })).toBeVisible();
+  const launch = page.getByTestId('launch-evidence');
+  await expect(launch).toContainText('Chưa nghiệm thu production');
+  await expect(launch).toContainText('Bất động sản hết hiệu lực');
+  await expect(launch).toContainText('Chưa xác minh');
+  await expect(launch).toContainText('Bản sao lưu ngoài VPS');
   await expect.poll(requestCount).toBeGreaterThan(0);
 
   const initial = requestCount();

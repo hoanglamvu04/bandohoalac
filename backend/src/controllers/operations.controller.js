@@ -1,6 +1,7 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { getDatabaseReadiness } from '../services/readiness.service.js';
 import { softLaunchMetrics } from '../services/softLaunchMetrics.service.js';
+import { getLaunchEvidenceCached, LAUNCH_MANUAL_GATES } from '../services/launchEvidence.service.js';
 
 function warningsFor(stats, database) {
   const warnings = [];
@@ -38,6 +39,28 @@ export const adminOperationsOverview = asyncHandler(async (_req, res) => {
   const database = await getDatabaseReadiness();
   const metrics = softLaunchMetrics.snapshot();
   const warnings = warningsFor(metrics, database);
+  // Keep API-health separate from launch approval. An unreachable DB must
+  // never cause public or private launch checks to report success.
+  let launch;
+  if (database.ok) {
+    try {
+      launch = await getLaunchEvidenceCached();
+    } catch {
+      launch = {
+        launchStatus: 'NOT_VERIFIED',
+        dataGate: 'UNKNOWN',
+        counts: null,
+        blockers: ['DATA_EVIDENCE_QUERY_FAILED'],
+        manualGates: LAUNCH_MANUAL_GATES.map((code) => ({ code, status: 'UNVERIFIED' }))
+      };
+    }
+  } else {
+    launch = {
+      launchStatus: 'NOT_VERIFIED', dataGate: 'UNKNOWN', counts: null,
+      blockers: ['DATABASE_DOWN'],
+      manualGates: LAUNCH_MANUAL_GATES.map((code) => ({ code, status: 'UNVERIFIED' }))
+    };
+  }
   res.set('Cache-Control', 'private, no-store');
   res.json({
     checkedAt: new Date().toISOString(),
@@ -48,6 +71,7 @@ export const adminOperationsOverview = asyncHandler(async (_req, res) => {
     heapUsedMb: Math.round(process.memoryUsage().heapUsed / (1024 * 1024)),
     metrics,
     warnings,
+    launch,
     limitations: [
       'Số liệu tạm thời của tiến trình API này; sẽ đặt lại khi restart PM2.',
       'Chỉ thống kê nhóm API, không lưu IP, URL chi tiết, token hoặc nội dung request.',
