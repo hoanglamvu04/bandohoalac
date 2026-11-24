@@ -453,7 +453,13 @@ export async function listPublishedPlaceSitemapEntries(client = pool) {
         LIMIT 1
       ) AS cover_image
     FROM places p
+    LEFT JOIN categories c ON c.id = p.category_id
+    LEFT JOIN housing_listings hl ON hl.place_id = p.id
     WHERE p.status = 'PUBLISHED'
+      -- Stale BĐS must not remain indexable before the nightly archive job.
+      AND (c.slug IS DISTINCT FROM 'bat-dong-san'
+        OR ((hl.listing_status IS NULL OR hl.listing_status = 'ACTIVE')
+          AND (hl.expires_at IS NULL OR hl.expires_at > NOW())))
       AND p.slug IS NOT NULL
       AND p.slug <> ''
       AND ST_Intersects(
