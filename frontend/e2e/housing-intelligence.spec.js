@@ -55,7 +55,7 @@ async function stubHousing(page, authenticated = false) {
         disclaimer: 'Giá chào, không phải giá giao dịch hoặc định giá.'
       } });
     }
-    if (/^\\/api\\/housing\\/\\d+\\/amenities$/.test(url.pathname)) {
+    if (/^\/api\/housing\/\d+\/amenities$/.test(url.pathname)) {
       amenitiesRequests.push(url.pathname);
       return route.fulfill({ json: {
         placeId: '701', radiusM: Number(url.searchParams.get('radius') || 1000),
