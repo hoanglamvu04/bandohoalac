@@ -41,3 +41,13 @@
   .place-trust-report-buttons { display:grid; grid-template-columns:1fr; }
   .place-trust-report-buttons button { width:100%; }
 }
+
+/* Public suspicious-housing report: links to the existing guest moderation queue. */
+.place-trust-report-buttons a {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-height:34px; padding:0 10px; border:1px solid #e9ceab;
+  border-radius:9px; background:#fff8ed; color:#855024;
+  text-decoration:none; font-size:10px; font-weight:800;
+}
+.place-trust-report-buttons a:focus-visible { outline:2px solid #855024; outline-offset:2px; }
+@media(max-width:700px) { .place-trust-report-buttons a { width:100%; } }
