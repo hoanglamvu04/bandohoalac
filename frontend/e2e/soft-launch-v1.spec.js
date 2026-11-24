@@ -313,3 +313,42 @@ test('manual refresh keeps the original review version attached to an unsaved dr
   await expect(compare).toHaveCount(0);
   await expect(page.getByLabel('Ghi chú phản hồi 1002')).toHaveValue('Admin A đang xác minh');
 });
+
+test('guest can flag a public property for human triage without login or automatic removal', async ({ page }) => {
+  let submitted = null;
+  await page.route('**/api/**', (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/api/auth/refresh')
+      return route.fulfill({ status:401, json:{ error:'Login required' } });
+    if (url.pathname === '/api/soft-launch/feedback' && route.request().method() === 'POST') {
+      submitted = route.request().postDataJSON();
+      return route.fulfill({ status:201, json:{
+        accepted:true, reference:'47b02e0f-8a45-48a0-bfdd-130784bf6a00'
+      } });
+    }
+    return route.fulfill({ json:{ items:[], ok:true } });
+  });
+  await page.goto('/gop-y?reportHousing=701', { waitUntil:'domcontentloaded' });
+  await expect(page.getByText('Đang phản ánh tin BĐS #701')).toBeVisible();
+  await expect(page.getByLabel('Loại phản hồi')).toHaveValue('DATA');
+  await expect(page.getByLabel('Khu vực gặp lỗi')).toHaveValue('HOUSING');
+  await expect(page.getByRole('button', { name:'Gửi góp ý cho HOLA Maps' })).toBeDisabled();
+  await page.locator('textarea').fill('Ảnh và giá chào trên tin có dấu hiệu không khớp với thông tin tôi kiểm tra.');
+  await page.getByRole('button', { name:'Gửi góp ý cho HOLA Maps' }).click();
+  await expect.poll(() => submitted).not.toBeNull();
+  expect(submitted.area).toBe('HOUSING');
+  expect(submitted.category).toBe('DATA');
+  expect(submitted.message).toContain('Tin BĐS #701');
+  expect(submitted.message).toContain('Ảnh và giá chào');
+  for (const key of ['phone','userId','coordinates','lat','lng','url'])
+    expect(submitted).not.toHaveProperty(key);
+  await expect(page.getByText('Không có thay đổi nào được tự động áp dụng lên bản đồ.')).toBeVisible();
+});
+
+test('invalid public property reference never prefills an arbitrary housing ID', async ({ page }) => {
+  await page.route('**/api/**', (route) => route.fulfill({ json: {} }));
+  await page.goto('/gop-y?reportHousing=0001', { waitUntil:'domcontentloaded' });
+  await expect(page.getByLabel('Loại phản hồi')).toHaveValue('BUG');
+  await expect(page.getByLabel('Khu vực gặp lỗi')).toHaveValue('MAP');
+  await expect(page.getByText(/Đang phản ánh tin BĐS/)).toHaveCount(0);
+});

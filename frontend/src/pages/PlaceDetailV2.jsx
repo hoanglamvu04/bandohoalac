@@ -585,9 +585,14 @@ export default function PlaceDetailV2() {
             <button type="button" onClick={() => openPlaceReport('OPENING_HOURS')}>Báo sai giờ mở cửa</button>
             <button type="button" onClick={() => openPlaceReport('PHONE')}>Báo sai số điện thoại</button>
             {place.categorySlug === 'bat-dong-san' && (
-              <button type="button" onClick={() => openPlaceReport('LISTING_INACTIVE')}>
-                Báo tin không còn hiệu lực
-              </button>
+              <>
+                <button type="button" onClick={() => openPlaceReport('LISTING_INACTIVE')}>
+                  Báo tin không còn hiệu lực
+                </button>
+                <Link to={'/gop-y?reportHousing=' + encodeURIComponent(place.id)}>
+                  Báo tin BĐS đáng ngờ
+                </Link>
+              </>
             )}
           </div>
         </div>

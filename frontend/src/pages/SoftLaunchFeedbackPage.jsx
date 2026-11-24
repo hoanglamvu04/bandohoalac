@@ -20,8 +20,15 @@ const AREA_CODES = new Set(AREAS.map(([code]) => code));
 export default function SoftLaunchFeedbackPage() {
   const location = useLocation();
   const suggestedArea = location.state?.area;
-  const [category, setCategory] = useState('BUG');
-  const [area, setArea] = useState(AREA_CODES.has(suggestedArea) ? suggestedArea : 'MAP');
+  // Only an already-public integer listing ID is accepted from the URL.
+  // No user position, contact, image or identity is prefilled or collected.
+  const rawPropertyId = new URLSearchParams(location.search).get('reportHousing');
+  const propertyId = rawPropertyId && /^[1-9]\\d{0,14}$/.test(rawPropertyId) &&
+    Number.isSafeInteger(Number(rawPropertyId)) ? rawPropertyId : null;
+  const messagePrefix = propertyId ? 'Tin BĐS #' + propertyId + ': ' : '';
+  const [category, setCategory] = useState(propertyId ? 'DATA' : 'BUG');
+  const [area, setArea] = useState(propertyId ? 'HOUSING' :
+    AREA_CODES.has(suggestedArea) ? suggestedArea : 'MAP');
   const [message, setMessage] = useState('');
   const [website, setWebsite] = useState('');
   const [busy, setBusy] = useState(false);
@@ -31,12 +38,13 @@ export default function SoftLaunchFeedbackPage() {
 
   async function onSubmit(event) {
     event.preventDefault();
-    if (busy || message.trim().length < 20) return;
+    if (busy || message.trim().length < 20 ||
+        messagePrefix.length + message.trim().length > 1200) return;
     setBusy(true);
     setError('');
     try {
       const result = await submitSoftLaunchFeedback({
-        category, area, message: message.trim(), website
+        category, area, message: messagePrefix + message.trim(), website
       });
       setReference(result.reference || null);
       setSent(true);
@@ -79,8 +87,12 @@ export default function SoftLaunchFeedbackPage() {
             <div className="soft-feedback-intro">
               <span className="soft-feedback-eyebrow"><MessageSquareWarning size={16}/> THỬ NGHIỆM CỘNG ĐỒNG</span>
               <h1>Bạn gặp lỗi khi dùng HOLA Maps?</h1>
-              <p>Mô tả sự cố hoặc góp ý của bạn. Chúng tôi sẽ xem xét để bản đồ hoạt động
-                tốt hơn trước khi ra mắt rộng rãi.</p>
+              <p>{propertyId
+                ? 'Phản ánh về một tin BĐS đã công khai. Vui lòng mô tả lý do cần kiểm tra; báo cáo không làm tin tự động bị ẩn.'
+                : 'Mô tả sự cố hoặc góp ý của bạn. Chúng tôi sẽ xem xét để bản đồ hoạt động tốt hơn trước khi ra mắt rộng rãi.'}</p>
+              {propertyId && <p className="soft-feedback-property-context" role="status">
+                Đang phản ánh tin BĐS #{propertyId}. Mã tin do người gửi cung cấp và cần Admin đối chiếu trước khi xử lý.
+              </p>}
             </div>
 
             <form className="soft-feedback-panel soft-feedback-form" onSubmit={onSubmit}>
@@ -102,12 +114,16 @@ export default function SoftLaunchFeedbackPage() {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   minLength={20}
-                  maxLength={1200}
+                  maxLength={1200 - messagePrefix.length}
                   rows={6}
                   required
-                  placeholder="Ví dụ: Khi mở bản đồ bằng điện thoại và chọn lớp đường, các điểm bị tải lại liên tục..."
+                  placeholder={propertyId
+                    ? 'Ví dụ: Giá/ảnh trên tin không trùng với thực tế; giải thích dấu hiệu và cách bạn kiểm tra, không gửi dữ liệu cá nhân...'
+                    : 'Ví dụ: Khi mở bản đồ bằng điện thoại và chọn lớp đường, các điểm bị tải lại liên tục...'}
                 />
-                <small>{message.trim().length} / 1200 ký tự · Nêu các bước gây lỗi nếu có.</small>
+                <small>{message.trim().length} / {1200 - messagePrefix.length} ký tự ·
+                  {propertyId ? ' Nêu dấu hiệu nghi vấn, không cần cung cấp thông tin riêng tư.' : ' Nêu các bước gây lỗi nếu có.'}
+                </small>
               </label>
               <div className="soft-feedback-trap" aria-hidden="true">
                 <label htmlFor="soft-feedback-website">Không điền trường này</label>
