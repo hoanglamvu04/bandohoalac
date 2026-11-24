@@ -1,4 +1,5 @@
 import { before, after, test } from 'node:test';
+import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { createApp } from '../src/app.js';
 import { pool } from '../src/database/pool.js';
@@ -332,4 +333,53 @@ test('Local SEO: server renderer outputs canonical content, real place cards and
   assert.match(html, /<iframe src="\/local-map\/cafe-hoa-lac"/);
   assert.match(html, /Cafe thử nghiệm/);
   assert.doesNotMatch(html, /<meta name="robots" content="noindex/);
+});
+
+test('SEO: expired or paused housing cannot remain indexable before nightly archive', async () => {
+  const nonce = randomUUID().replaceAll('-', '');
+  let placeId = null;
+  const slug = 'seo-expired-housing-' + nonce;
+  try {
+    const inserted = await pool.query(
+      `INSERT INTO places(name, slug, category_id, location, status, source)
+       VALUES ('Tin BĐS kiểm thử SEO', $1,
+          (SELECT id FROM categories WHERE slug='bat-dong-san'),
+          ST_SetSRID(ST_MakePoint(105.52522,21.01354),4326),
+          'PUBLISHED','USER') RETURNING id`,
+      [slug]
+    );
+    placeId = inserted.rows[0].id;
+    await pool.query(
+      `INSERT INTO housing_listings
+        (place_id,listing_type,property_type,total_price_vnd,area_m2,listing_status,expires_at)
+       VALUES ($1,'SALE','LAND',1500000000,80,'ACTIVE',NOW()-INTERVAL '1 day')`,
+      [placeId]
+    );
+    for (const state of ['EXPIRED','PAUSED']) {
+      if (state === 'PAUSED') {
+        await pool.query(
+          `UPDATE housing_listings SET listing_status='PAUSED',
+           expires_at=NOW()+INTERVAL '20 days' WHERE place_id=$1`, [placeId]
+        );
+      }
+      const detail = await fetch(url('/dia-diem/' + slug));
+      assert.equal(detail.status, 404, state + ' housing must not be indexable');
+      assert.match(detail.headers.get('x-robots-tag') || '', /noindex/);
+      const legacy = await fetch(url('/place/' + placeId), { redirect:'manual' });
+      assert.equal(legacy.status, 404);
+      const sitemap = await (await fetch(url('/api/sitemap-places.xml'))).text();
+      assert.ok(!sitemap.includes('/dia-diem/' + slug), state + ' housing in sitemap');
+    }
+    await pool.query(
+      `UPDATE housing_listings SET listing_status='ACTIVE',
+       expires_at=NOW()+INTERVAL '20 days' WHERE place_id=$1`, [placeId]
+    );
+    const published = await fetch(url('/dia-diem/' + slug));
+    assert.equal(published.status, 200);
+    assert.match(await published.text(), /Tin BĐS kiểm thử SEO/);
+    const xml = await (await fetch(url('/api/sitemap-places.xml'))).text();
+    assert.ok(xml.includes('/dia-diem/' + slug));
+  } finally {
+    if (placeId) await pool.query('DELETE FROM places WHERE id=$1', [placeId]);
+  }
 });

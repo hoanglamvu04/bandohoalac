@@ -183,7 +183,7 @@ export function createApp() {
       })).join('\n');
 
       res.set('Content-Type', 'application/xml; charset=utf-8');
-      res.set('Cache-Control', 'public, max-age=900, stale-while-revalidate=3600');
+      res.set('Cache-Control', 'public, max-age=60, must-revalidate');
       res.send('<?xml version="1.0" encoding="UTF-8"?>\n' +
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="' +
         SITEMAP_IMAGE_NAMESPACE + '">\n' + urls + '\n</urlset>');

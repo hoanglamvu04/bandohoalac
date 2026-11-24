@@ -8,6 +8,7 @@ import {
   listExploreArticles
 } from '../services/explore.service.js';
 import { getLocalSeoPageBySlug } from '../services/localSeo.service.js';
+import { getHousingListingByPlaceId } from '../services/housing.service.js';
 import {
   renderExploreArticleSeoPage,
   renderLocalSeoLandingPage,
@@ -35,10 +36,17 @@ function sendSeoHtml(res, html, maxAge = 300, staleWhileRevalidate = 1800) {
   res.send(html);
 }
 
+export async function publicSeoPlaceIsVisible(place, loadHousing = getHousingListingByPlaceId) {
+  if (!place || place.status !== 'PUBLISHED' || !place.slug) return false;
+  if (place.categorySlug !== 'bat-dong-san') return true;
+  // Respect the canonical housing-publication policy, even before cron.
+  return Boolean(await loadHousing(Number(place.id)));
+}
+
 export const getPlaceSeoPage = asyncHandler(async (req, res) => {
   const place = await getPlaceBySlug(req.params.slug);
-  if (!place || place.status !== 'PUBLISHED' || !place.slug) return notFound(res);
-  return sendSeoHtml(res, renderPlaceSeoPage(place));
+  if (!await publicSeoPlaceIsVisible(place)) return notFound(res);
+  return sendSeoHtml(res, renderPlaceSeoPage(place), 60, 0);
 });
 
 export const redirectLegacyPlaceSeoPage = asyncHandler(async (req, res) => {
@@ -46,9 +54,9 @@ export const redirectLegacyPlaceSeoPage = asyncHandler(async (req, res) => {
   if (!Number.isSafeInteger(id) || id < 1) return notFound(res);
 
   const place = await getPlaceById(id);
-  if (!place || place.status !== 'PUBLISHED' || !place.slug) return notFound(res);
+  if (!await publicSeoPlaceIsVisible(place)) return notFound(res);
 
-  res.set('Cache-Control', 'public, max-age=86400');
+  res.set('Cache-Control', 'public, max-age=60, must-revalidate');
   return res.redirect(301, '/dia-diem/' + encodeURIComponent(place.slug));
 });
 
