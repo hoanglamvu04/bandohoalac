@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import {
   compareHousing, createHousingSavedSearch, deleteHousingSavedSearch,
   listHousingSavedSearches, toggleHousingSavedSearch,
-  getHousingMarketInsights, getHousingPublicAmenities
+  getHousingMarketInsights, getHousingPublicAmenities, getHousingListings
 } from '../services/api.js';
 import '../housing-intelligence.css';
 
@@ -64,6 +64,11 @@ export default function HousingIntelligencePanel({
   const [amenitiesBusy, setAmenitiesBusy] = useState(false);
   const [amenitiesError, setAmenitiesError] = useState('');
   const [amenityRadius, setAmenityRadius] = useState('1000');
+  const viewportRequestRef = useRef(0);
+  const [viewportResults, setViewportResults] = useState(null);
+  const [viewportCriteria, setViewportCriteria] = useState(null);
+  const [viewportBusy, setViewportBusy] = useState(false);
+  const [viewportError, setViewportError] = useState('');
 
   const candidates = useMemo(() => places.filter((p) =>
     p?.housing && /^\d+$/.test(String(p.id)) &&
@@ -210,6 +215,48 @@ export default function HousingIntelligencePanel({
     }
   }
 
+  function currentMapBounds() {
+    if (!viewport) return null;
+    const keys = ['west','south','east','north'];
+    if (!keys.every((key) => Number.isFinite(Number(viewport[key])))) return null;
+    const result = Object.fromEntries(keys.map((key) =>
+      [key, Number(Number(viewport[key]).toFixed(5))]));
+    if (result.west >= result.east || result.south >= result.north ||
+        result.east - result.west > 0.6 ||
+        result.north - result.south > 0.6) return null;
+    return result;
+  }
+
+  async function loadViewportHousing(more = false) {
+    const criteria = more ? viewportCriteria :
+      { ...currentFilters, ...currentMapBounds(), limit: 20 };
+    if (!more && !currentMapBounds()) {
+      setViewportError('Hãy phóng tới khu vực cần tìm trên bản đồ trước.');
+      return;
+    }
+    if (!criteria || (more && !viewportResults?.meta?.hasMore)) return;
+    const requestId = ++viewportRequestRef.current;
+    setViewportBusy(true);
+    setViewportError('');
+    if (!more) setViewportResults(null);
+    const offset = more ? viewportResults.items.length : 0;
+    try {
+      const result = await getHousingListings({ ...criteria, offset });
+      if (requestId !== viewportRequestRef.current) return;
+      const data = {
+        items: more ? [...viewportResults.items, ...(result.items || [])] : (result.items || []),
+        meta: result.meta || {}
+      };
+      setViewportResults(data);
+      if (!more) setViewportCriteria(criteria);
+    } catch (error) {
+      if (requestId === viewportRequestRef.current)
+        setViewportError(error.message || 'Không thể tải tin ở khu vực này.');
+    } finally {
+      if (requestId === viewportRequestRef.current) setViewportBusy(false);
+    }
+  }
+
   const comparisonItems = comparison?.items || [];
   const unusualPrices = market?.sufficientSample && market.quartiles
     ? comparisonItems.flatMap((item) => {
@@ -298,6 +345,30 @@ export default function HousingIntelligencePanel({
             Giá chào/m² của {unusualPrices.map((item) => item.name + ' ' + item.direction).join(', ')}
             {' '}khác đáng kể so với dải thống kê tham khảo. Đây không phải kết luận tin sai hoặc gian lận.
           </p>}
+        </div>}
+
+        <div className="hm-intel-divider" />
+        <div className="hm-intel-section-head"><strong>Tin trong khung bản đồ</strong><MapPinned size={15}/></div>
+        <p className="hm-intel-hint">Di chuyển bản đồ tới khu vực cần xem rồi bấm tìm. Kết quả được lấy trực tiếp bằng PostGIS, theo các bộ lọc BĐS đang chọn, không chỉ lọc các ghim đã tải.</p>
+        <button className="hm-intel-primary" type="button"
+          disabled={viewportBusy || !viewport} onClick={() => loadViewportHousing(false)}>
+          {viewportBusy ? 'Đang tìm trong vùng…' : 'Tìm tin trong vùng bản đồ'}
+        </button>
+        {viewportError && <p className="hm-intel-error" role="alert">{viewportError}</p>}
+        {viewportResults && <div className="hm-intel-market" data-testid="housing-viewport-results">
+          <strong>{viewportResults.meta.total || viewportResults.items.length} tin phù hợp trong vùng đã chọn</strong>
+          <small>Đã tải {viewportResults.items.length} tin. Di chuyển bản đồ rồi bấm tìm lại để cập nhật.</small>
+          {viewportResults.items.map((place) => (
+            <div className="hm-intel-amenity-row" key={place.id}>
+              <Link to={'/place/' + encodeURIComponent(place.id)}>{place.name}</Link>
+              <small>{priceFor(place)}</small>
+            </div>
+          ))}
+          {!viewportResults.items.length && <p className="hm-intel-hint">Chưa tìm thấy tin phù hợp trong vùng này.</p>}
+          {viewportResults.meta.hasMore && <button className="hm-intel-save" type="button"
+            disabled={viewportBusy} onClick={() => loadViewportHousing(true)}>
+            {viewportBusy ? 'Đang tải…' : 'Xem thêm tin trong vùng'}
+          </button>}
         </div>}
 
         <div className="hm-intel-divider" />
