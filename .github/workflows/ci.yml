@@ -85,7 +85,9 @@ jobs:
 
   backend:
     name: Backend migrate and test
-    runs-on: ubuntu-latest
+    # PG16 backup/restore and image-codec acceptance depend on Ubuntu's
+    # supported `webp` package; ubuntu-latest moved to 26.04 without it.
+    runs-on: ubuntu-24.04
 
     services:
       postgres:
