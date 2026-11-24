@@ -23,7 +23,7 @@ export default function SoftLaunchFeedbackPage() {
   // Only an already-public integer listing ID is accepted from the URL.
   // No user position, contact, image or identity is prefilled or collected.
   const rawPropertyId = new URLSearchParams(location.search).get('reportHousing');
-  const propertyId = rawPropertyId && /^[1-9]\\d{0,14}$/.test(rawPropertyId) &&
+  const propertyId = rawPropertyId && /^[1-9][0-9]{0,14}$/.test(rawPropertyId) &&
     Number.isSafeInteger(Number(rawPropertyId)) ? rawPropertyId : null;
   const messagePrefix = propertyId ? 'Tin BĐS #' + propertyId + ': ' : '';
   const [category, setCategory] = useState(propertyId ? 'DATA' : 'BUG');
