@@ -110,3 +110,32 @@ export const housingCompareQuerySchema = z.object({
 export const savedHousingSearchIdSchema = z.object({
   id: z.string().regex(/^[1-9]\d{0,14}$/)
 }).strict();
+
+ 
+// Public price insight is aggregated ONLY from active published asking prices.
+// Map viewport is optional, but incomplete or very wide coordinate bounds are
+// not allowed (privacy / resource safety / ambiguous area attribution).
+const insightLongitude = z.coerce.number().finite().min(-180).max(180);
+const insightLatitude = z.coerce.number().finite().min(-90).max(90);
+export const marketInsightsQuerySchema = z.object({
+  listingType: z.enum(['SALE', 'RENT']).default('SALE'),
+  propertyType: z.enum(['LAND','HOUSE','APARTMENT','VILLA','COMMERCIAL','OTHER']).optional(),
+  west: insightLongitude.optional(),
+  east: insightLongitude.optional(),
+  south: insightLatitude.optional(),
+  north: insightLatitude.optional()
+}).strict().superRefine((query, context) => {
+  const bounds = ['west','east','south','north'];
+  const count = bounds.filter((key) => query[key] !== undefined).length;
+  if (count > 0 && count < 4) {
+    context.addIssue({ code: 'custom', path: ['west'], message: 'Thiếu giới hạn vùng bản đồ.' });
+  }
+  if (count === 4 && (query.west >= query.east || query.south >= query.north ||
+      query.east - query.west > 0.6 || query.north - query.south > 0.6)) {
+    context.addIssue({ code: 'custom', path: ['west'], message: 'Vùng bản đồ không hợp lệ hoặc quá rộng.' });
+  }
+});
+
+export const housingAmenitiesQuerySchema = z.object({
+  radius: z.enum(['500','1000','2000']).default('1000')
+}).strict();

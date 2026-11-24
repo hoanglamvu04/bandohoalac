@@ -183,6 +183,18 @@ export function getHousingListings(params = {}, options = {}) {
   }));
 }
 
+export function getHousingMarketInsights(params = {}, options = {}) {
+  return unwrap(client.get('/housing/market-insights', {
+    params: cleanParams(params), signal: options.signal
+  }));
+}
+
+export function getHousingPublicAmenities(placeId, radius = 1000, options = {}) {
+  return unwrap(client.get('/housing/' + encodeURIComponent(placeId) + '/amenities', {
+    params: { radius }, signal: options.signal
+  }));
+}
+
 export function compareHousing(params = {}, options = {}) {
   return unwrap(client.get('/housing/compare', {
     params: { ids: (params.ids || []).join(',') },

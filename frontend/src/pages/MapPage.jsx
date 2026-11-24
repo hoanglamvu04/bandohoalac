@@ -3487,6 +3487,7 @@ export default function MapPage() {
             user={user}
             places={sidebarPlaces}
             currentFilters={housingRequestParams({ includeQuery: true })}
+            viewport={viewport}
             onApplySavedSearch={applySavedHousingFilters}
           />
         )}

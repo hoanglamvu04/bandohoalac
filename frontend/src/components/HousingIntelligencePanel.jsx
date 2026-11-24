@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, ChevronDown, GitCompareArrows, Plus, Trash2, X } from 'lucide-react';
+import { Bell, ChevronDown, GitCompareArrows, Plus, Trash2, X, ChartColumnIncreasing, MapPinned } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   compareHousing, createHousingSavedSearch, deleteHousingSavedSearch,
-  listHousingSavedSearches, toggleHousingSavedSearch
+  listHousingSavedSearches, toggleHousingSavedSearch,
+  getHousingMarketInsights, getHousingPublicAmenities
 } from '../services/api.js';
 import '../housing-intelligence.css';
 
@@ -40,7 +41,7 @@ const PROPERTY_TYPES = {
 };
 
 export default function HousingIntelligencePanel({
-  user, places = [], currentFilters = {}, onApplySavedSearch
+  user, places = [], currentFilters = {}, viewport = null, onApplySavedSearch
 }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState([]);
@@ -53,6 +54,16 @@ export default function HousingIntelligencePanel({
   const [savedError, setSavedError] = useState('');
   const [loaded, setLoaded] = useState(false);
   const comparingRef = useRef(0);
+  const insightsRequestRef = useRef(0);
+  const amenitiesRequestRef = useRef(0);
+  const [market, setMarket] = useState(null);
+  const [marketBusy, setMarketBusy] = useState(false);
+  const [marketError, setMarketError] = useState('');
+  const [amenityPlaceId, setAmenityPlaceId] = useState('');
+  const [amenities, setAmenities] = useState(null);
+  const [amenitiesBusy, setAmenitiesBusy] = useState(false);
+  const [amenitiesError, setAmenitiesError] = useState('');
+  const [amenityRadius, setAmenityRadius] = useState('1000');
 
   const candidates = useMemo(() => places.filter((p) =>
     p?.housing && /^\d+$/.test(String(p.id)) &&
@@ -152,7 +163,64 @@ export default function HousingIntelligencePanel({
     } catch (error) { setSavedError(error.message || 'Không xóa được bộ lọc.'); }
   }
 
+  async function loadMarket() {
+    const requestId = ++insightsRequestRef.current;
+    setMarketBusy(true);
+    setMarketError('');
+    setMarket(null);
+    const params = {
+      listingType: currentFilters.listingType || 'SALE',
+      propertyType: currentFilters.propertyType || undefined
+    };
+    // A small explicit current viewport can narrow the statistics.
+    // No user GPS, history, contact, price filter or search keyword is sent.
+    if (viewport && ['west','east','south','north'].every((key) => Number.isFinite(Number(viewport[key]))) &&
+        Number(viewport.east) > Number(viewport.west) &&
+        Number(viewport.north) > Number(viewport.south) &&
+        Number(viewport.east) - Number(viewport.west) <= 0.6 &&
+        Number(viewport.north) - Number(viewport.south) <= 0.6) {
+      for (const key of ['west','east','south','north']) params[key] = Number(viewport[key]).toFixed(5);
+    }
+    try {
+      const result = await getHousingMarketInsights(params);
+      if (requestId === insightsRequestRef.current) setMarket(result);
+    } catch (error) {
+      if (requestId === insightsRequestRef.current)
+        setMarketError(error.message || 'Không thể tải thống kê giá.');
+    } finally {
+      if (requestId === insightsRequestRef.current) setMarketBusy(false);
+    }
+  }
+
+  async function loadAmenities() {
+    const target = amenityPlaceId || String(candidates[0]?.id || '');
+    if (!target) return;
+    const requestId = ++amenitiesRequestRef.current;
+    setAmenitiesBusy(true);
+    setAmenitiesError('');
+    setAmenities(null);
+    try {
+      const result = await getHousingPublicAmenities(target, Number(amenityRadius));
+      if (requestId === amenitiesRequestRef.current) setAmenities(result);
+    } catch (error) {
+      if (requestId === amenitiesRequestRef.current)
+        setAmenitiesError(error.message || 'Không thể tải tiện ích gần tin.');
+    } finally {
+      if (requestId === amenitiesRequestRef.current) setAmenitiesBusy(false);
+    }
+  }
+
   const comparisonItems = comparison?.items || [];
+  const unusualPrices = market?.sufficientSample && market.quartiles
+    ? comparisonItems.flatMap((item) => {
+      if (item.housing?.listingType !== market.listingType ||
+          (market.propertyType && item.housing?.propertyType !== market.propertyType)) return [];
+      const price = Number(item.pricePerM2Vnd);
+      if (!Number.isFinite(price) || price <= 0) return [];
+      if (price < market.quartiles.p25 * 0.6) return [{ name: item.name, direction: 'thấp' }];
+      if (price > market.quartiles.p75 * 1.6) return [{ name: item.name, direction: 'cao' }];
+      return [];
+    }) : [];
   const rows = [
     ['Loại giao dịch', (item) => item.housing?.listingType === 'SALE' ? 'Cần bán' : 'Cho thuê'],
     ['Giá niêm yết', priceFor],
@@ -226,6 +294,67 @@ export default function HousingIntelligencePanel({
             </tr>)}</tbody>
           </table>}
           <p className="hm-intel-hint">Giá/m² tính từ giá và diện tích người đăng cung cấp, không phải định giá thị trường. Khoảng cách FPT là đường thẳng.</p>
+          {unusualPrices.length > 0 && <p className="hm-intel-hint" role="status">
+            Giá chào/m² của {unusualPrices.map((item) => item.name + ' ' + item.direction).join(', ')}
+            {' '}khác đáng kể so với dải thống kê tham khảo. Đây không phải kết luận tin sai hoặc gian lận.
+          </p>}
+        </div>}
+
+        <div className="hm-intel-divider" />
+        <div className="hm-intel-section-head"><strong>Giá chào tham khảo</strong><ChartColumnIncreasing size={15}/></div>
+        <p className="hm-intel-hint">Dùng tin đã duyệt, còn hiệu lực; chỉ theo bán/thuê và loại tài sản đang chọn. Dữ liệu được giới hạn theo vùng bản đồ nếu vùng đủ nhỏ. Không áp dụng bộ lọc từ khóa hoặc ngân sách.</p>
+        <button className="hm-intel-primary" type="button" onClick={loadMarket} disabled={marketBusy}>
+          {marketBusy ? 'Đang tính thống kê…' : 'Xem thống kê giá/m²'}
+        </button>
+        {marketError && <p className="hm-intel-error" role="alert">{marketError}</p>}
+        {market && <div className="hm-intel-market" data-testid="housing-market-insights">
+          <strong>{market.listingType === 'RENT' ? 'Giá thuê chào / m² / tháng' : 'Giá chào bán / m²'}</strong>
+          <small>{market.areaBasis === 'MAP_VIEWPORT' ? 'Trong vùng bản đồ hiện tại' : 'Toàn bộ vùng dữ liệu HOLA Maps'}
+            {' · '}{market.sampleCount} tin đủ dữ liệu</small>
+          {market.sufficientSample && market.quartiles ? <dl>
+            <div><dt>Phân vị 25%</dt><dd>{vnMoney(market.quartiles.p25)}</dd></div>
+            <div><dt>Trung vị</dt><dd>{vnMoney(market.quartiles.median)}</dd></div>
+            <div><dt>Phân vị 75%</dt><dd>{vnMoney(market.quartiles.p75)}</dd></div>
+          </dl> : <p className="hm-intel-hint">Cần ít nhất {market.minSample} tin hợp lệ để hiển thị phân vị. Không suy đoán khi ít dữ liệu.</p>}
+          <p className="hm-intel-hint">{market.disclaimer}</p>
+        </div>}
+
+        <div className="hm-intel-divider" />
+        <div className="hm-intel-section-head"><strong>Tiện ích quanh bất động sản</strong><MapPinned size={15}/></div>
+        <p className="hm-intel-hint">Tra cứu theo ghim đã công khai, không sử dụng GPS của bạn. Khoảng cách chỉ tính đường thẳng.</p>
+        <label className="hm-intel-select-label">
+          <span>Chọn bất động sản</span>
+          <select aria-label="Bất động sản để xem tiện ích" value={amenityPlaceId}
+            onChange={(e) => { ++amenitiesRequestRef.current; setAmenities(null); setAmenityPlaceId(e.target.value); }}>
+            <option value="">Tin đầu tiên trong kết quả</option>
+            {candidates.map((place) =>
+              <option key={place.id} value={String(place.id)}>{place.name}</option>)}
+          </select>
+        </label>
+        <label className="hm-intel-select-label">
+          <span>Bán kính đường thẳng</span>
+          <select aria-label="Bán kính tiện ích" value={amenityRadius}
+            onChange={(e) => { ++amenitiesRequestRef.current; setAmenities(null); setAmenityRadius(e.target.value); }}>
+            <option value="500">500 m</option><option value="1000">1 km</option><option value="2000">2 km</option>
+          </select>
+        </label>
+        <button className="hm-intel-save" type="button" onClick={loadAmenities}
+          disabled={!candidates.length || amenitiesBusy}>
+          {amenitiesBusy ? 'Đang tìm tiện ích…' : 'Xem tiện ích gần tin'}
+        </button>
+        {amenitiesError && <p className="hm-intel-error" role="alert">{amenitiesError}</p>}
+        {amenities && <div className="hm-intel-market" data-testid="housing-amenities">
+          <strong>{amenities.matchedCount} địa điểm đã công khai trong {amenities.radiusM} m
+            {amenities.capped ? ' (danh sách giới hạn)' : ''}</strong>
+          {amenities.categories.length > 0
+            ? <div className="hm-intel-amenity-tags">{amenities.categories.map((item) =>
+              <span key={item.categorySlug}>{item.name}: {item.count}</span>)}</div>
+            : <p className="hm-intel-hint">Chưa có tiện ích được ghi nhận trong phạm vi này.</p>}
+          {amenities.places.map((place) => <div className="hm-intel-amenity-row" key={place.id}>
+            <Link to={'/place/' + encodeURIComponent(place.id)}>{place.name}</Link>
+            <small>{place.distanceM} m</small>
+          </div>)}
+          <p className="hm-intel-hint">{amenities.disclaimer}</p>
         </div>}
 
         <div className="hm-intel-divider" />

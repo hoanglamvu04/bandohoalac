@@ -27,6 +27,8 @@ const comparison = {
 
 async function stubHousing(page, authenticated = false) {
   const compareRequests = [];
+  const marketRequests = [];
+  const amenitiesRequests = [];
   let saved = [];
   const savedOperations = [];
 
@@ -41,6 +43,34 @@ async function stubHousing(page, authenticated = false) {
     if (url.pathname === '/api/housing' && route.request().method() === 'GET') {
       return route.fulfill({ json: { items: properties,
         meta: { count: 2, total: 2, hasMore: false } } });
+    }
+    if (url.pathname === '/api/housing/market-insights') {
+      marketRequests.push(Object.fromEntries(url.searchParams));
+      return route.fulfill({ json: {
+        source: 'PUBLISHED_ACTIVE_ASKING_PRICES', listingType: 'SALE',
+        propertyType: null, areaBasis: 'MAP_VIEWPORT',
+        sampleCount: 6, minSample: 5, sufficientSample: true,
+        unit: 'VND_PER_M2',
+        quartiles: { p25: 20000000, median: 30000000, p75: 42000000 },
+        disclaimer: 'Giá chào, không phải giá giao dịch hoặc định giá.'
+      } });
+    }
+    if (/^\/api\/housing\/\d+\/amenities$/.test(url.pathname)) {
+      amenitiesRequests.push(url.pathname);
+      return route.fulfill({ json: {
+        placeId: '701', radiusM: Number(url.searchParams.get('radius') || 1000),
+        matchedCount: 2, capped: false,
+        categories: [
+          { categorySlug: 'truong-hoc', name: 'Trường học', count: 1 },
+          { categorySlug: 'y-te', name: 'Y tế', count: 1 }
+        ],
+        places: [
+          { id: '91', name: 'Trường FPT QA', categorySlug:'truong-hoc', distanceM: 350 },
+          { id: '92', name: 'Trạm y tế QA', categorySlug:'y-te', distanceM: 790 }
+        ],
+        method: 'STRAIGHT_LINE_DISTANCE',
+        disclaimer: 'Khoảng cách đường thẳng, không phải thời gian lái xe.'
+      } });
     }
     if (url.pathname === '/api/housing/compare') {
       compareRequests.push(url.searchParams.get('ids'));
@@ -87,7 +117,7 @@ async function stubHousing(page, authenticated = false) {
     }
     return route.fulfill({ json: { items: [], data: [], ok: true } });
   });
-  return { compareRequests, savedOperations };
+  return { compareRequests, savedOperations, marketRequests, amenitiesRequests };
 }
 
 test('Housing Sprint 2 compares 2 public listings with price/m² and FPT distance', async ({ page }) => {
@@ -137,4 +167,29 @@ test('Authenticated housing filters can be saved, paused, reapplied and removed'
   await panel.getByRole('button', { name: 'Xóa bộ lọc Đất FPT dưới 2 tỷ' }).click();
   await expect(panel.getByText('Bạn chưa lưu bộ lọc nào.')).toBeVisible();
   expect(calls.savedOperations.map((c) => c.method)).toEqual(['POST','PATCH','DELETE']);
+});
+
+test('Market + location intelligence works on approved property data without GPS or login', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const requests = await stubHousing(page);
+  await page.goto('/map?vertical=housing&category=bat-dong-san',
+    { waitUntil: 'domcontentloaded' });
+  const panel = page.getByTestId('housing-intelligence');
+  await panel.getByRole('button', { name: /So sánh & theo dõi tin mới/ }).click();
+  await panel.getByRole('button', { name: 'Xem thống kê giá/m²' }).click();
+  const market = panel.getByTestId('housing-market-insights');
+  await expect(market).toContainText('Trung vị');
+  await expect(market).toContainText('30.000.000 đ');
+  await expect(market).toContainText('không phải giá giao dịch');
+  expect(requests.marketRequests).toHaveLength(1);
+  for (const secret of ['phone','lat','lng','email','token','q']) {
+    expect(Object.hasOwn(requests.marketRequests[0], secret)).toBe(false);
+  }
+  await panel.getByRole('button', { name: 'Xem tiện ích gần tin' }).click();
+  const amenities = panel.getByTestId('housing-amenities');
+  await expect(amenities).toContainText('Trường học: 1');
+  await expect(amenities).toContainText('Trạm y tế QA');
+  await expect(amenities.getByRole('link', { name:'Trường FPT QA' }))
+    .toHaveAttribute('href','/place/91');
+  expect(requests.amenitiesRequests).toEqual(['/api/housing/701/amenities']);
 });
