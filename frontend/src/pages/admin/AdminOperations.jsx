@@ -6,6 +6,23 @@ import {
 import { getAdminOperationsOverview } from '../../services/api.js';
 import '../../soft-launch-operations.css';
 
+const MANUAL_GATE_LABELS = {
+  OFFSITE_BACKUP_VERIFIED: 'Bản sao lưu ngoài VPS đã kiểm tra checksum',
+  PRODUCTION_RESTORE_DRILL: 'Thử khôi phục DB/ảnh độc lập từ backup thật',
+  REAL_MOBILE_ACCEPTANCE: 'Kiểm tra thiết bị Android và iOS thực tế',
+  LEGACY_MEDIA_PRIVACY_REVIEW: 'Rà soát ảnh cũ và quyền sử dụng ảnh',
+  LIVE_HTTPS_AND_NGINX: 'HTTPS, Nginx và PM2 production',
+  WA005_OPERATOR_APPROVAL: 'Nghiệm thu và cấp nguồn WA-005 từ X-HUB'
+};
+const DATA_BLOCKER_LABELS = {
+  NO_PUBLIC_PLACES: 'Không có địa điểm công khai',
+  STALE_PUBLISHED_HOUSING: 'Bất động sản hết hiệu lực vẫn đang PUBLISHED',
+  HOUSING_MISSING_CONTACT: 'Bất động sản thiếu thông tin liên hệ',
+  HOUSING_INVALID_PRICE_AREA: 'Bất động sản thiếu giá hoặc diện tích hợp lệ',
+  LEGACY_UNSTRUCTURED_HOUSING: 'Tin BĐS cũ chưa có hồ sơ cấu trúc',
+  DATA_EVIDENCE_QUERY_FAILED: 'Không thể kiểm tra dữ liệu PostgreSQL',
+  DATABASE_DOWN: 'PostgreSQL không sẵn sàng'
+};
 const GROUP_NAMES = {
   auth: 'Đăng nhập / phiên',
   places: 'Địa điểm',
@@ -126,6 +143,50 @@ export default function AdminOperations() {
           ))}
         </section>
       )}
+
+      {data?.launch && <section className="soft-launch-ops-launch"
+        data-testid="launch-evidence" aria-label="Cổng nghiệm thu ra mắt công chúng">
+        <div className="soft-launch-ops-launch-head">
+          <div>
+            <small>PUBLIC LAUNCH GATES</small>
+            <h2>Kiểm tra trước khi ra mắt công chúng</h2>
+            <p role="status">Chưa nghiệm thu production. API hoạt động và CI PASS
+              không thay thế backup, phục hồi dữ liệu hay kiểm tra thực tế.</p>
+          </div>
+          <span className="soft-launch-ops-gate-status">
+            {data.launch.dataGate === 'NO_BLOCKERS_DETECTED'
+              ? 'Chưa thấy lỗi dữ liệu bắt buộc'
+              : data.launch.dataGate === 'UNKNOWN'
+                ? 'Chưa kiểm tra được dữ liệu'
+                : 'Có dữ liệu cần xử lý'}
+          </span>
+        </div>
+        {data.launch.counts && <div className="soft-launch-ops-launch-counts">
+          <div><small>Địa điểm công khai</small><b>{number(data.launch.counts.publishedPlaces)}</b></div>
+          <div><small>Tin BĐS còn hiệu lực</small><b>{number(data.launch.counts.activeHousing)}</b></div>
+          <div><small>BĐS đã hết hiệu lực nhưng còn công khai</small><b>{number(data.launch.counts.stalePublishedHousing)}</b></div>
+          <div><small>Thiếu liên hệ BĐS</small><b>{number(data.launch.counts.missingHousingContact)}</b></div>
+          <div><small>BĐS cũ chưa chuẩn hóa</small><b>{number(data.launch.counts.legacyUnstructuredHousing)}</b></div>
+          <div><small>Địa điểm chưa có ảnh</small><b>{number(data.launch.counts.publishedWithoutImages)}</b></div>
+        </div>}
+        {Boolean(data.launch.blockers?.length) && <div className="soft-launch-ops-launch-blockers">
+          <strong>Vấn đề dữ liệu cần đối chiếu:</strong>
+          <ul>{data.launch.blockers.map((code) =>
+            <li key={code}>{DATA_BLOCKER_LABELS[code] || 'Cần kiểm tra thêm'}</li>)}</ul>
+        </div>}
+        <h3>Điều kiện vận hành chưa thể xác minh qua API</h3>
+        <ul className="soft-launch-ops-gates">
+          {(data.launch.manualGates || []).map((gate) =>
+            <li key={gate.code}>
+              <span>{MANUAL_GATE_LABELS[gate.code] || 'Nghiệm thu bổ sung'}</span>
+              <small>Chưa xác minh</small>
+            </li>)}
+        </ul>
+        <p className="soft-launch-ops-note">Hướng dẫn kiểm tra:
+          <code> scripts/check-p0-readiness.sh</code> và
+          <code> docs/PUBLIC_LAUNCH_P0_RUNBOOK.md</code>.
+          Không dùng bảng này để tự kích hoạt production.</p>
+      </section>}
 
       <section className="soft-launch-ops-table">
         <div className="soft-launch-ops-table-head">

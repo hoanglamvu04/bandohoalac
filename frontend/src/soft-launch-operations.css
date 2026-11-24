@@ -51,3 +51,22 @@
   .soft-launch-ops-table-head { flex-direction: column; align-items: flex-start; }
   .soft-launch-ops-table-head small { text-align: left; }
 }
+/* Read-only public-launch evidence, deliberately separate from live API health. */
+.soft-launch-ops-launch { border: 1px solid #e2dbb9; background: #fffcf3; color: #283d33; border-radius: 15px; padding: 18px; display: grid; gap: 14px; }
+.soft-launch-ops-launch-head { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; }
+.soft-launch-ops-launch-head small { font-size:11px; font-weight:800; letter-spacing:.04em; color:#88703e; }
+.soft-launch-ops-launch h2 { font-size:20px; margin:5px 0; }
+.soft-launch-ops-launch h3 { font-size:14px; margin:0; }
+.soft-launch-ops-launch p { margin:0; font-size:12px; line-height:1.6; }
+.soft-launch-ops-gate-status { border:1px solid #e9d9ad; border-radius:9px; background:#fff; padding:8px 10px; font-size:11px; font-weight:750; color:#73562d; }
+.soft-launch-ops-launch-counts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.soft-launch-ops-launch-counts div { border:1px solid #ede6cf; background:#fff; border-radius:10px; padding:11px; display:grid; gap:5px; }
+.soft-launch-ops-launch-counts small { font-size:11px; line-height:1.35; color:#52695e; }
+.soft-launch-ops-launch-counts b { font-size:20px; font-variant-numeric:tabular-nums; }
+.soft-launch-ops-launch-blockers { border:1px solid #eac7bd; border-radius:9px; background:#fff7f2; padding:12px; font-size:12px; line-height:1.6; }
+.soft-launch-ops-launch-blockers ul { padding-left:20px; margin:5px 0 0; }
+.soft-launch-ops-gates { list-style:none; display:grid; gap:7px; padding:0; margin:0; }
+.soft-launch-ops-gates li { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:7px; padding:9px 11px; border-radius:8px; border:1px solid #e5e7dd; background:#fff; font-size:12px; line-height:1.5; }
+.soft-launch-ops-gates small { color:#8d6038; font-size:11px; font-weight:700; }
+.soft-launch-ops-launch code { font-size:11px; overflow-wrap:anywhere; }
+@media (max-width:720px) { .soft-launch-ops-launch-counts { grid-template-columns:repeat(2,minmax(0,1fr)); } .soft-launch-ops-launch { padding:12px; } }
