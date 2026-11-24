@@ -6,6 +6,22 @@ import { capturePlaceSnapshot, recordPlaceRevision } from './placeRevision.servi
 const STALE_DAYS = 180;
 const STALE_IMAGE_DAYS = 365;
 const DUPLICATE_DISTANCE_METERS = 120;
+const TRIAGE_REASONS = Object.freeze({
+  CRITICAL: ['PROPERTY_EXPIRED', 'PROPERTY_NOT_ACTIVE', 'OUT_OF_COVERAGE', 'MISSING_COORDINATES'],
+  HIGH: ['INCOMPLETE_PROPERTY_PROFILE', 'MISSING_CONTACT', 'MISSING_PROPERTY_PRICE',
+    'MISSING_PROPERTY_AREA', 'POSSIBLE_DUPLICATE'],
+  MEDIUM: ['NEVER_VERIFIED', 'STALE_PLACE', 'MISSING_IMAGES', 'STALE_IMAGES'],
+  LOW: ['MISSING_ADDRESS', 'MISSING_CATEGORY', 'MISSING_DESCRIPTION', 'MISSING_HOURS']
+});
+const TRIAGE_RANK = Object.freeze({ CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 });
+
+export function classifyPlaceTriage(issues = []) {
+  const set = new Set(issues);
+  const priority = Object.keys(TRIAGE_REASONS)
+    .find((tier) => TRIAGE_REASONS[tier].some((issue) => set.has(issue))) || 'LOW';
+  const reasons = TRIAGE_REASONS[priority].filter((issue) => set.has(issue));
+  return { priority, rank: TRIAGE_RANK[priority], reasons: reasons.slice(0, 3) };
+}
 const TARGET_AREAS = ['Hòa Lạc', 'Hạ Bằng', 'Thạch Thất', 'Tây Phương', 'Yên Xuân', 'Phú Cát', 'Ba Vì', 'Quốc Oai'];
 
 function ageDays(value) {
@@ -83,8 +99,12 @@ export function scorePlace(row) {
     issues.push('STALE_PLACE'); score -= 20;
   }
 
+  const triage = classifyPlaceTriage(issues);
   return {
     id: String(row.id),
+    triagePriority: triage.priority,
+    triageRank: triage.rank,
+    triageReasons: triage.reasons,
     name: row.name,
     address: row.address,
     category: row.category_name,
@@ -232,15 +252,23 @@ export async function getDataQualityOverview({ limit = 100 } = {}) {
       item.issues.includes('PROPERTY_NOT_ACTIVE')).length,
     averageScore: all.length
       ? Math.round(all.reduce((sum, item) => sum + item.qualityScore, 0) / all.length)
-      : 100
+      : 100,
+    triageCounts: Object.fromEntries(['CRITICAL','HIGH','MEDIUM','LOW']
+      .map((tier) => [tier, needsAttention.filter((place) => place.triagePriority === tier).length]))
   };
 
+  // Safety-first: prioritize immediately misleading public data before
+  // purely cosmetic incompleteness. No automatic moderation mutation.
   const items = needsAttention
-    .sort((a, b) => a.qualityScore - b.qualityScore || Number(b.verifiedAgeDays || 0) - Number(a.verifiedAgeDays || 0))
+    .sort((a, b) => a.triageRank - b.triageRank ||
+      a.qualityScore - b.qualityScore ||
+      Number(b.verifiedAgeDays || 0) - Number(a.verifiedAgeDays || 0))
     .slice(0, Math.min(Math.max(Number(limit) || 100, 1), 300));
 
   return {
     version: 3,
+    triageVersion: 5,
+    triageMode: 'READ_ONLY',
     summary,
     coverage: buildCoverage(all),
     items,
