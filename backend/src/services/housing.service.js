@@ -162,7 +162,7 @@ const BASE_SELECT = `
   LEFT JOIN housing_listings hl ON hl.place_id = p.id
 `;
 
-export async function listHousingListings(filters = {}) {
+export async function listHousingListings(filters = {}, db = pool) {
   const conditions = [
     "p.status = 'PUBLISHED'",
     "c.slug = 'bat-dong-san'",
@@ -179,6 +179,19 @@ export async function listHousingListings(filters = {}) {
   if (filters.propertyType) {
     params.push(filters.propertyType);
     conditions.push('hl.property_type = $' + params.length);
+  }
+
+  // Server-side PostGIS viewport predicate runs before pagination.
+  if (['west', 'south', 'east', 'north'].every((key) => filters[key] !== undefined)) {
+    params.push(
+      Number(filters.west), Number(filters.south),
+      Number(filters.east), Number(filters.north)
+    );
+    const n = params.length;
+    conditions.push(
+      'ST_Intersects(p.location, ST_MakeEnvelope($' + (n - 3) +
+      ',$' + (n - 2) + ',$' + (n - 1) + ',$' + n + ',4326))'
+    );
   }
 
   if (filters.q) {
@@ -294,7 +307,7 @@ export async function listHousingListings(filters = {}) {
     ' LIMIT ' + limitRef +
     ' OFFSET ' + offsetRef;
 
-  const { rows } = await pool.query(sql, params);
+  const { rows } = await db.query(sql, params);
   const hasMore = rows.length > safeLimit;
   const pageRows = rows.slice(0, safeLimit);
   const items = pageRows.map(mapHousingRow);

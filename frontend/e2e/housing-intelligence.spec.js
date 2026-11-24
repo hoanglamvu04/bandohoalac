@@ -27,6 +27,7 @@ const comparison = {
 
 async function stubHousing(page, authenticated = false) {
   const compareRequests = [];
+  const viewportRequests = [];
   const marketRequests = [];
   const amenitiesRequests = [];
   let saved = [];
@@ -41,6 +42,11 @@ async function stubHousing(page, authenticated = false) {
         : { status: 401, json: { error: 'No session' } });
     }
     if (url.pathname === '/api/housing' && route.request().method() === 'GET') {
+      if (url.searchParams.has('west')) {
+        viewportRequests.push(Object.fromEntries(url.searchParams));
+        return route.fulfill({ json: { items: [properties[0]],
+          meta: { count: 1, total: 1, hasMore: false } } });
+      }
       return route.fulfill({ json: { items: properties,
         meta: { count: 2, total: 2, hasMore: false } } });
     }
@@ -117,7 +123,7 @@ async function stubHousing(page, authenticated = false) {
     }
     return route.fulfill({ json: { items: [], data: [], ok: true } });
   });
-  return { compareRequests, savedOperations, marketRequests, amenitiesRequests };
+  return { compareRequests, savedOperations, marketRequests, amenitiesRequests, viewportRequests };
 }
 
 test('Housing Sprint 2 compares 2 public listings with price/m² and FPT distance', async ({ page }) => {
@@ -192,4 +198,27 @@ test('Market + location intelligence works on approved property data without GPS
   await expect(amenities.getByRole('link', { name:'Trường FPT QA' }))
     .toHaveAttribute('href','/place/91');
   expect(requests.amenitiesRequests).toEqual(['/api/housing/701/amenities']);
+});
+
+test('Housing map searches the actual viewport on demand using spatial query', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const calls = await stubHousing(page);
+  await page.goto('/map?vertical=housing&category=bat-dong-san&listingType=SALE',
+    { waitUntil: 'domcontentloaded' });
+  const panel = page.getByTestId('housing-intelligence');
+  await expect(panel).toBeVisible();
+  await panel.getByRole('button', { name: /So sánh & theo dõi tin mới/ }).click();
+  const button = panel.getByRole('button', { name: 'Tìm tin trong vùng bản đồ' });
+  await expect(button).toBeEnabled();
+  await button.click();
+  const result = panel.getByTestId('housing-viewport-results');
+  await expect(result).toContainText('1 tin phù hợp');
+  await expect(result.getByRole('link', { name: 'Đất A đã duyệt' }))
+    .toHaveAttribute('href', '/place/701');
+  expect(calls.viewportRequests).toHaveLength(1);
+  const query = calls.viewportRequests[0];
+  expect(query.listingType).toBe('SALE');
+  for (const key of ['west','south','east','north']) expect(Number.isFinite(Number(query[key]))).toBe(true);
+  expect(Number(query.west)).toBeLessThan(Number(query.east));
+  expect(Number(query.south)).toBeLessThan(Number(query.north));
 });
