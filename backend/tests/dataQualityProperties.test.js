@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getDataQualityOverview, scorePlace } from '../src/services/dataQuality.service.js';
+import {
+  getDataQualityOverview, scorePlace, classifyPlaceTriage
+} from '../src/services/dataQuality.service.js';
 import { pool } from '../src/database/pool.js';
 
 function place(overrides = {}) {
@@ -102,4 +104,44 @@ test('quality overview reports real published count and audited sample size', as
     overview.summary.auditPartial,
     overview.summary.totalPublished > overview.summary.auditedCount
   );
+});
+
+test('Data Trust V5 triage prioritizes public expiry above cosmetic metadata gaps', () => {
+  assert.deepEqual(classifyPlaceTriage(['PROPERTY_EXPIRED','MISSING_IMAGES']), {
+    priority:'CRITICAL', rank:0, reasons:['PROPERTY_EXPIRED']
+  });
+  assert.equal(classifyPlaceTriage(['MISSING_PROPERTY_PRICE','STALE_IMAGES']).priority,'HIGH');
+  assert.equal(classifyPlaceTriage(['NEVER_VERIFIED','MISSING_DESCRIPTION']).priority,'MEDIUM');
+  assert.equal(classifyPlaceTriage(['MISSING_DESCRIPTION']).priority,'LOW');
+  assert.equal(classifyPlaceTriage([]).priority,'LOW');
+
+  const expired = scorePlace(place({
+    category_slug:'bat-dong-san', housing_listing_type:'SALE',
+    housing_property_type:'HOUSE', housing_listing_status:'PAUSED',
+    housing_total_price_vnd:'3500000000', housing_area_m2:'80',
+    housing_expires_at:new Date(Date.now()-86400000).toISOString(),
+    image_count:0, opening_hours:null
+  }));
+  assert.equal(expired.triagePriority,'CRITICAL');
+  assert.ok(expired.triageReasons.includes('PROPERTY_EXPIRED'));
+  assert.equal(expired.issues.includes('MISSING_HOURS'),false);
+  const incomplete = scorePlace(place({ address:'', description:'', opening_hours:'8h-20h' }));
+  assert.equal(incomplete.triagePriority,'LOW');
+  assert.ok(expired.triageRank < incomplete.triageRank);
+});
+
+test('Data Trust V5 overview keeps V3 contract, triage metadata and read-only priority ordering', async (t) => {
+  if (process.env.NODE_ENV !== 'test' || !process.env.DATABASE_URL) {
+    t.skip('isolated migrated PostgreSQL 16 required');
+    return;
+  }
+  const result = await getDataQualityOverview({limit:50});
+  assert.equal(result.version,3);
+  assert.equal(result.triageVersion,5);
+  assert.equal(result.triageMode,'READ_ONLY');
+  assert.ok(['CRITICAL','HIGH','MEDIUM','LOW'].every((t) =>
+    Number.isInteger(result.summary.triageCounts[t])));
+  const rank = { CRITICAL:0, HIGH:1, MEDIUM:2, LOW:3 };
+  const p = result.items.map((item) => rank[item.triagePriority]);
+  assert.deepEqual(p,[...p].sort((a,b)=>a-b));
 });

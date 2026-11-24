@@ -26,6 +26,13 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import '../../data-trust-admin.css';
 
+const TRIAGE_LABELS = {
+  CRITICAL: 'Ưu tiên khẩn',
+  HIGH: 'Ưu tiên cao',
+  MEDIUM: 'Cần rà soát',
+  LOW: 'Bổ sung khi phù hợp'
+};
+
 const ISSUE_LABELS = {
   MISSING_ADDRESS: 'Thiếu địa chỉ',
   MISSING_DESCRIPTION: 'Thiếu mô tả',
@@ -191,9 +198,9 @@ export default function AdminDataTrust() {
     <main className="admin-page page-container data-trust-page">
       <section className="data-trust-hero">
         <div>
-          <span className="eyebrow">DATA TRUST & MODERATION V2</span>
+          <span className="eyebrow">DATA TRUST V5 · PRIORITY TRIAGE</span>
           <h1>Chất lượng & độ tin cậy dữ liệu</h1>
-          <p>Phát hiện spam, theo dõi dữ liệu cũ/thiếu, quản lý CTV và hoàn tác thay đổi sai.</p>
+          <p>Ưu tiên dữ liệu công khai có thể gây hiểu nhầm, rà soát tin bất động sản hết hạn, spam và chất lượng địa điểm. Điểm ưu tiên không tự ẩn hay từ chối nội dung.</p>
         </div>
         <div className="data-trust-health"><ShieldCheck size={22} /><span><b>{summary.averageScore ?? '—'}/100</b><small>điểm chất lượng TB</small></span></div>
       </section>
@@ -233,11 +240,26 @@ export default function AdminDataTrust() {
               </div>
             </div>
 
+            {quality?.triageVersion === 5 && <p className="data-trust-triage-summary" role="status">
+              Hàng chờ ưu tiên V5 trong phạm vi {summary.auditedCount || 0} địa điểm đã kiểm tra:
+              {' '}<b>{summary.triageCounts?.CRITICAL || 0} khẩn</b> ·
+              {' '}{summary.triageCounts?.HIGH || 0} cao ·
+              {' '}{summary.triageCounts?.MEDIUM || 0} cần rà soát.
+              Không đại diện toàn bộ hệ thống nếu việc kiểm tra mới chỉ lấy mẫu.
+            </p>}
             <div className="quality-place-list">
               {qualityItems.map((place) => (
                 <article key={place.id}>
                   <div className="quality-score"><b>{place.qualityScore}</b><small>/100</small></div>
-                  <div className="quality-place-copy"><small>{place.category || 'Chưa phân loại'} · #{place.id}</small><h3>{place.name}</h3><p>{place.address || 'Chưa có địa chỉ'}</p><div>{place.issues.map((issue) => <span key={issue}>{ISSUE_LABELS[issue] || issue}</span>)}</div></div>
+                  <div className="quality-place-copy">
+                    <small>{place.category || 'Chưa phân loại'} · #{place.id}</small>
+                    <h3>{place.name}</h3>
+                    {place.triagePriority && <div className={'data-trust-triage-badge tier-' + place.triagePriority.toLowerCase()}>
+                      {TRIAGE_LABELS[place.triagePriority] || 'Cần rà soát'}
+                    </div>}
+                    <p>{place.address || 'Chưa có địa chỉ'}</p>
+                    <div>{place.issues.map((issue) => <span key={issue}>{ISSUE_LABELS[issue] || issue}</span>)}</div>
+                  </div>
                   <div className="quality-place-meta"><span>{place.imageCount} ảnh</span><span>Xác minh: {place.verifiedAgeDays === null ? 'Chưa từng' : place.verifiedAgeDays + ' ngày'}</span></div>
                   <div className="quality-place-actions">
                     <button onClick={() => openHistory(place)}><History size={15} /> Lịch sử</button>
