@@ -4,7 +4,7 @@
 
 ## Đang phát triển — HOLA-P1-104 (25/11/2026, GMT+7)
 
-- **Nhánh:** `feat/p1-104-housing-amenities-detail-20261125` (PR cần ghi sau khi mở).
+- **PR:** [#109](https://github.com/hoanglamvu04/bandohoalac/pull/109) — nhánh `feat/p1-104-housing-amenities-detail-20261125`, chờ CI/merge.
 - **Trạng thái:** ĐANG LÀM — chờ CI/merge; KHÔNG coi là đã lên `main` hoặc VPS.
 - **Nâng cấp:** Trang chi tiết BĐS công khai có tìm tiện ích trong bán kính 500 m / 1 km / 2 km, hiển thị nhóm địa điểm, khoảng cách đường thẳng, link POI, retry và cảnh báo dữ liệu chưa đầy đủ.
 - **Phạm vi mã:** component/CSS trang chi tiết, Playwright, tài liệu chức năng. Không đổi schema/API server, tracking, moderation hoặc quyền riêng tư.
