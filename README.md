@@ -1,5 +1,7 @@
 # Hola Maps
 
+> **BẮT BUỘC ĐỌC TRƯỚC KHI CODE:** [LƯU Ý CODE — báo cáo tiến độ, trạng thái, kế hoạch và bàn giao ChatGPT](LUU_Y_CODE/README.md). Mọi PR sửa code phải cập nhật [báo cáo](LUU_Y_CODE/BAO_CAO_TIEN_DO.md), [kế hoạch](LUU_Y_CODE/KE_HOACH_TIEP_THEO.md) và [nhật ký](LUU_Y_CODE/NHAT_KY_CODE.md). Xem thêm [AGENTS.md](AGENTS.md).
+
 Hola Maps is a community-driven discovery map for the Hoa Lac area (Hanoi).
 People browse real places on an interactive map, and Contributors/Explorers
 add and improve the data themselves — every submission goes through
