@@ -2,6 +2,12 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 16:29 25/11/2026 GMT+7 — HOLA-P1-109 — Xác nhận merge và bàn giao
+
+- **Kết quả:** [PR #111](https://github.com/hoanglamvu04/bandohoalac/pull/111) đã hợp nhất trên `main`, SHA `eb8b7f3abb58852e7703129158caca3aab072ca4`.
+- **CI:** 9/9 checks PASS trên head `1766d6dce8e3416d437b0d74123c72dae415daad`. [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45584879416) chạy frontend build, Playwright và PG16/PostGIS; backend đạt 228/228. [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45584879379) PASS.
+- **Bước tiếp:** Chạy `npm run housing:amenities:audit --prefix backend` trên bản sao được cấp quyền. Kiểm chứng khu/nhóm có ít dữ liệu trước khi bổ sung hoặc tái xác minh POI. Trạng thái VPS chưa được xác minh; WA-005 cần phê duyệt riêng.
+
 ## 16:21 25/11/2026 GMT+7 — HOLA-P1-109 — Bằng chứng dữ liệu tiện ích quanh BĐS
 
 - **Baseline:** `main` `9c73385cefbc3694a43da8b4ecb9f0190db7f218`, PR #109/#110 đã merge. [CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45563858100) và [Security](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45563858229) PASS; P0-004 đang có PR #108.
