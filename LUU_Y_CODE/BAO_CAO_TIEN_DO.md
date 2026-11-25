@@ -1,6 +1,14 @@
 # BÁO CÁO TIẾN ĐỘ & TRẠNG THÁI — HOLA Maps
 
-> **Chốt kiểm tra:** 25/11/2026 (GMT+7). Sau khi [PR #106](https://github.com/hoanglamvu04/bandohoalac/pull/106) merge, đối chiếu `main` SHA `7eb2078c938fbb7c291ae5ea5c2866db5d36c5fe` và toàn bộ CI/Security của PR #106 PASS. Dữ liệu thay đổi theo Git; khi đọc lần sau cần xác minh lại GitHub.
+> **Chốt kiểm tra:** 16:21 25/11/2026 GMT+7. Baseline `main` tại `9c73385cefbc3694a43da8b4ecb9f0190db7f218` sau PR #110. [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45563858100) và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45563858229) PASS trên SHA này.
+
+## HOLA-P1-109 — Độ phủ và độ mới dữ liệu tiện ích (16:21 25/11/2026 GMT+7)
+
+- **Trạng thái:** DANG_LAM, chờ CI/merge. [Nhánh và thay đổi](https://github.com/hoanglamvu04/bandohoalac/compare/main...feat/p1-109-amenity-coverage-20261125).
+- **Trang chi tiết BĐS:** Hiện số nhóm được ghi nhận trong 8 nhóm và số POI xác minh bởi HOLA trong 180 ngày, xác minh cũ hơn hoặc chưa có ngày hợp lệ. Khi chạm giới hạn 100, số liệu mô tả mẫu; kết quả rỗng chỉ phản ánh dữ liệu đang có.
+- **Rà soát theo khu:** Lệnh chỉ đọc báo cáo theo 9 khu phục vụ, thêm nhóm ngoài vùng. Mỗi nhóm tiện ích có số tin công khai còn hiệu lực, số tin có POI trong 1 km và số tin có POI được xác minh gần đây. Khu phục vụ là xấp xỉ địa lý của sản phẩm.
+- **Kiểm thử:** Thêm kiểm thử mẫu giới hạn, truy vấn PG16/PostGIS và Playwright. Chờ GitHub Actions chạy bộ kiểm thử của PR.
+- **Bước tiếp:** Chạy báo cáo trên bản sao dữ liệu được cấp quyền, xác nhận mẫu thấp/rỗng và chọn khu cần bổ sung hoặc xác minh POI. Routing và nghiệm thu VPS chờ bằng chứng riêng.
 
 ## Hoàn thành mã nguồn — HOLA-P1-104 (13:50 25/11/2026 GMT+7)
 

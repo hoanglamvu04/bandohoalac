@@ -71,6 +71,7 @@ export default function HousingNearbyPlaces({ placeId }) {
   }
 
   const categories = Array.isArray(result?.categories) ? result.categories : [];
+  const quality = result?.dataQuality;
   const places = Array.isArray(result?.places) ? result.places.slice(0, 8) : [];
 
   return (
@@ -105,6 +106,22 @@ export default function HousingNearbyPlaces({ placeId }) {
               : result.matchedCount + ' địa điểm được ghi nhận trong bán kính ' +
                 distanceLabel(result.radiusM) + '.'}
           </p>
+          {quality && (
+            <div className="hnp-disclaimer">
+              <p>
+                Đã ghi nhận {categories.length}/{quality.trackedCategoryCount} nhóm tiện ích
+                {result.capped ? ' trong mẫu giới hạn.' : ' trong bán kính này.'}
+              </p>
+              {result.matchedCount > 0 && (
+                <p>
+                  {result.capped ? 'Trong mẫu: ' : ''}
+                  {quality.verification.recent} địa điểm được HOLA xác minh trong {quality.freshnessDays} ngày gần đây,
+                  {' '}{quality.verification.older} xác minh trước đó,
+                  {' '}{quality.verification.unknown} chưa có ngày xác minh hợp lệ.
+                </p>
+              )}
+            </div>
+          )}
           {categories.length > 0 ? (
             <ul className="hnp-categories" aria-label="Nhóm tiện ích">
               {categories.map((category) => (

@@ -1,6 +1,6 @@
 # KẾ HOẠCH CODE TIẾP THEO — HOLA Maps
 
-> **Rà soát:** 25/11/2026 (GMT+7), theo `main` đã kiểm chứng sau PR #106 tại `7eb2078c938f`. Đây là backlog **đề xuất**, không phải lời tuyên bố mọi Sprint đã xong. Tình trạng công việc và ưu tiên phải kiểm tra lại trước mỗi phiên.
+> **Rà soát:** 16:21 25/11/2026 GMT+7, theo baseline `main` `9c73385cefbc3694a43da8b4ecb9f0190db7f218` sau PR #110. Tình trạng công việc và ưu tiên phải kiểm tra lại trước mỗi phiên.
 
 ## Quy ước
 
@@ -33,7 +33,7 @@
 | HOLA-P1-102 | 7 | CHUA_LAM | Audit Smart Map V4, tìm kiếm/sắp xếp/cụm ghim, vùng nhỏ, UX mobile và độ trễ; test thao tác kéo bản đồ, tránh request lặp |
 | HOLA-P1-103 | 8 | CHUA_LAM | Kiểm thử từ đăng tin→duyệt→ghim→liên hệ→tạm ẩn→đã giao dịch→báo nghi vấn; không cấp quyền tự xuất bản |
 | HOLA-P1-104 | 9 | DA_MERGE_CHUA_DEPLOY — [PR #109](https://github.com/hoanglamvu04/bandohoalac/pull/109), 9 checks PASS | Đưa tiện ích vào trang chi tiết BĐS, chọn 500 m/1 km/2 km, kết quả POI công khai, loading/error/retry, Playwright mobile; tiếp theo đo độ phủ theo khu và chỉ tính thời gian di chuyển khi có routing thật được xác minh |
-| HOLA-P1-109 | 9 | CHUA_LAM | Đo độ phủ/độ mới của POI quanh BĐS theo xã/khu, kiểm tra 8 nhóm tiện ích, thiếu dữ liệu và kết quả có giới hạn; chỉ tích hợp thời gian di chuyển khi routing hợp lệ, thêm test dữ liệu thực tế |
+| HOLA-P1-109 | 9 | DANG_LAM — [thay đổi đang chờ CI/merge](https://github.com/hoanglamvu04/bandohoalac/compare/main...feat/p1-109-amenity-coverage-20261125) | Hiện bằng chứng POI trong 8 nhóm trên trang chi tiết và đo số tin có POI/xác minh gần đây theo khu phục vụ trong 1 km. Sau merge, cần bản sao dữ liệu được cấp quyền để rà kết quả và kiểm tra POI thực tế. Routing chỉ triển khai khi có nguồn được xác minh. |
 | HOLA-P1-105 | 10 | CHUA_LAM | Rà thực tế kết quả Data Trust V5, false positive trùng tin và khả năng Admin giải quyết backlog |
 | HOLA-P1-106 | 11–12 | CHUA_LAM | Kiểm thử CTV và Partner từ đăng ký, RBAC, duyệt, xác minh, báo cáo, quyền sở hữu; kiểm tra dữ liệu của từng tổ chức |
 | HOLA-P1-107 | 13 | CHUA_LAM | Audit sitemap/index/canonical, trang địa phương, ảnh quyền sử dụng; chỉ xuất bản trang SEO đạt điều kiện dữ liệu thật |
