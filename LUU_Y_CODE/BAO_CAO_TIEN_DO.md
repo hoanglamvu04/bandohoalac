@@ -12,6 +12,13 @@
 - **Tích hợp X-HUB WA-005:** [PR #92](https://github.com/hoanglamvu04/bandohoalac/pull/92) **OPEN, chưa merge**, cần nghiệm thu/cấp nguồn theo hợp đồng X-HUB. Không bật tracking ngoài consent.
 - **Quy tắc:** Địa điểm/BĐS công khai phải qua kiểm duyệt; không tự xuất bản khi người dùng chỉ gửi yêu cầu.
 
+## 25/11/2026 — HOLA-P0-004 (đang thực hiện)
+ 
+- Baseline kiểm chứng: main `b5bc158daf3396705e33af7f4cf13e8bd81664fa`, [CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45534055077) và [Security](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45534055086) đều PASS.
+- [Nhánh sửa](https://github.com/hoanglamvu04/bandohoalac/tree/fix/p0-004-launch-audit-consistency-20261125): đồng nhất cổng audit CLI/VPS và Admin Operations, đếm cả BĐS cũ thiếu hồ sơ, thiếu giá/diện tích, không báo đạt khi dữ liệu rỗng/lỗi; thêm số đếm giá/diện tích và ảnh BĐS trên Admin.
+- Kiểm thử mới: đối chiếu chính sách CLI/Admin, dữ liệu aggregate sai, bảng tạm PG16 không ghi vào bảng thật. CI của thay đổi này đang chờ; chưa merge, chưa deploy.
+- Việc còn lại: audit ảnh lịch sử, nguồn dữ liệu thật và quyền ảnh trên VPS; triage bảo mật P0-005, giữ WA-005 #92 chờ duyệt. Không tuyên bố đã nghiệm thu.
+
 ## Các đợt đã merge gần nhất (mã nguồn)
 
 | PR | Nhóm | Trạng thái tại thời điểm kiểm tra | Phạm vi thực tế |

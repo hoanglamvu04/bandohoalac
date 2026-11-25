@@ -140,10 +140,16 @@ Run from the repository root:
 (cd backend && node src/scripts/publicLaunchAudit.js)
 \`\`\`
 
-The audit prints total published places, missing address, description, media,
-contact, stale official checks and published property-specific problems.
-If a published structured property has no phone or should have been archived,
-exit status is nonzero: resolve these before public promotion.
+The audit uses the same uncached, read-only aggregate and blocker policy as
+Admin → Operations → Public Launch Gates. The report retains the published
+place counts and now includes **all published properties**, even those without
+a housing profile. It returns nonzero if public data is empty, a published
+property is inactive/expired, contact is absent, price/area is invalid, a
+legacy property has no housing profile, or the aggregate cannot be verified.
+Missing images/description and stale verification are review counts, not new
+automatic publication rules. Exit 0 means only that this data gate detected
+no blockers; it does not approve launch or replace media/restore/device checks.
+No records are changed and no stored personal data or URLs are printed.
 
 Historical real estate imported before P0 is not automatically given a
 30-day expiry or retroactively assumed to have contact consent. Review

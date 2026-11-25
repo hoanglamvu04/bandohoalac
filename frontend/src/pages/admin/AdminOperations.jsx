@@ -167,6 +167,8 @@ export default function AdminOperations() {
           <div><small>BĐS đã hết hiệu lực nhưng còn công khai</small><b>{number(data.launch.counts.stalePublishedHousing)}</b></div>
           <div><small>Thiếu liên hệ BĐS</small><b>{number(data.launch.counts.missingHousingContact)}</b></div>
           <div><small>BĐS cũ chưa chuẩn hóa</small><b>{number(data.launch.counts.legacyUnstructuredHousing)}</b></div>
+          <div><small>BĐS thiếu giá hoặc diện tích hợp lệ</small><b>{data.launch.counts.invalidHousingPriceArea == null ? '—' : number(data.launch.counts.invalidHousingPriceArea)}</b></div>
+          <div><small>Tin BĐS chưa có ảnh</small><b>{data.launch.counts.propertyMissingImages == null ? '—' : number(data.launch.counts.propertyMissingImages)}</b></div>
           <div><small>Địa điểm chưa có ảnh</small><b>{number(data.launch.counts.publishedWithoutImages)}</b></div>
         </div>}
         {Boolean(data.launch.blockers?.length) && <div className="soft-launch-ops-launch-blockers">

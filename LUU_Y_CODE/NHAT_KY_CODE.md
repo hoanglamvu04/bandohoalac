@@ -2,6 +2,15 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 25/11/2026 GMT+7 — HOLA-P0-004 — Cổng audit dữ liệu thống nhất
+
+- **Baseline:** main `b5bc158daf3396705e33af7f4cf13e8bd81664fa`; CI/Security PASS trên main, chưa có kết quả kiểm thử của nhánh mới.
+- **Phát hiện:** CLI publicLaunchAudit dùng INNER JOIN bỏ sót BĐS không có hồ sơ và không chặn giá/diện tích sai; khác chính sách Admin. Dữ liệu rỗng cũng có thể qua CLI.
+- **Mã nguồn:** launchEvidence.service.js là nguồn thống nhất; publicLaunchAudit.js dùng aggregate uncached; thêm số đếm trên AdminOperations.jsx; bổ sung launchEvidence.test.js (mock + bảng tạm PG16) và runbook.
+- **Nhánh:** [fix/p0-004-launch-audit-consistency-20261125](https://github.com/hoanglamvu04/bandohoalac/tree/fix/p0-004-launch-audit-consistency-20261125); PR/CI đang chờ. Không sửa schema, dữ liệu, consent, WA-005, VPS hay quyền duyệt.
+- **Blocker:** chưa chạy audit trên VPS và chưa kiểm tra quyền ảnh/ảnh lịch sử. Kiểm thử mới phải có bằng chứng CI trước merge; không tự công bố đã deploy.
+- **Bàn giao:** xem CI, xử lý lỗi, ghi lại PR/merge; P0-004 tiếp tục nghiệm thu dữ liệu thật, P0-005 rà PR bảo mật cũ và upload originals.
+
 ## 09:32 25/11/2026 GMT+7 — HOLA-DOC-001 — Xác nhận bộ LƯU Ý CODE đã hợp nhất
 
 - **Đã merge:** [PR #106](https://github.com/hoanglamvu04/bandohoalac/pull/106) vào `main` tại SHA `7eb2078c938fbb7c291ae5ea5c2866db5d36c5fe`.
