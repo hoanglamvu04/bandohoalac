@@ -2,13 +2,13 @@
 
 > **Chốt kiểm tra:** 25/11/2026 (GMT+7). Sau khi [PR #106](https://github.com/hoanglamvu04/bandohoalac/pull/106) merge, đối chiếu `main` SHA `7eb2078c938fbb7c291ae5ea5c2866db5d36c5fe` và toàn bộ CI/Security của PR #106 PASS. Dữ liệu thay đổi theo Git; khi đọc lần sau cần xác minh lại GitHub.
 
-## Đang phát triển — HOLA-P1-104 (25/11/2026, GMT+7)
+## Hoàn thành mã nguồn — HOLA-P1-104 (13:50 25/11/2026 GMT+7)
 
-- **PR:** [#109](https://github.com/hoanglamvu04/bandohoalac/pull/109) — nhánh `feat/p1-104-housing-amenities-detail-20261125`, chờ CI/merge.
-- **Trạng thái:** ĐANG LÀM — chờ CI/merge; KHÔNG coi là đã lên `main` hoặc VPS.
+- **PR:** [#109](https://github.com/hoanglamvu04/bandohoalac/pull/109) — đã merge, frontend build, E2E Playwright, backend/PostGIS, CodeQL, dependency, repository safety, shell và LUU_Y_CODE gate đều PASS.
+- **Trạng thái:** ĐÃ MERGE — CHƯA XÁC MINH DEPLOY. [PR #109](https://github.com/hoanglamvu04/bandohoalac/pull/109) đã merge vào `main` tại `d55f50d5f21d207a2e10d093576018be0ac43f8f`.
 - **Nâng cấp:** Trang chi tiết BĐS công khai có tìm tiện ích trong bán kính 500 m / 1 km / 2 km, hiển thị nhóm địa điểm, khoảng cách đường thẳng, link POI, retry và cảnh báo dữ liệu chưa đầy đủ.
 - **Phạm vi mã:** component/CSS trang chi tiết, Playwright, tài liệu chức năng. Không đổi schema/API server, tracking, moderation hoặc quyền riêng tư.
-- **Kiểm thử:** mới bổ sung test E2E; kết quả CI sẽ đối chiếu trên PR. Không tự nhận PASS trước khi Actions hoàn thành.
+- **Kiểm thử:** 9 checks của PR #109 đều PASS (frontend build, frontend E2E, backend migrate/test/PostGIS, CodeQL 2 kiểm tra, dependency audit, repository safety, shell security, handoff). CI chạy lại trên merge commit `main` cần kiểm tra riêng.
 - **Phụ thuộc:** đánh giá độ phủ POI và routing thật vẫn là việc cần làm; production backup/restore và WA-005 PR #92 vẫn chưa nghiệm thu.
 
 ## Tóm tắt có thể kiểm chứng
