@@ -2,6 +2,13 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 16:54 25/11/2026 GMT+7 — HOLA-P0-004 / P1-109 / P1-102 — Bàn giao kiểm toán và Smart Map
+
+- **P0-004:** [PR #108](https://github.com/hoanglamvu04/bandohoalac/pull/108) đã hợp nhất tại `2e58863e79280a1393f8854c9a72a39170c4d065`, 9/9 checks PASS trên head đã đồng bộ. [CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589166739) và [Security](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589166792).
+- **Kiểm toán POI/BĐS:** Chưa chạy. VPS từ chối xác thực SSH; cần phiên xác thực và bản sao chỉ đọc đã được xác nhận. Không có kết quả production.
+- **P1-102:** [Nhánh Smart Map V4](https://github.com/hoanglamvu04/bandohoalac/compare/main...feat/p1-102-smart-map-mobile-20261125) cập nhật `MapPage.jsx`, CSS mobile và `smart-map-v4.spec.js`. Sửa việc hủy lặp truy vấn do kéo bản đồ và giữ nút xem kết quả trong bộ lọc mobile. Chờ CI/merge.
+- **Việc tiếp:** Chạy báo cáo tổng hợp trên bản sao được phép và đo bản đồ trên thiết bị thật. Chưa triển khai VPS.
+
 ## 16:49 25/11/2026 GMT+7 — HOLA-P0-004 — Đồng bộ PR kiểm toán dữ liệu công khai
 
 - **Trước:** `main` `c03d7301f7b8ab704ed45e1499d2b61caa7c8628`, Hola Maps CI và Security Scan PASS.
