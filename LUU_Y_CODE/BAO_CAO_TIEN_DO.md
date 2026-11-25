@@ -1,13 +1,13 @@
 # BÁO CÁO TIẾN ĐỘ & TRẠNG THÁI — HOLA Maps
 
-> **Chốt kiểm tra:** 16:21 25/11/2026 GMT+7. Baseline `main` tại `9c73385cefbc3694a43da8b4ecb9f0190db7f218` sau PR #110. [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45563858100) và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45563858229) PASS trên SHA này.
+> **Chốt kiểm tra:** 16:29 25/11/2026 GMT+7. Đã xác minh `main` tại `eb8b7f3abb58852e7703129158caca3aab072ca4` sau [PR #111](https://github.com/hoanglamvu04/bandohoalac/pull/111). [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45584879416) và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45584879379) PASS trên head PR.
 
 ## HOLA-P1-109 — Độ phủ và độ mới dữ liệu tiện ích (16:21 25/11/2026 GMT+7)
 
-- **Trạng thái:** DANG_LAM, chờ CI/merge. [Nhánh và thay đổi](https://github.com/hoanglamvu04/bandohoalac/compare/main...feat/p1-109-amenity-coverage-20261125).
+- **Trạng thái:** ĐÃ MERGE — CHƯA XÁC MINH DEPLOY. [PR #111](https://github.com/hoanglamvu04/bandohoalac/pull/111) đã vào `main` tại `eb8b7f3abb58852e7703129158caca3aab072ca4`.
 - **Trang chi tiết BĐS:** Hiện số nhóm được ghi nhận trong 8 nhóm và số POI xác minh bởi HOLA trong 180 ngày, xác minh cũ hơn hoặc chưa có ngày hợp lệ. Khi chạm giới hạn 100, số liệu mô tả mẫu; kết quả rỗng chỉ phản ánh dữ liệu đang có.
 - **Rà soát theo khu:** Lệnh chỉ đọc báo cáo theo 9 khu phục vụ, thêm nhóm ngoài vùng. Mỗi nhóm tiện ích có số tin công khai còn hiệu lực, số tin có POI trong 1 km và số tin có POI được xác minh gần đây. Khu phục vụ là xấp xỉ địa lý của sản phẩm.
-- **Kiểm thử:** Thêm kiểm thử mẫu giới hạn, truy vấn PG16/PostGIS và Playwright. Chờ GitHub Actions chạy bộ kiểm thử của PR.
+- **Kiểm thử:** 9/9 checks của PR PASS, gồm frontend build, Playwright, PostGIS, CodeQL, kiểm toán phụ thuộc, shell và cổng bàn giao. Backend đạt 228/228 bài kiểm thử, gồm ca truy vấn PostGIS của báo cáo.
 - **Bước tiếp:** Chạy báo cáo trên bản sao dữ liệu được cấp quyền, xác nhận mẫu thấp/rỗng và chọn khu cần bổ sung hoặc xác minh POI. Routing và nghiệm thu VPS chờ bằng chứng riêng.
 
 ## Hoàn thành mã nguồn — HOLA-P1-104 (13:50 25/11/2026 GMT+7)
@@ -22,7 +22,7 @@
 ## Tóm tắt có thể kiểm chứng
 
 - **Repository:** [hoanglamvu04/bandohoalac](https://github.com/hoanglamvu04/bandohoalac), branch chính `main`.
-- **Kết quả tại baseline:** GitHub Actions **Hola Maps CI = PASS**, **Security Scan = PASS** trên SHA ở trên.
+- **Kết quả tại baseline:** GitHub Actions **Hola Maps CI = PASS**, **Security Scan = PASS** trên head PR #111.
 - **Mã nguồn:** React/Vite, Express, PostgreSQL 16 + PostGIS, MapLibre; đã có bản đồ, địa điểm, đóng góp/duyệt, BĐS, cộng đồng/CTV, đối tác, SEO và vận hành.
 - **Trạng thái phát hành production:** **CHƯA NGHIỆM THU / không có bằng chứng triển khai VPS của các PR mới**. GitHub CI không xác nhận Nginx, PM2, PostgreSQL/ảnh thật hay thiết bị thật.
 - **Bộ bàn giao LƯU Ý CODE:** [PR #106](https://github.com/hoanglamvu04/bandohoalac/pull/106) **ĐÃ MERGE**, CodeQL, PostGIS/backend, Playwright/frontend, dependency audit, shell và handoff policy đều PASS. Đây là bộ hồ sơ/CI, không phải deploy VPS.
