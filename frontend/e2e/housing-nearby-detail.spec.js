@@ -36,6 +36,10 @@ async function mockDetail(page, { isHousing = true, amenities = null } = {}) {
       return route.fulfill({ json: amenities || {
         placeId: '777', radiusM: radius, matchedCount: radius === 2000 ? 3 : 2,
         capped: false, method: 'STRAIGHT_LINE_DISTANCE',
+        dataQuality: {
+          trackedCategoryCount: 8, freshnessDays: 180,
+          verification: { recent: 1, older: 0, unknown: radius === 2000 ? 2 : 1 }
+        },
         categories: [
           { categorySlug: 'truong-hoc', name: 'Trường học', count: 1 },
           { categorySlug: 'y-te', name: 'Y tế', count: 1 }
@@ -65,6 +69,9 @@ test('guest on mobile can inspect public amenities by radius, without GPS collec
   await section.getByRole('button', { name: 'Tra cứu tiện ích' }).click();
   const results = section.getByTestId('housing-nearby-results');
   await expect(results).toContainText('2 địa điểm được ghi nhận');
+  await expect(results).toContainText('Đã ghi nhận 2/8 nhóm tiện ích trong bán kính này.');
+  await expect(results).toContainText('1 địa điểm được HOLA xác minh trong 180 ngày gần đây');
+  await expect(results).toContainText('1 chưa có ngày xác minh hợp lệ');
   await expect(results).toContainText('Trường học');
   await expect(results.getByRole('link', { name: 'Trường Hòa Lạc' }))
     .toHaveAttribute('href', '/place/91');
@@ -85,7 +92,11 @@ test('errors are reversible and capped values never claim exhaustive totals', as
   const requests = await mockDetail(page, { amenities: {
     placeId: '777', radiusM: 1000, matchedCount: 100, capped: true,
     categories: [{ categorySlug: 'truong-hoc', name: 'Trường học', count: 100 }],
-    places: [], method: 'STRAIGHT_LINE_DISTANCE'
+    places: [], method: 'STRAIGHT_LINE_DISTANCE',
+    dataQuality: {
+      trackedCategoryCount: 8, freshnessDays: 180,
+      verification: { recent: 40, older: 10, unknown: 50 }
+    }
   } });
   await page.goto('/place/777');
   const section = page.getByTestId('housing-nearby-detail');
@@ -96,7 +107,8 @@ test('errors are reversible and capped values never claim exhaustive totals', as
   await section.getByRole('button', { name: 'Tra cứu lại' }).click();
   await expect(section.getByTestId('housing-nearby-results'))
     .toContainText('Ít nhất 100 địa điểm được ghi nhận');
-  await expect(section).toContainText('trong mẫu');
+  await expect(section).toContainText('Đã ghi nhận 1/8 nhóm tiện ích trong mẫu giới hạn.');
+  await expect(section).toContainText('Trong mẫu: 40 địa điểm được HOLA xác minh');
 });
 
 test('regular public POIs do not show housing-only location intelligence', async ({ page }) => {
@@ -105,4 +117,21 @@ test('regular public POIs do not show housing-only location intelligence', async
   await expect(page.getByRole('heading', { name: property.name })).toBeVisible();
   await expect(page.getByTestId('housing-nearby-detail')).toHaveCount(0);
   expect(requests.calls).toHaveLength(0);
+});
+
+test('empty amenities communicate missing observations', async ({ page }) => {
+  await mockDetail(page, { amenities: {
+    placeId: '777', radiusM: 1000, matchedCount: 0, capped: false,
+    categories: [], places: [],
+    dataQuality: {
+      trackedCategoryCount: 8, freshnessDays: 180,
+      verification: { recent: 0, older: 0, unknown: 0 }
+    }
+  } });
+  await page.goto('/place/777');
+  const section = page.getByTestId('housing-nearby-detail');
+  await section.getByRole('button', { name: 'Tra cứu tiện ích' }).click();
+  await expect(section).toContainText('Đã ghi nhận 0/8 nhóm tiện ích');
+  await expect(section).toContainText('Chưa ghi nhận tiện ích nào trong dữ liệu hiện có');
+  await expect(section).not.toContainText('0 địa điểm được HOLA xác minh');
 });
