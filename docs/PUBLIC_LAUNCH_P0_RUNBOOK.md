@@ -167,6 +167,65 @@ Property owner:
   recent owner confirmation. The daily job archives them; the public Housing
   API excludes expired records immediately even before the job runs.
 
+### Kiểm toán tiện ích và BĐS trên bản sao PostgreSQL
+
+Chỉ chạy khi đã có **bản sao PostgreSQL riêng được phép đọc** và URL kết nối của tài khoản chỉ đọc. Nếu chỉ có URL của cơ sở dữ liệu website đang dùng thì dừng ở bước này. Khối lệnh dành cho Bash trên VPS có Git và Node.js. Nó tải mã vào thư mục tạm, cài thư viện ở đó và hỏi URL bằng chế độ nhập ẩn.
+
+```bash
+(
+set -e
+audit_dir="$(mktemp -d)"
+git clone --quiet --depth 1 https://github.com/hoanglamvu04/bandohoalac.git "$audit_dir/hola"
+cd "$audit_dir/hola/backend"
+npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+git rev-parse --short HEAD
+read -rsp 'Nhập URL chỉ đọc của BẢN SAO PostgreSQL: ' DATABASE_URL
+printf '\n'
+test -n "$DATABASE_URL"
+NODE_ENV=development DATABASE_URL="$DATABASE_URL" node --input-type=module <<'NODE'
+import pg from 'pg';
+import { auditHousingAmenities } from './src/scripts/auditHousingAmenities.js';
+import { buildPublicLaunchAudit } from './src/scripts/publicLaunchAudit.js';
+
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  connectionTimeoutMillis: 8000
+});
+let client;
+try {
+  client = await pool.connect();
+  await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+  await client.query("SET LOCAL statement_timeout = '30s'");
+  const quality = await buildPublicLaunchAudit(client);
+  const amenities = await auditHousingAmenities(client);
+  console.log('=== KIỂM TOÁN BĐS ===', quality.checkedAt);
+  console.log(JSON.stringify({ dataGate: quality.dataGate,
+    ...quality.realEstate, blockers: quality.blockers }, null, 2));
+  const zones = new Map();
+  for (const row of amenities.rows) {
+    const zone = zones.get(row.zoneName) ?? { tin: row.activeListings, coPOI: 0, xacMinh180Ngay: 0 };
+    if (row.listingsWithPoi > 0) zone.coPOI++;
+    if (row.listingsWithRecentlyVerifiedPoi > 0) zone.xacMinh180Ngay++;
+    zones.set(row.zoneName, zone);
+  }
+  console.log('=== TIỆN ÍCH TRONG 1 KM (số nhóm trên 8) ===');
+  console.table(Object.fromEntries(zones));
+} catch (error) {
+  console.error('Không chạy được kiểm toán. Mã lỗi:', error.code || 'AUDIT_FAILED');
+  process.exitCode = 1;
+} finally {
+  if (client) {
+    await client.query('ROLLBACK').catch(() => {});
+    client.release();
+  }
+  await pool.end();
+}
+NODE
+)
+```
+
+Chụp hai khối **KIỂM TOÁN BĐS** và **TIỆN ÍCH TRONG 1 KM** để bàn giao. Cột `tin` là số tin công khai còn hiệu lực trong khu; `coPOI` và `xacMinh180Ngay` là số nhóm tiện ích có quan sát trong 8 nhóm. Khu có 0 tin chưa có mẫu để đánh giá. Phần kiểm toán BĐS chỉ trả số lượng và mã vấn đề. Nếu có lỗi, gửi mã lỗi hiển thị thay vì URL kết nối.
+
 ## Manual launch acceptance matrix
 
 1. Guest: browse map and details but cannot submit or manage listings.
