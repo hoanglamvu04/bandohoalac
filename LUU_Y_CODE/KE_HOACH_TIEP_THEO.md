@@ -9,6 +9,12 @@
 - Trạng thái dùng chung: `CHUA_LAM`, `DANG_LAM`, `CHO_DUYET`, `DA_MERGE_CHUA_DEPLOY`, `DA_DEPLOY_CHUA_NGHIEM_THU`, `DA_NGHIEM_THU`.
 - **Không có hạn chót tự suy đoán.** Mỗi phiên nhận việc phải chọn ID và ghi rõ cái gì sẽ làm, cái gì không làm.
 
+## Nhiệm vụ tài liệu đang thực hiện
+
+| ID | Trạng thái tại thời điểm ghi | Kết quả mong đợi |
+|---|---|---|
+| HOLA-DOC-001 | ĐANG LÀM — [PR #106](https://github.com/hoanglamvu04/bandohoalac/pull/106) | Merge bộ LƯU Ý CODE sau CI; xác minh CI handoff trên code PR mới và duy trì cập nhật về sau |
+
 ## P0 — Cổng an toàn và ra mắt
 
 | ID | Trạng thái | Việc cần làm tiếp | Điều kiện hoàn thành |
