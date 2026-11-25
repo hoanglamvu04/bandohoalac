@@ -1,0 +1,52 @@
+/* Public property detail: intentional, accessible on-demand POI discovery. */
+.hnp-card { display: grid; gap: 12px; }
+.hnp-intro, .hnp-disclaimer {
+  margin: 0; color: #587065; font-size: 13px; line-height: 1.6;
+}
+.hnp-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.hnp-controls label { font-weight: 700; font-size: 13px; }
+.hnp-controls select {
+  min-height: 42px; min-width: 110px; padding: 8px 10px;
+  border: 1px solid #cbd8d0; border-radius: 9px; background: #fff;
+  color: #294638; font: inherit;
+}
+.hnp-controls button {
+  min-height: 42px; display: inline-flex; align-items: center; justify-content: center;
+  gap: 7px; padding: 8px 15px; border: 0; border-radius: 9px;
+  background: #21634b; color: #fff; cursor: pointer; font-weight: 750; font-size: 13px;
+}
+.hnp-controls button:disabled { opacity: .7; cursor: progress; }
+.hnp-controls :is(button, select):focus-visible, .hnp-places a:focus-visible {
+  outline: 3px solid #dbb65c; outline-offset: 2px;
+}
+.hnp-feedback { margin: 0; color: #43604f; font-size: 13px; }
+.hnp-error {
+  margin: 0; padding: 10px 12px; border-radius: 8px;
+  background: #fff0eb; color: #923c2d; font-size: 13px;
+}
+.hnp-results { display: grid; gap: 12px; }
+.hnp-summary { margin: 0; font-size: 14px; font-weight: 750; color: #295b47; }
+.hnp-categories { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 0; }
+.hnp-categories li {
+  display: flex; flex-direction: column; gap: 2px; min-width: 132px;
+  border: 1px solid #dce9e0; border-radius: 9px; background: #f5faf6;
+  padding: 9px 11px; font-size: 12px; line-height: 1.45;
+}
+.hnp-categories strong { color: #22533c; }
+.hnp-categories span { color: #537568; }
+.hnp-empty { margin: 0; font-size: 13px; color: #5f746b; }
+.hnp-places h3 { margin: 0 0 8px; font-size: 14px; }
+.hnp-places ul { display: grid; gap: 7px; padding: 0; margin: 0; list-style: none; }
+.hnp-places li {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 8px 0; border-bottom: 1px solid #edf0ec; font-size: 13px;
+}
+.hnp-places a { color: #245e45; font-weight: 650; overflow-wrap: anywhere; }
+.hnp-places li span { color: #5d7167; flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) {
+  .hnp-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .hnp-controls label { grid-column: 1 / -1; }
+  .hnp-controls select, .hnp-controls button { width: 100%; min-width: 0; }
+  .hnp-categories li { min-width: 0; flex: 1 1 130px; }
+  .hnp-places li { align-items: flex-start; }
+}

@@ -2,6 +2,15 @@
 
 > **Chốt kiểm tra:** 25/11/2026 (GMT+7). Sau khi [PR #106](https://github.com/hoanglamvu04/bandohoalac/pull/106) merge, đối chiếu `main` SHA `7eb2078c938fbb7c291ae5ea5c2866db5d36c5fe` và toàn bộ CI/Security của PR #106 PASS. Dữ liệu thay đổi theo Git; khi đọc lần sau cần xác minh lại GitHub.
 
+## Đang phát triển — HOLA-P1-104 (25/11/2026, GMT+7)
+
+- **Nhánh:** `feat/p1-104-housing-amenities-detail-20261125` (PR cần ghi sau khi mở).
+- **Trạng thái:** ĐANG LÀM — chờ CI/merge; KHÔNG coi là đã lên `main` hoặc VPS.
+- **Nâng cấp:** Trang chi tiết BĐS công khai có tìm tiện ích trong bán kính 500 m / 1 km / 2 km, hiển thị nhóm địa điểm, khoảng cách đường thẳng, link POI, retry và cảnh báo dữ liệu chưa đầy đủ.
+- **Phạm vi mã:** component/CSS trang chi tiết, Playwright, tài liệu chức năng. Không đổi schema/API server, tracking, moderation hoặc quyền riêng tư.
+- **Kiểm thử:** mới bổ sung test E2E; kết quả CI sẽ đối chiếu trên PR. Không tự nhận PASS trước khi Actions hoàn thành.
+- **Phụ thuộc:** đánh giá độ phủ POI và routing thật vẫn là việc cần làm; production backup/restore và WA-005 PR #92 vẫn chưa nghiệm thu.
+
 ## Tóm tắt có thể kiểm chứng
 
 - **Repository:** [hoanglamvu04/bandohoalac](https://github.com/hoanglamvu04/bandohoalac), branch chính `main`.
