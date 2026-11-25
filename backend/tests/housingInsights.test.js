@@ -82,8 +82,8 @@ test('public amenities are bounded, published-only and anchored to a public hous
       assert.match(sql,/hl.listing_status = 'ACTIVE'/);
       assert.equal(params[2].includes('bat-dong-san'), false);
       return { rows:[
-        { id:11, name:'Trường học', category_slug:'truong-hoc',category_name:'Giáo dục',distance_m:350 },
-        { id:12, name:'Trạm y tế', category_slug:'y-te', category_name:'Y tế', distance_m:490 }
+        { id:11, name:'Trường học', category_slug:'truong-hoc',category_name:'Giáo dục',distance_m:350, verification_age:'RECENT' },
+        { id:12, name:'Trạm y tế', category_slug:'y-te', category_name:'Y tế', distance_m:490, verification_age:'OLDER' }
       ] };
     }
   };
@@ -92,6 +92,11 @@ test('public amenities are bounded, published-only and anchored to a public hous
   assert.equal(result.matchedCount,2);
   assert.equal(result.places[0].distanceM,350);
   assert.equal(result.categories.length,2);
+  assert.deepEqual(result.dataQuality, {
+    trackedCategoryCount: 8,
+    freshnessDays: 180,
+    verification: { recent: 1, older: 1, unknown: 0 }
+  });
   assert.equal(result.method,'STRAIGHT_LINE_DISTANCE');
   assert.equal(MAX_AMENITY_CANDIDATES,100);
   assert.equal(JSON.stringify(result).includes('location'),false);
@@ -107,4 +112,21 @@ test('public amenities are bounded, published-only and anchored to a public hous
   await assert.rejects(()=>getHousingNearbyAmenities('7','1000',{
     async query() { return { rows:[] }; }
   }), (err)=>err.statusCode===404);
+});
+
+test('amenity freshness counts describe the same bounded sample as category counts', async () => {
+  const rows = Array.from({ length: 101 }, (_, index) => ({
+    id: index + 10, name: 'Cafe', category_slug: 'cafe', category_name: 'Cafe',
+    distance_m: index, verification_age: index === 100 ? 'RECENT' : 'UNKNOWN'
+  }));
+  const db = {
+    async query(sql) {
+      return { rows: sql.includes('ST_DWithin') ? rows : [{ id: 5 }] };
+    }
+  };
+  const result = await getHousingNearbyAmenities('5', '1000', db);
+  assert.equal(result.capped, true);
+  assert.equal(result.matchedCount, 100);
+  assert.equal(result.places.length, 8);
+  assert.deepEqual(result.dataQuality.verification, { recent: 0, older: 0, unknown: 100 });
 });

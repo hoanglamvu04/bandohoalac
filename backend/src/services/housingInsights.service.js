@@ -5,7 +5,8 @@ import { AppError } from '../utils/AppError.js';
 // or appraised values. Small samples cannot produce meaningful quartiles.
 export const MIN_VISIBLE_MARKET_SAMPLE = 5;
 export const MAX_AMENITY_CANDIDATES = 100;
-const AMENITY_CATEGORIES = Object.freeze([
+export const AMENITY_FRESHNESS_DAYS = 180;
+export const AMENITY_CATEGORIES = Object.freeze([
   'truong-hoc', 'y-te', 'sieu-thi', 'ngan-hang-atm',
   'nhien-lieu-sac', 'giao-thong', 'an-uong', 'cafe'
 ]);
@@ -125,6 +126,11 @@ export async function getHousingNearbyAmenities(placeId, radius = '1000', db = p
   }
   const { rows } = await db.query(
     `SELECT p.id, p.name, c.name AS category_name, c.slug AS category_slug,
+            CASE
+              WHEN p.last_verified_at IS NULL OR p.last_verified_at > NOW() THEN 'UNKNOWN'
+              WHEN p.last_verified_at >= NOW() - INTERVAL '${AMENITY_FRESHNESS_DAYS} days' THEN 'RECENT'
+              ELSE 'OLDER'
+            END AS verification_age,
             ROUND(ST_Distance(p.location::geography, anchor.location::geography))::int AS distance_m
        FROM places p
        JOIN categories c ON c.id = p.category_id
@@ -142,7 +148,11 @@ export async function getHousingNearbyAmenities(placeId, radius = '1000', db = p
   );
   const limited = rows.slice(0, MAX_AMENITY_CANDIDATES);
   const counts = new Map();
+  const verification = { recent: 0, older: 0, unknown: 0 };
   for (const row of limited) {
+    if (row.verification_age === 'RECENT') verification.recent++;
+    else if (row.verification_age === 'OLDER') verification.older++;
+    else verification.unknown++;
     const categorySlug = String(row.category_slug);
     const entry = counts.get(categorySlug) || {
       categorySlug, name: String(row.category_name), count: 0
@@ -155,6 +165,11 @@ export async function getHousingNearbyAmenities(placeId, radius = '1000', db = p
     radiusM,
     matchedCount: limited.length,
     capped: rows.length > MAX_AMENITY_CANDIDATES,
+    dataQuality: {
+      trackedCategoryCount: AMENITY_CATEGORIES.length,
+      freshnessDays: AMENITY_FRESHNESS_DAYS,
+      verification
+    },
     categories: [...counts.values()].sort((a,b) => b.count-a.count || a.categorySlug.localeCompare(b.categorySlug)),
     places: limited.slice(0, 8).map((row) => ({
       id: String(row.id),

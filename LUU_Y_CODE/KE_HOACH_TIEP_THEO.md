@@ -1,6 +1,6 @@
 # KẾ HOẠCH CODE TIẾP THEO — HOLA Maps
 
-> **Rà soát:** 25/11/2026 (GMT+7), theo `main` đã kiểm chứng sau PR #106 tại `7eb2078c938f`. Đây là backlog **đề xuất**, không phải lời tuyên bố mọi Sprint đã xong. Tình trạng công việc và ưu tiên phải kiểm tra lại trước mỗi phiên.
+> **Rà soát:** 16:29 25/11/2026 GMT+7, `main` `eb8b7f3abb58852e7703129158caca3aab072ca4` sau [PR #111](https://github.com/hoanglamvu04/bandohoalac/pull/111). Tình trạng công việc và ưu tiên phải kiểm tra lại trước mỗi phiên.
 
 ## Quy ước
 
@@ -22,7 +22,7 @@
 | HOLA-P0-001 | CHUA_LAM (cần quyền VPS) | Audit backup offsite, checksum và restore drill độc lập; đối chiếu PostgreSQL 16, Cloudinary/local media | Có log thực tế + bằng chứng restore test, không tác động DB production |
 | HOLA-P0-002 | CHUA_LAM (cần thiết bị/hạ tầng thật) | Nghiệm thu Nginx/TLS, PM2, API, cron, mobile Android/iOS, 3G/4G và Web Vitals | Checklist runbook hoàn tất, rủi ro P0 được xử lý và có người duyệt |
 | HOLA-P0-003 | CHO_DUYET | Rà WA-005 PR #92 và hợp đồng X-HUB; chỉ merge khi X-HUB chấp thuận dữ liệu/phân quyền/consent | PR đạt CI + nghiệm thu nguồn/đích, không có PII/GPS/token đưa ra frontend |
-| HOLA-P0-004 | DANG_LAM | Đồng nhất audit CLI/Admin (nhánh `fix/p0-004-launch-audit-consistency-20261125`); tiếp tục audit nguồn/ảnh lịch sử, tin hết hạn và dữ liệu thật | CI PASS và merge phần code; sau đó chạy `scripts/check-p0-readiness.sh`, public-launch audit, media audit và rà thủ công trên VPS |
+| HOLA-P0-004 | DANG_LAM — [PR #108](https://github.com/hoanglamvu04/bandohoalac/pull/108), đang chờ CI sau đồng bộ | Thống nhất kiểm tra CLI/Admin và báo lỗi dữ liệu cũ, tin hết hạn, thiếu liên hệ, giá hoặc diện tích | Merge sau CI/Security; chạy kiểm toán tổng hợp trên bản sao PostgreSQL chỉ đọc, rà quyền ảnh và các trường hợp bất thường |
 | HOLA-P0-005 | CHUA_LAM | Triage các PR đang mở về bảo mật, Cloudinary, auth, test tấn công; không merge hàng loạt | Mỗi PR đối chiếu base, schema, RBAC, tests/CodeQL; có quyết định merge/close và nhật ký |
 
 ## P1 — Hoàn thiện các phần sản phẩm chưa nghiệm thu full
@@ -32,7 +32,8 @@
 | HOLA-P1-101 | 6 | CHUA_LAM | Đo số mẫu theo loại/vùng từ dữ liệu thật, giữ cảnh báo giá chào; không suy ra giá giao dịch khi thiếu dữ liệu |
 | HOLA-P1-102 | 7 | CHUA_LAM | Audit Smart Map V4, tìm kiếm/sắp xếp/cụm ghim, vùng nhỏ, UX mobile và độ trễ; test thao tác kéo bản đồ, tránh request lặp |
 | HOLA-P1-103 | 8 | CHUA_LAM | Kiểm thử từ đăng tin→duyệt→ghim→liên hệ→tạm ẩn→đã giao dịch→báo nghi vấn; không cấp quyền tự xuất bản |
-| HOLA-P1-104 | 9 | CHUA_LAM | Đánh giá mức đầy đủ tiện ích theo khu, phân biệt đường thẳng với thời gian đường đi; chỉ dùng routing thật khi đã xác minh nguồn |
+| HOLA-P1-104 | 9 | DA_MERGE_CHUA_DEPLOY — [PR #109](https://github.com/hoanglamvu04/bandohoalac/pull/109), 9 checks PASS | Đưa tiện ích vào trang chi tiết BĐS, chọn 500 m/1 km/2 km, kết quả POI công khai, loading/error/retry, Playwright mobile; tiếp theo đo độ phủ theo khu và chỉ tính thời gian di chuyển khi có routing thật được xác minh |
+| HOLA-P1-109 | 9 | DA_MERGE_CHUA_DEPLOY — [PR #111](https://github.com/hoanglamvu04/bandohoalac/pull/111), 9/9 checks PASS | Hiện bằng chứng POI trong 8 nhóm trên trang chi tiết và đo số tin có POI/xác minh gần đây theo khu phục vụ trong 1 km. Sau merge, cần bản sao dữ liệu được cấp quyền để rà kết quả và kiểm tra POI thực tế. Routing chỉ triển khai khi có nguồn được xác minh. |
 | HOLA-P1-105 | 10 | CHUA_LAM | Rà thực tế kết quả Data Trust V5, false positive trùng tin và khả năng Admin giải quyết backlog |
 | HOLA-P1-106 | 11–12 | CHUA_LAM | Kiểm thử CTV và Partner từ đăng ký, RBAC, duyệt, xác minh, báo cáo, quyền sở hữu; kiểm tra dữ liệu của từng tổ chức |
 | HOLA-P1-107 | 13 | CHUA_LAM | Audit sitemap/index/canonical, trang địa phương, ảnh quyền sử dụng; chỉ xuất bản trang SEO đạt điều kiện dữ liệu thật |
@@ -46,6 +47,10 @@
 | HOLA-P2-202 | CHUA_LAM | Theo dõi lỗi vận hành, backup/restore định kỳ, dashboard gọn, cảnh báo có người chịu trách nhiệm |
 | HOLA-P2-203 | CHUA_LAM | Đánh giá UX, nội dung địa phương, cộng tác viên/đối tác dựa trên phản hồi thật; không thay số liệu bằng dữ liệu giả |
 
+## Lưu ý thực hiện ngày 25/11/2026 — P1-104
+
+Đã merge **tiện ích quanh BĐS ngay ở trang chi tiết** tại [PR #109](https://github.com/hoanglamvu04/bandohoalac/pull/109), SHA `d55f50d5f21d207a2e10d093576018be0ac43f8f`, 9 PR checks PASS. Chưa triển khai hay nghiệm thu VPS. Tiêu chí code: có nút gọi API theo yêu cầu, danh mục, bán kính, lỗi/retry, giao diện mobile, không lấy GPS và không coi khoảng cách thẳng là đường đi. Sau khi CI đạt/merge cần cập nhật trạng thái thực tế vào cả ba file. **Việc tiếp:** HOLA-P1-109 khảo sát dữ liệu thiếu theo xã/khu, mở rộng POI; HOLA-P0-002 thử Android/iOS thật và kiểm chứng VPS; chỉ ước tính thời gian di chuyển khi có routing hợp lệ. HOLA-P0-004 hiện có PR #108 riêng, không làm trùng.
+
 ## Công việc gần nhất được ưu tiên
 
 1. **HOLA-P0-003:** làm rõ các bước nghiệm thu còn thiếu của WA-005, giữ PR #92 ở trạng thái chờ nếu chưa có phê duyệt.
@@ -57,6 +62,4 @@
 
 Khi bắt đầu task: gắn ID, đổi sang `DANG_LAM` và ghi PR/dự kiến kiểm thử. Sau code: cập nhật nội dung đã làm, trở ngại, thứ tự ưu tiên, bước tiếp. Khi PR chưa merge **không đổi thành đã merge**. Sau merge phải có phiên cập nhật lại cùng bằng chứng.
 
-**Kế hoạch giữ nguyên sau khi đối chiếu ngày 25/11/2026 (GMT+7) ở baseline nêu trên.**
-
-**25/11/2026:** ưu tiên phần code của P0-004 vì có thể sửa an toàn không cần VPS; các P0-001/002/003 vẫn phụ thuộc hạ tầng hoặc phê duyệt. Sau CI, ghi PR và trạng thái merge thực tế, rồi tiếp tục P0-005.
+**Việc tiếp của HOLA-P1-109:** chạy báo cáo trên bản sao PostgreSQL được cấp quyền, rà nhóm và khu có ít quan sát, đối chiếu với nguồn POI độc lập trước khi kết luận độ phủ thực tế.

@@ -2,14 +2,45 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
-## 25/11/2026 GMT+7 — HOLA-P0-004 — Cổng audit dữ liệu thống nhất
+## 16:49 25/11/2026 GMT+7 — HOLA-P0-004 — Đồng bộ PR kiểm toán dữ liệu công khai
 
-- **Baseline:** main `b5bc158daf3396705e33af7f4cf13e8bd81664fa`; CI/Security PASS trên main, chưa có kết quả kiểm thử của nhánh mới.
-- **Phát hiện:** CLI publicLaunchAudit dùng INNER JOIN bỏ sót BĐS không có hồ sơ và không chặn giá/diện tích sai; khác chính sách Admin. Dữ liệu rỗng cũng có thể qua CLI.
-- **Mã nguồn:** launchEvidence.service.js là nguồn thống nhất; publicLaunchAudit.js dùng aggregate uncached; thêm số đếm trên AdminOperations.jsx; bổ sung launchEvidence.test.js (mock + bảng tạm PG16) và runbook.
-- **Nhánh:** [fix/p0-004-launch-audit-consistency-20261125](https://github.com/hoanglamvu04/bandohoalac/tree/fix/p0-004-launch-audit-consistency-20261125); PR/CI đang chờ. Không sửa schema, dữ liệu, consent, WA-005, VPS hay quyền duyệt.
-- **Blocker:** chưa chạy audit trên VPS và chưa kiểm tra quyền ảnh/ảnh lịch sử. Kiểm thử mới phải có bằng chứng CI trước merge; không tự công bố đã deploy.
-- **Bàn giao:** xem CI, xử lý lỗi, ghi lại PR/merge; P0-004 tiếp tục nghiệm thu dữ liệu thật, P0-005 rà PR bảo mật cũ và upload originals.
+- **Trước:** `main` `c03d7301f7b8ab704ed45e1499d2b61caa7c8628`, Hola Maps CI và Security Scan PASS.
+- **PR:** [PR #108](https://github.com/hoanglamvu04/bandohoalac/pull/108) đang mở. Đồng bộ với `main`, giải quyết xung đột ở báo cáo/kế hoạch/nhật ký, lưu nguyên vẹn lịch sử trên `main`.
+- **Phạm vi:** `publicLaunchAudit.js`, `launchEvidence.service.js`, `launchEvidence.test.js`, `AdminOperations.jsx` và runbook. Kiểm thử trên head mới đang chờ CI.
+- **Bàn giao:** Xác nhận bản sao chỉ đọc trên VPS để chạy báo cáo POI và BĐS. Chưa triển khai VPS.
+
+## 16:29 25/11/2026 GMT+7 — HOLA-P1-109 — Xác nhận merge và bàn giao
+
+- **Kết quả:** [PR #111](https://github.com/hoanglamvu04/bandohoalac/pull/111) đã hợp nhất trên `main`, SHA `eb8b7f3abb58852e7703129158caca3aab072ca4`.
+- **CI:** 9/9 checks PASS trên head `1766d6dce8e3416d437b0d74123c72dae415daad`. [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45584879416) chạy frontend build, Playwright và PG16/PostGIS; backend đạt 228/228. [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45584879379) PASS.
+- **Bước tiếp:** Chạy `npm run housing:amenities:audit --prefix backend` trên bản sao được cấp quyền. Kiểm chứng khu/nhóm có ít dữ liệu trước khi bổ sung hoặc tái xác minh POI. Trạng thái VPS chưa được xác minh; WA-005 cần phê duyệt riêng.
+
+## 16:21 25/11/2026 GMT+7 — HOLA-P1-109 — Bằng chứng dữ liệu tiện ích quanh BĐS
+
+- **Baseline:** `main` `9c73385cefbc3694a43da8b4ecb9f0190db7f218`, PR #109/#110 đã merge. [CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45563858100) và [Security](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45563858229) PASS; P0-004 đang có PR #108.
+- **Nhánh/trạng thái:** [`feat/p1-109-amenity-coverage-20261125`](https://github.com/hoanglamvu04/bandohoalac/compare/main...feat/p1-109-amenity-coverage-20261125), DANG_LAM, chờ CI/merge.
+- **Mã:** `housingInsights.service.js` thêm `dataQuality`; `HousingNearbyPlaces.jsx` hiển thị độ mới và giới hạn mẫu; `auditHousingAmenities.js` và `backend/package.json` thêm lệnh tổng hợp chỉ đọc; cập nhật tài liệu Sprint 6/9.
+- **Kiểm thử:** `housingInsights.test.js`, `housingAmenitiesAudit.test.js`, `housing-nearby-detail.spec.js` bổ sung ca mẫu giới hạn, phạm vi nhóm, xác minh cũ/thiếu, rỗng và kiểm tra quyền công khai. Chờ CI chạy.
+- **Bàn giao:** Đo dữ liệu thật trên bản sao được cấp quyền. Hồ sơ VPS/WA-005 và routing vẫn chờ nghiệm thu riêng.
+
+## 13:50 25/11/2026 GMT+7 — HOLA-P1-104 — Xác nhận merge và bàn giao
+
+- **Kết quả:** [PR #109](https://github.com/hoanglamvu04/bandohoalac/pull/109) đã hợp nhất trên `main`, merge commit `d55f50d5f21d207a2e10d093576018be0ac43f8f`.
+- **CI có bằng chứng:** 9/9 checks PASS trên head PR; gồm frontend build/E2E, backend/PostGIS, CodeQL, dependencies, shell, repository safety và tài liệu bàn giao. Không lấy CI làm bằng chứng production.
+- **Tính năng:** BĐS chi tiết tra cứu tiện ích trong 500 m / 1 km / 2 km, kết quả phân nhóm, link POI, trạng thái lỗi/retry, giới hạn mẫu minh bạch.
+- **Production:** CHƯA XÁC MINH DEPLOY. Không thay đổi migration, PM2, Nginx hoặc WA-005.
+- **Bàn giao:** HOLA-P1-109 độ phủ POI và routing, HOLA-P0-002 kiểm thử thiết bị/VPS, HOLA-P0-004 đang có PR #108 riêng. Không gọi Sprint 9 đã hoàn thành toàn bộ.
+
+## 25/11/2026 GMT+7 — HOLA-P1-104 — Tiện ích công khai trên trang chi tiết BĐS
+
+- **Người thực hiện:** ChatGPT coding agent.
+- **Trước:** `main` `b5bc158daf3396705e33af7f4cf13e8bd81664fa`, CI/Security PASS. PR #108 đang thực hiện P0-004 về launch audit, không thay đổi phần đó.
+- **Nhánh/trạng thái:** `feat/p1-104-housing-amenities-detail-20261125`, [PR #109](https://github.com/hoanglamvu04/bandohoalac/pull/109), ĐANG LÀM, chờ CI/merge.
+- **Mã nguồn:** thêm component `HousingNearbyPlaces.jsx`, CSS `housing-nearby-detail.css`, gắn vào `PlaceDetailV2.jsx`. Dùng API public đã có; không tạo dữ liệu mới.
+- **Kiểm thử:** thêm Playwright `housing-nearby-detail.spec.js` cho guest/mobile, thay bán kính, lỗi retry, giới hạn mẫu và không hiện ở POI thường. Cần chờ CI xác minh; chưa xác nhận PASS.
+- **Quyền riêng tư:** truy vấn thủ công theo ID tin BĐS + bán kính; không gửi GPS cá nhân, số điện thoại hoặc token mới.
+- **Production:** chưa deploy; không đụng PostgreSQL, Nginx, PM2 hoặc WA-005 PR #92.
+- **Bàn giao:** sau CI kiểm tra, merge nếu PASS; cập nhật trạng thái theo SHA thực tế. Tiếp tục độ phủ tiện ích, routing chuẩn và nghiệm thu mobile/VPS (HOLA-P1-104, HOLA-P0-002).
 
 ## 09:32 25/11/2026 GMT+7 — HOLA-DOC-001 — Xác nhận bộ LƯU Ý CODE đã hợp nhất
 

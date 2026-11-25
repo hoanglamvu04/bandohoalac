@@ -37,7 +37,38 @@ otherwise `quartiles: null`. Results carry `sampleCount`,
 
 Amenities include eight preapproved public categories only. If more
 than 100 public nearby places are found, counts and results are
-explicitly labeled capped, not presented as exhaustive.
+explicitly labeled capped, not presented as exhaustive. The optional
+`dataQuality` response object gives `trackedCategoryCount`, `freshnessDays`,
+and `verification` counts (`recent`, `older`, `unknown`) for the same
+nearest-100 sample. Freshness uses HOLA's `last_verified_at`, with a
+180-day threshold. Missing or future dates count as unknown. This is
+evidence of verification recorded in the database.
+
+## Audit amenity coverage by HOLA service zone
+
+Run against a permitted database or read-only snapshot, with the backend
+database connection already configured:
+
+```bash
+npm run housing:amenities:audit --prefix backend
+```
+
+The command runs in a read-only transaction with a 30-second statement
+timeout. It emits aggregate JSON for all eight amenity categories in
+each of the nine service zones, plus a bucket for listings outside them.
+Each published, active, unexpired structured listing is assigned to its
+nearest configured zone that contains it. These circles approximate the
+product's service areas. Interpreting results as official commune totals
+requires authoritative boundaries.
+
+For each zone and category, `activeListings` is the denominator,
+`listingsWithPoi` counts listings with at least one published POI
+within 1 km, and `listingsWithRecentlyVerifiedPoi` counts those with at
+least one HOLA verification within 180 days. Multiple POIs in a category
+count once per listing. A zero denominator means there are no eligible
+listings to assess. The results measure the share of listings with
+recorded amenities, while estimating completeness on the ground
+requires an independent inventory.
 
 ## Scope and limits
 
