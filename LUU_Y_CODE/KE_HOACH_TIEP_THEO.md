@@ -32,7 +32,8 @@
 | HOLA-P1-101 | 6 | CHUA_LAM | Đo số mẫu theo loại/vùng từ dữ liệu thật, giữ cảnh báo giá chào; không suy ra giá giao dịch khi thiếu dữ liệu |
 | HOLA-P1-102 | 7 | CHUA_LAM | Audit Smart Map V4, tìm kiếm/sắp xếp/cụm ghim, vùng nhỏ, UX mobile và độ trễ; test thao tác kéo bản đồ, tránh request lặp |
 | HOLA-P1-103 | 8 | CHUA_LAM | Kiểm thử từ đăng tin→duyệt→ghim→liên hệ→tạm ẩn→đã giao dịch→báo nghi vấn; không cấp quyền tự xuất bản |
-| HOLA-P1-104 | 9 | DANG_LAM — [PR #109](https://github.com/hoanglamvu04/bandohoalac/pull/109), chờ CI/merge | Đưa tiện ích vào trang chi tiết BĐS, chọn 500 m/1 km/2 km, kết quả POI công khai, loading/error/retry, Playwright mobile; tiếp theo đo độ phủ theo khu và chỉ tính thời gian di chuyển khi có routing thật được xác minh |
+| HOLA-P1-104 | 9 | DA_MERGE_CHUA_DEPLOY — [PR #109](https://github.com/hoanglamvu04/bandohoalac/pull/109), 9 checks PASS | Đưa tiện ích vào trang chi tiết BĐS, chọn 500 m/1 km/2 km, kết quả POI công khai, loading/error/retry, Playwright mobile; tiếp theo đo độ phủ theo khu và chỉ tính thời gian di chuyển khi có routing thật được xác minh |
+| HOLA-P1-109 | 9 | CHUA_LAM | Đo độ phủ/độ mới của POI quanh BĐS theo xã/khu, kiểm tra 8 nhóm tiện ích, thiếu dữ liệu và kết quả có giới hạn; chỉ tích hợp thời gian di chuyển khi routing hợp lệ, thêm test dữ liệu thực tế |
 | HOLA-P1-105 | 10 | CHUA_LAM | Rà thực tế kết quả Data Trust V5, false positive trùng tin và khả năng Admin giải quyết backlog |
 | HOLA-P1-106 | 11–12 | CHUA_LAM | Kiểm thử CTV và Partner từ đăng ký, RBAC, duyệt, xác minh, báo cáo, quyền sở hữu; kiểm tra dữ liệu của từng tổ chức |
 | HOLA-P1-107 | 13 | CHUA_LAM | Audit sitemap/index/canonical, trang địa phương, ảnh quyền sử dụng; chỉ xuất bản trang SEO đạt điều kiện dữ liệu thật |
@@ -48,7 +49,7 @@
 
 ## Lưu ý thực hiện ngày 25/11/2026 — P1-104
 
-Đang triển khai **tiện ích quanh BĐS ngay ở trang chi tiết** tại [PR #109](https://github.com/hoanglamvu04/bandohoalac/pull/109). Tiêu chí code: có nút gọi API theo yêu cầu, danh mục, bán kính, lỗi/retry, giao diện mobile, không lấy GPS và không coi khoảng cách thẳng là đường đi. Sau khi CI đạt/merge cần cập nhật trạng thái thực tế vào cả ba file. **Việc tiếp:** khảo sát dữ liệu thiếu theo xã/khu, mở rộng POI, thử thiết bị thật và xác minh nguồn routing trước khi tính thời gian.
+Đã merge **tiện ích quanh BĐS ngay ở trang chi tiết** tại [PR #109](https://github.com/hoanglamvu04/bandohoalac/pull/109), SHA `d55f50d5f21d207a2e10d093576018be0ac43f8f`, 9 PR checks PASS. Chưa triển khai hay nghiệm thu VPS. Tiêu chí code: có nút gọi API theo yêu cầu, danh mục, bán kính, lỗi/retry, giao diện mobile, không lấy GPS và không coi khoảng cách thẳng là đường đi. Sau khi CI đạt/merge cần cập nhật trạng thái thực tế vào cả ba file. **Việc tiếp:** HOLA-P1-109 khảo sát dữ liệu thiếu theo xã/khu, mở rộng POI; HOLA-P0-002 thử Android/iOS thật và kiểm chứng VPS; chỉ ước tính thời gian di chuyển khi có routing hợp lệ. HOLA-P0-004 hiện có PR #108 riêng, không làm trùng.
 
 ## Công việc gần nhất được ưu tiên
 
