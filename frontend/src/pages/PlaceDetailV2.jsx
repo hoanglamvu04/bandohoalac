@@ -43,6 +43,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import SeoHead from '../components/SeoHead.jsx';
 import PlaceContributionPanel from '../components/PlaceContributionPanel.jsx';
 import PlaceReviews from '../components/PlaceReviews.jsx';
+import HousingNearbyPlaces from '../components/HousingNearbyPlaces.jsx';
 import { publicPlaceKey, trackXHubEvent } from '../lib/xhubAnalytics.js';
 
 function uniqueImages(values = []) {
@@ -750,6 +751,10 @@ export default function PlaceDetailV2() {
             </p>
           )}
         </section>
+      )}
+
+      {place.categorySlug === 'bat-dong-san' && housingDetail?.housing && (
+        <HousingNearbyPlaces key={place.id} placeId={place.id} />
       )}
 
       <div className="place-v2-grid">
