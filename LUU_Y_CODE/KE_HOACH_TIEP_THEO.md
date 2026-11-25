@@ -22,7 +22,7 @@
 | HOLA-P0-001 | CHUA_LAM (cần quyền VPS) | Audit backup offsite, checksum và restore drill độc lập; đối chiếu PostgreSQL 16, Cloudinary/local media | Có log thực tế + bằng chứng restore test, không tác động DB production |
 | HOLA-P0-002 | CHUA_LAM (cần thiết bị/hạ tầng thật) | Nghiệm thu Nginx/TLS, PM2, API, cron, mobile Android/iOS, 3G/4G và Web Vitals | Checklist runbook hoàn tất, rủi ro P0 được xử lý và có người duyệt |
 | HOLA-P0-003 | CHO_DUYET | Rà WA-005 PR #92 và hợp đồng X-HUB; chỉ merge khi X-HUB chấp thuận dữ liệu/phân quyền/consent | PR đạt CI + nghiệm thu nguồn/đích, không có PII/GPS/token đưa ra frontend |
-| HOLA-P0-004 | CHUA_LAM | Audit tin BĐS và nguồn dữ liệu lịch sử, quyền ảnh, tin hết hạn và nội dung công khai | Chạy `scripts/check-p0-readiness.sh`, public-launch audit và rà thủ công các trường hợp bất thường |
+| HOLA-P0-004 | DANG_LAM — [PR #108](https://github.com/hoanglamvu04/bandohoalac/pull/108), đang chờ CI sau đồng bộ | Thống nhất kiểm tra CLI/Admin và báo lỗi dữ liệu cũ, tin hết hạn, thiếu liên hệ, giá hoặc diện tích | Merge sau CI/Security; chạy kiểm toán tổng hợp trên bản sao PostgreSQL chỉ đọc, rà quyền ảnh và các trường hợp bất thường |
 | HOLA-P0-005 | CHUA_LAM | Triage các PR đang mở về bảo mật, Cloudinary, auth, test tấn công; không merge hàng loạt | Mỗi PR đối chiếu base, schema, RBAC, tests/CodeQL; có quyết định merge/close và nhật ký |
 
 ## P1 — Hoàn thiện các phần sản phẩm chưa nghiệm thu full

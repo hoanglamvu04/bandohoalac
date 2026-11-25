@@ -2,6 +2,13 @@
 
 > **Chốt kiểm tra:** 16:29 25/11/2026 GMT+7. Đã xác minh `main` tại `eb8b7f3abb58852e7703129158caca3aab072ca4` sau [PR #111](https://github.com/hoanglamvu04/bandohoalac/pull/111). [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45584879416) và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45584879379) PASS trên head PR.
 
+## HOLA-P0-004 — Rà dữ liệu công khai (16:49 25/11/2026 GMT+7)
+
+- **Trạng thái:** [PR #108](https://github.com/hoanglamvu04/bandohoalac/pull/108) đang mở. Đồng bộ với `main` `c03d7301f7b8ab704ed45e1499d2b61caa7c8628`, giữ nguyên các mục bàn giao tiện ích đã merge.
+- **Phạm vi:** Dùng cùng phép tổng hợp và điều kiện báo lỗi cho CLI và Admin. Đếm tin cũ chưa có hồ sơ BĐS, giá/diện tích không hợp lệ, tin hết hạn hoặc thiếu liên hệ.
+- **Kiểm thử:** CI và Security của baseline `main` PASS. Chờ kết quả trên head đã đồng bộ.
+- **Dữ liệu thật:** Chưa chạy. Cần xác định kết nối chỉ đọc tới bản sao riêng trên VPS. Chưa triển khai hay nghiệm thu VPS.
+
 ## HOLA-P1-109 — Độ phủ và độ mới dữ liệu tiện ích (16:21 25/11/2026 GMT+7)
 
 - **Trạng thái:** ĐÃ MERGE — CHƯA XÁC MINH DEPLOY. [PR #111](https://github.com/hoanglamvu04/bandohoalac/pull/111) đã vào `main` tại `eb8b7f3abb58852e7703129158caca3aab072ca4`.

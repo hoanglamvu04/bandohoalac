@@ -2,6 +2,13 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 16:49 25/11/2026 GMT+7 — HOLA-P0-004 — Đồng bộ PR kiểm toán dữ liệu công khai
+
+- **Trước:** `main` `c03d7301f7b8ab704ed45e1499d2b61caa7c8628`, Hola Maps CI và Security Scan PASS.
+- **PR:** [PR #108](https://github.com/hoanglamvu04/bandohoalac/pull/108) đang mở. Đồng bộ với `main`, giải quyết xung đột ở báo cáo/kế hoạch/nhật ký, lưu nguyên vẹn lịch sử trên `main`.
+- **Phạm vi:** `publicLaunchAudit.js`, `launchEvidence.service.js`, `launchEvidence.test.js`, `AdminOperations.jsx` và runbook. Kiểm thử trên head mới đang chờ CI.
+- **Bàn giao:** Xác nhận bản sao chỉ đọc trên VPS để chạy báo cáo POI và BĐS. Chưa triển khai VPS.
+
 ## 16:29 25/11/2026 GMT+7 — HOLA-P1-109 — Xác nhận merge và bàn giao
 
 - **Kết quả:** [PR #111](https://github.com/hoanglamvu04/bandohoalac/pull/111) đã hợp nhất trên `main`, SHA `eb8b7f3abb58852e7703129158caca3aab072ca4`.
