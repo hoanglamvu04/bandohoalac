@@ -1,6 +1,6 @@
 # KẾ HOẠCH CODE TIẾP THEO — HOLA Maps
 
-> **Rà soát:** 25/11/2026 (GMT+7), theo `main` baseline `0eeb84c1fba9`. Đây là backlog **đề xuất**, không phải lời tuyên bố mọi Sprint đã xong. Tình trạng công việc và ưu tiên phải kiểm tra lại trước mỗi phiên.
+> **Rà soát:** 25/11/2026 (GMT+7), theo `main` đã kiểm chứng sau PR #106 tại `7eb2078c938f`. Đây là backlog **đề xuất**, không phải lời tuyên bố mọi Sprint đã xong. Tình trạng công việc và ưu tiên phải kiểm tra lại trước mỗi phiên.
 
 ## Quy ước
 
@@ -13,7 +13,7 @@
 
 | ID | Trạng thái tại thời điểm ghi | Kết quả mong đợi |
 |---|---|---|
-| HOLA-DOC-001 | ĐANG LÀM — [PR #106](https://github.com/hoanglamvu04/bandohoalac/pull/106) | Merge bộ LƯU Ý CODE sau CI; xác minh CI handoff trên code PR mới và duy trì cập nhật về sau |
+| HOLA-DOC-001 | ĐÃ MERGE — [PR #106](https://github.com/hoanglamvu04/bandohoalac/pull/106), CI PASS | Tiếp tục duy trì nhật ký và kế hoạch ở mỗi PR sửa code; kiểm tra định kỳ PR code có cập nhật ba file |
 
 ## P0 — Cổng an toàn và ra mắt
 
