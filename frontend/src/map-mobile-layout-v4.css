@@ -1,3 +1,7 @@
+.hm-filter-popover-footer .hm-filter-results-button {
+  display: none;
+}
+
 /* Mobile map layout v4
    One clean mobile stack:
    header -> search -> Vi tri cua toi / Gan toi / Bo loc -> result sheet.
@@ -150,6 +154,25 @@
     max-height: min(54dvh, 440px) !important;
     overflow-y: auto !important;
     overscroll-behavior: contain;
+  }
+
+  body.map-route-active .hm-filter-popover-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    flex-wrap: wrap;
+    padding: 8px 0 0;
+    background: #fff;
+  }
+
+  body.map-route-active .hm-filter-popover-footer .hm-filter-results-button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-left: auto;
+    color: #fff;
+    border-color: #174d41;
+    background: #174d41;
   }
 
   body.map-route-active .theme-layer-dock.open {

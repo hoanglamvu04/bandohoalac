@@ -618,6 +618,12 @@ export default function MapPage() {
   const verticalMode = searchParams.get('vertical') || '';
   const isHousingMode = verticalMode === 'housing';
   const isFoodMode = verticalMode === 'food';
+  const discoveryNeedle = query.trim();
+  const viewportReady = Boolean(viewport);
+  // Search and housing queries have no spatial parameters. Panning should
+  // only restart the request for unfiltered map browsing.
+  const discoveryBounds = isHousingMode || discoveryNeedle ? null : viewport;
+  const discoverySort = isHousingMode ? sortMode : '';
   const housingListingType = searchParams.get('listingType') || '';
   const housingPropertyType = searchParams.get('propertyType') || '';
   const housingMinArea = searchParams.get('minArea') || '';
@@ -970,15 +976,13 @@ export default function MapPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (localSeoSlug) return undefined;
-    if (!viewport) return undefined;
+    if (localSeoSlug || !viewportReady) return undefined;
 
-    const needle = query.trim();
+    const needle = discoveryNeedle;
     if (!needle && placeScope !== 'viewport') return undefined;
 
     let active = true;
     const controller = new AbortController();
-    const normalizedViewport = normalizeViewport(viewport);
     const filterKey = ':category=' + category + ':rating=' + minRating;
 
     // Housing is a first-class map vertical. Load its structured dataset once
@@ -988,7 +992,7 @@ export default function MapPage() {
         'housing:' + stripHousingIntent(needle).toLowerCase() +
         ':rating=' + minRating +
         ':filters=' + housingFilterSignature +
-        ':sort=' + sortMode;
+        ':sort=' + discoverySort;
 
       if (lastPlacesRequestKeyRef.current === requestKey) {
         return () => controller.abort();
@@ -1141,6 +1145,8 @@ export default function MapPage() {
       };
     }
 
+    const normalizedViewport = normalizeViewport(discoveryBounds);
+
     // Already fetched a padded area around this viewport: keep the current
     // cache and do not call the API again when the user pans back into it.
     if (loadedPlaceBoundsRef.current.some((bounds) =>
@@ -1233,14 +1239,17 @@ export default function MapPage() {
       controller.abort();
     };
   }, [
-    viewport,
-    query,
+    localSeoSlug,
+    regionId,
+    viewportReady,
+    discoveryBounds,
+    discoveryNeedle,
+    discoverySort,
     placeScope,
     category,
     minRating,
     verticalMode,
-    housingFilterSignature,
-    sortMode
+    housingFilterSignature
   ]);
 
   useEffect(() => {
@@ -2989,6 +2998,7 @@ export default function MapPage() {
               className={advancedFilterCount ? 'hm-filter-trigger active' : 'hm-filter-trigger'}
               onClick={() => setFilterMenuOpen((value) => !value)}
               aria-expanded={filterMenuOpen}
+              aria-controls={filterMenuOpen ? 'hm-discovery-filter-panel' : undefined}
               aria-label="Mở bộ lọc địa điểm"
               title="Bộ lọc"
             >
@@ -3001,10 +3011,10 @@ export default function MapPage() {
             </button>
 
             {filterMenuOpen && (
-              <div className={isHousingMode ? 'hm-filter-popover housing-mode' : isFoodMode ? 'hm-filter-popover food-mode' : 'hm-filter-popover'}>
+              <div id="hm-discovery-filter-panel" aria-label="Bộ lọc địa điểm" role="region"
+                className={isHousingMode ? 'hm-filter-popover housing-mode' : isFoodMode ? 'hm-filter-popover food-mode' : 'hm-filter-popover'}>
                 <div className="hm-filter-popover-head">
                   <div>
-                    <small>TÙY CHỈNH HIỂN THỊ</small>
                     <strong>Bộ lọc địa điểm</strong>
                   </div>
                   <button
@@ -3216,7 +3226,7 @@ export default function MapPage() {
                       { value: 'relevant', label: 'Phù hợp' },
                       ...(isHousingMode
                         ? [
-                            { value: 'rent-asc', label: 'Giá thấp trước' },
+                            { value: 'rent-asc', label: 'Giá thuê thấp trước' },
                             { value: 'rent-desc', label: 'Giá thuê cao trước' },
                             { value: 'price-asc', label: 'Giá bán thấp trước' },
                             { value: 'price-desc', label: 'Giá bán cao trước' },
@@ -3248,6 +3258,14 @@ export default function MapPage() {
                       Đặt lại
                     </button>
                   )}
+                  <button type="button" className="hm-filter-results-button"
+                    onClick={() => {
+                      setFilterMenuOpen(false);
+                      setLeftOpen(true);
+                      setMobileSheetLevel('half');
+                    }}>
+                    Xem kết quả
+                  </button>
                 </div>
               </div>
             )}

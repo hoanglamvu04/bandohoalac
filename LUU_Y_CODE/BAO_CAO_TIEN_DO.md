@@ -1,13 +1,20 @@
 # BÁO CÁO TIẾN ĐỘ & TRẠNG THÁI — HOLA Maps
 
-> **Chốt kiểm tra:** 16:29 25/11/2026 GMT+7. Đã xác minh `main` tại `eb8b7f3abb58852e7703129158caca3aab072ca4` sau [PR #111](https://github.com/hoanglamvu04/bandohoalac/pull/111). [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45584879416) và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45584879379) PASS trên head PR.
+> **Chốt kiểm tra:** 16:54 25/11/2026 GMT+7. Xác minh `main` tại `2e58863e79280a1393f8854c9a72a39170c4d065` sau [PR #108](https://github.com/hoanglamvu04/bandohoalac/pull/108). [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589166739) và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589166792) PASS trên head PR đã đồng bộ.
+
+## HOLA-P1-102 — Smart Map V4 (16:54 25/11/2026 GMT+7)
+
+- **Trạng thái:** DANG_LAM. [Nhánh thay đổi](https://github.com/hoanglamvu04/bandohoalac/compare/main...feat/p1-102-smart-map-mobile-20261125) chờ CI/merge.
+- **Thay đổi:** Kéo bản đồ chỉ khởi động lại truy vấn theo khung nhìn. Tìm kiếm theo chữ và danh sách BĐS giữ truy vấn đang chạy khi bộ lọc không đổi. Trên điện thoại, nút xem kết quả luôn có thể bấm khi cuộn bộ lọc; giá thuê thấp trước có nhãn rõ hơn.
+- **Kiểm thử:** Thêm ca Playwright giữ truy vấn BĐS đang chờ qua thao tác kéo, sau đó áp dụng lọc giao dịch và mở danh sách. Chờ CI.
+- **Việc tiếp:** Đo độ trễ và độ ổn định cụm ghim trên Android/iOS thật, kiểm tra mạng chậm và vùng dày dữ liệu.
 
 ## HOLA-P0-004 — Rà dữ liệu công khai (16:49 25/11/2026 GMT+7)
 
-- **Trạng thái:** [PR #108](https://github.com/hoanglamvu04/bandohoalac/pull/108) đang mở. Đồng bộ với `main` `c03d7301f7b8ab704ed45e1499d2b61caa7c8628`, giữ nguyên các mục bàn giao tiện ích đã merge.
+- **Trạng thái:** [PR #108](https://github.com/hoanglamvu04/bandohoalac/pull/108) đã merge tại `2e58863e79280a1393f8854c9a72a39170c4d065`. Chưa triển khai VPS.
 - **Phạm vi:** Dùng cùng phép tổng hợp và điều kiện báo lỗi cho CLI và Admin. Đếm tin cũ chưa có hồ sơ BĐS, giá/diện tích không hợp lệ, tin hết hạn hoặc thiếu liên hệ.
-- **Kiểm thử:** CI và Security của baseline `main` PASS. Chờ kết quả trên head đã đồng bộ.
-- **Dữ liệu thật:** Chưa chạy. Cần xác định kết nối chỉ đọc tới bản sao riêng trên VPS. Chưa triển khai hay nghiệm thu VPS.
+- **Kiểm thử:** 9/9 checks PASS, gồm [CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589166739), PG16/PostGIS, Playwright, CodeQL và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589166792).
+- **Dữ liệu thật (P0-004/P1-109):** BỊ CHẶN. VPS từ chối xác thực SSH từ phiên làm việc này. Cần phiên SSH được xác thực và tên kết nối chỉ đọc tới bản sao PostgreSQL riêng. Chưa chạy truy vấn dữ liệu thật.
 
 ## HOLA-P1-109 — Độ phủ và độ mới dữ liệu tiện ích (16:21 25/11/2026 GMT+7)
 
