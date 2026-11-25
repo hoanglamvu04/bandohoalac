@@ -2,6 +2,12 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 16:57 25/11/2026 GMT+7 — HOLA-P1-102 / P0-004 / P1-109 — Xác nhận merge và lệnh kiểm toán
+
+- **Smart Map V4:** [PR #113](https://github.com/hoanglamvu04/bandohoalac/pull/113) đã merge tại `c02640c9ec5399c003f3e1a7fd9115921e5a25d5`; 9/9 checks PASS, 231 bài backend và 64 bài Playwright đều PASS. [CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817673) và [Security](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817721).
+- **Kiểm toán bản sao:** Runbook có một khối lệnh chạy cả hai báo cáo trong cùng giao dịch PostgreSQL chỉ đọc. Thực thi trên dữ liệu thật chờ chủ dự án chạy trên bản sao riêng và gửi ảnh kết quả tổng hợp.
+- **Triển khai và việc tiếp:** Chưa triển khai VPS. Phân loại khu thiếu POI và vấn đề BĐS sau khi nhận kết quả; đo P95 và cụm ghim trên thiết bị thật.
+
 ## 16:54 25/11/2026 GMT+7 — HOLA-P0-004 / P1-109 / P1-102 — Bàn giao kiểm toán và Smart Map
 
 - **P0-004:** [PR #108](https://github.com/hoanglamvu04/bandohoalac/pull/108) đã hợp nhất tại `2e58863e79280a1393f8854c9a72a39170c4d065`, 9/9 checks PASS trên head đã đồng bộ. [CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589166739) và [Security](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589166792).
