@@ -65,13 +65,18 @@ test('housing map shows real price badge and anonymous visitor gets login gate, 
   }));
   await expect.poll(async () => {
     try {
-      return await page.evaluate(() => {
+      return await page.evaluate(async () => {
         const map = window.__HOLA_MAP_INSTANCE__;
-        if (!map?.getLayer('hm-housing-price-label')) return '';
-        // Query source features rather than collision-pruned render results:
-        // label placement can hide a badge momentarily during style changes.
-        const feature = map.querySourceFeatures('hola-place-points')
-          .find((item) => String(item.properties?.placeId) === '4683');
+        const layer = map?.getLayer('hm-housing-price-label');
+        const source = map?.getSource('hola-place-points');
+        if (!layer || !source) return '';
+        // Check the actual MapLibre source and price-symbol binding, not the
+        // viewport-dependent tile cache (which can be empty during style loads).
+        const data = await source.getData();
+        const feature = data?.features?.find((item) => String(item.properties?.placeId) === '4683');
+        const layout = map.getLayoutProperty('hm-housing-price-label', 'text-field');
+        if (JSON.stringify(layout) !== JSON.stringify(['get', 'priceLabel'])) return '';
+        if (!map.getLayer('hm-place-cluster-circle') && !map.getStyle()?.sources?.['hola-place-points']?.cluster) return '';
         return feature?.properties?.priceLabel || '';
       });
     } catch {
