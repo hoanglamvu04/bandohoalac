@@ -1171,13 +1171,14 @@ export default function MapView({
 }) {
   const mapRef = useRef(null);
   const areaRef=useRef({drawing:areaDrawing,points:areaVertices,onPoint:onAreaPoint});
+  useEffect(()=>{areaRef.current.onPoint=onAreaPoint;},[onAreaPoint]);
   useEffect(()=>{
-    areaRef.current={drawing:areaDrawing,points:areaVertices,onPoint:onAreaPoint};
+    areaRef.current.drawing=areaDrawing;areaRef.current.points=areaVertices;
     const map=mapRef.current;
     if(!map)return;
     map.__holaAreaDrawing=areaDrawing;
     if(placeStyleReadyRef.current)renderAreaSelection(map,areaVertices);
-  },[areaDrawing,areaVertices,onAreaPoint]);
+  },[areaDrawing,areaVertices]);
   const placeStyleReadyRef = useRef(false);
   const maplibreRef = useRef(null);
   const containerRef = useRef(null);

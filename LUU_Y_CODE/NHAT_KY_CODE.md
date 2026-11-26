@@ -10,6 +10,10 @@
 ### HOLA-P2-123 — Business services and local activity (27/11/2026)
 - Migration 360: catalog and private appointment requests. Only published non-housing active partners with existing owner authority can manage; no auto-verification, payments, phone/email or X-HUB transfer. Public catalog, customer request/cancel, owner inbox/accept/decline/cancel and 30-day aggregate counts; request throttling. Appointment is a request, not a guaranteed slot. Map panel shows existing loaded events/alerts with provenance status. Correct spatial result detail path to /place/:id. Tests added; CI pending. Full real-world partner permission/retention policy and mobile evidence still needed. No production deploy.
 
+
+### HOLA-P2-124 — SEO readiness, content assistant and price review (27/11/2026)
+- #129, #130 and #131 merged; #131 workflow CI/Security completed success and all safety steps passed; check-run summary still returned inconsistent status. #132–135 stacked/pending final CI and merge at time of writing. New: asking-price reference (same-type nearby non-demo inventory, minimum 8 samples; review only), local rules draft from entered fields (no model, no contact), admin SEO filter/internal eligibility and formula-safe CSV, avoid redrawing selection on unrelated MapView rerenders. Tests added. Full 72-item audit in ROADMAP_72.md; do not claim complete/live. External provider approvals, actual sources, room-type inventory, KYC, Q&A, paid product and physical-device evidence remain open. No VPS deploy.
+
 ## 27/11/2026 GMT+7 — HOLA-P1-120 / HOLA-P2-121 — search, lưới giá, dòng tiền, góc nhìn
 
 - Stacked sau #131, nhánh `feat/roadmap-search-market-smart-map-20261127`, DANG_LAM. Bổ sung parser tiếng Việt deterministic có giới hạn (ngân sách có đơn vị, bán/thuê, FPT, tiện ích), hiển thị tiêu chí; không gọi AI hay bịa kết quả. Đồng bộ subtype/nội thất vào URL, API, saved search; không lọc lại bằng chuỗi có dấu sau backend.

@@ -1,6 +1,6 @@
 import { getMarketGrid, getMarketTrend } from '../services/housingMarketGrid.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { getHousingHistory, getSimilarHousing } from '../services/housingDiscovery.service.js';
+import { getHousingHistory, getSimilarHousing,getHousingPriceReference } from '../services/housingDiscovery.service.js';
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { createViewing, listViewings, manageViewing } from '../controllers/housingViewings.controller.js';
@@ -83,6 +83,9 @@ router.get('/:placeId/history', housingInsightsLimiter, asyncHandler(async(req,r
 }));
 router.get('/:placeId/similar', housingInsightsLimiter, asyncHandler(async(req,res)=>{
   res.set('Cache-Control','no-store');res.json(await getSimilarHousing(req.params.placeId));
+}));
+router.get('/:placeId/price-reference',housingInsightsLimiter,asyncHandler(async(req,res)=>{
+ res.set('Cache-Control','no-store');res.json(await getHousingPriceReference(req.params.placeId));
 }));
 router.get('/:placeId', getHousing);
 

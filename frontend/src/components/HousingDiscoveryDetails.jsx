@@ -1,6 +1,6 @@
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {Link} from 'react-router-dom';
-import {getHousingHistory,getSimilarHousing} from '../services/api.js';
+import {getHousingHistory,getSimilarHousing,getHousingPriceReference} from '../services/api.js';
 import {detailRows} from '../lib/propertyDetails.js';
 
 const money=(value)=>value==null?'Chưa có':new Intl.NumberFormat('vi-VN').format(value)+' đ';
@@ -8,6 +8,16 @@ const STATUS={AVAILABLE:'Còn phòng',LIMITED:'Sắp hết',FULL:'Hết phòng',
 export default function HousingDiscoveryDetails({placeId,housing}){
  const [opened,setOpened]=useState(false),[data,setData]=useState(null),[error,setError]=useState('');
  const rows=detailRows(housing.details||{});
+ const [reference,setReference]=useState(null),[referenceBusy,setReferenceBusy]=useState(false),[referenceError,setReferenceError]=useState('');
+ const referenceRequest=useRef(null);
+ useEffect(()=>{setReference(null);setReferenceError('');setReferenceBusy(false);return()=>referenceRequest.current?.abort();},[placeId]);
+ async function loadReference(){
+  referenceRequest.current?.abort();const c=new AbortController();referenceRequest.current=c;
+  setReferenceBusy(true);setReferenceError('');setReference(null);
+  try{const result=await getHousingPriceReference(placeId,{signal:c.signal});if(!c.signal.aborted)setReference(result);}
+  catch(e){if(!c.signal.aborted)setReferenceError(e.message||'Chưa tải được giá tham khảo.');}
+  finally{if(!c.signal.aborted)setReferenceBusy(false);}
+ }
  useEffect(()=>{
   if(!opened)return;
   const controller=new AbortController();setData(null);setError('');
@@ -20,6 +30,13 @@ export default function HousingDiscoveryDetails({placeId,housing}){
   <div className="place-v2-section-title"><h2>Đặc điểm & lịch sử giá chào</h2></div>
   {rows.length?<dl className="place-v2-housing-detail-grid">{rows.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>:<p>Chưa có đặc điểm chi tiết do người đăng cung cấp.</p>}
   <p>Pháp lý, kích thước, nội thất là thông tin tự khai; kiểm tra trực tiếp trước giao dịch.</p>
+  <button type="button" className="place-v2-inline-action" onClick={loadReference} disabled={referenceBusy}>{referenceBusy?'Đang đối chiếu…':'Đối chiếu giá chào tham khảo'}</button>
+  {referenceError&&<p role="alert">{referenceError}</p>}
+  {reference&&<div className="hm-spatial-panel">
+    <b>{reference.status==='INSUFFICIENT_SAMPLE'?'Chưa đủ mẫu':reference.status==='REVIEW_HIGH'?'Giá cao hơn dải tham khảo — cần kiểm tra':reference.status==='REVIEW_LOW'?'Giá thấp hơn dải tham khảo — cần kiểm tra':'Trong dải giá tham khảo'}</b>
+    <p>{reference.sampleCount} tin so sánh{reference.median!=null?' · Trung vị '+money(reference.median)+(reference.unit==='VND_PER_M2'?'/m²':'/tháng'):''}</p>
+    <small>{reference.disclaimer}</small>
+  </div>}
   <button type="button" className="place-v2-inline-action" onClick={()=>setOpened(v=>!v)} aria-expanded={opened}>
     {opened?'Ẩn lịch sử và tin tương tự':'Xem lịch sử và tin tương tự'}
   </button>

@@ -1001,3 +1001,5 @@ export const createBusinessRequest=(id,startsAt)=>unwrap(client.post('/business/
 export const getMyBusinessRequests=(id)=>unwrap(client.get('/business/places/'+encodeURIComponent(id)+'/my-requests'));
 export const getBusinessInbox=(id)=>unwrap(client.get('/business/places/'+encodeURIComponent(id)+'/inbox'));
 export const actBusinessRequest=(id,action)=>unwrap(client.patch('/business/requests/'+encodeURIComponent(id),{action}));
+
+export const getHousingPriceReference=(id,options={})=>unwrap(client.get('/housing/'+encodeURIComponent(id)+'/price-reference',{signal:options.signal}));

@@ -21,6 +21,8 @@ Thư mục `LUU_Y_CODE/` là sổ bàn giao chung giữa chủ dự án, lập t
 | [NHẬT KÝ CODE](NHAT_KY_CODE.md) | Nhật ký nối tiếp theo thời gian, PR/commit, file sửa, tests, phần chưa làm | Sau **mọi công việc**; không xóa lịch sử |
 | [QUY TẮC CHATGPT](QUY_TAC_CHATGPT.md) | Quy trình để phiên ChatGPT mới tiếp nhận, code, test, báo cáo, bàn giao | Khi quy trình/điều kiện thay đổi |
 
+[Ma trận ROADMAP_72](ROADMAP_72.md) — đối chiếu 72 hạng mục với bằng chứng code, thiếu sót và điều kiện nghiệm thu; kiểm tra PR/CI trước khi cập nhật.
+
 ## Định nghĩa trạng thái
 
 - **CHƯA LÀM**: chưa triển khai, mới là ý tưởng/kế hoạch.

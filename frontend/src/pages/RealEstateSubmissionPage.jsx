@@ -1,3 +1,4 @@
+import {buildHousingDraft} from '../lib/housingDraftAssistant.js';
 import PropertyDetailsFields from '../components/PropertyDetailsFields.jsx';
 import { submissionDetails } from '../lib/propertyDetails.js';
 import { useEffect, useState } from 'react';
@@ -10,6 +11,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import { DEFAULT_CENTER, isInsideServiceCoverage } from '../mapConfig.js';
 import { getBestBrowserLocation } from '../utils/geolocation.js';
 import '../real-estate-submission.css';
+import '../spatial-discovery.css';
 
 const PROPERTY_TYPES = [
   { value: 'LAND', label: 'Đất' },
@@ -67,6 +69,7 @@ export default function RealEstateSubmissionPage() {
   const { showToast } = useToast();
 
   const [form, setForm] = useState(INITIAL_FORM);
+  const [generatedDraft,setGeneratedDraft]=useState(null);
   const [position, setPosition] = useState(() => initialPosition(search));
   const [positionConfirmed, setPositionConfirmed] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -423,6 +426,14 @@ export default function RealEstateSubmissionPage() {
                   <textarea name="description" maxLength={2000} rows={4} value={form.description}
                     onChange={updateField} placeholder="Đặc điểm, đường vào, pháp lý được người đăng cung cấp, tiện ích gần đó…" />
                 </label>
+                <div className="estate-full hm-spatial-panel">
+                  <b>Trợ lý soạn mô tả</b><p>Ghép các thông tin đã nhập bằng quy tắc, không dùng AI bên ngoài. Không tự thêm giá, pháp lý, địa chỉ hoặc liên hệ.</p>
+                  <button type="button" onClick={()=>setGeneratedDraft(buildHousingDraft(form))}>Tạo bản nháp mô tả</button>
+                  {generatedDraft&&<><pre style={{whiteSpace:'pre-wrap'}}>{generatedDraft.text||'Chưa đủ thông tin.'}</pre>
+                    {!!generatedDraft.missing.length&&<p>Cần kiểm tra thêm: {generatedDraft.missing.join(', ')}</p>}
+                    <button type="button" disabled={!generatedDraft.text} onClick={()=>{if(!form.description||window.confirm('Thay thế mô tả hiện tại bằng bản nháp này?')){setForm(current=>({...current,description:generatedDraft.text}));setGeneratedDraft(null);}}}>Dùng bản nháp</button> <button type="button" onClick={()=>setGeneratedDraft(null)}>Bỏ</button>
+                  </>}
+                </div>
               </div>
             </section>
 
