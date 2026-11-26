@@ -974,3 +974,10 @@ export function recordHousingDetailView(placeId){
     headers:{'X-Hola-Housing-Stats':'1'},skipRefreshRetry:true
   }));
 }
+
+export function getHousingHistory(placeId,options={}){
+ return unwrap(client.get('/housing/'+encodeURIComponent(placeId)+'/history',{signal:options.signal}));
+}
+export function getSimilarHousing(placeId,options={}){
+ return unwrap(client.get('/housing/'+encodeURIComponent(placeId)+'/similar',{signal:options.signal}));
+}

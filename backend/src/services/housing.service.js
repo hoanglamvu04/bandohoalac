@@ -1,3 +1,4 @@
+import { propertyDetailsSchema } from '../validators/propertyDetails.validators.js';
 import { pool } from '../database/pool.js';
 
 const FPT_LNG = 105.52522;
@@ -49,6 +50,7 @@ function mapHousingRow(row) {
       lastConfirmedAt: row.last_confirmed_at || null,
       expiresAt: row.expires_at || null,
       propertyType: row.property_type || null,
+      details: propertyDetailsSchema.safeParse(row.property_details || {}).data || {},
       totalPriceVnd: numberOrNull(row.total_price_vnd),
       contactName: row.contact_name || null,
       advertiserRole: row.advertiser_role || null,
@@ -135,6 +137,7 @@ const BASE_SELECT = `
     hl.last_confirmed_at,
     hl.expires_at,
     hl.property_type,
+    hl.property_details,
     hl.total_price_vnd,
     hl.contact_name,
     hl.advertiser_role,
@@ -190,6 +193,14 @@ export async function listHousingListings(filters = {}, db = pool) {
     conditions.push('hl.property_type = $' + params.length);
   }
 
+  if (filters.subtype) {
+    params.push(filters.subtype);
+    conditions.push("hl.property_details->>'subtype' = $" + params.length);
+  }
+  if (filters.furnishing) {
+    params.push(filters.furnishing);
+    conditions.push("hl.property_details->>'furnishing' = $" + params.length);
+  }
   // Server-side PostGIS viewport predicate runs before pagination.
   if (['west', 'south', 'east', 'north'].every((key) => filters[key] !== undefined)) {
     params.push(

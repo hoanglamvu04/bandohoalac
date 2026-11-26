@@ -1,3 +1,4 @@
+import { detailRows, AMENITIES } from '../../lib/propertyDetails.js';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Award, Camera, Check, Clock3, MapPin, ShieldCheck, Users, X } from 'lucide-react';
@@ -553,6 +554,8 @@ export default function AdminContributions() {
                     )} đ
                   </div>
                   <div>Liên hệ: {estate.contactName || item.userName} · {place.phone}</div>
+                  {detailRows(estate.details||{}).map(([label,value])=><div key={label}>{label}: {value}</div>)}
+                  {AMENITIES.filter(([key])=>typeof estate[key]==='boolean').map(([key,label])=><div key={key}>{label}: {estate[key]?'Có':'Không'}</div>)}
                   <div>Vai trò tự khai: {({OWNER:'Chủ nhà/chủ tài sản',BROKER:'Môi giới',MANAGER:'Đơn vị quản lý',OTHER:'Khác'})[estate.advertiserRole]||'Chưa cung cấp'} (không xác minh quyền sở hữu)</div>
                   {estate.transactionType==='RENT'&&[
                     ['Tiền cọc',estate.depositAmount,'đ'],['Điện',estate.electricityPricePerKwh,'đ/kWh'],

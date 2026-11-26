@@ -1,3 +1,5 @@
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { getHousingHistory, getSimilarHousing } from '../services/housingDiscovery.service.js';
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { createViewing, listViewings, manageViewing } from '../controllers/housingViewings.controller.js';
@@ -62,6 +64,12 @@ const housingMetricLimiter=rateLimit({windowMs:60_000,limit:20,standardHeaders:t
   message:{error:'Vui lòng thử lại sau.'}});
 router.post('/:placeId/detail-view',housingMetricLimiter,recordHousingDetailView);
 router.patch('/:placeId/manage', authenticate, requireAdminSecurity, validateBody(housingManageActionSchema), manageMyHousing);
+router.get('/:placeId/history', housingInsightsLimiter, asyncHandler(async(req,res)=>{
+  res.set('Cache-Control','no-store');res.json(await getHousingHistory(req.params.placeId));
+}));
+router.get('/:placeId/similar', housingInsightsLimiter, asyncHandler(async(req,res)=>{
+  res.set('Cache-Control','no-store');res.json(await getSimilarHousing(req.params.placeId));
+}));
 router.get('/:placeId', getHousing);
 
 export default router;

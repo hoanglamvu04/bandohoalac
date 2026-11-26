@@ -167,11 +167,13 @@ async function applyContributionToPlace(contribution, client) {
           monthly_rent, area_m2, contact_name, availability_status, verification_source,
           listing_status, last_confirmed_at, expires_at, advertiser_role,
           deposit_amount, electricity_price_per_kwh, water_price_per_person_month,
-          parking_fee_monthly, available_rooms
+          parking_fee_monthly, available_rooms, property_details,
+          has_air_conditioner, has_water_heater, has_private_bathroom, has_loft,
+          has_balcony, has_parking, allows_pets
         ) VALUES ($1, $2, $3, $4, $5, $6, $7,
                   CASE WHEN $13::integer IS NULL THEN 'UNKNOWN' WHEN $13::integer = 0 THEN 'FULL' ELSE 'AVAILABLE' END,
                   'COMMUNITY', 'ACTIVE', NOW(), NOW() + INTERVAL '30 days',
-                  $8, $9, $10, $11, $12, $13)`,
+                  $8, $9, $10, $11, $12, $13, $14::jsonb, $15, $16, $17, $18, $19, $20, $21)`,
         [
           placeId,
           listing.transactionType,
@@ -185,7 +187,15 @@ async function applyContributionToPlace(contribution, client) {
           listing.transactionType === 'RENT' ? listing.electricityPricePerKwh ?? null : null,
           listing.transactionType === 'RENT' ? listing.waterPricePerPersonMonth ?? null : null,
           listing.transactionType === 'RENT' ? listing.parkingFeeMonthly ?? null : null,
-          listing.transactionType === 'RENT' ? listing.availableRooms ?? null : null
+          listing.transactionType === 'RENT' ? listing.availableRooms ?? null : null,
+          JSON.stringify(listing.details || {}),
+          listing.hasAirConditioner ?? null,
+          listing.hasWaterHeater ?? null,
+          listing.hasPrivateBathroom ?? null,
+          listing.hasLoft ?? null,
+          listing.hasBalcony ?? null,
+          listing.hasParking ?? null,
+          listing.allowsPets ?? null
         ]
       );
     }

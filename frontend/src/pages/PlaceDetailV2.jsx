@@ -1,3 +1,4 @@
+import HousingDiscoveryDetails from '../components/HousingDiscoveryDetails.jsx';
 import { useEffect, useMemo, useState } from 'react';
 import '../place-trust.css';
 import '../place-v2-media-reliability.css';
@@ -778,6 +779,10 @@ export default function PlaceDetailV2() {
 
       {place.categorySlug === 'bat-dong-san' && housingDetail?.housing?.listingType === 'RENT' && (
         <HousingCostCalculator key={place.id} housing={housingDetail.housing} />
+      )}
+
+      {place.categorySlug === 'bat-dong-san' && housingDetail?.housing && (
+        <HousingDiscoveryDetails key={place.id} placeId={place.id} housing={housingDetail.housing}/>
       )}
 
       {place.categorySlug === 'bat-dong-san' && housingDetail?.housing && (
