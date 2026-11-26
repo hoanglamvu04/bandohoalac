@@ -2,6 +2,14 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 26/11/2026 GMT+7 — HOLA-P1-110 — Xác minh merge và bàn giao seed DEMO staging
+
+- **Đã merge:** [PR #122](https://github.com/hoanglamvu04/bandohoalac/pull/122) vào `main` SHA `e70b9ec672be0343f261ed5ef790d9e6d61d7e65`, 9/9 CI/Security checks PASS trên head PR.
+- **Backend/PostGIS:** 242/242 tests PASS, gồm ca dữ liệu đúng 30/15/120, kiểm tra dữ liệu giả, seed lặp không nhân đôi, xóa demo mà không xóa tin bên ngoài.
+- **Tài liệu:** `docs/DEMO_THACH_THAT_30.md`, `npm run demo:thachthat:preview`, `demo:thachthat:seed`, `demo:thachthat:clean` trên backend staging.
+- **Giới hạn:** không chạy script trên DB production hay VPS. Chưa có bằng chứng DB staging và 120 URL ảnh CDN hoạt động; số liệu chỉ là demo không dùng kiểm toán P0/#115 hoặc SEO thật.
+- **Bàn giao:** chủ vận hành kiểm tra bản sao staging riêng, chạy lệnh có xác nhận, kiểm tra bản đồ/phòng trọ/ảnh, sau đó xóa demo nếu cần; ghi kết quả. WA-005 vẫn chờ phê duyệt.
+
 ## 26/11/2026 GMT+7 — HOLA-P1-110: tạo mã seed DEMO 30 BĐS Thạch Thất cũ
 
 - **Trước:** main `18cf197b2368828377f5cecc1efbb2535a8b8748` sau PR #121, đã đọc AGENTS.md/5 file LUU_Y_CODE và schema+migrations housing.
