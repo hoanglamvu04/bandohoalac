@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowRight, BookOpen, CheckCircle2, Database, LockKeyhole, MapPinned, ShieldCheck } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import SeoHead from '../components/SeoHead.jsx';
+import HousingMetricsChoice from '../components/HousingMetricsChoice.jsx';
 
 const PAGE_CONFIG = {
   '/huong-dan': {
@@ -96,7 +97,11 @@ const PAGE_CONFIG = {
       },
       {
         title: 'Tin bất động sản và thông tin liên hệ công khai',
-        body: 'Khi gửi tin bất động sản, bạn phải chủ động đồng ý để tên liên hệ và số điện thoại hiển thị trên tin sau khi quản trị viên duyệt. Hệ thống lưu bản ghi yêu cầu và thời điểm gửi làm bằng chứng xác nhận; nếu không đồng ý, bạn không thể đăng tin. Chỉ gửi ảnh thuộc quyền sử dụng của mình, không chứa giấy tờ tùy thân hoặc dữ liệu nhạy cảm.'
+        body: 'Khi gửi tin bất động sản, bạn phải chủ động đồng ý để tên liên hệ hiển thị công khai và số điện thoại được thành viên đã đăng nhập chủ động yêu cầu xem sau khi quản trị viên duyệt. Hệ thống lưu bản ghi yêu cầu và thời điểm gửi làm bằng chứng xác nhận; nếu không đồng ý, bạn không thể đăng tin. Chỉ gửi ảnh thuộc quyền sử dụng của mình, không chứa giấy tờ tùy thân hoặc dữ liệu nhạy cảm.'
+      },
+      {
+        title: 'Lịch xem nhà và thống kê tin bất động sản',
+        body: 'Khi gửi lịch xem nhà, tài khoản gửi và tài khoản đăng tin được liên kết với mã yêu cầu, tên tin, giờ hẹn và trạng thái để vận hành lịch. Không gửi số điện thoại hoặc email khách qua tính năng lịch. Chỉ hai bên được xem; dữ liệu lịch quá 180 ngày được xóa qua job dọn định kỳ. Thống kê lượt xem chi tiết và lượt hiện số chỉ hoạt động khi bạn bật lựa chọn riêng trên trình duyệt; lưu số tổng hợp theo ngày/tin trong 90 ngày qua job dọn, không lưu mã người xem, địa chỉ IP, GPS hoặc liên hệ trong bảng này. Không gửi sang X-HUB. Có thể tắt mà vẫn dùng đầy đủ chức năng.'
       },
       {
         title: 'Góp ý thử nghiệm và thống kê hiệu năng',
@@ -197,7 +202,7 @@ export default function PublicInfoPage() {
         ))}
       </section>
 
-      {location.pathname === '/quyen-rieng-tu' && <PrivacyPerformanceChoice />}
+      {location.pathname === '/quyen-rieng-tu' && <><PrivacyPerformanceChoice /><HousingMetricsChoice /></>}
 
       <section className="public-info-cta">
         <div>

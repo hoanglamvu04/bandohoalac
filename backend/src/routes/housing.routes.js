@@ -5,6 +5,7 @@ import { getPublicMarketInsights, getPublicHousingAmenities } from '../controlle
 import {
   getHousing,
   revealHousingContact,
+  recordHousingDetailView,
   listHousing
 } from '../controllers/housing.controller.js';
 import { listMyHousing, manageMyHousing } from '../controllers/housingLifecycle.controller.js';
@@ -57,6 +58,9 @@ const contactRevealLimiter = rateLimit({
 // Token+active session is resolved on every request; details are not sent on
 // any public endpoint and are never preloaded by the frontend.
 router.get('/:placeId/contact', authenticate, contactRevealLimiter, revealHousingContact);
+const housingMetricLimiter=rateLimit({windowMs:60_000,limit:20,standardHeaders:true,legacyHeaders:false,
+  message:{error:'Vui lòng thử lại sau.'}});
+router.post('/:placeId/detail-view',housingMetricLimiter,recordHousingDetailView);
 router.patch('/:placeId/manage', authenticate, requireAdminSecurity, validateBody(housingManageActionSchema), manageMyHousing);
 router.get('/:placeId', getHousing);
 

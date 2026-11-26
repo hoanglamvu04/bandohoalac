@@ -7,6 +7,7 @@
 - PR #128 đã merge `19b13daecdbf1215e58d635f59ed57267216b894`, 9/9 CI/Security PASS; chưa deploy. PR #129 đã retarget `main`; lần CI đầu 8/9 checks PASS, Playwright 69 PASS/1 FAIL tại ghim giá (run 45869287236), không merge khi còn đỏ.
 - Sửa vòng đời MapLibre: lấy danh sách mới nhất lúc load, không bỏ qua cập nhật source khi tile khác đang tải; khóa cập nhật chỉ trong lúc đổi style và phục hồi từ refs. Test kiểm tra GeoJSON thật và binding text-field của layer giá, không phụ thuộc tile cache đang tải. Chờ CI lại; chưa nghiệm thu production.
 
+
 ## Quy ước
 
 - Mỗi hạng mục có **ID ổn định**, phạm vi, tiêu chí nghiệm thu, blocker và trạng thái.
@@ -105,11 +106,11 @@ Khi bắt đầu task: gắn ID, đổi sang `DANG_LAM` và ghi PR/dự kiến k
 
 | ID | Trạng thái | Tiêu chí |
 |---|---|---|
-| HOLA-P1-113 | DANG_LAM | Calculator giá thuê/cọc/điện/nước/xe, không đánh đồng giá chưa biết với 0; mobile, test tính toán. |
-| HOLA-P1-114 | DANG_LAM | Vai trò người đăng tự khai, qua moderation; không tự cấp xác minh chủ sở hữu. Hồ sơ xác minh đầy đủ cần quy trình bằng chứng riêng. |
+| HOLA-P1-113 | DA_MERGE_CHUA_DEPLOY #128 (9/9 PASS) | Calculator giá thuê/cọc/điện/nước/xe, không đánh đồng giá chưa biết với 0; mobile, test tính toán. |
+| HOLA-P1-114 | DA_MERGE_CHUA_DEPLOY #128 (vai trò tự khai) | Vai trò người đăng tự khai, qua moderation; không tự cấp xác minh chủ sở hữu. Hồ sơ xác minh đầy đủ cần quy trình bằng chứng riêng. |
 | HOLA-P1-115 | DANG_LAM | API, UI lịch xem, requester/owner, trạng thái, chống spam, PG + Playwright; chờ CI. |
 | HOLA-P1-116 | DANG_LAM | Tin mới + cập nhật room count khi gia hạn, 0 = FULL; hủy lịch tương lai; chờ CI. |
 | HOLA-P1-117 | DANG_LAM | Danh sách lịch khách tới tin của tôi/lịch tôi gửi, trạng thái và RBAC. |
-| HOLA-P1-118 | DANG_LAM (một phần) | Đếm yêu cầu/lịch ACCEPTED 30 ngày từ giao dịch nghiệp vụ; views/contact metrics chưa triển khai vì cần consent, chống spam và chính sách giữ dữ liệu. |
+| HOLA-P1-118 | DANG_LAM | Metrics first-party opt-in, 30 ngày, retention 90 ngày; lịch xem/lead #129, rate-limit và kiểm thử; WA-005 không thay đổi. |
 
 Các mục P1 trước đây và P0 blockers giữ nguyên; không coi việc merge các module mới là nghiệm thu toàn bộ P1.
