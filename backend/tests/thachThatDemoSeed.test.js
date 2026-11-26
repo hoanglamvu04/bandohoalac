@@ -63,18 +63,37 @@ test('seed and cleanup reject production, wrong DB names, missing or wrong confi
     databaseUrl: 'postgresql://user:secret@localhost/hola_maps_staging',
     confirmation: DEMO_SEED_CONFIRM, action: 'apply'
   };
-  assert.deepEqual(assertDemoSeedTarget(sample), { databaseName:'hola_maps_staging' });
+  assert.deepEqual(assertDemoSeedTarget(sample), {
+    databaseName:'hola_maps_staging', productionTarget:false
+  });
   assert.throws(() => assertDemoSeedTarget({ ...sample, nodeEnv:'production' }),
-    /DEMO_SEED_REFUSES_PRODUCTION/);
-  assert.throws(() => assertDemoSeedTarget({ ...sample, databaseUrl:'postgresql://user:secret@localhost/hola_maps' }),
-    /DEMO_SEED_REQUIRES_SEPARATE/);
+    /DEMO_SEED_LIVE_CONFIRMATION_REQUIRED/);
+  assert.throws(() => assertDemoSeedTarget({ ...sample,
+    databaseUrl:'postgresql://user:secret@localhost/hola_maps'
+  }), /DEMO_SEED_LIVE_CONFIRMATION_REQUIRED/);
+  const live = {
+    ...sample, nodeEnv:'production',
+    databaseUrl:'postgresql://user:secret@localhost/hola_maps',
+    productionConfirmation:'ALLOW_30_LABELED_DEMO_LISTINGS_ON_LIVE_SITE'
+  };
+  assert.deepEqual(assertDemoSeedTarget(live), {
+    databaseName:'hola_maps', productionTarget:true
+  });
+  assert.deepEqual(assertDemoSeedTarget({ ...live, nodeEnv:'development' }), {
+    databaseName:'hola_maps', productionTarget:true
+  });
+  assert.throws(() => assertDemoSeedTarget({ ...live, action:'clean' }),
+    /DEMO_SEED_CONFIRMATION_MISSING/);
+  assert.deepEqual(assertDemoSeedTarget({
+    ...live, action:'clean', confirmation:DEMO_CLEAN_CONFIRM
+  }), { databaseName:'hola_maps', productionTarget:true });
   assert.throws(() => assertDemoSeedTarget({ ...sample, confirmation:'' }),
     /CONFIRMATION_MISSING/);
   assert.throws(() => assertDemoSeedTarget({ ...sample, action:'clean' }),
     /CONFIRMATION_MISSING/);
   assert.deepEqual(assertDemoSeedTarget({
     ...sample, action:'clean', confirmation:DEMO_CLEAN_CONFIRM
-  }), { databaseName:'hola_maps_staging' });
+  }), { databaseName:'hola_maps_staging', productionTarget:false });
   assert.throws(() => assertDemoSeedTarget({ ...sample, databaseUrl:'https://bad/hola_maps_staging' }),
     /INVALID_DEMO_DATABASE_URL/);
   assert.throws(() => assertDemoSeedTarget({ ...sample, databaseUrl:'not a url' }),
@@ -91,6 +110,12 @@ test('DB identity preflight rejects changed database before writing any row', as
   await verifyDemoDatabaseTarget({
     async query() { return { rows:[{ name:'hola_maps_staging' }] }; }
   }, 'hola_maps_staging');
+  await assert.rejects(verifyDemoDatabaseTarget({
+    async query() { return { rows:[{ name:'hola_maps' }] }; }
+  }, 'hola_maps'), /IDENTITY_MISMATCH/);
+  await verifyDemoDatabaseTarget({
+    async query() { return { rows:[{ name:'hola_maps' }] }; }
+  }, 'hola_maps', { productionTarget:true });
 });
 
 test('PG16/PostGIS demo seed is idempotent, isolated and exactly removable', async (t) => {

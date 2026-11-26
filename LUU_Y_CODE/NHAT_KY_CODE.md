@@ -2,6 +2,14 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 26/11/2026 GMT+7 — HOLA-P1-111: production opt-in cho 30 BĐS DEMO
+
+- **Trước:** `main` `e70b9ec672be0343f261ed5ef790d9e6d61d7e65`; code seed #122 đã merge. Chủ website yêu cầu xuất bản demo lên DB production để kiểm thử.
+- **Mã:** thêm xác nhận riêng `HOLA_DEMO_LIVE_CONFIRM` ngoài xác nhận apply/clean hiện có, không chuyển NODE_ENV sang development; chỉ làm việc trên đúng database kiểm tra tên. Thêm noindex cho trang demo và loại dữ liệu DEMO khỏi thống kê phân vị giá và trang SEO địa phương.
+- **Test:** mở rộng kiểm thử seed production confirmation, identity, SEO noindex và truy vấn giá (chờ GitHub CI).
+- **Vận hành:** chưa SSH, chưa backup/seed PM2, chưa xác minh ảnh bên ngoài. Người vận hành phải backup rồi chạy script từ `/var/www/bandohoalac/backend`.
+- **Bàn giao:** chỉ merge khi CI/Security PASS, tiếp theo kiểm thử demo live sau khi chủ VPS chạy lệnh có xác nhận, ghi rõ kết quả.
+
 ## 26/11/2026 GMT+7 — HOLA-P1-110: tạo mã seed DEMO 30 BĐS Thạch Thất cũ
 
 - **Trước:** main `18cf197b2368828377f5cecc1efbb2535a8b8748` sau PR #121, đã đọc AGENTS.md/5 file LUU_Y_CODE và schema+migrations housing.

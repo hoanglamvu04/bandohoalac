@@ -42,6 +42,7 @@ export async function getHousingAskingPriceInsights(filters, db = pool) {
          JOIN housing_listings hl ON hl.place_id = p.id
         WHERE p.status = 'PUBLISHED'
           AND c.slug = 'bat-dong-san'
+          AND p.external_source IS DISTINCT FROM 'HOLA_THACH_THAT_DEMO_2026'
           AND hl.listing_status = 'ACTIVE'
           AND (hl.expires_at IS NULL OR hl.expires_at > NOW())
           AND hl.listing_type = $1

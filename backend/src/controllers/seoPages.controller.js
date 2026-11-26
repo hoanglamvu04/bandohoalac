@@ -46,6 +46,9 @@ export async function publicSeoPlaceIsVisible(place, loadHousing = getHousingLis
 export const getPlaceSeoPage = asyncHandler(async (req, res) => {
   const place = await getPlaceBySlug(req.params.slug);
   if (!await publicSeoPlaceIsVisible(place)) return notFound(res);
+  if (String(place.slug).startsWith('demo-thach-that-2026-')) {
+    res.set('X-Robots-Tag', 'noindex,follow');
+  }
   return sendSeoHtml(res, renderPlaceSeoPage(place), 60, 0);
 });
 

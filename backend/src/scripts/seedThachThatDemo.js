@@ -8,11 +8,13 @@ import {
 } from '../database/thachThatDemoData.js';
 
 const STAGING_DB_NAME = /(?:^|[_-])(?:demo|staging|stage|test|testing|ci|dev)(?:$|[_-])/i;
+export const DEMO_LIVE_CONFIRM = 'ALLOW_30_LABELED_DEMO_LISTINGS_ON_LIVE_SITE';
 
-export function assertDemoSeedTarget({ nodeEnv, databaseUrl, confirmation, action }) {
-  // The separate DB-name pattern is an additional guard, not proof of physical
-  // isolation. An operator must verify the staging DB/host independently.
-  if (nodeEnv === 'production') throw new Error('DEMO_SEED_REFUSES_PRODUCTION');
+export function assertDemoSeedTarget({
+  nodeEnv, databaseUrl, confirmation, productionConfirmation, action
+}) {
+  // Production must remain NODE_ENV=production: live use needs two explicit
+  // acknowledgements, without changing credentials or environment mode.
   if (!['apply', 'clean'].includes(action)) throw new Error('INVALID_DEMO_ACTION');
   if (confirmation !== (action === 'apply' ? DEMO_SEED_CONFIRM : DEMO_CLEAN_CONFIRM)) {
     throw new Error('DEMO_SEED_CONFIRMATION_MISSING');
@@ -24,17 +26,18 @@ export function assertDemoSeedTarget({ nodeEnv, databaseUrl, confirmation, actio
     throw new Error('INVALID_DEMO_DATABASE_URL');
   }
   const dbName = decodeURIComponent(url.pathname.slice(1));
-  if (!dbName || !STAGING_DB_NAME.test(dbName)) {
-    throw new Error('DEMO_SEED_REQUIRES_SEPARATE_TEST_OR_STAGING_DATABASE');
+  if (!dbName) throw new Error('INVALID_DEMO_DATABASE_URL');
+  const productionTarget = nodeEnv === 'production' || !STAGING_DB_NAME.test(dbName);
+  if (productionTarget && productionConfirmation !== DEMO_LIVE_CONFIRM) {
+    throw new Error('DEMO_SEED_LIVE_CONFIRMATION_REQUIRED');
   }
-  // Never log username, password, hostname or connection string.
-  return { databaseName: dbName };
+  return { databaseName: dbName, productionTarget };
 }
 
-export async function verifyDemoDatabaseTarget(client, expectedDbName) {
+export async function verifyDemoDatabaseTarget(client, expectedDbName, { productionTarget = false } = {}) {
   const { rows } = await client.query('SELECT current_database() AS name');
   if (rows?.length !== 1 || rows[0].name !== expectedDbName ||
-      !STAGING_DB_NAME.test(rows[0].name)) {
+      (!productionTarget && !STAGING_DB_NAME.test(rows[0].name))) {
     throw new Error('DEMO_SEED_DATABASE_IDENTITY_MISMATCH');
   }
 }
@@ -186,13 +189,16 @@ async function main() {
     nodeEnv: env.nodeEnv,
     databaseUrl: env.databaseUrl,
     confirmation: process.env.HOLA_DEMO_SEED_CONFIRM,
+    productionConfirmation: process.env.HOLA_DEMO_LIVE_CONFIRM,
     action
   });
 
   const client = await pool.connect();
   let inTransaction = false;
   try {
-    await verifyDemoDatabaseTarget(client, target.databaseName);
+    await verifyDemoDatabaseTarget(client, target.databaseName, {
+      productionTarget: target.productionTarget
+    });
     await client.query('BEGIN');
     inTransaction = true;
     await client.query("SET LOCAL statement_timeout = '20s'");
@@ -201,8 +207,10 @@ async function main() {
     await client.query('COMMIT');
     inTransaction = false;
     console.log(JSON.stringify({
-      mode: action === 'apply' ? 'STAGING_DEMO_SEEDED' : 'STAGING_DEMO_REMOVED',
-      ...result, production: false
+      mode: target.productionTarget
+        ? (action === 'apply' ? 'LIVE_PUBLIC_DEMO_SEEDED' : 'LIVE_PUBLIC_DEMO_REMOVED')
+        : (action === 'apply' ? 'STAGING_DEMO_SEEDED' : 'STAGING_DEMO_REMOVED'),
+      ...result, production: target.productionTarget
     }, null, 2));
   } catch (error) {
     if (inTransaction) await client.query('ROLLBACK').catch(() => {});
@@ -218,9 +226,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   } catch (error) {
     // Do not print connection strings, SQL parameters, or credentials.
     const safeCodes = [
-      'DEMO_SEED_REFUSES_PRODUCTION', 'INVALID_DEMO_ACTION',
+      'DEMO_SEED_LIVE_CONFIRMATION_REQUIRED', 'INVALID_DEMO_ACTION',
       'DEMO_SEED_CONFIRMATION_MISSING', 'INVALID_DEMO_DATABASE_URL',
-      'DEMO_SEED_REQUIRES_SEPARATE_TEST_OR_STAGING_DATABASE',
       'DEMO_SEED_DATABASE_IDENTITY_MISMATCH',
       'DEMO_PLACE_CONFLICT_OR_NON_DEMO_OWNER',
       'DEMO_PLACE_HAS_NON_DEMO_IMAGES', 'DEMO_REQUIRES_REAL_ESTATE_CATEGORY'

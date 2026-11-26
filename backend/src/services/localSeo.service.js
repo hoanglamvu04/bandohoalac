@@ -126,7 +126,8 @@ async function evaluateQuality(row, client = pool) {
       '  MAX(p.updated_at) AS inventory_updated_at,',
       '  MAX(p.last_verified_at) AS latest_verified_at',
       'FROM local_seo_pages s',
-      "JOIN places p ON p.status = 'PUBLISHED' AND " + areaFilter,
+      "JOIN places p ON p.status = 'PUBLISHED' " +
+      "AND p.external_source IS DISTINCT FROM 'HOLA_THACH_THAT_DEMO_2026' AND " + areaFilter,
       'LEFT JOIN categories c ON c.id = p.category_id',
       'WHERE s.id = $1 AND ' + categoryFilter
     ].join('\n'),
@@ -201,7 +202,8 @@ async function loadPagePlaces(row, client = pool) {
       '   ORDER BY pi.is_cover DESC, pi.id ASC)',
       "   FROM place_images pi WHERE pi.place_id = p.id), '[]'::json) AS card_images",
       'FROM local_seo_pages s',
-      "JOIN places p ON p.status = 'PUBLISHED' AND " + mapFilter,
+      "JOIN places p ON p.status = 'PUBLISHED' " +
+      "AND p.external_source IS DISTINCT FROM 'HOLA_THACH_THAT_DEMO_2026' AND " + mapFilter,
       'LEFT JOIN categories c ON c.id = p.category_id',
       'WHERE s.id = $1 AND ' + categoryFilter,
       'ORDER BY',
