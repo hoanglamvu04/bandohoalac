@@ -1134,7 +1134,23 @@ function renderTripStops(map, stops = []) {
   }
 }
 
+function renderAreaSelection(map,points=[]){
+ const features=[];
+ if(points.length)features.push(...points.map(coordinates=>({type:'Feature',geometry:{type:'Point',coordinates},properties:{}})));
+ if(points.length>=2)features.push({type:'Feature',geometry:{type:'LineString',coordinates:points},properties:{}});
+ if(points.length>=3)features.push({type:'Feature',geometry:{type:'Polygon',coordinates:[[...points,points[0]]]},properties:{}});
+ const data={type:'FeatureCollection',features};
+ const source=map.getSource('hola-area-selection');
+ if(source){source.setData(data);return;}
+ map.addSource('hola-area-selection',{type:'geojson',data});
+ map.addLayer({id:'hm-area-fill',type:'fill',source:'hola-area-selection',filter:['==',['geometry-type'],'Polygon'],paint:{'fill-color':'#188657','fill-opacity':0.16}});
+ map.addLayer({id:'hm-area-outline',type:'line',source:'hola-area-selection',filter:['!=',['geometry-type'],'Point'],paint:{'line-color':'#188657','line-width':3,'line-dasharray':[2,1]}});
+ map.addLayer({id:'hm-area-vertex',type:'circle',source:'hola-area-selection',filter:['==',['geometry-type'],'Point'],paint:{'circle-color':'#188657','circle-radius':5,'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
+}
 export default function MapView({
+  areaDrawing=false,
+  areaVertices=[],
+  onAreaPoint,
   places = [],
   showHousingPrices = false,
   selectedPlaceId,
@@ -1154,6 +1170,14 @@ export default function MapView({
   fitPlacesKey = ''
 }) {
   const mapRef = useRef(null);
+  const areaRef=useRef({drawing:areaDrawing,points:areaVertices,onPoint:onAreaPoint});
+  useEffect(()=>{
+    areaRef.current={drawing:areaDrawing,points:areaVertices,onPoint:onAreaPoint};
+    const map=mapRef.current;
+    if(!map)return;
+    map.__holaAreaDrawing=areaDrawing;
+    if(placeStyleReadyRef.current)renderAreaSelection(map,areaVertices);
+  },[areaDrawing,areaVertices,onAreaPoint]);
   const placeStyleReadyRef = useRef(false);
   const maplibreRef = useRef(null);
   const containerRef = useRef(null);
@@ -1284,6 +1308,8 @@ export default function MapView({
 
         map.on('load', () => {
           placeStyleReadyRef.current = true;
+          map.__holaAreaDrawing=areaRef.current.drawing;
+          renderAreaSelection(map,areaRef.current.points);
           addCoverage(map);
           addDataLayers(map, latestMapDataRef.current);
           addPlaceLayers(map, latestPlacesRef.current, latestShowHousingPricesRef.current);
@@ -1326,6 +1352,7 @@ export default function MapView({
         map.on('moveend', notifyViewport);
 
         const expandPlaceCluster = (event) => {
+          if(areaRef.current.drawing)return;
           const coords = event.features?.[0]?.geometry?.coordinates;
           if (!Array.isArray(coords) || coords.length !== 2 ||
               !coords.every(Number.isFinite)) return;
@@ -1347,6 +1374,7 @@ export default function MapView({
         });
 
         const selectPlacePoint = (event) => {
+          if(areaRef.current.drawing)return;
           const feature = event.features?.[0];
           const placeId = feature?.properties?.placeId;
           if (!placeId) return;
@@ -1434,6 +1462,11 @@ export default function MapView({
         });
 
         map.on('click', (event) => {
+          if(areaRef.current.drawing){
+            const {lng,lat}=event.lngLat;
+            if(lng>=105.28&&lng<=105.72&&lat>=20.86&&lat<=21.18)areaRef.current.onPoint?.([Number(lng.toFixed(6)),Number(lat.toFixed(6))]);
+            return;
+          }
           const ids = [
             ...Object.values(DATA_LAYER_IDS),
             ...Object.values(DATA_AUX_LAYER_IDS).flat()
@@ -1602,6 +1635,7 @@ export default function MapView({
         if (switchId !== styleSwitchIdRef.current || !mapRef.current) return;
 
         placeStyleReadyRef.current = true;
+        renderAreaSelection(map,areaRef.current.points);
         addCoverage(map);
         addDataLayers(map, latestMapDataRef.current);
         addPlaceLayers(map, latestPlacesRef.current, latestShowHousingPricesRef.current);

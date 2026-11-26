@@ -25,6 +25,9 @@ import {
   marketInsightsQuerySchema, housingAmenitiesQuerySchema, createHousingViewingSchema, manageHousingViewingSchema
 } from '../validators/housing.validators.js';
 
+import { areaSearchSchema } from '../validators/spatialDiscovery.validators.js';
+import { searchHousingArea } from '../services/spatialDiscovery.service.js';
+
 const router = Router();
 
 // Separate tighter limits for on-demand spatial/aggregate queries.
@@ -33,6 +36,9 @@ const housingInsightsLimiter = rateLimit({
   message: { error: 'Bạn đang tra cứu quá nhanh. Vui lòng thử lại sau.' }
 });
 
+router.post('/area-search',housingInsightsLimiter,validateBody(areaSearchSchema),asyncHandler(async(req,res)=>{
+ res.set('Cache-Control','no-store');res.json(await searchHousingArea(req.body));
+}));
 router.get('/market-grid',housingInsightsLimiter,validateQuery(marketInsightsQuerySchema),asyncHandler(async(req,res)=>{
  res.set('Cache-Control','public, max-age=60');res.json(await getMarketGrid(req.query));
 }));

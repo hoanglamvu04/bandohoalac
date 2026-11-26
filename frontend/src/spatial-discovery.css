@@ -1,0 +1,7 @@
+.hm-spatial-panel{margin:10px 0;padding:12px;border:1px solid var(--hm-border,#d9e1dc);border-radius:10px;background:var(--hm-surface,#fff);color:var(--hm-text,#193b2e);font-size:13px;line-height:1.5}
+.hm-spatial-panel summary{font-weight:700;cursor:pointer}
+.hm-spatial-panel p{margin:6px 0}.hm-spatial-panel label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0}
+.hm-spatial-panel button,.hm-area-drawing-toolbar button{border:1px solid #c6d7ce;border-radius:7px;background:#f2f8f4;color:#143b2b;padding:7px 10px;cursor:pointer}
+.hm-spatial-panel ul{margin:8px 0;padding-left:19px;max-height:210px;overflow:auto;overflow-wrap:anywhere}.hm-spatial-panel a{color:#196b4c}
+.hm-area-drawing-toolbar{position:absolute;z-index:150;bottom:calc(72px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(440px,calc(100% - 24px));background:#fff;color:#173c2d;box-shadow:0 4px 24px #163f2733;border:1px solid #b9d4c6;border-radius:12px;padding:12px;font-size:13px;line-height:1.4}
+.hm-area-drawing-toolbar p{margin:4px 0}.hm-area-drawing-toolbar div{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
