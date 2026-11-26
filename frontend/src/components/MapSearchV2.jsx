@@ -1,3 +1,4 @@
+import { parseHousingIntent } from '../lib/housingIntent.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   GraduationCap,
@@ -35,7 +36,7 @@ function requiresUserLocation(query) {
 
 function inferVerticalIntent(query) {
   const value = fold(query);
-  if (/(phong tro|nha tro|phong cho thue|nha cho thue|tim tro)/.test(value)) return 'housing';
+  if (parseHousingIntent(query).recognized || /(phong tro|nha tro|phong cho thue|nha cho thue|tim tro)/.test(value)) return 'housing';
   if (/(an uong|quan an|nha hang|cafe|coffee|ca phe|an dem|do an)/.test(value)) return 'food';
   return '';
 }
@@ -157,10 +158,11 @@ export default function MapSearchV2() {
         if (requiresUserLocation(needle)) {
           const location = await getBestBrowserLocation({ timeout: 9000, targetAccuracy: 80 });
           data = await nearbySearch(needle, location);
-        } else if (inferVerticalIntent(needle) === 'housing') {
-          const housingQuery = stripHousingIntent(needle);
+        } else if (inferVerticalIntent(needle) === 'housing' || activeVertical === 'housing') {
+          const parsed = parseHousingIntent(needle,{force:true});
+          if(parsed.invalid)throw new Error('Ngân sách tìm kiếm mâu thuẫn. Hãy kiểm tra lại.');
           data = await getHousingListings(
-            { q: housingQuery || undefined, limit: 40 },
+            { ...parsed.filters, q: parsed.q || undefined, limit: 40 },
             { signal: controller.signal }
           );
         } else {
@@ -187,7 +189,7 @@ export default function MapSearchV2() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query]);
+  }, [query, activeVertical]);
 
   function clearSearch() {
     requestRef.current += 1;
@@ -210,6 +212,11 @@ export default function MapSearchV2() {
     if (intent === 'housing') {
       next.set('vertical', 'housing');
       next.set('category', 'bat-dong-san');
+      const parsed=parseHousingIntent(query,{force:true});
+      if(parsed.invalid){setError('Ngân sách tìm kiếm mâu thuẫn.');return;}
+      for(const key of ['listingType','propertyType','subtype','furnishing','minRent','maxRent','minPrice','maxPrice','minArea','maxArea','maxDistanceFpt','availability','availableOnly','privateBathroom','parking','partnerOnly','sort'])next.delete(key);
+      for(const [key,value] of Object.entries(parsed.filters))next.set(key,value);
+      if(parsed.q)next.set('q',parsed.q);
     } else if (intent === 'food') {
       next.set('vertical', 'food');
       next.delete('category');
@@ -303,7 +310,7 @@ export default function MapSearchV2() {
                 </strong>
                 <small>
                   {verticalIntent === 'housing'
-                    ? 'Giá · còn phòng · khoảng cách FPT · tiện ích'
+                    ? (parseHousingIntent(query,{force:true}).labels.join(' · ') || 'Giá · còn phòng · khoảng cách FPT · tiện ích')
                     : 'Quán ăn · cafe · đang mở · gần bạn'}
                 </small>
               </span>

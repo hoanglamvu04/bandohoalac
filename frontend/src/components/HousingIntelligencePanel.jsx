@@ -1,3 +1,6 @@
+import HousingMarketExplorer from './HousingMarketExplorer.jsx';
+import RentalInvestmentCalculator from './RentalInvestmentCalculator.jsx';
+import '../housing-cost-calculator.css';
 import { detailRows, AMENITIES } from '../lib/propertyDetails.js';
 import { estimateHousingCosts } from '../lib/housingCosts.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -404,6 +407,8 @@ export default function HousingIntelligencePanel({
           <p className="hm-intel-hint">{market.disclaimer}</p>
         </div>}
 
+        <HousingMarketExplorer viewport={viewport} filters={currentFilters}/>
+        <RentalInvestmentCalculator/>
         <div className="hm-intel-divider" />
         <div className="hm-intel-section-head"><strong>Tiện ích quanh bất động sản</strong><MapPinned size={15}/></div>
         <p className="hm-intel-hint">Tra cứu theo ghim đã công khai, không sử dụng GPS của bạn. Khoảng cách chỉ tính đường thẳng.</p>

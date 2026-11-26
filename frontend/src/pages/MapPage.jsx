@@ -1,3 +1,5 @@
+import { SUBTYPES, FURNISHINGS } from '../lib/propertyDetails.js';
+import MapSavedViews from '../components/MapSavedViews.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BadgeCheck,
@@ -282,7 +284,8 @@ function MapFilterSelect({
 }) {
   const detailsRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const selected = options.find((option) => String(option.value) === String(value)) || options[0] || null;
+  const selected = options.find((option) => String(option.value) === String(value)) ||
+    (value && /^\d+$/.test(String(value)) ? {value,label:new Intl.NumberFormat('vi-VN').format(Number(value))+' (tùy chọn)'} : options[0]) || null;
   const needle = normalizePlaceCategory(searchQuery);
   const visibleOptions = needle
     ? options.filter((option) => normalizePlaceCategory(option.label).includes(needle))
@@ -627,6 +630,8 @@ export default function MapPage() {
   const discoverySort = isHousingMode ? sortMode : '';
   const housingListingType = searchParams.get('listingType') || '';
   const housingPropertyType = searchParams.get('propertyType') || '';
+  const housingSubtype = searchParams.get('subtype') || '';
+  const housingFurnishing = searchParams.get('furnishing') || '';
   const housingMinArea = searchParams.get('minArea') || '';
   const housingMaxArea = searchParams.get('maxArea') || '';
   const housingSubmissionLink = viewport
@@ -644,7 +649,7 @@ export default function MapPage() {
   const housingPrivateBathroom = searchParams.get('privateBathroom') === 'true';
   const housingParking = searchParams.get('parking') === 'true';
   const housingFilterSignature = [
-    housingListingType, housingPropertyType, housingMinArea, housingMaxArea,
+    housingListingType, housingPropertyType, housingSubtype, housingFurnishing, housingMinArea, housingMaxArea,
     housingMinRent,
     housingMaxRent,
     housingMinPrice,
@@ -669,6 +674,8 @@ export default function MapPage() {
     sortMode !== 'relevant',
     isHousingMode && Boolean(housingListingType),
     isHousingMode && Boolean(housingPropertyType),
+    isHousingMode && Boolean(housingSubtype),
+    isHousingMode && Boolean(housingFurnishing),
     isHousingMode && Boolean(housingMinArea),
     isHousingMode && Boolean(housingMaxArea),
     isHousingMode && Boolean(housingMinRent),
@@ -710,6 +717,8 @@ export default function MapPage() {
       q: cleanQuery || undefined,
       listingType: housingListingType || undefined,
       propertyType: housingPropertyType || undefined,
+      subtype: housingSubtype || undefined,
+      furnishing: housingFurnishing || undefined,
       minArea: housingMinArea || undefined,
       maxArea: housingMaxArea || undefined,
       minRent: housingMinRent || undefined,
@@ -1346,7 +1355,7 @@ export default function MapPage() {
 
     return places
       .filter((place) => {
-        if (needle) {
+        if (needle && !isHousingMode) {
           const haystack = [
             place.name,
             place.category,
@@ -2293,6 +2302,8 @@ export default function MapPage() {
       place: null,
       listingType: null,
       propertyType: null,
+      subtype: null,
+      furnishing: null,
       minArea: null,
       maxArea: null,
       minRent: null,
@@ -2402,6 +2413,7 @@ export default function MapPage() {
         availability: null, availableOnly: null,
         privateBathroom: null, parking: null
       } : {}),
+      ...(key==='propertyType'?{subtype:null}:{}),
       [key]: value,
       place: null
     });
@@ -2409,7 +2421,7 @@ export default function MapPage() {
 
   function applySavedHousingFilters(filters = {}) {
     const keys = [
-      'listingType', 'propertyType', 'minRent', 'maxRent',
+      'listingType', 'propertyType', 'subtype', 'furnishing', 'minRent', 'maxRent',
       'minPrice', 'maxPrice', 'minArea', 'maxArea',
       'availability', 'availableOnly', 'partnerOnly', 'privateBathroom',
       'parking', 'maxDistanceFpt'
@@ -2483,6 +2495,8 @@ export default function MapPage() {
       sort: null,
       listingType: null,
       propertyType: null,
+      subtype: null,
+      furnishing: null,
       minArea: null,
       maxArea: null,
       minRent: null,
@@ -3079,6 +3093,12 @@ export default function MapPage() {
                         ]}
                         onChange={(value) => handleHousingFilterChange('propertyType', value)}
                       />
+                      <MapFilterSelect label="Loại hình chi tiết" value={housingSubtype}
+                        options={[{value:'',label:'Mọi loại chi tiết'},...SUBTYPES.filter(x=>!housingPropertyType||x[2]===housingPropertyType).map(([value,label])=>({value,label}))]}
+                        onChange={value=>handleHousingFilterChange('subtype',value)}/>
+                      <MapFilterSelect label="Nội thất" value={housingFurnishing}
+                        options={[{value:'',label:'Mọi mức nội thất'},...FURNISHINGS.map(([value,label])=>({value,label}))]}
+                        onChange={value=>handleHousingFilterChange('furnishing',value)}/>
                       <MapFilterSelect
                         label="Diện tích từ"
                         value={housingMinArea}
@@ -3512,6 +3532,7 @@ export default function MapPage() {
           />
         )}
 
+        {!inEmbed && <MapSavedViews activeLayers={activeLayers} validLayers={LAYERS.map(x=>x.type)} onRestoreLayers={setActiveLayers}/>}
         <TravelTimeDiscovery
           defaultCategory={isHousingMode ? 'bat-dong-san' : isFoodMode ? 'an-uong' : 'all'}
           onChoose={openTravelTimeResult}
