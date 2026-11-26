@@ -76,7 +76,11 @@ export const partnerHousingSchema = z.object({
 });
 
 export const housingManageActionSchema = z.object({
-  action: z.enum(['CONFIRM_ACTIVE', 'PAUSE', 'SOLD', 'RENTED'])
+  action: z.enum(['CONFIRM_ACTIVE', 'PAUSE', 'SOLD', 'RENTED']),
+  availableRooms: z.number().int().min(0).max(10000).optional()
+}).strict().superRefine((value,ctx)=>{
+  if(value.availableRooms !== undefined && value.action !== 'CONFIRM_ACTIVE')
+    ctx.addIssue({code:'custom',path:['availableRooms'],message:'Chỉ cập nhật phòng trống khi xác nhận hiệu lực.'});
 });
 
 
@@ -155,4 +159,11 @@ export const marketInsightsQuerySchema = z.object({
 
 export const housingAmenitiesQuerySchema = z.object({
   radius: z.enum(['500','1000','2000']).default('1000')
+}).strict();
+
+export const createHousingViewingSchema = z.object({
+  startsAt: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\.000Z$/)
+}).strict();
+export const manageHousingViewingSchema = z.object({
+  action: z.enum(['ACCEPT','DECLINE','CANCEL'])
 }).strict();

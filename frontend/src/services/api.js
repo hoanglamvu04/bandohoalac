@@ -222,8 +222,17 @@ export function getMyHousingListings() {
   return unwrap(client.get('/housing/mine'));
 }
 
-export function manageMyHousingListing(placeId, action) {
-  return unwrap(client.patch('/housing/' + encodeURIComponent(placeId) + '/manage', { action }));
+export function manageMyHousingListing(placeId, action, options = {}) {
+  return unwrap(client.patch('/housing/' + encodeURIComponent(placeId) + '/manage', { action, ...options }));
+}
+export function createHousingViewing(placeId,startsAt,options={}) {
+  return unwrap(client.post('/housing/'+encodeURIComponent(placeId)+'/viewings',{startsAt},{signal:options.signal}));
+}
+export function listMyHousingViewings(options={}) {
+  return unwrap(client.get('/housing/viewings',{signal:options.signal}));
+}
+export function manageHousingViewing(id,action,options={}) {
+  return unwrap(client.patch('/housing/viewings/'+encodeURIComponent(id),{action},{signal:options.signal}));
 }
 
 export function getHousingListing(placeId, options = {}) {

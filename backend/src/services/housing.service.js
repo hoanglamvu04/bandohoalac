@@ -52,6 +52,7 @@ function mapHousingRow(row) {
       totalPriceVnd: numberOrNull(row.total_price_vnd),
       contactName: row.contact_name || null,
       advertiserRole: row.advertiser_role || null,
+      viewingAvailable: row.viewing_available === true,
       monthlyRent: numberOrNull(row.monthly_rent),
       depositAmount: numberOrNull(row.deposit_amount),
       areaM2: numberOrNull(row.area_m2),
@@ -137,6 +138,12 @@ const BASE_SELECT = `
     hl.total_price_vnd,
     hl.contact_name,
     hl.advertiser_role,
+    (p.source IN ('USER','CTV') AND p.external_source IS NULL
+      AND hl.property_type IS NOT NULL AND hl.listing_status='ACTIVE'
+      AND (hl.expires_at IS NULL OR hl.expires_at>NOW())
+      AND (hl.listing_type='SALE' OR hl.availability_status<>'FULL')
+      AND EXISTS (SELECT 1 FROM users au WHERE au.id=p.created_by AND au.account_status='ACTIVE')
+    ) AS viewing_available,
     hl.monthly_rent,
     hl.deposit_amount,
     hl.area_m2,

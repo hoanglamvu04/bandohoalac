@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { createContribution, getMyContributions, getMyHousingListings, manageMyHousingListing } from '../services/api.js';
 import { useToast } from '../context/ToastContext.jsx';
 import '../real-estate-management.css';
+import HousingViewingsManager from '../components/HousingViewingsManager.jsx';
 
 const STATUS_LABEL = {
   ACTIVE: 'Đang hiển thị',
@@ -29,6 +30,7 @@ export default function MyRealEstatePage() {
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState('');
   const [priceDrafts, setPriceDrafts] = useState({});
+  const [roomDrafts,setRoomDrafts]=useState({});
 
   const load = useCallback(async () => {
     // Both endpoints are scoped to the signed-in owner. A failed history
@@ -70,7 +72,12 @@ export default function MyRealEstatePage() {
     if (!window.confirm(message)) return;
     setBusyId(item.id);
     try {
-      await manageMyHousingListing(item.id, action);
+      const rooms=roomDrafts[item.id];
+      const options=action==='CONFIRM_ACTIVE'&&item.listingType==='RENT'&&rooms!==undefined&&rooms!==''?{availableRooms:Number(rooms)}:{};
+      if(options.availableRooms!==undefined&&(!Number.isInteger(options.availableRooms)||options.availableRooms<0||options.availableRooms>10000||
+        (item.totalRooms!=null&&options.availableRooms>item.totalRooms)))throw new Error('Số phòng trống không hợp lệ.');
+      await manageMyHousingListing(item.id, action,options);
+      setRoomDrafts(current=>({...current,[item.id]:undefined}));
       showToast('Đã cập nhật trạng thái tin bất động sản.', 'success');
       await load();
     } catch (err) {
@@ -117,6 +124,7 @@ export default function MyRealEstatePage() {
           <Link to="/dang-tin-bat-dong-san" className="estate-manager-new">+ Đăng bất động sản mới</Link>
         </header>
 
+        <HousingViewingsManager/>
         {loading && <p>Đang tải tin của bạn…</p>}
         {error && <div className="estate-manager-error" role="alert">{error}</div>}
         {submissionsWarning && <div className="estate-manager-error" role="alert">{submissionsWarning}</div>}
@@ -200,6 +208,8 @@ export default function MyRealEstatePage() {
                   <span><b>{item.listingType === 'SALE' ? 'Đang bán' : 'Cho thuê'}</b></span>
                   <span><b>{currency(price)}</b>{item.listingType === 'RENT' && '/tháng'}</span>
                   {item.areaM2 && <span><b>{item.areaM2} m²</b></span>}
+                  {item.listingType==='RENT'&&<span>Phòng trống: <b>{item.availableRooms??'Chưa cập nhật'}</b></span>}
+                  <span>30 ngày: <b>{item.viewingRequests30d??0}</b> yêu cầu xem · <b>{item.acceptedViewings30d??0}</b> đang ở trạng thái xác nhận</span>
                 </div>
 
                 {active ? (
@@ -211,6 +221,13 @@ export default function MyRealEstatePage() {
                         : 'Cần xác nhận lại trước ' + until.toLocaleDateString('vi-VN'))
                         : 'Tin cũ chưa có hạn xác nhận, bạn vẫn có thể chủ động xác nhận.'}
                     </div>
+                    {item.listingType==='RENT'&&<div className="estate-manager-price-form">
+                      <label htmlFor={'rooms-'+item.id}>Số phòng/căn còn trống (tự khai)</label>
+                      <input id={'rooms-'+item.id} type="number" min="0" max={item.totalRooms??10000} step="1"
+                        value={roomDrafts[item.id]??''} onChange={e=>setRoomDrafts(s=>({...s,[item.id]:e.target.value}))}
+                        placeholder={item.availableRooms==null?'Chưa cập nhật':String(item.availableRooms)}/>
+                      <small>Nhấn “Tin vẫn còn hiệu lực” để lưu. Nhập 0 nếu hết phòng; lịch tương lai sẽ bị hủy.</small>
+                    </div>}
                     <div className="estate-manager-actions">
                       <button type="button" disabled={busyId === item.id} onClick={() => manage(item, 'CONFIRM_ACTIVE')}>
                         <CheckCircle2 size={16} /> Tin vẫn còn hiệu lực

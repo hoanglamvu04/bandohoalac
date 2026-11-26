@@ -2,6 +2,15 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 27/11/2026 GMT+7 — HOLA-P1-115/116/117/118 — lịch xem và quản lý người quan tâm
+
+- Nhánh `feat/p1-115-117-118-housing-viewings-20261127` xếp sau PR #128 (head `eff3ade1b7aaf520fbc6aaa15f0a69a04c3f91a4`), DANG_LAM, chưa merge/deploy. Migration 320 additive.
+- Lịch xem riêng giữa tài khoản đăng tin USER/CTV và người gửi; chặn DEMO/import, self-booking, tin ẩn/hết hạn/hết phòng, IDOR, lịch trùng và quá khứ. Chỉ lưu mã tài khoản nội bộ, tên tin snapshot và thời gian; không lấy phone/email/GPS/ghi chú.
+- Quản lý lịch vào/ra, xác nhận/từ chối/hủy, giới hạn 10 lịch đang mở và rate-limit; số lượng yêu cầu và lịch đang ACCEPTED 30 ngày riêng chủ tin. Không tuyên bố đã đo lượt xem/hiện số hay giao dịch; analytics consent riêng còn cần thiết kế.
+- Chủ tin RENT có thể xác nhận số phòng trống trong luồng gia hạn có sẵn; 0 = FULL, hủy lịch tương lai; không tự xuất bản lại tin archived hoặc thay đổi giá ngoài moderation.
+- Tests: backend auth, time, PG16 quyền/trùng/chuyển trạng thái, Playwright login/slot. Chưa có kết quả CI. Phải retarget main sau PR #128, kiểm tra CI đầy đủ trước merge; chưa migration VPS.
+- Các P1 cũ cần nghiệm thu thực tế, xác minh hồ sơ chủ nhà và analytics consent chưa hoàn tất; WA-005/P0 giữ nguyên.
+
 ## 27/11/2026 GMT+7 — HOLA-P1-113/114/116 — chi phí thuê và vai trò người đăng
 
 - Baseline `main` `d81074a0836773099ea4232d1b19edba1f9f4428` sau PR #127. Nhánh `feat/p1-113-114-116-housing-rental-details-20261127`: DANG_LAM, chờ CI/merge, chưa deploy.
