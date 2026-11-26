@@ -13,7 +13,7 @@ export async function listMyPropertyListings(userId) {
     `SELECT p.id, p.name, p.slug, p.address, p.status AS place_status,
             p.updated_at, hl.listing_type, hl.listing_status, hl.expires_at,
             hl.last_confirmed_at, hl.property_type, hl.total_price_vnd,
-            hl.monthly_rent, hl.area_m2, hl.available_rooms, hl.total_rooms,
+            hl.monthly_rent, hl.area_m2, hl.available_rooms, hl.total_rooms,jsonb_array_length(hl.room_types) AS room_type_count,
             (SELECT COUNT(*)::int FROM housing_viewing_requests v WHERE v.place_id=p.id AND v.recipient_id=$1
               AND v.created_at>=NOW()-INTERVAL '30 days') AS viewing_requests_30d,
             (SELECT COUNT(*)::int FROM housing_viewing_requests v WHERE v.place_id=p.id AND v.recipient_id=$1
@@ -47,6 +47,7 @@ export async function listMyPropertyListings(userId) {
     areaM2: money(row.area_m2),
     availableRooms: money(row.available_rooms),
     totalRooms: money(row.total_rooms),
+    roomTypeCount:Number(row.room_type_count)||0,
     viewingRequests30d: Number(row.viewing_requests_30d)||0,
     acceptedViewings30d: Number(row.accepted_viewings_30d)||0,
     detailViews30d: Number(row.detail_views_30d)||0,
@@ -59,7 +60,7 @@ export async function managePropertyListing(placeId, actor, action, {availableRo
   const result = await withTransaction(async (client) => {
     const { rows } = await client.query(
       `SELECT p.id, p.created_by, p.status AS place_status,
-              hl.listing_type, hl.listing_status, hl.expires_at, hl.total_rooms
+              hl.listing_type, hl.listing_status, hl.expires_at, hl.total_rooms,jsonb_array_length(hl.room_types) AS room_type_count
          FROM places p
          JOIN categories c ON c.id = p.category_id AND c.slug = 'bat-dong-san'
          JOIN housing_listings hl ON hl.place_id = p.id
@@ -75,6 +76,7 @@ export async function managePropertyListing(placeId, actor, action, {availableRo
     }
 
     if (action === 'CONFIRM_ACTIVE') {
+      if(availableRooms!==undefined&&Number(row.room_type_count)>0)throw new AppError('Hãy gửi cập nhật theo từng loại phòng để duyệt.',409);
       if (row.listing_status !== 'ACTIVE' || row.place_status !== 'PUBLISHED') {
         throw new AppError('Tin đã ẩn hoặc kết thúc, cần gửi yêu cầu đăng lại.', 409);
       }

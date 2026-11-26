@@ -205,3 +205,9 @@
 - **Production:** chưa triển khai / triển khai có bằng chứng / nghiệm thu có bằng chứng: …
 - **Chặn / rủi ro:** …
 - **Việc tiếp theo:** … (phải đối chiếu với kế hoạch).
+
+
+## 27/11/2026 — ROADMAP #136 (P2-125/P2-126)
+- Đã xác nhận #129, #130, #131, #132, #133, #134, #135 đã merge; main trước PR này: ea41ffd49f8412cfc8b47d614d11ad59884bcd3e. CI/Security #132–135 đều 9/9 thành công; #131 hai workflow thành công, safety gate tất cả steps pass (check-run summary từng trả in_progress/success).
+- Code mới: migration 370, danh sách loại phòng cùng một tin/ghim; giá đại diện thấp nhất loại còn phòng, tổng phòng trống; yêu cầu thay đổi giá và tồn phải qua ADMIN/MODERATOR, chặn cập nhật cũ phá tính nhất quán, hủy lịch tương lai khi hết phòng. Chưa lọc từng loại, chưa quản lý từng căn hoặc tồn realtime. Hỏi đáp POI phi BĐS, chờ duyệt, báo cáo, hàng chờ kiểm duyệt, không lộ ID/email tác giả trong API công khai, giới hạn gửi.
+- Trạng thái: code mới mở PR, chờ CI, không deploy/migrate VPS. Ma trận 72 cập nhật #11 PARTIAL, #50 NEW_PR. Kiểm tra lại cả DB thật, thiết bị, moderation, dữ liệu và hợp đồng; chưa hoàn thành 72/72. Các mục KYC, nguồn quy hoạch/GTFS, 80Land, WA-005, Search Console, AI và thu tiền vẫn phụ thuộc phê duyệt/nguồn/cấu hình. Không tự khai xác minh hoặc gọi external API thiếu quyền.

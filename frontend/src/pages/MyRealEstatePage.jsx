@@ -5,6 +5,7 @@ import { createContribution, getMyContributions, getMyHousingListings, manageMyH
 import { useToast } from '../context/ToastContext.jsx';
 import '../real-estate-management.css';
 import HousingViewingsManager from '../components/HousingViewingsManager.jsx';
+import { RoomCatalogManager } from '../components/CommunityTools.jsx';
 
 const STATUS_LABEL = {
   ACTIVE: 'Đang hiển thị',
@@ -73,7 +74,7 @@ export default function MyRealEstatePage() {
     setBusyId(item.id);
     try {
       const rooms=roomDrafts[item.id];
-      const options=action==='CONFIRM_ACTIVE'&&item.listingType==='RENT'&&rooms!==undefined&&rooms!==''?{availableRooms:Number(rooms)}:{};
+      const options=action==='CONFIRM_ACTIVE'&&item.listingType==='RENT'&&!item.roomTypeCount&&rooms!==undefined&&rooms!==''?{availableRooms:Number(rooms)}:{};
       if(options.availableRooms!==undefined&&(!Number.isInteger(options.availableRooms)||options.availableRooms<0||options.availableRooms>10000||
         (item.totalRooms!=null&&options.availableRooms>item.totalRooms)))throw new Error('Số phòng trống không hợp lệ.');
       await manageMyHousingListing(item.id, action,options);
@@ -222,7 +223,8 @@ export default function MyRealEstatePage() {
                         : 'Cần xác nhận lại trước ' + until.toLocaleDateString('vi-VN'))
                         : 'Tin cũ chưa có hạn xác nhận, bạn vẫn có thể chủ động xác nhận.'}
                     </div>
-                    {item.listingType==='RENT'&&<div className="estate-manager-price-form">
+                    {item.listingType==='RENT'&&['HOUSE','APARTMENT'].includes(item.propertyType)&&<RoomCatalogManager item={item} onChanged={load}/>}
+                    {item.listingType==='RENT'&&!item.roomTypeCount&&<div className="estate-manager-price-form">
                       <label htmlFor={'rooms-'+item.id}>Số phòng/căn còn trống (tự khai)</label>
                       <input id={'rooms-'+item.id} type="number" min="0" max={item.totalRooms??10000} step="1"
                         value={roomDrafts[item.id]??''} onChange={e=>setRoomDrafts(s=>({...s,[item.id]:e.target.value}))}
@@ -238,7 +240,7 @@ export default function MyRealEstatePage() {
                         {item.listingType === 'SALE' ? 'Đã bán' : 'Đã cho thuê'}
                       </button>
                     </div>
-                    <div className="estate-manager-price-form">
+                    {!item.roomTypeCount&&<div className="estate-manager-price-form">
                       <label htmlFor={'price-' + item.id}>Gửi yêu cầu thay đổi giá (VND)</label>
                       <div>
                         <input id={'price-' + item.id} type="number" min="1" step="1" inputMode="numeric"
@@ -249,7 +251,7 @@ export default function MyRealEstatePage() {
                           Gửi chờ duyệt
                         </button>
                       </div>
-                    </div>
+                    </div>}
                   </>
                 ) : (
                   <p className="estate-manager-hidden-note">

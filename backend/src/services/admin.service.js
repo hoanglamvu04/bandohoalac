@@ -288,13 +288,14 @@ async function applyContributionToPlace(contribution, client) {
   }
   if (contribution.type === 'UPDATE_PRICE' && place.realEstatePriceVnd !== undefined) {
     const { rows } = await client.query(
-      'SELECT listing_type, listing_status FROM housing_listings WHERE place_id = $1 FOR UPDATE',
+      'SELECT listing_type, listing_status,jsonb_array_length(room_types) AS room_type_count FROM housing_listings WHERE place_id = $1 FOR UPDATE',
       [placeId]
     );
     const listing = rows[0];
     if (!listing || listing.listing_status !== 'ACTIVE') {
       throw new AppError('Tin bất động sản không còn hoạt động hoặc không tồn tại.', 409);
     }
+    if(Number(listing.room_type_count)>0)throw new AppError('Tin có nhiều loại phòng; hãy duyệt yêu cầu danh sách loại phòng.',409);
     const price = Number(place.realEstatePriceVnd);
     if (!Number.isSafeInteger(price) || price <= 0 ||
         (listing.listing_type === 'RENT' && price > 100000000)) {

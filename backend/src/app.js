@@ -46,6 +46,7 @@ import missionsRoutes from './routes/missions.routes.js';
 import placeClaimsRoutes from './routes/placeClaims.routes.js';
 import partnerPortalRoutes from './routes/partnerPortal.routes.js';
 import businessRoutes from './routes/business.routes.js';
+import communityToolsRoutes from './routes/communityTools.routes.js';
 import brandRoutes from './routes/brand.routes.js';
 import publicIntegrationRoutes from './routes/publicIntegration.routes.js';
 import haloHolaRoutes from './routes/haloHola.routes.js';
@@ -261,6 +262,7 @@ export function createApp() {
   app.use('/api/place-claims', placeClaimsRoutes);
   app.use('/api/partner', partnerPortalRoutes);
   app.use('/api/business', businessRoutes);
+  app.use('/api/community-tools',communityToolsRoutes);
   app.use('/api/brand', brandRoutes);
   app.use('/api/halo/v1', haloHolaRoutes);
 

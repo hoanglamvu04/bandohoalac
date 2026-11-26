@@ -940,6 +940,10 @@ export async function updateManagedPlace({ userId, placeId, values }) {
 
     const input = values || {};
     const housing = input.housing;
+    if(housing&&['monthlyRent','depositAmount','areaM2','availabilityStatus','availableRooms','totalRooms'].some(k=>Object.prototype.hasOwnProperty.call(housing,k))){
+      const {rows:[catalog]}=await client.query('SELECT jsonb_array_length(room_types) AS count FROM housing_listings WHERE place_id=$1',[placeId]);
+      if(Number(catalog?.count)>0)throw new AppError('Tin có nhiều loại phòng; hãy dùng danh sách loại phòng chờ duyệt.',409);
+    }
     const columnMap = {
       phone: 'phone',
       website: 'website',
