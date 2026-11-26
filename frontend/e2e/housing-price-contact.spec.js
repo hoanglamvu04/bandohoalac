@@ -47,9 +47,17 @@ test('housing map shows real price badge and anonymous visitor gets login gate, 
   const calls = { count:0 };
   await mockHousingApi(page, false, calls);
   await page.goto('/map?vertical=housing&category=bat-dong-san', { waitUntil:'domcontentloaded' });
-  await expect.poll(() => page.evaluate(() =>
-    Boolean(window.__HOLA_MAP_INSTANCE__?.getLayer('hm-housing-price-label'))
-  ), { timeout:20000 }).toBe(true);
+  await expect(page.locator('.hm-map-shell')).toBeVisible();
+  await expect.poll(async () => {
+    try {
+      return await page.evaluate(() =>
+        Boolean(window.__HOLA_MAP_INSTANCE__?.getLayer('hm-housing-price-label'))
+      );
+    } catch {
+      // App/map can still navigate during the first render in a cold browser.
+      return false;
+    }
+  }, { timeout:20000 }).toBe(true);
   await page.evaluate(() => window.__HOLA_MAP_INSTANCE__.jumpTo({
     center:[105.52522,21.01354], zoom:16
   }));

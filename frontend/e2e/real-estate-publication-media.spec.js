@@ -59,14 +59,18 @@ test('public rental detail skips missing first image, keeps gallery usable and l
   await expect(page.getByTestId('place-primary-image')).toHaveAttribute('src', goodOne);
 });
 
-test('all missing VPS images show accessible fallback without hiding contact information', async ({ page }) => {
+test('all missing VPS images show fallback and require login before housing contact reveal', async ({ page }) => {
   const noMedia = { ...property, images: ['/uploads/broken.jpg'] };
   await servePublicProperty(page, noMedia);
   await page.goto('/place/777');
   await expect(page.getByTestId('place-gallery-fallback'))
     .toContainText('Ảnh đang không khả dụng');
   await expect(page.getByTestId('place-primary-image')).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Gọi' })).toHaveAttribute('href', 'tel:0987654321');
+  // Even a stale place API that accidentally sends a phone must not
+  // create a public tel: link; only authenticated click-to-reveal is allowed.
+  await expect(page.getByRole('link', { name: 'Gọi' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Đăng nhập để hiện số' })).toBeVisible();
+  await expect(page.getByText('0987654321')).toHaveCount(0);
 });
 
 test('Admin approval verifies public property, housing and map pin without blocking success', async ({ page }) => {
