@@ -22,8 +22,8 @@
 | HOLA-P0-001 | CHUA_LAM (cần quyền VPS) | Audit backup offsite, checksum và restore drill độc lập; đối chiếu PostgreSQL 16, Cloudinary/local media | Có log thực tế + bằng chứng restore test, không tác động DB production |
 | HOLA-P0-002 | CHUA_LAM (cần thiết bị/hạ tầng thật) | Nghiệm thu Nginx/TLS, PM2, API, cron, mobile Android/iOS, 3G/4G và Web Vitals | Checklist runbook hoàn tất, rủi ro P0 được xử lý và có người duyệt |
 | HOLA-P0-003 | CHO_DUYET | Rà WA-005 PR #92 và hợp đồng X-HUB; chỉ merge khi X-HUB chấp thuận dữ liệu/phân quyền/consent | PR đạt CI + nghiệm thu nguồn/đích, không có PII/GPS/token đưa ra frontend |
-| HOLA-P0-004 | DA_MERGE_CHUA_DEPLOY #108; preflight bản sao ĐANG LÀM trên `feat/p0-004-p1-102-audit-cluster-20261126` (issue #115) | CLI và Admin dùng cùng điều kiện kiểm toán BĐS công khai. Kiểm toán dữ liệu thật chờ ảnh kết quả từ chủ dự án sau khi chạy [lệnh trong runbook](../docs/PUBLIC_LAUNCH_P0_RUNBOOK.md#kiểm-toán-tiện-ích-và-bđs-trên-bản-sao-postgresql) | Ghi số tổng hợp trên bản sao; rà quyền ảnh, tin hết hạn, thiếu liên hệ và giá/diện tích |
-| HOLA-P0-005 | DANG_LAM — fix/p0-005-cron-fail-closed-20261126, issue #116 | Sửa legacy cron installer fail closed; kiểm thử giả lập, rà upload/WebP; đối chiếu PR #54/#57 trên main, không merge nguyên trạng | CI/Security PASS, backlog phần còn lại và VPS chưa nghiệm thu được ghi rõ |
+| HOLA-P0-004 | DA_MERGE_CHUA_DEPLOY #108/#120 (preflight); CHỜ DỮ LIỆU THẬT issue #115 | CLI và Admin dùng cùng điều kiện kiểm toán BĐS công khai. Kiểm toán dữ liệu thật chờ ảnh kết quả từ chủ dự án sau khi chạy [lệnh trong runbook](../docs/PUBLIC_LAUNCH_P0_RUNBOOK.md#kiểm-toán-tiện-ích-và-bđs-trên-bản-sao-postgresql) | Ghi số tổng hợp trên bản sao; rà quyền ảnh, tin hết hạn, thiếu liên hệ và giá/diện tích |
+| HOLA-P0-005 | DA_MERGE_CHUA_DEPLOY #120 (cron); vẫn rà bảo mật PR #54/#57 trong issue #116 | Sửa legacy cron installer fail closed; kiểm thử giả lập, rà upload/WebP; đối chiếu PR #54/#57 trên main, không merge nguyên trạng | CI/Security PASS, backlog phần còn lại và VPS chưa nghiệm thu được ghi rõ |
 | HOLA-OPS-118 | CHO_QUAN_TRI_VIEN — issue #118 | Bật bảo vệ `main` trong GitHub Settings theo `docs/MAIN_BRANCH_PROTECTION_OPERATOR.md` | Có bằng chứng Ruleset active và branch protected; **chưa được bật bằng mã nguồn** |
 
 ## P1 — Hoàn thiện các phần sản phẩm chưa nghiệm thu full
@@ -31,7 +31,7 @@
 | ID | Sprint | Trạng thái | Việc tiếp theo và tiêu chí nghiệm thu |
 |---|---|---|---|
 | HOLA-P1-101 | 6 | CHUA_LAM | Đo số mẫu theo loại/vùng từ dữ liệu thật, giữ cảnh báo giá chào; không suy ra giá giao dịch khi thiếu dữ liệu |
-| HOLA-P1-102 | 7 | DA_MERGE_CHUA_DEPLOY #113; cụm ghim WebGL ĐANG LÀM trên `feat/p0-004-p1-102-audit-cluster-20261126` (issue #117) | Đợt tiếp theo đo P95, cụm ghim và thao tác Android/iOS thật trên mạng chậm và vùng dày dữ liệu. |
+| HOLA-P1-102 | 7 | DA_MERGE_CHUA_DEPLOY #113/#120 (cluster WebGL); CHỜ TEST MOBILE THẬT issue #117 | Đợt tiếp theo đo P95, cụm ghim và thao tác Android/iOS thật trên mạng chậm và vùng dày dữ liệu. |
 | HOLA-P1-103 | 8 | CHUA_LAM | Kiểm thử từ đăng tin→duyệt→ghim→liên hệ→tạm ẩn→đã giao dịch→báo nghi vấn; không cấp quyền tự xuất bản |
 | HOLA-P1-104 | 9 | DA_MERGE_CHUA_DEPLOY — [PR #109](https://github.com/hoanglamvu04/bandohoalac/pull/109), 9 checks PASS | Đưa tiện ích vào trang chi tiết BĐS, chọn 500 m/1 km/2 km, kết quả POI công khai, loading/error/retry, Playwright mobile; tiếp theo đo độ phủ theo khu và chỉ tính thời gian di chuyển khi có routing thật được xác minh |
 | HOLA-P1-109 | 9 | DA_MERGE_CHUA_DEPLOY — [PR #111](https://github.com/hoanglamvu04/bandohoalac/pull/111), 9/9 checks PASS | Hiện bằng chứng POI trong 8 nhóm trên trang chi tiết và đo số tin có POI/xác minh gần đây theo khu phục vụ trong 1 km. Kiểm toán dữ liệu thật chờ chủ dự án chạy [lệnh trong runbook](../docs/PUBLIC_LAUNCH_P0_RUNBOOK.md#kiểm-toán-tiện-ích-và-bđs-trên-bản-sao-postgresql) trên bản sao chỉ đọc. Routing chỉ triển khai khi có nguồn được xác minh. |
@@ -54,11 +54,18 @@
 
 ## Nhiệm vụ điều phối 26/11/2026 — P0-004 và P1-102
 
-- **P0-004/#115:** mã kiểm tra role và transaction read-only đang ở nhánh `feat/p0-004-p1-102-audit-cluster-20261126`. Sau CI/merge vẫn **CHỜ** người vận hành xác minh bản sao độc lập và gửi hai bảng tổng hợp BĐS/POI; không ghi production READY.
-- **P1-102/#117:** bổ sung cluster WebGL và test ghim dày trên mobile giả lập. Sau CI/merge cần Android Chrome + iOS Safari trên thiết bị thật, mạng chậm, đo P50/P95 thật và kiểm tra ghim/camera.
-- **P0-005/#116:** nhánh #119 đang qua CI; không merge draft #54/#57 nguyên trạng.
+- **P0-004/#115:** preflight role và transaction read-only đã merge [PR #120](https://github.com/hoanglamvu04/bandohoalac/pull/120). Sau CI/merge vẫn **CHỜ** người vận hành xác minh bản sao độc lập và gửi hai bảng tổng hợp BĐS/POI; không ghi production READY.
+- **P1-102/#117:** cluster WebGL và test ghim dày trên mobile giả lập đã merge PR #120. Sau CI/merge cần Android Chrome + iOS Safari trên thiết bị thật, mạng chậm, đo P50/P95 thật và kiểm tra ghim/camera.
+- **P0-005/#116:** code cron đã merge qua #120. PR #119 được đóng vì trùng nội dung, không merge riêng; tiếp tục triage draft #54/#57, không merge nguyên trạng.
 - **OPS/#118:** cần quản trị viên bật protection/ruleset; CI không thay thế việc này.
 - **P0-003:** WA-005 #92 tiếp tục chờ nghiệm thu, không tự merge/bật.
+
+## Trạng thái điều phối sau merge 26/11/2026
+
+- **Đã merge code cả ba đợt:** PR #120 `086c91ac5e543a983da8e444a4709d19e1e13aeb`. Đây là code + CI, **chưa deploy VPS hoặc public launch acceptance**.
+- **Blocker P0:** #115 cần bản sao PostgreSQL **độc lập** và tài khoản chỉ đọc, #118 GitHub admin bật protection, P0-001 backup offsite/restore, P0-003 WA-005 chờ phê duyệt.
+- **Blocker P1:** #117 Android/iOS thật và P50/P95 mạng chậm. Không lấy Playwright synthetic làm chứng nhận thiết bị thật.
+- **Triage còn lại:** issue #116 kiểm tra PR #54/#57, giữ lại phần thực sự chưa có trên main; xử lý từng PR với test riêng.
 
 ## Công việc gần nhất được ưu tiên
 

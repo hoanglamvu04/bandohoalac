@@ -2,6 +2,14 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 26/11/2026 GMT+7 — Xác nhận merge 3 đợt HOLA-P0-005 / P0-004 / P1-102
+
+- **Mã:** [PR #120](https://github.com/hoanglamvu04/bandohoalac/pull/120) merge vào main `086c91ac5e543a983da8e444a4709d19e1e13aeb`; toàn bộ 9/9 checks head PR PASS, gồm Backend migrate and test (PostGIS), Frontend build/E2E, CodeQL và security gates.
+- **PR #119:** đóng không merge, vì mọi file đã nằm trong #120. Job Playwright của riêng #119 chậm ở cài Chromium, không lấy trạng thái đó làm chứng nhận sản phẩm; #120 đã PASS full E2E.
+- **Bàn giao mã:** cron installer fail-closed/test giả; PostgreSQL copy audit preflight + unit tests và runbook; cluster WebGL + Playwright ghim dày; cập nhật `LUU_Y_CODE`.
+- **Chưa làm bằng chứng thật:** không có snapshot PostgreSQL readonly để xuất số liệu #115; chưa bật GitHub ruleset #118; chưa đo mobile thật #117; offsite/restore/VPS chưa nghiệm thu; WA-005 #92 chưa phê duyệt.
+- **Bước tiếp:** chạy kiểm toán copy thật theo runbook sau khi operator xác minh, kiểm tra Android/iOS/P95, bật bảo vệ main, hoàn tất adversarial & backup review. Không tự deploy.
+
 ## 26/11/2026 GMT+7 — HOLA-P0-004 / HOLA-P1-102 — preflight bản sao và marker clustering
 
 - **Trước:** main `de134e4c94bcad7bf91284d383cc7e5c67933f89`, nhánh bảo mật #119 đã sửa cron và đang chờ CI; hai đợt này được xếp trên cùng nhánh `feat/p0-004-p1-102-audit-cluster-20261126`.

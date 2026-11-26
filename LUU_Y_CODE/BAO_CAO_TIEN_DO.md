@@ -2,6 +2,15 @@
 
 > **Chốt kiểm tra:** 16:57 25/11/2026 GMT+7. Xác minh `main` tại `c02640c9ec5399c003f3e1a7fd9115921e5a25d5` sau [PR #113](https://github.com/hoanglamvu04/bandohoalac/pull/113). [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817673) và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817721) PASS trên head PR.
 
+## 26/11/2026 GMT+7 — BÀN GIAO 3 ĐỢT: P0-005 / P0-004 / P1-102
+
+- **Đã merge:** [PR #120](https://github.com/hoanglamvu04/bandohoalac/pull/120) vào `main` SHA `086c91ac5e543a983da8e444a4709d19e1e13aeb`, **9/9 checks PASS** trên head PR, gồm backend PG16/PostGIS, frontend build, Playwright E2E, CodeQL, dependency, shell, safety và LUU_Y_CODE. [PR #119](https://github.com/hoanglamvu04/bandohoalac/pull/119) đóng **không merge** vì nội dung đã có đầy đủ trong #120; E2E #119 bị giữ ở bước cài Chromium của runner.
+- **Đợt 1:** legacy backup cron installer fail-closed, test cron giả, hướng dẫn bảo vệ `main`. Upload ảnh hiện có sanitizer WebP trên main, chưa xác minh quyền ảnh cũ/Cloudinary production. Issue #116 vẫn mở cho adversarial PR #57 & residual review; issue #118 vẫn chờ GitHub admin bật branch protection.
+- **Đợt 2:** preflight an toàn cho báo cáo BĐS/POI trên bản sao PostgreSQL độc lập, bắt buộc xác nhận thủ công + role không có quyền ghi. **Chưa có số liệu dữ liệu thật** vì chưa có bản sao/credential chỉ đọc: issue #115 còn bị chặn ngoài Git.
+- **Đợt 3:** MapLibre WebGL nhóm ghim gần nhau, nhãn số lượng và chạm phóng to; test 65 POI giả lập mobile. Chưa đo P50/P95 Android/iOS thật, issue #117 vẫn mở cho thiết bị/mạng chậm.
+- **Production:** không chạy migration, cron, PM2, deploy, ghi DB hoặc bật WA-005. `CI PASS` khác với nghiệm thu VPS.
+- **Việc tiếp:** GitHub admin kích hoạt ruleset #118; data owner cấp PostgreSQL copy readonly để chạy 2 bảng tổng hợp #115; QA thử thực tế Android/iOS #117 và backup/restore P0 trước public.
+
 ## 26/11/2026 GMT+7 — HOLA-P0-004 + HOLA-P1-102 — kiểm toán bản sao & cụm ghim mobile
 
 - **Trạng thái:** ĐANG LÀM — nhánh `feat/p0-004-p1-102-audit-cluster-20261126` trên nhánh bảo mật #119; chờ CI/merge. Không chạy truy vấn dữ liệu production hoặc deploy VPS.
