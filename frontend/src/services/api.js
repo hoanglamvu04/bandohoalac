@@ -232,6 +232,14 @@ export function getHousingListing(placeId, options = {}) {
   }));
 }
 
+// Sensitive contact is fetched only on an explicit, authenticated user click.
+export function getHousingContact(placeId, options = {}) {
+  return unwrap(client.get('/housing/' + encodeURIComponent(placeId) + '/contact', {
+    headers: { 'Cache-Control': 'no-store' },
+    signal: options.signal
+  }));
+}
+
 export function getHomePlaceSections(limit = 8) {
   return unwrap(client.get('/places/home-sections', {
     params: { limit }

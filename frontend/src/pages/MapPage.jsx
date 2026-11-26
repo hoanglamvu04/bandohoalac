@@ -46,6 +46,7 @@ import MapView from '../components/MapView.jsx';
 import TripPlanner from '../components/TripPlanner.jsx';
 import TravelTimeDiscovery from '../components/TravelTimeDiscovery.jsx';
 import HousingIntelligencePanel from '../components/HousingIntelligencePanel.jsx';
+import HousingContactReveal from '../components/HousingContactReveal.jsx';
 import CollectionPicker from '../components/CollectionPicker.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -2861,6 +2862,7 @@ export default function MapPage() {
     >
       <MapView
         places={mapPlaces}
+        showHousingPrices={isHousingMode}
         selectedPlaceId={selectedId}
         hoveredPlaceId={hoveredPlaceId}
         onSelectPlace={togglePlaceSelection}
@@ -3941,9 +3943,18 @@ export default function MapPage() {
                         ? 'Xác minh ' + formatPlaceAge(selectedPlace.housing.lastVerifiedAt)
                         : 'Chưa xác minh gần đây'}
                     </span>
-                    {selectedPlace.housing.contactZalo && <b>Zalo: {selectedPlace.housing.contactZalo}</b>}
+
                   </div>
                 </div>
+              )}
+
+              {isHousingMode && selectedPlace.housing && (
+                <HousingContactReveal
+                  key={selectedPlace.id}
+                  placeId={selectedPlace.id}
+                  contactName={selectedPlace.housing.contactName}
+                  isDemo={String(selectedPlace.slug || '').startsWith('demo-thach-that-2026-')}
+                />
               )}
 
               {openStatus && (
