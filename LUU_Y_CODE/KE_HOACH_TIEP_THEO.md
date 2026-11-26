@@ -35,7 +35,7 @@
 | HOLA-P1-103 | 8 | CHUA_LAM | Kiểm thử từ đăng tin→duyệt→ghim→liên hệ→tạm ẩn→đã giao dịch→báo nghi vấn; không cấp quyền tự xuất bản |
 | HOLA-P1-104 | 9 | DA_MERGE_CHUA_DEPLOY — [PR #109](https://github.com/hoanglamvu04/bandohoalac/pull/109), 9 checks PASS | Đưa tiện ích vào trang chi tiết BĐS, chọn 500 m/1 km/2 km, kết quả POI công khai, loading/error/retry, Playwright mobile; tiếp theo đo độ phủ theo khu và chỉ tính thời gian di chuyển khi có routing thật được xác minh |
 | HOLA-P1-109 | 9 | DA_MERGE_CHUA_DEPLOY — [PR #111](https://github.com/hoanglamvu04/bandohoalac/pull/111), 9/9 checks PASS | Hiện bằng chứng POI trong 8 nhóm trên trang chi tiết và đo số tin có POI/xác minh gần đây theo khu phục vụ trong 1 km. Kiểm toán dữ liệu thật chờ chủ dự án chạy [lệnh trong runbook](../docs/PUBLIC_LAUNCH_P0_RUNBOOK.md#kiểm-toán-tiện-ích-và-bđs-trên-bản-sao-postgresql) trên bản sao chỉ đọc. Routing chỉ triển khai khi có nguồn được xác minh. |
-| HOLA-P1-112 | Housing UX & contact | DANG_LAM — `feat/p1-112-housing-price-pins-contact-reveal-20261126` | Ghim giá bán/thuê trong MapLibre, click mở thẻ BĐS; API liên hệ riêng sau đăng nhập và click, không lộ phone/Zalo trên API công khai; giới hạn rate, test 401/demo/expired, Playwright, build và Security. Sau merge chờ deploy và QA trên web thật. |
+| HOLA-P1-112 | Housing UX & contact | DA_MERGE_CHUA_DEPLOY — [PR #126](https://github.com/hoanglamvu04/bandohoalac/pull/126), 9/9 CI/Security PASS | Ghim giá bán/thuê trong MapLibre, click mở thẻ BĐS; API liên hệ riêng sau đăng nhập và click, không lộ phone/Zalo trên API công khai; giới hạn rate, test 401/demo/expired, Playwright, build và Security. Sau merge chờ deploy và QA trên web thật. |
 | HOLA-P1-111 | DEMO live | DANG_LAM — `feat/production-optin-thachthat-demo-20261126` | Cho phép admin seed 30 tin DEMO trên DB live bằng 2 xác nhận; giữ nhãn DEMO, noindex, không dùng giá giả làm phân vị. Kiểm thử + CI; chỉ chạy VPS sau backup đã kiểm tra. |
 | HOLA-P1-110 | QA DEMO | DANG_LAM — nhánh `feat/p1-110-thach-that-demo-30-20261126` | Seed 30 BĐS mô phỏng vùng Thạch Thất cũ (15 phòng trọ, 15 loại khác), 120 ảnh Unsplash; có giá, diện tích, tiện ích, source DEMO; idempotent, clean riêng; CLI từ chối production, test PG16/PostGIS/CI; sau merge chỉ staging chạy thật, kiểm tra ảnh và map |
 | HOLA-P1-105 | 10 | CHUA_LAM | Rà thực tế kết quả Data Trust V5, false positive trùng tin và khả năng Admin giải quyết backlog |
@@ -80,7 +80,7 @@
 
 - **Code:** giá hiện ngay trên ghim BĐS, giữ cụm ở zoom thấp; số liên hệ chỉ lấy sau login và thao tác chủ động. Liên hệ DEMO ghi rõ không có số thật.
 - **Bảo mật:** các API công khai phải ẩn phone/Zalo của BĐS; không chỉ dùng che chữ ở frontend. Hạn mức reveal theo tài khoản; không log/analytics số.
-- **Nghiệm thu:** Backend PG16/PostGIS, Playwright và CodeQL/Security xanh; trên production kiểm tra 401 khi ẩn danh và không thấy phone trong Network JSON. Tiếp tục backlog xác minh người đăng, chi phí vào ở, lịch xem nhà và routing.
+- **Nghiệm thu code:** PR #126 đã merge `9880919a514d36b0855cc44c979cb8356ac8220c`, 9/9 CI/Security PASS. **Chưa nghiệm thu VPS:** cần pull/build/reload đúng backend và kiểm tra 401 khi ẩn danh, số không có trong public JSON. Backlog: xác minh chủ nhà/môi giới thật, chi phí vào ở, lịch hẹn xem và routing.
 - **Giữ nguyên:** WA-005 #92 chờ duyệt, P0 backup/restore và mobile Android/iOS chưa nghiệm thu.
 
 ## Công việc gần nhất được ưu tiên

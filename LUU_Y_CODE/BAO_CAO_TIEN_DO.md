@@ -4,12 +4,12 @@
 
 ## 26/11/2026 GMT+7 — HOLA-P1-112: ghim giá BĐS, liên hệ sau đăng nhập
 
-- **Baseline:** `main` `a034b2d75a061c6bf4c1f3d462522b611c715953` (PR #124 đã merge). Nhánh `feat/p1-112-housing-price-pins-contact-reveal-20261126`, **ĐANG LÀM — chờ CI/merge**, chưa deploy VPS.
+- **Đã merge:** [PR #126](https://github.com/hoanglamvu04/bandohoalac/pull/126) vào `main` SHA `9880919a514d36b0855cc44c979cb8356ac8220c`, **9/9 CI/Security checks PASS** trên head PR (frontend build, Playwright 67/67, backend PG16/PostGIS, CodeQL, security, dependency, shell, repository safety, handoff). **DA_MERGE_CHUA_DEPLOY** — chưa pull/build/reload VPS.
 - **Ghim bản đồ:** trong HOLA HOUSING hiển thị giá thuê/bán bằng nhãn MapLibre, giữ gom cụm, click/hover như pin thường. Giá rỗng vẫn để biểu tượng mặc định; không áp giá sang lớp POI khác.
 - **Liên hệ:** API công khai BĐS không trả `phone` và `contactZalo` trong place/housing; API riêng `GET /api/housing/:placeId/contact` kiểm tra session, published+active+expiry, hạn mức 12 lượt/phút/tài khoản, no-store; demo không trả số giả. Frontend login rồi click mới gọi; có hủy request khi đổi tin/logout.
 - **Mở rộng:** thẻ trên map, trang chi tiết mới/cũ có người đăng và nút hiện số; giữ địa điểm không phải BĐS như hiện tại. Không tự đánh dấu chủ nhà đã xác minh.
-- **Tests:** bổ sung backend unit HTTP 401, data redaction và validation; Playwright ghim giá, ẩn số khi chưa login, click reveal khi login; tài liệu `docs/HOUSING_PRICE_PINS_CONTACT_REVEAL_P1_112.md`. **CI chưa có bằng chứng PASS ở thời điểm ghi.**
-- **Bàn giao:** kiểm thử PG16/PostGIS, Playwright, CodeQL/Security, merge nếu xanh, cập nhật trạng thái và hướng dẫn build/reload riêng HOLA Maps; không tự deploy hoặc thu thập PII.
+- **Tests:** backend kiểm tra 401, redaction, hạn chế liên hệ của tin hết hiệu lực và DEMO; Playwright kiểm tra ghim giá, login gate, click reveal và test cũ phù hợp chính sách mới. **9/9 CI/Security checks PASS** trên PR #126; không thay bằng bằng chứng deploy thực tế.
+- **Bàn giao VPS:** người vận hành kéo `main`, build `frontend`, reload **chỉ** tiến trình HOLA Maps API, kiểm tra số ẩn trong Network JSON và `GET /api/housing/:id/contact` trả 401 khi chưa đăng nhập. Chưa SSH/deploy, chưa ghi/đọc số điện thoại production trong cuộc trò chuyện này.
 
 ## 26/11/2026 GMT+7 — HOLA-P1-111: mở seed demo trên production theo yêu cầu
 

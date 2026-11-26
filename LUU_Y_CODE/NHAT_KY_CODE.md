@@ -2,6 +2,14 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 26/11/2026 GMT+7 — HOLA-P1-112 — xác minh merge ghim giá và reveal theo đăng nhập
+
+- **Đã merge:** [PR #126](https://github.com/hoanglamvu04/bandohoalac/pull/126) vào `main` `9880919a514d36b0855cc44c979cb8356ac8220c`; 9/9 CI/Security checks PASS (bao gồm PG16/PostGIS, Playwright 67/67, CodeQL).
+- **Code:** MapLibre hiện nhãn giá thuê/bán tại layer BĐS, click/hover/chọn tin giữ nguyên, clusters hoạt động; ContactReveal trong inspector + trang chi tiết cũ/mới. Phone/Zalo BĐS không có trong API công khai, chỉ trả ở endpoint authenticated, rate limited, explicit click; DEMO không có số thật; login đưa về đúng URL cũ.
+- **Test:** xử lý tương thích E2E với luật ẩn số, và tránh kiểm tra nhãn giá trong lúc MapLibre thay style; lượt CI cuối tất cả PASS.
+- **Chưa làm:** chưa SSH hoặc reload PM2, chưa kiểm chứng thay đổi trên website production; không kết luận data live không lộ số cho đến khi reload API thực tế.
+- **Tiếp theo:** chủ VPS kéo main, build frontend, reload riêng backend HOLA Maps, kiểm tra 401 chưa login và luồng login/hiện số, đo mobile thực. Không thay WA-005.
+
 ## 26/11/2026 GMT+7 — HOLA-P1-112 — BĐS ghim giá và contact reveal
 
 - **Baseline:** main `a034b2d75a061c6bf4c1f3d462522b611c715953`; PR #124 đã merge, #125 vẫn là PR tài liệu chờ CI ở thời điểm bắt đầu.
