@@ -1,5 +1,5 @@
 import { SUBTYPES, FURNISHINGS } from '../lib/propertyDetails.js';
-import { AreaProfile,HousingAreaResults,RouteNearbyPlaces } from '../components/SpatialDiscovery.jsx';
+import { AreaProfile,HousingAreaResults,RouteNearbyPlaces,LocalActivityFeed } from '../components/SpatialDiscovery.jsx';
 import { searchHousingArea } from '../services/api.js';
 import MapSavedViews from '../components/MapSavedViews.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -3570,6 +3570,7 @@ export default function MapPage() {
           <HousingAreaResults result={areaResult} onClear={clearHousingArea}/>
         </div>}
         {!inEmbed&&<AreaProfile viewport={viewport}/>}
+        {!inEmbed&&<LocalActivityFeed mapData={mapData}/>}
         {!inEmbed && <MapSavedViews activeLayers={activeLayers} validLayers={LAYERS.map(x=>x.type)} onRestoreLayers={setActiveLayers}/>}
         <TravelTimeDiscovery
           defaultCategory={isHousingMode ? 'bat-dong-san' : isFoodMode ? 'an-uong' : 'all'}

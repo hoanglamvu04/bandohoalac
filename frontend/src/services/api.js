@@ -992,3 +992,12 @@ export function getHousingMarketTrend(params,options={}){
 export function searchHousingArea(payload){return unwrap(client.post('/housing/area-search',payload));}
 export function searchRouteCorridor(payload){return unwrap(client.post('/directions/corridor',payload));}
 export function getMapAreaSummary(params){return unwrap(client.get('/map-layers/area-summary',{params}));}
+
+export const getBusinessCatalog=(id)=>unwrap(client.get('/business/places/'+encodeURIComponent(id)+'/services'));
+export const getManagedBusinessCatalog=(id)=>unwrap(client.get('/business/places/'+encodeURIComponent(id)+'/manage'));
+export const createBusinessService=(id,payload)=>unwrap(client.post('/business/places/'+encodeURIComponent(id)+'/services',payload));
+export const setBusinessServiceActive=(id,sid,active)=>unwrap(client.patch('/business/places/'+encodeURIComponent(id)+'/services/'+encodeURIComponent(sid),{active}));
+export const createBusinessRequest=(id,startsAt)=>unwrap(client.post('/business/services/'+encodeURIComponent(id)+'/requests',{startsAt}));
+export const getMyBusinessRequests=(id)=>unwrap(client.get('/business/places/'+encodeURIComponent(id)+'/my-requests'));
+export const getBusinessInbox=(id)=>unwrap(client.get('/business/places/'+encodeURIComponent(id)+'/inbox'));
+export const actBusinessRequest=(id,action)=>unwrap(client.patch('/business/requests/'+encodeURIComponent(id),{action}));

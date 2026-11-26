@@ -1,3 +1,4 @@
+import {PartnerCatalogManager} from '../components/BusinessCatalog.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
@@ -740,6 +741,7 @@ export default function PartnerDashboard() {
         <div><CheckCircle2 size={19} /><span><b>{data.stats?.vouchersUsed || 0}</b><small>Đã dùng</small></span></div>
       </section>
 
+      <PartnerCatalogManager places={data.managedPlaces||[]}/>
       {ownerPartners.length > 0 && <PartnerReconciliationPanel />}
 
       <section className="partner-redeem-panel partner-voucher-scanner">
