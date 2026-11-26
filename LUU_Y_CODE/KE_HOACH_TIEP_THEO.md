@@ -35,7 +35,7 @@
 | HOLA-P1-103 | 8 | CHUA_LAM | Kiểm thử từ đăng tin→duyệt→ghim→liên hệ→tạm ẩn→đã giao dịch→báo nghi vấn; không cấp quyền tự xuất bản |
 | HOLA-P1-104 | 9 | DA_MERGE_CHUA_DEPLOY — [PR #109](https://github.com/hoanglamvu04/bandohoalac/pull/109), 9 checks PASS | Đưa tiện ích vào trang chi tiết BĐS, chọn 500 m/1 km/2 km, kết quả POI công khai, loading/error/retry, Playwright mobile; tiếp theo đo độ phủ theo khu và chỉ tính thời gian di chuyển khi có routing thật được xác minh |
 | HOLA-P1-109 | 9 | DA_MERGE_CHUA_DEPLOY — [PR #111](https://github.com/hoanglamvu04/bandohoalac/pull/111), 9/9 checks PASS | Hiện bằng chứng POI trong 8 nhóm trên trang chi tiết và đo số tin có POI/xác minh gần đây theo khu phục vụ trong 1 km. Kiểm toán dữ liệu thật chờ chủ dự án chạy [lệnh trong runbook](../docs/PUBLIC_LAUNCH_P0_RUNBOOK.md#kiểm-toán-tiện-ích-và-bđs-trên-bản-sao-postgresql) trên bản sao chỉ đọc. Routing chỉ triển khai khi có nguồn được xác minh. |
-| HOLA-P1-110 | QA DEMO | DANG_LAM — nhánh `feat/p1-110-thach-that-demo-30-20261126` | Seed 30 BĐS mô phỏng vùng Thạch Thất cũ (15 phòng trọ, 15 loại khác), 120 ảnh Unsplash; có giá, diện tích, tiện ích, source DEMO; idempotent, clean riêng; CLI từ chối production, test PG16/PostGIS/CI; sau merge chỉ staging chạy thật, kiểm tra ảnh và map |
+| HOLA-P1-110 | QA DEMO | DA_MERGE_CHUA_DEPLOY — [PR #122](https://github.com/hoanglamvu04/bandohoalac/pull/122), 9/9 CI PASS | Seed 30 BĐS mô phỏng vùng Thạch Thất cũ (15 phòng trọ, 15 loại khác), 120 ảnh Unsplash; có giá, diện tích, tiện ích, source DEMO; idempotent, clean riêng; CLI từ chối production, test PG16/PostGIS/CI; sau merge chỉ staging chạy thật, kiểm tra ảnh và map |
 | HOLA-P1-105 | 10 | CHUA_LAM | Rà thực tế kết quả Data Trust V5, false positive trùng tin và khả năng Admin giải quyết backlog |
 | HOLA-P1-106 | 11–12 | CHUA_LAM | Kiểm thử CTV và Partner từ đăng ký, RBAC, duyệt, xác minh, báo cáo, quyền sở hữu; kiểm tra dữ liệu của từng tổ chức |
 | HOLA-P1-107 | 13 | CHUA_LAM | Audit sitemap/index/canonical, trang địa phương, ảnh quyền sử dụng; chỉ xuất bản trang SEO đạt điều kiện dữ liệu thật |
@@ -70,7 +70,7 @@
 
 ## 26/11/2026 — HOLA-P1-110: DEMO QA Thạch Thất cũ
 
-**Mục tiêu code:** fixture 30 tin / 15 phòng trọ, 4 ảnh minh họa mỗi tin, giá/diện tích/phòng trống rõ, không chứa dữ liệu bất động sản hoặc điện thoại thật. Seed + clean theo namespace, idempotent, có xác nhận và từ chối DB production. Nhánh `feat/p1-110-thach-that-demo-30-20261126` chờ CI.
+**Đã merge mã:** [PR #122](https://github.com/hoanglamvu04/bandohoalac/pull/122) tại `e70b9ec672be`, 9/9 checks PASS, backend 242/242. Fixture 30 tin / 15 phòng trọ, 4 ảnh minh họa mỗi tin, giá/diện tích/phòng trống rõ, không chứa dữ liệu bất động sản hoặc điện thoại thật. Seed + clean theo namespace, idempotent, có xác nhận và từ chối DB production. **Chưa triển khai/seed trên staging/VPS.**
 
 **Phụ thuộc ngoài repo:** cần người vận hành tạo database test/staging đã migrate, chạy CLI và kiểm tra 120 URL hình bên ngoài trên UI. Không được dùng demo trong báo cáo độ phủ thật, SEO hoặc production. Sau đó kiểm thử filter giá, 15 room rental, gallery và xóa demo không mất dữ liệu thật. Các P0/#115/#118/WA-005 vẫn giữ nguyên.
 
