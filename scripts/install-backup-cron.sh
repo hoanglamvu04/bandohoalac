@@ -4,7 +4,7 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-/var/www/bandohoalac}"
 # Cron entries are unquoted shell commands; refuse ambiguous or unsafe paths.
 if [[ "$APP_DIR" == *[[:space:]]* || "$APP_DIR" == *';'* ||
-      "$APP_DIR" == *'&'* || "$APP_DIR" == *'|'* || "$APP_DIR" == *'\`'* ]]; then
+      "$APP_DIR" == *'&'* || "$APP_DIR" == *'|'* || "$APP_DIR" == *'`'* ]]; then
   echo "[backup] APP_DIR contains unsupported characters." >&2
   exit 1
 fi
