@@ -2,6 +2,14 @@
 
 > **Chốt kiểm tra:** 16:57 25/11/2026 GMT+7. Xác minh `main` tại `c02640c9ec5399c003f3e1a7fd9115921e5a25d5` sau [PR #113](https://github.com/hoanglamvu04/bandohoalac/pull/113). [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817673) và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817721) PASS trên head PR.
 
+## 26/11/2026 GMT+7 — HOLA-P1-111: mở seed demo trên production theo yêu cầu
+
+- **Yêu cầu:** chủ website chấp thuận đưa 30 tin giả (15 nhà trọ/phòng trọ) lên DB live phục vụ QA, công khai tên/giá/ảnh demo.
+- **Trạng thái:** nhánh `feat/production-optin-thachthat-demo-20261126`, chờ PR/CI/merge. **Chưa truy cập database VPS, chưa seed hoặc reload PM2.**
+- **Code:** hai xác nhận cho database live (`HOLA_DEMO_LIVE_CONFIRM` và `HOLA_DEMO_SEED_CONFIRM`), giữ nguyên NODE_ENV và so khớp DB thực, transaction/cleanup an toàn; trang chi tiết demo `noindex`, loại ảnh/giá demo khỏi SEO địa phương và phân vị giá.
+- **Kiểm thử:** bổ sung unit production opt-in/cleanup, SEO noindex và market query, CI/PG16/PostGIS/Playwright đang chờ chạy.
+- **Tiếp:** merge sau CI; chủ VPS backup, kéo main, reload API nếu thay đổi backend, chạy seed có xác nhận, kiểm tra 30 tin và ảnh, ghi nhận trạng thái production.
+
 ## 26/11/2026 GMT+7 — HOLA-P1-110: 30 bất động sản DEMO huyện Thạch Thất cũ
 
 - **Baseline:** `main` `18cf197b2368828377f5cecc1efbb2535a8b8748` sau [PR #121](https://github.com/hoanglamvu04/bandohoalac/pull/121), CI/Security trên PR #121 PASS. Nhánh: `feat/p1-110-thach-that-demo-30-20261126`; **ĐANG LÀM, chờ PR/CI/merge**, chưa chạy seed lên VPS.

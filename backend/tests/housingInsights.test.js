@@ -32,6 +32,7 @@ test('price distribution only counts active published property asking prices; su
     async query(sql, params) {
       queries.push({ sql, params });
       assert.match(sql, /p.status = 'PUBLISHED'/);
+      assert.match(sql, /p.external_source IS DISTINCT FROM 'HOLA_THACH_THAT_DEMO_2026'/);
       assert.match(sql, /hl.listing_status = 'ACTIVE'/);
       assert.match(sql, /hl.expires_at/);
       assert.match(sql, /PERCENTILE_CONT/);

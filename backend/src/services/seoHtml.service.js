@@ -180,6 +180,7 @@ function renderPlaceCard(place) {
 }
 
 export function renderPlaceSeoPage(place) {
+  const isDemo = String(place.slug || '').startsWith('demo-thach-that-2026-');
   const canonical = SITE_URL + '/dia-diem/' + encodeURIComponent(place.slug);
   const description = compactText(
     place.description,
@@ -229,7 +230,7 @@ export function renderPlaceSeoPage(place) {
   const facts = [
     place.address ? '<div><dt>Địa chỉ / khu vực</dt><dd>' + escapeHtml(place.address) + '</dd></div>' : '',
     place.openingHours ? '<div><dt>Giờ hoạt động</dt><dd>' + escapeHtml(place.openingHours) + '</dd></div>' : '',
-    place.phone ? '<div><dt>Điện thoại</dt><dd><a href="tel:' + escapeHtml(place.phone) + '">' + escapeHtml(place.phone) + '</a></dd></div>' : '',
+    place.phone && !isDemo ? '<div><dt>Điện thoại</dt><dd><a href="tel:' + escapeHtml(place.phone) + '">' + escapeHtml(place.phone) + '</a></dd></div>' : '',
     place.website && safePublicUrl(place.website) ? '<div><dt>Website</dt><dd><a href="' + escapeHtml(safePublicUrl(place.website)) + '" rel="nofollow noopener" target="_blank">' + escapeHtml(place.website) + '</a></dd></div>' : '',
     place.lastVerifiedAt ? '<div><dt>Xác minh gần nhất</dt><dd>' + escapeHtml(formatDate(place.lastVerifiedAt)) + '</dd></div>' : ''
   ].filter(Boolean).join('');
@@ -272,7 +273,8 @@ export function renderPlaceSeoPage(place) {
     description,
     canonical,
     image: coverImage,
-    jsonLd,
+    jsonLd: isDemo ? null : jsonLd,
+    noindex: isDemo,
     body
   });
 }

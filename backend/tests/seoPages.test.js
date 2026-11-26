@@ -383,3 +383,18 @@ test('SEO: expired or paused housing cannot remain indexable before nightly arch
     if (placeId) await pool.query('DELETE FROM places WHERE id=$1', [placeId]);
   }
 });
+
+test('SEO: public demo is noindex and does not promote fictitious telephone or Place schema', () => {
+  const html = renderPlaceSeoPage({
+    id:17, slug:'demo-thach-that-2026-01',
+    name:'[DEMO 01] Phòng trọ giả lập',
+    description:'[DEMO - KHÔNG PHẢI TIN THẬT] Ảnh minh họa',
+    categorySlug:'bat-dong-san', address:'Khu vực Thạch Hòa',
+    lat:21.0131, lng:105.5202, phone:'0000000001',
+    images:['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2']
+  });
+  assert.match(html, /<meta name="robots" content="noindex,follow"/);
+  assert.match(html, /KHÔNG PHẢI TIN THẬT/);
+  assert.doesNotMatch(html, /application\/ld\+json/);
+  assert.doesNotMatch(html, /href="tel:/);
+});
