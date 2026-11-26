@@ -2,6 +2,15 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 26/11/2026 GMT+7 — HOLA-P0-004 / HOLA-P1-102 — preflight bản sao và marker clustering
+
+- **Trước:** main `de134e4c94bcad7bf91284d383cc7e5c67933f89`, nhánh bảo mật #119 đã sửa cron và đang chờ CI; hai đợt này được xếp trên cùng nhánh `feat/p0-004-p1-102-audit-cluster-20261126`.
+- **Code:** `backend/src/scripts/auditCopyPreflight.js`, `backend/tests/auditCopyPreflight.test.js`, runbook kiểm toán, `MapView.jsx` gom ghim WebGL, Playwright ghim dày và docs nghiệm thu mobile.
+- **Nghiệm thu mã nguồn:** chờ CI backend/PostGIS, Playwright, CodeQL, dependency và handoff. Không viết PASS trước khi có chứng cứ.
+- **Dữ liệu thật:** chưa chạy trên PostgreSQL copy; sẽ yêu cầu xác nhận bằng bản sao và tài khoản chỉ đọc, không gửi kết nối ra Git.
+- **Mobile thật:** chưa đo P50/P95/hardware, phải làm ở Android/iOS và mạng chậm.
+- **Bàn giao:** hoàn tất kiểm thử và merge sau #119; giữ issue #115, #117 mở cho các gate vận hành chưa có bằng chứng.
+
 ## 26/11/2026 GMT+7 — HOLA-P0-005 — sửa fail-closed backup cron và tài liệu bảo vệ main
 
 - **Trước:** main `de134e4c94bcad7bf91284d383cc7e5c67933f89` CI/Security PASS, `main` chưa protected.

@@ -37,6 +37,8 @@ const ROUTE_HAZARD_SOURCE_ID = 'hola-route-hazards';
 const TRIP_STOP_SOURCE_ID = 'hola-trip-stops';
 const COVERAGE_SOURCE_ID = 'hola-service-areas';
 const PLACE_SOURCE_ID = 'hola-place-points';
+const PLACE_CLUSTER_CIRCLE_ID = 'hm-place-cluster-circle';
+const PLACE_CLUSTER_LABEL_ID = 'hm-place-cluster-count';
 const PLACE_POINT_LAYER_ID = 'hm-place-point';
 const PLACE_POINT_LABEL_LAYER_ID = 'hm-place-point-label';
 const PLACE_NAME_LABEL_LAYER_ID = 'hm-place-name-label';
@@ -350,7 +352,49 @@ function addPlaceLayers(map, places = []) {
   } else {
     map.addSource(PLACE_SOURCE_ID, {
       type: 'geojson',
-      data
+      data,
+      // Aggregate overlapping public pins on mobile instead of rendering
+      // dozens of identical symbols at lower zoom levels.
+      cluster: true,
+      clusterRadius: 48,
+      clusterMaxZoom: 14
+    });
+  }
+
+  // Dedicated WebGL cluster layers. A cluster represents several public
+  // records and must never behave as an individual approved place.
+  if (!map.getLayer(PLACE_CLUSTER_CIRCLE_ID)) {
+    map.addLayer({
+      id: PLACE_CLUSTER_CIRCLE_ID,
+      type: 'circle',
+      source: PLACE_SOURCE_ID,
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-radius': ['step', ['get', 'point_count'], 20, 25, 25, 75, 30],
+        'circle-color': ['step', ['get', 'point_count'], '#27725c', 25, '#1d5a48', 75, '#143c32'],
+        'circle-stroke-color': '#fff',
+        'circle-stroke-width': 2,
+        'circle-opacity': 0.93
+      }
+    });
+  }
+  if (!map.getLayer(PLACE_CLUSTER_LABEL_ID)) {
+    map.addLayer({
+      id: PLACE_CLUSTER_LABEL_ID,
+      type: 'symbol',
+      source: PLACE_SOURCE_ID,
+      filter: ['has', 'point_count'],
+      layout: {
+        'text-field': ['get', 'point_count_abbreviated'],
+        'text-size': 12,
+        'text-allow-overlap': true,
+        'text-ignore-placement': true
+      },
+      paint: {
+        'text-color': '#fff',
+        'text-halo-color': '#153c31',
+        'text-halo-width': 0.5
+      }
     });
   }
 
@@ -361,6 +405,7 @@ function addPlaceLayers(map, places = []) {
       id: PLACE_POINT_LAYER_ID,
       type: 'circle',
       source: PLACE_SOURCE_ID,
+      filter: ['!', ['has', 'point_count']],
       paint: {
         'circle-radius': [
           'interpolate',
@@ -413,6 +458,7 @@ function addPlaceLayers(map, places = []) {
       id: PLACE_POINT_LABEL_LAYER_ID,
       type: 'symbol',
       source: PLACE_SOURCE_ID,
+      filter: ['!', ['has', 'point_count']],
       layout: {
         'icon-image': ['coalesce', ['get', 'markerIcon'], 'hm-marker-default'],
         'icon-size': [
@@ -443,6 +489,7 @@ function addPlaceLayers(map, places = []) {
       id: PLACE_NAME_LABEL_LAYER_ID,
       type: 'symbol',
       source: PLACE_SOURCE_ID,
+      filter: ['!', ['has', 'point_count']],
       minzoom: 15.4,
       layout: {
         'text-field': ['get', 'name'],
@@ -1179,6 +1226,27 @@ export default function MapView({
         });
 
         map.on('moveend', notifyViewport);
+
+        const expandPlaceCluster = (event) => {
+          const coords = event.features?.[0]?.geometry?.coordinates;
+          if (!Array.isArray(coords) || coords.length !== 2 ||
+              !coords.every(Number.isFinite)) return;
+          // This is an explicit tap; do not change camera just because
+          // a search result or popup was opened/closed.
+          map.easeTo({
+            center: coords,
+            zoom: Math.min(map.getZoom() + 2, 15.5),
+            duration: 260,
+            essential: true
+          });
+        };
+        map.on('click', PLACE_CLUSTER_CIRCLE_ID, expandPlaceCluster);
+        map.on('mouseenter', PLACE_CLUSTER_CIRCLE_ID, () => {
+          map.getCanvas().style.cursor = 'zoom-in';
+        });
+        map.on('mouseleave', PLACE_CLUSTER_CIRCLE_ID, () => {
+          map.getCanvas().style.cursor = '';
+        });
 
         const selectPlacePoint = (event) => {
           const feature = event.features?.[0];
