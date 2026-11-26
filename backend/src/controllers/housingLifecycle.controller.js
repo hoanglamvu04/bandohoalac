@@ -8,7 +8,7 @@ export const listMyHousing = asyncHandler(async (req, res) => {
 });
 
 export const manageMyHousing = asyncHandler(async (req, res) => {
-  const result = await managePropertyListing(Number(req.params.placeId), req.user, req.body.action);
+  const result = await managePropertyListing(Number(req.params.placeId), req.user, req.body.action, {availableRooms:req.body.availableRooms});
   await writeAuditLog({
     actorUserId: req.user.id,
     action: 'HOUSING_LISTING_' + req.body.action,

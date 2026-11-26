@@ -2,6 +2,11 @@
 
 > **Rà soát:** 16:57 25/11/2026 GMT+7, `main` `c02640c9ec5399c003f3e1a7fd9115921e5a25d5` sau [PR #113](https://github.com/hoanglamvu04/bandohoalac/pull/113).
 
+## 27/11/2026 GMT+7 — P1: trạng thái #128/#129 và sửa race MapLibre
+
+- PR #128 đã merge `19b13daecdbf1215e58d635f59ed57267216b894`, 9/9 CI/Security PASS; chưa deploy. PR #129 đã retarget `main`; lần CI đầu 8/9 checks PASS, Playwright 69 PASS/1 FAIL tại ghim giá (run 45869287236), không merge khi còn đỏ.
+- Sửa vòng đời MapLibre: lấy danh sách mới nhất lúc load, không bỏ qua cập nhật source khi tile khác đang tải; khóa cập nhật chỉ trong lúc đổi style và phục hồi từ refs. Test kiểm tra GeoJSON thật và binding text-field của layer giá, không phụ thuộc tile cache đang tải. Chờ CI lại; chưa nghiệm thu production.
+
 ## Quy ước
 
 - Mỗi hạng mục có **ID ổn định**, phạm vi, tiêu chí nghiệm thu, blocker và trạng thái.
@@ -102,9 +107,9 @@ Khi bắt đầu task: gắn ID, đổi sang `DANG_LAM` và ghi PR/dự kiến k
 |---|---|---|
 | HOLA-P1-113 | DANG_LAM | Calculator giá thuê/cọc/điện/nước/xe, không đánh đồng giá chưa biết với 0; mobile, test tính toán. |
 | HOLA-P1-114 | DANG_LAM | Vai trò người đăng tự khai, qua moderation; không tự cấp xác minh chủ sở hữu. Hồ sơ xác minh đầy đủ cần quy trình bằng chứng riêng. |
-| HOLA-P1-115 | CHUA_LAM | Lịch xem nhà, requester/owner, trạng thái và chống spam, không lộ PII. |
-| HOLA-P1-116 | DANG_LAM | Dữ liệu phòng trống trên tin mới và mốc xác nhận; bổ sung cập nhật room count cho tin cũ, giữ luồng gia hạn hiện có. |
-| HOLA-P1-117 | CHUA_LAM | Danh sách khách quan tâm/lịch hẹn riêng theo quyền. |
-| HOLA-P1-118 | CHUA_LAM | Thống kê tin đăng có consent và phân quyền. |
+| HOLA-P1-115 | DANG_LAM | API, UI lịch xem, requester/owner, trạng thái, chống spam, PG + Playwright; chờ CI. |
+| HOLA-P1-116 | DANG_LAM | Tin mới + cập nhật room count khi gia hạn, 0 = FULL; hủy lịch tương lai; chờ CI. |
+| HOLA-P1-117 | DANG_LAM | Danh sách lịch khách tới tin của tôi/lịch tôi gửi, trạng thái và RBAC. |
+| HOLA-P1-118 | DANG_LAM (một phần) | Đếm yêu cầu/lịch ACCEPTED 30 ngày từ giao dịch nghiệp vụ; views/contact metrics chưa triển khai vì cần consent, chống spam và chính sách giữ dữ liệu. |
 
 Các mục P1 trước đây và P0 blockers giữ nguyên; không coi việc merge các module mới là nghiệm thu toàn bộ P1.

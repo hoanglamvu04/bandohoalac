@@ -227,7 +227,7 @@ export default function ProfilePage() {
           <span>
             <small>BẤT ĐỘNG SẢN · TIN CỦA TÔI</small>
             <b>Quản lý tin đang bán hoặc cho thuê</b>
-            <em><ShieldCheck size={13} /> Xác nhận hiệu lực, tạm ẩn và cập nhật giá</em>
+            <em><ShieldCheck size={13} /> Xác nhận hiệu lực, cập nhật giá và lịch xem nhà</em>
           </span>
           <ChevronRight size={20} />
         </Link>

@@ -404,7 +404,10 @@ function applyPlaceInteractionState(map, selectedPlaceId, hoveredPlaceId) {
 }
 
 function addPlaceLayers(map, places = [], showHousingPrices = false) {
-  if (!map?.isStyleLoaded()) return;
+  // Callers gate on the style lifecycle. isStyleLoaded() also waits for
+  // unrelated sources/tiles, and silently dropping updates during those loads
+  // leaves the price/POI source stale until another user interaction.
+  if (!map) return;
 
   ensurePlaceMarkerImages(map);
   ensureHousingPriceBadges(map);
@@ -1151,6 +1154,7 @@ export default function MapView({
   fitPlacesKey = ''
 }) {
   const mapRef = useRef(null);
+  const placeStyleReadyRef = useRef(false);
   const maplibreRef = useRef(null);
   const containerRef = useRef(null);
   const userMarkerRef = useRef(null);
@@ -1279,9 +1283,10 @@ export default function MapView({
         };
 
         map.on('load', () => {
+          placeStyleReadyRef.current = true;
           addCoverage(map);
-          addDataLayers(map, mapData);
-          addPlaceLayers(map, validPlaces, latestShowHousingPricesRef.current);
+          addDataLayers(map, latestMapDataRef.current);
+          addPlaceLayers(map, latestPlacesRef.current, latestShowHousingPricesRef.current);
           applyPlaceInteractionState(
             map,
             latestSelectedPlaceIdRef.current,
@@ -1490,6 +1495,7 @@ export default function MapView({
       if (styleSwitchTimerRef.current) window.clearTimeout(styleSwitchTimerRef.current);
       if (locationNoticeTimerRef.current) window.clearTimeout(locationNoticeTimerRef.current);
       userMarkerRef.current?.remove();
+      placeStyleReadyRef.current = false;
       mapRef.current?.remove();
       mapRef.current = null;
       maplibreRef.current = null;
@@ -1595,6 +1601,7 @@ export default function MapView({
       restoreHandler = () => {
         if (switchId !== styleSwitchIdRef.current || !mapRef.current) return;
 
+        placeStyleReadyRef.current = true;
         addCoverage(map);
         addDataLayers(map, latestMapDataRef.current);
         addPlaceLayers(map, latestPlacesRef.current, latestShowHousingPricesRef.current);
@@ -1624,9 +1631,11 @@ export default function MapView({
       map.once('style.load', restoreHandler);
 
       try {
+        placeStyleReadyRef.current = false;
         map.setStyle(nextStyle, { diff: false });
       } catch (error) {
         map.off('style.load', restoreHandler);
+        placeStyleReadyRef.current = Boolean(map.isStyleLoaded());
         console.error('[Hola Maps] basemap switch failed', error);
         setMapError('Không thể chuyển chế độ bản đồ. Hãy thử lại.');
       }
@@ -1663,7 +1672,7 @@ export default function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !interactiveReady) return;
+    if (!map || !interactiveReady || !placeStyleReadyRef.current) return;
     addPlaceLayers(map, validPlaces, showHousingPrices);
   }, [validPlaces, showHousingPrices, interactiveReady]);
 

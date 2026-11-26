@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
+import { createViewing, listViewings, manageViewing } from '../controllers/housingViewings.controller.js';
 import { getPublicMarketInsights, getPublicHousingAmenities } from '../controllers/housingInsights.controller.js';
 import {
   getHousing,
@@ -17,7 +18,7 @@ import {
   housingListQuerySchema, housingManageActionSchema,
   createSavedHousingSchema, updateSavedHousingStatusSchema,
   housingCompareQuerySchema, savedHousingSearchIdSchema,
-  marketInsightsQuerySchema, housingAmenitiesQuerySchema
+  marketInsightsQuerySchema, housingAmenitiesQuerySchema, createHousingViewingSchema, manageHousingViewingSchema
 } from '../validators/housing.validators.js';
 
 const router = Router();
@@ -42,6 +43,12 @@ router.patch('/saved-searches/:id', authenticate,
   validateBody(updateSavedHousingStatusSchema), toggleMySavedHousingSearch);
 router.delete('/saved-searches/:id', authenticate, removeMySavedHousingSearch);
 router.get('/mine', authenticate, listMyHousing);
+const viewingLimiter=rateLimit({windowMs:60_000,limit:10,standardHeaders:true,legacyHeaders:false,
+  keyGenerator:req=>'housing-viewing-'+req.user.id,
+  message:{error:'Bạn thao tác lịch xem quá nhanh. Vui lòng thử lại.'}});
+router.get('/viewings',authenticate,listViewings);
+router.patch('/viewings/:id',authenticate,viewingLimiter,validateBody(manageHousingViewingSchema),manageViewing);
+router.post('/:placeId/viewings',authenticate,viewingLimiter,validateBody(createHousingViewingSchema),createViewing);
 const contactRevealLimiter = rateLimit({
   windowMs: 60_000, limit: 12, standardHeaders: true, legacyHeaders: false,
   keyGenerator: (req) => 'housing-member-' + req.user.id,

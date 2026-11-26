@@ -13,7 +13,11 @@ export async function listMyPropertyListings(userId) {
     `SELECT p.id, p.name, p.slug, p.address, p.status AS place_status,
             p.updated_at, hl.listing_type, hl.listing_status, hl.expires_at,
             hl.last_confirmed_at, hl.property_type, hl.total_price_vnd,
-            hl.monthly_rent, hl.area_m2
+            hl.monthly_rent, hl.area_m2, hl.available_rooms, hl.total_rooms,
+            (SELECT COUNT(*)::int FROM housing_viewing_requests v WHERE v.place_id=p.id AND v.recipient_id=$1
+              AND v.created_at>=NOW()-INTERVAL '30 days') AS viewing_requests_30d,
+            (SELECT COUNT(*)::int FROM housing_viewing_requests v WHERE v.place_id=p.id AND v.recipient_id=$1
+              AND v.created_at>=NOW()-INTERVAL '30 days' AND v.status='ACCEPTED') AS accepted_viewings_30d
        FROM places p
        JOIN categories c ON c.id = p.category_id AND c.slug = 'bat-dong-san'
        JOIN housing_listings hl ON hl.place_id = p.id
@@ -36,15 +40,20 @@ export async function listMyPropertyListings(userId) {
     propertyType: row.property_type,
     totalPriceVnd: money(row.total_price_vnd),
     monthlyRentVnd: money(row.monthly_rent),
-    areaM2: money(row.area_m2)
+    areaM2: money(row.area_m2),
+    availableRooms: money(row.available_rooms),
+    totalRooms: money(row.total_rooms),
+    viewingRequests30d: Number(row.viewing_requests_30d)||0,
+    acceptedViewings30d: Number(row.accepted_viewings_30d)||0
   }));
 }
 
-export async function managePropertyListing(placeId, actor, action) {
+export async function managePropertyListing(placeId, actor, action, {availableRooms} = {}) {
+  if (availableRooms !== undefined && (action !== 'CONFIRM_ACTIVE' || !Number.isInteger(availableRooms) || availableRooms < 0 || availableRooms > 10000)) throw new AppError('Số phòng trống không hợp lệ.',400);
   const result = await withTransaction(async (client) => {
     const { rows } = await client.query(
       `SELECT p.id, p.created_by, p.status AS place_status,
-              hl.listing_type, hl.listing_status, hl.expires_at
+              hl.listing_type, hl.listing_status, hl.expires_at, hl.total_rooms
          FROM places p
          JOIN categories c ON c.id = p.category_id AND c.slug = 'bat-dong-san'
          JOIN housing_listings hl ON hl.place_id = p.id
@@ -63,14 +72,22 @@ export async function managePropertyListing(placeId, actor, action) {
       if (row.listing_status !== 'ACTIVE' || row.place_status !== 'PUBLISHED') {
         throw new AppError('Tin đã ẩn hoặc kết thúc, cần gửi yêu cầu đăng lại.', 409);
       }
+      if (availableRooms !== undefined && (row.listing_type !== 'RENT' ||
+          (row.total_rooms !== null && availableRooms > Number(row.total_rooms)))) {
+        throw new AppError('Số phòng trống không phù hợp với tin cho thuê.',400);
+      }
       await client.query(
         `UPDATE housing_listings SET
+           available_rooms=COALESCE($2::integer,available_rooms),
+           availability_status=CASE WHEN $2::integer IS NULL THEN availability_status WHEN $2::integer=0 THEN 'FULL' ELSE 'AVAILABLE' END,
            last_confirmed_at = NOW(),
            expires_at = NOW() + INTERVAL '30 days',
            updated_at = NOW()
          WHERE place_id = $1`,
-        [placeId]
+        [placeId, availableRooms ?? null]
       );
+      if (availableRooms === 0) await client.query(
+        "UPDATE housing_viewing_requests SET status='CANCELLED',updated_at=NOW() WHERE place_id=$1 AND starts_at>NOW() AND status IN ('PENDING','ACCEPTED')",[placeId]);
       return { placeId: String(placeId), listingStatus: 'ACTIVE', action };
     }
 
@@ -92,6 +109,7 @@ export async function managePropertyListing(placeId, actor, action) {
       'UPDATE housing_listings SET listing_status = $1, updated_at = NOW() WHERE place_id = $2',
       [target, placeId]
     );
+    await client.query("UPDATE housing_viewing_requests SET status='CANCELLED',updated_at=NOW() WHERE place_id=$1 AND starts_at>NOW() AND status IN ('PENDING','ACCEPTED')",[placeId]);
     // Archiving the canonical place hides it from *all* public map endpoints,
     // not just the dedicated Housing API.
     await client.query(

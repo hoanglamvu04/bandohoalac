@@ -1,0 +1,10 @@
+.hm-viewing,.hm-viewing-manager{overflow-wrap:anywhere}
+.hm-viewing p,.hm-viewing small,.hm-viewing-manager p,.hm-viewing-manager small{font-size:13px;line-height:1.6}
+.hm-viewing form,.hm-viewing form label{display:grid;gap:8px}
+.hm-viewing input{width:100%;min-width:0;box-sizing:border-box;padding:10px;font:inherit;border:1px solid #8a9d92;border-radius:9px;color:inherit;background:transparent}
+.hm-viewing button,.hm-viewing-manager button{border:1px solid #176848;border-radius:9px;padding:10px 12px;color:#fff;background:#176848;font:inherit;font-size:13px;cursor:pointer}
+.hm-viewing button:disabled,.hm-viewing-manager button:disabled{opacity:.55;cursor:not-allowed}
+.hm-viewing a,.hm-viewing-manager a{color:inherit;text-decoration:underline;font-size:13px;font-weight:600}
+.hm-viewing-manager{margin-bottom:22px}.hm-viewing-manager h2{display:flex;align-items:center;gap:8px;font-size:20px}
+.hm-viewing-manager article{display:grid;gap:8px;border-top:1px solid #8d9a9d55;padding:12px 0;font-size:13px}
+.hm-viewing-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
