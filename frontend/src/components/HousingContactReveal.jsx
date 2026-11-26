@@ -92,7 +92,7 @@ export default function HousingContactReveal({ placeId, contactName, isDemo = fa
             {busy ? 'Đang lấy liên hệ...' : 'Hiện số điện thoại'}
           </button>
         ) : (
-          <Link to="/login" state={{ from: location.pathname + location.search }}>
+          <Link to="/login" state={{ from: { pathname: location.pathname, search: location.search } }}>
             <Eye size={16} aria-hidden="true" /> Đăng nhập để hiện số
           </Link>
         )}

@@ -26,7 +26,11 @@ export default function Login() {
     try {
       await login(form);
       showToast('Đăng nhập thành công. Chào mừng trở lại!', 'success');
-      navigate(location.state?.from?.pathname || '/', { replace: true });
+      const from = location.state?.from;
+      const returnTo = from?.pathname
+        ? from.pathname + (from.search || '')
+        : '/';
+      navigate(returnTo, { replace: true });
     } catch (err) {
       if (err.code === 'TWO_FACTOR_REQUIRED' || err.code === 'TWO_FACTOR_INVALID') {
         setNeedsTwoFactor(true);
