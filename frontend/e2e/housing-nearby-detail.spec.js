@@ -7,7 +7,7 @@ const property = {
   lat: 21.01354, lng: 105.52522, images: []
 };
 
-async function mockDetail(page, { isHousing = true, amenities = null } = {}) {
+async function mockDetail(page, { isHousing = true, amenities = null, rental = false } = {}) {
   const calls = [];
   let failNext = false;
   await page.route('**/api/**', (route) => {
@@ -23,7 +23,8 @@ async function mockDetail(page, { isHousing = true, amenities = null } = {}) {
     if (pathname === '/api/housing/777') {
       return route.fulfill({ json: { item: { ...property, housing: {
         listingType: 'SALE', propertyType: 'HOUSE',
-        areaM2: 100, totalPriceVnd: 3500000000, listingStatus: 'ACTIVE'
+        areaM2: 100, totalPriceVnd: 3500000000, listingStatus: 'ACTIVE',
+        ...(rental ? { listingType:'RENT', monthlyRent:2900000, depositAmount:2900000, electricityPricePerKwh:3500, waterPricePerPersonMonth:100000, parkingFeeMonthly:null, advertiserRole:'BROKER' } : {})
       } } } });
     }
     if (pathname === '/api/housing/777/amenities') {
@@ -134,4 +135,18 @@ test('empty amenities communicate missing observations', async ({ page }) => {
   await expect(section).toContainText('Đã ghi nhận 0/8 nhóm tiện ích');
   await expect(section).toContainText('Chưa ghi nhận tiện ích nào trong dữ liệu hiện có');
   await expect(section).not.toContainText('0 địa điểm được HOLA xác minh');
+});
+
+test('rental calculator recalculates known costs and flags missing charges on mobile', async ({ page }) => {
+  await page.setViewportSize({width:390,height:844});
+  await mockDetail(page,{rental:true});
+  await page.goto('/place/777');
+  const section=page.getByTestId('housing-cost-calculator');
+  await expect(section).toBeVisible();
+  await expect(section).toContainText('Chưa tính: Gửi xe');
+  await section.getByLabel('Số người ở').fill('2');
+  await section.getByLabel('Số xe gửi').fill('0');
+  await expect(section.getByTestId('housing-monthly-cost')).toHaveText('3.380.000 đ');
+  await expect(section.getByTestId('housing-first-month-cost')).toHaveText('6.280.000 đ');
+  await expect(page.getByText('Môi giới · Tự khai, chưa xác minh')).toBeVisible();
 });

@@ -165,9 +165,13 @@ async function applyContributionToPlace(contribution, client) {
         `INSERT INTO housing_listings (
           place_id, listing_type, property_type, total_price_vnd,
           monthly_rent, area_m2, contact_name, availability_status, verification_source,
-          listing_status, last_confirmed_at, expires_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'UNKNOWN', 'COMMUNITY',
-                  'ACTIVE', NOW(), NOW() + INTERVAL '30 days')`,
+          listing_status, last_confirmed_at, expires_at, advertiser_role,
+          deposit_amount, electricity_price_per_kwh, water_price_per_person_month,
+          parking_fee_monthly, available_rooms
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7,
+                  CASE WHEN $13::integer IS NULL THEN 'UNKNOWN' WHEN $13::integer = 0 THEN 'FULL' ELSE 'AVAILABLE' END,
+                  'COMMUNITY', 'ACTIVE', NOW(), NOW() + INTERVAL '30 days',
+                  $8, $9, $10, $11, $12, $13)`,
         [
           placeId,
           listing.transactionType,
@@ -175,7 +179,13 @@ async function applyContributionToPlace(contribution, client) {
           listing.transactionType === 'SALE' ? Number(listing.totalPriceVnd) : null,
           listing.transactionType === 'RENT' ? Number(listing.monthlyRentVnd) : null,
           Number(listing.areaM2),
-          listing.contactName || null
+          listing.contactName || null,
+          listing.advertiserRole ?? null,
+          listing.transactionType === 'RENT' ? listing.depositAmount ?? null : null,
+          listing.transactionType === 'RENT' ? listing.electricityPricePerKwh ?? null : null,
+          listing.transactionType === 'RENT' ? listing.waterPricePerPersonMonth ?? null : null,
+          listing.transactionType === 'RENT' ? listing.parkingFeeMonthly ?? null : null,
+          listing.transactionType === 'RENT' ? listing.availableRooms ?? null : null
         ]
       );
     }

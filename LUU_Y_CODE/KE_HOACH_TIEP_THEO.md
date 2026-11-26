@@ -95,3 +95,16 @@
 Khi bắt đầu task: gắn ID, đổi sang `DANG_LAM` và ghi PR/dự kiến kiểm thử. Sau code: cập nhật nội dung đã làm, trở ngại, thứ tự ưu tiên, bước tiếp. Khi PR chưa merge **không đổi thành đã merge**. Sau merge phải có phiên cập nhật lại cùng bằng chứng.
 
 **Việc tiếp của HOLA-P1-109:** chạy báo cáo trên bản sao PostgreSQL được cấp quyền, rà nhóm và khu có ít quan sát, đối chiếu với nguồn POI độc lập trước khi kết luận độ phủ thực tế.
+
+## 27/11/2026 — HOLA Housing P1 tiếp theo
+
+| ID | Trạng thái | Tiêu chí |
+|---|---|---|
+| HOLA-P1-113 | DANG_LAM | Calculator giá thuê/cọc/điện/nước/xe, không đánh đồng giá chưa biết với 0; mobile, test tính toán. |
+| HOLA-P1-114 | DANG_LAM | Vai trò người đăng tự khai, qua moderation; không tự cấp xác minh chủ sở hữu. Hồ sơ xác minh đầy đủ cần quy trình bằng chứng riêng. |
+| HOLA-P1-115 | CHUA_LAM | Lịch xem nhà, requester/owner, trạng thái và chống spam, không lộ PII. |
+| HOLA-P1-116 | DANG_LAM | Dữ liệu phòng trống trên tin mới và mốc xác nhận; bổ sung cập nhật room count cho tin cũ, giữ luồng gia hạn hiện có. |
+| HOLA-P1-117 | CHUA_LAM | Danh sách khách quan tâm/lịch hẹn riêng theo quyền. |
+| HOLA-P1-118 | CHUA_LAM | Thống kê tin đăng có consent và phân quyền. |
+
+Các mục P1 trước đây và P0 blockers giữ nguyên; không coi việc merge các module mới là nghiệm thu toàn bộ P1.

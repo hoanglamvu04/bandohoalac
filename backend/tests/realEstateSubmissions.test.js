@@ -79,3 +79,16 @@ test('rejects out-of-area pins and unrealistic monetary values', () => {
   assert.equal(validate((data) => { data.place.realEstate.areaM2 = 100000; }).success, false);
   assert.equal(validate((data) => { delete data.place.realEstate.contactName; }).success, false);
 });
+
+test('advertiser role is self-reported and rental fees preserve explicit zero', () => {
+  const valid = validate((data) => {
+    const e = data.place.realEstate;
+    e.transactionType = 'RENT'; delete e.totalPriceVnd;
+    Object.assign(e, { monthlyRentVnd:2900000, advertiserRole:'BROKER', depositAmount:0, electricityPricePerKwh:3500, availableRooms:0 });
+  });
+  assert.equal(valid.success,true);
+  assert.equal(valid.data.place.realEstate.depositAmount,0);
+  assert.equal(valid.data.place.realEstate.advertiserRole,'BROKER');
+  assert.equal(validate((d)=>{d.place.realEstate.advertiserRole='VERIFIED_OWNER';}).success,false);
+  assert.equal(validate((d)=>{d.place.realEstate.depositAmount=0;}).success,false);
+});
