@@ -560,11 +560,11 @@ function addPlaceLayers(map, places = [], showHousingPrices = false) {
         'icon-image': ['get', 'priceIcon'],
         'icon-text-fit': 'both',
         'icon-text-fit-padding': [5, 10, 5, 10],
-        'icon-allow-overlap': false,
+        'icon-allow-overlap': true,
         'text-field': ['get', 'priceLabel'],
         'text-font': ['Noto Sans Regular'],
         'text-size': 13,
-        'text-allow-overlap': false
+        'text-allow-overlap': true
       },
       paint: {
         'text-color': '#ffffff',
