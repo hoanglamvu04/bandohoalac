@@ -1,3 +1,5 @@
+import PropertyDetailsFields from '../components/PropertyDetailsFields.jsx';
+import { submissionDetails } from '../lib/propertyDetails.js';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, BadgeCheck, CheckCircle2, LocateFixed, MapPin, Send, ShieldCheck } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
@@ -38,6 +40,8 @@ const INITIAL_FORM = {
   waterPricePerPersonMonth: '',
   parkingFeeMonthly: '',
   availableRooms: '',
+  details: {},
+  amenities: {},
   phone: ''
 };
 
@@ -107,12 +111,12 @@ export default function RealEstateSubmissionPage() {
   function saveDraft() {
     if (!user?.id) return;
     const { transactionType, propertyType, name, address, areaM2,
-      priceVnd, description, advertiserRole, depositAmount, electricityPricePerKwh, waterPricePerPersonMonth, parkingFeeMonthly, availableRooms } = form;
+      priceVnd, description, advertiserRole, depositAmount, electricityPricePerKwh, waterPricePerPersonMonth, parkingFeeMonthly, availableRooms, details, amenities } = form;
     const next = {
       version: 1,
       savedAt: Date.now(),
       form: { transactionType, propertyType, name, address, areaM2,
-        priceVnd, description, advertiserRole, depositAmount, electricityPricePerKwh, waterPricePerPersonMonth, parkingFeeMonthly, availableRooms },
+        priceVnd, description, advertiserRole, depositAmount, electricityPricePerKwh, waterPricePerPersonMonth, parkingFeeMonthly, availableRooms, details, amenities },
       position: { lat: position.lat, lng: position.lng }
     };
     try {
@@ -235,6 +239,8 @@ export default function RealEstateSubmissionPage() {
         propertyType: form.propertyType,
         areaM2: area,
         contactName: form.contactName.trim(),
+        details: submissionDetails(form),
+        ...(form.propertyType==='LAND'?{}:Object.fromEntries(Object.entries(form.amenities||{}).filter(([,value])=>value==='true'||value==='false').map(([key,value])=>[key,value==='true']))),
         ...(form.advertiserRole ? { advertiserRole: form.advertiserRole } : {}),
         publicContactConsent,
         imageRightsConfirmed,
@@ -411,6 +417,7 @@ export default function RealEstateSubmissionPage() {
                     <small>Để trống nếu chưa biết; nhập 0 nếu miễn phí hoặc không còn phòng.</small>
                   </label>
                 ))}
+                <PropertyDetailsFields form={form} onChange={(key,value)=>setForm(current=>({...current,[key]:value}))}/>
                 <label className="estate-full">
                   Thông tin mô tả (không bắt buộc)
                   <textarea name="description" maxLength={2000} rows={4} value={form.description}

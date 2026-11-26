@@ -2,6 +2,13 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 27/11/2026 GMT+7 — HOLA-P1-119 — Đợt 2–3: đặc điểm tài sản, lịch sử và gợi ý
+
+- Xác minh PR #129 merge `707db62988761d3d5f67ad2ca363d9d5bd853738`, PR #130 merge `e8b6d44e473c393fe7734de2cc7e23018c3d5a15`; cả hai 9/9 CI/Security PASS. Chưa xác minh deploy. 
+- Nhánh `feat/roadmap-stage1-housing-depth-20261127`: migration 340 additive, subtype tương thích property_type hiện có, đặc điểm và tiện nghi đi qua duyệt, pháp lý tự khai, không lưu giấy tờ. Lịch sử giá/phòng trống chỉ bắt đầu ghi từ khi migration chạy, không dựng lịch sử. Tin tương tự theo cùng loại/giá/khoảng cách, public active và loại nguồn import/demo. Bộ lọc API/lưu tìm kiếm và so sánh chi phí mở rộng.
+- Kiểm thử validation, SQL, công khai/PII; CI chờ. Chưa có quản lý từng tòa/phòng, KYC hoặc dữ liệu thị trường lịch sử đủ mẫu. Không deploy production; WA-005 giữ chờ nghiệm thu.
+- Roadmap 72: đối chiếu chi tiết trong `LUU_Y_CODE/ROADMAP_72.md` sẽ được bổ sung ở PR kế tiếp, giữ backlog cũ và tiêu chí nghiệm thu.
+
 ## 27/11/2026 GMT+7 — P1: trạng thái #128/#129 và sửa race MapLibre
 
 - PR #128 đã merge `19b13daecdbf1215e58d635f59ed57267216b894`, 9/9 CI/Security PASS; chưa deploy. PR #129 đã retarget `main`; lần CI đầu 8/9 checks PASS, Playwright 69 PASS/1 FAIL tại ghim giá (run 45869287236), không merge khi còn đỏ.

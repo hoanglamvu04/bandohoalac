@@ -1,3 +1,4 @@
+import { propertyDetailsSchema, validatePropertyDetails } from './propertyDetails.validators.js';
 import { z } from 'zod';
 import { isInsideServiceCoverage } from '../config/mapCoverage.js';
 
@@ -21,12 +22,20 @@ const locationSchema = z.object({
 // Property details are validated before they reach the pending moderation
 // queue. Neither submission nor community verification publishes a listing.
 export const realEstateSubmissionSchema = z.object({
+  details: propertyDetailsSchema.optional(),
   transactionType: z.enum(['SALE', 'RENT']),
   propertyType: z.enum(['LAND', 'HOUSE', 'APARTMENT', 'VILLA', 'COMMERCIAL', 'OTHER']),
   areaM2: z.coerce.number().positive().max(99999.99),
   totalPriceVnd: z.coerce.number().int().positive().max(1000000000000000).optional(),
   monthlyRentVnd: z.coerce.number().int().positive().max(100000000).optional(),
   contactName: z.string().trim().min(2).max(120),
+  hasAirConditioner: z.boolean().optional(),
+  hasWaterHeater: z.boolean().optional(),
+  hasPrivateBathroom: z.boolean().optional(),
+  hasLoft: z.boolean().optional(),
+  hasBalcony: z.boolean().optional(),
+  hasParking: z.boolean().optional(),
+  allowsPets: z.boolean().optional(),
   advertiserRole: z.enum(['OWNER','BROKER','MANAGER','OTHER']).optional(),
   depositAmount: z.number().int().min(0).max(100000000).optional(),
   electricityPricePerKwh: z.number().int().min(0).max(100000).optional(),
@@ -38,6 +47,7 @@ export const realEstateSubmissionSchema = z.object({
   }),
   imageRightsConfirmed: z.boolean().optional()
 }).superRefine((value, ctx) => {
+  validatePropertyDetails(value, ctx);
   if (value.transactionType === 'SALE') {
     for (const field of ['depositAmount','electricityPricePerKwh','waterPricePerPersonMonth','parkingFeeMonthly','availableRooms']) {
       if (value[field] !== undefined) ctx.addIssue({ code:'custom', path:[field], message:'Chỉ áp dụng cho tin cho thuê.' });

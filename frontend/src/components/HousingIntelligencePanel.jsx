@@ -1,3 +1,5 @@
+import { detailRows, AMENITIES } from '../lib/propertyDetails.js';
+import { estimateHousingCosts } from '../lib/housingCosts.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Bell, ChevronDown, GitCompareArrows, Plus, Trash2, X, ChartColumnIncreasing, MapPinned } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -9,7 +11,7 @@ import {
 import '../housing-intelligence.css';
 
 const FILTER_KEYS = [
-  'q', 'listingType', 'propertyType', 'minRent', 'maxRent',
+  'q', 'listingType', 'propertyType', 'subtype', 'furnishing', 'minRent', 'maxRent',
   'minPrice', 'maxPrice', 'minArea', 'maxArea',
   'availability', 'availableOnly', 'partnerOnly',
   'privateBathroom', 'parking', 'maxDistanceFpt'
@@ -275,6 +277,18 @@ export default function HousingIntelligencePanel({
     ['Giá / m²', (item) => vnMoney(item.pricePerM2Vnd,
       item.housing?.listingType === 'SALE' ? 'đ/m²' : 'đ/m²/tháng')],
     ['Loại tài sản', (item) => PROPERTY_TYPES[item.housing?.propertyType] || 'Chưa rõ'],
+    ['Đặc điểm', (item) => detailRows(item.housing?.details||{}).filter(([label])=>!label.startsWith('Pháp lý')).map(([label,value])=>label+': '+value).join(' · ')||'Chưa có'],
+    ['Tiện nghi', (item) => AMENITIES.filter(([key])=>item.housing?.[key]===true).map(([,label])=>label).join(', ')||'Chưa có thông tin có tiện nghi'],
+    ['Chi phí tháng (1 người, 80 kWh, 1 xe)',(item)=>{
+      if(item.housing?.listingType!=='RENT')return 'Không áp dụng';
+      const estimate=estimateHousingCosts(item.housing);
+      return vnMoney(estimate.knownMonthly)+(estimate.missingMonthly.length?' (chưa đủ phí)':'');
+    }],
+    ['Tháng đầu gồm cọc (cùng giả định)',(item)=>{
+      if(item.housing?.listingType!=='RENT')return 'Không áp dụng';
+      const estimate=estimateHousingCosts(item.housing);
+      return vnMoney(estimate.knownFirstMonth)+(estimate.missingFirstMonth.length?' (chưa đủ phí)':'');
+    }],
     ['Cách FPT (đường thẳng)', (item) =>
       Number.isFinite(Number(item.distanceToFptM)) &&
       item.distanceToFptM !== null && item.distanceToFptM !== undefined

@@ -1,3 +1,4 @@
+import { PROPERTY_SUBTYPE_PARENT } from './propertyDetails.validators.js';
 import { z } from 'zod';
 
 const numericString = z.string().regex(/^\d+(\.\d+)?$/, 'Must be a non-negative number');
@@ -11,6 +12,8 @@ export const housingListQuerySchema = z.object({
   maxPrice: numericString.optional(),
   listingType: z.enum(['SALE', 'RENT']).optional(),
   propertyType: z.enum(['LAND', 'HOUSE', 'APARTMENT', 'VILLA', 'COMMERCIAL', 'OTHER']).optional(),
+  subtype: z.enum(Object.keys(PROPERTY_SUBTYPE_PARENT)).optional(),
+  furnishing: z.enum(['NONE','BASIC','FULL']).optional(),
   minArea: numericString.optional(),
   maxArea: numericString.optional(),
   minAvailableRooms: numericString.optional(),
@@ -95,6 +98,8 @@ export const savedHousingFiltersSchema = z.object({
   q: z.string().trim().min(2).max(100).optional(),
   listingType: z.enum(['SALE', 'RENT']).optional(),
   propertyType: z.enum(['LAND','HOUSE','APARTMENT','VILLA','COMMERCIAL','OTHER']).optional(),
+  subtype: z.enum(Object.keys(PROPERTY_SUBTYPE_PARENT)).optional(),
+  furnishing: z.enum(['NONE','BASIC','FULL']).optional(),
   minPrice: numericFilter.optional(),
   maxPrice: numericFilter.optional(),
   minRent: numericFilter.optional(),
