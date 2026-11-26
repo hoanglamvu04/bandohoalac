@@ -5,10 +5,10 @@
 ## 26/11/2026 GMT+7 — HOLA-P1-111: mở seed demo trên production theo yêu cầu
 
 - **Yêu cầu:** chủ website chấp thuận đưa 30 tin giả (15 nhà trọ/phòng trọ) lên DB live phục vụ QA, công khai tên/giá/ảnh demo.
-- **Trạng thái:** nhánh `feat/production-optin-thachthat-demo-20261126`, chờ PR/CI/merge. **Chưa truy cập database VPS, chưa seed hoặc reload PM2.**
+- **Trạng thái:** [PR #124](https://github.com/hoanglamvu04/bandohoalac/pull/124) đã merge vào `main` SHA `a034b2d75a061c6bf4c1f3d462522b611c715953`, **9/9 CI/Security checks PASS**. **Chưa truy cập database VPS, chưa seed hoặc reload PM2.**
 - **Code:** hai xác nhận cho database live (`HOLA_DEMO_LIVE_CONFIRM` và `HOLA_DEMO_SEED_CONFIRM`), giữ nguyên NODE_ENV và so khớp DB thực, transaction/cleanup an toàn; trang chi tiết demo `noindex`, loại ảnh/giá demo khỏi SEO địa phương và phân vị giá.
-- **Kiểm thử:** bổ sung unit production opt-in/cleanup, SEO noindex và market query, CI/PG16/PostGIS/Playwright đang chờ chạy.
-- **Tiếp:** merge sau CI; chủ VPS backup, kéo main, reload API nếu thay đổi backend, chạy seed có xác nhận, kiểm tra 30 tin và ảnh, ghi nhận trạng thái production.
+- **Kiểm thử:** PG16/PostGIS, frontend build, Playwright E2E, CodeQL, dependency, shell, repository safety và LUU_Y_CODE gate đều PASS trên head PR #124. Checks `main` sau merge xác minh riêng.
+- **Tiếp:** chủ VPS backup, kéo main, xác minh DB, chạy seed có xác nhận, reload đúng tiến trình backend (không reload tất cả PM2), kiểm tra 30 tin, ảnh, noindex và thống kê. Không khẳng định live cho đến khi có log VPS.
 
 ## 26/11/2026 GMT+7 — HOLA-P1-110: 30 bất động sản DEMO huyện Thạch Thất cũ
 

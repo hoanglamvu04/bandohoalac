@@ -2,6 +2,13 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 26/11/2026 GMT+7 — HOLA-P1-111: xác minh code production opt-in đã merge
+
+- **GitHub:** [PR #124](https://github.com/hoanglamvu04/bandohoalac/pull/124) vào `main` `a034b2d75a061c6bf4c1f3d462522b611c715953`; 9/9 CI/Security gates PASS.
+- **Code:** cho phép seed live có hai xác nhận, giữ demo dễ nhận biết; loại khỏi phân vị giá, trang DEMO noindex/không schema `Place`, không hiển thị tin DEMO trong kết quả SEO địa phương.
+- **Chưa deploy:** chưa SSH, chưa backup hoặc seed trên database website. Không có bằng chứng 30 tin đang hiển thị hoặc ảnh Unsplash tải thành công.
+- **Bước tiếp:** chủ VPS chạy `npm run db:backup` trước lệnh seed live, kiểm tra kết quả và chỉ reload tiến trình HOLA Maps. Kiểm thử bản đồ, gallery, cleanup riêng nếu cần.
+
 ## 26/11/2026 GMT+7 — HOLA-P1-111: production opt-in cho 30 BĐS DEMO
 
 - **Trước:** `main` `e70b9ec672be0343f261ed5ef790d9e6d61d7e65`; code seed #122 đã merge. Chủ website yêu cầu xuất bản demo lên DB production để kiểm thử.
