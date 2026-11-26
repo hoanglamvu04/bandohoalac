@@ -988,3 +988,7 @@ export function getHousingMarketGrid(params,options={}){
 export function getHousingMarketTrend(params,options={}){
  return unwrap(client.get('/housing/market-trend',{params:cleanParams(params),signal:options.signal}));
 }
+
+export function searchHousingArea(payload){return unwrap(client.post('/housing/area-search',payload));}
+export function searchRouteCorridor(payload){return unwrap(client.post('/directions/corridor',payload));}
+export function getMapAreaSummary(params){return unwrap(client.get('/map-layers/area-summary',{params}));}

@@ -2,6 +2,10 @@
 
 > **Rà soát:** 16:57 25/11/2026 GMT+7, `main` `c02640c9ec5399c003f3e1a7fd9115921e5a25d5` sau [PR #113](https://github.com/hoanglamvu04/bandohoalac/pull/113).
 
+
+### HOLA-P2-122 — Spatial discovery (27/11/2026)
+- Code: POST housing area-search, polygon validity/area cap and service-area clipping predicate; click-drawn 3–24 vertices, cancellation, separate results (normal map markers retained). Route corridor on existing OSRM geometry, public POI only, 200/500/1000 m, length/vertex caps. Viewport profile by published POI categories. No stored GPS or analytics; no claims of administrative coverage or exact detour. Tests added; CI pending. No migration, no production deploy. Real mobile and data-source acceptance still required.
+
 ## 27/11/2026 GMT+7 — HOLA-P1-120 / HOLA-P2-121 — search, lưới giá, dòng tiền, góc nhìn
 
 - Stacked sau #131, nhánh `feat/roadmap-search-market-smart-map-20261127`, DANG_LAM. Bổ sung parser tiếng Việt deterministic có giới hạn (ngân sách có đơn vị, bán/thuê, FPT, tiện ích), hiển thị tiêu chí; không gọi AI hay bịa kết quả. Đồng bộ subtype/nội thất vào URL, API, saved search; không lọc lại bằng chuỗi có dấu sau backend.

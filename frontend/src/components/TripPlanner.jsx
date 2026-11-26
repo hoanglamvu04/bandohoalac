@@ -1,3 +1,4 @@
+import { RouteNearbyPlaces } from './SpatialDiscovery.jsx';
 import {
   ArrowDown,
   ArrowUp,
@@ -175,6 +176,7 @@ export default function TripPlanner({
             </div>
           )}
 
+          <RouteNearbyPlaces route={route}/>
           <div className="hm-trip-hazards">
             <div className="hm-trip-hazards-heading">
               <TriangleAlert size={15} />

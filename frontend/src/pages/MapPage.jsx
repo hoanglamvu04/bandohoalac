@@ -1,4 +1,6 @@
 import { SUBTYPES, FURNISHINGS } from '../lib/propertyDetails.js';
+import { AreaProfile,HousingAreaResults,RouteNearbyPlaces } from '../components/SpatialDiscovery.jsx';
+import { searchHousingArea } from '../services/api.js';
 import MapSavedViews from '../components/MapSavedViews.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -530,6 +532,25 @@ export default function MapPage() {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [places, setPlaces] = useState([]);
+  const [areaDrawing,setAreaDrawing]=useState(false);
+  const [areaVertices,setAreaVertices]=useState([]);
+  const [areaResult,setAreaResult]=useState(null);
+  const [areaError,setAreaError]=useState('');
+  const [areaBusy,setAreaBusy]=useState(false);
+  const areaRequestRef=useRef(0);
+  function clearHousingArea(){
+    areaRequestRef.current++;setAreaDrawing(false);setAreaVertices([]);setAreaResult(null);setAreaError('');setAreaBusy(false);
+  }
+  async function finishHousingArea(){
+    const id=++areaRequestRef.current;setAreaBusy(true);setAreaError('');
+    try {
+      const filters=Object.fromEntries(Object.entries(housingRequestParams({includeQuery:true})).filter(([k,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>[k,String(v)]));
+      const result=await searchHousingArea({points:areaVertices,filters});
+      if(id!==areaRequestRef.current)return;
+      setAreaResult(result);setAreaDrawing(false);setLeftOpen(true);
+    }catch(e){if(id===areaRequestRef.current)setAreaError(e.response?.data?.error||'Vùng tìm kiếm chưa hợp lệ.');}
+    finally{if(id===areaRequestRef.current)setAreaBusy(false);}
+  }
   const [localSeoView, setLocalSeoView] = useState(null);
   const [visiblePlaceCount, setVisiblePlaceCount] = useState(PLACE_PAGE_SIZE);
   const [listPagination, setListPagination] = useState({
@@ -621,6 +642,8 @@ export default function MapPage() {
   );
   const verticalMode = searchParams.get('vertical') || '';
   const isHousingMode = verticalMode === 'housing';
+  useEffect(()=>{if(!isHousingMode)clearHousingArea();},[isHousingMode]);
+  useEffect(()=>()=>{areaRequestRef.current++;},[]);
   const isFoodMode = verticalMode === 'food';
   const discoveryNeedle = query.trim();
   const viewportReady = Boolean(viewport);
@@ -2875,6 +2898,9 @@ export default function MapPage() {
       aria-label="Bản đồ và danh sách địa điểm Hòa Lạc"
     >
       <MapView
+        areaDrawing={areaDrawing}
+        areaVertices={areaVertices}
+        onAreaPoint={(point)=>{if(!areaBusy)setAreaVertices(previous=>previous.length>=24?previous:[...previous,point]);}}
         places={mapPlaces}
         showHousingPrices={isHousingMode}
         selectedPlaceId={selectedId}
@@ -2896,6 +2922,13 @@ export default function MapPage() {
           : ''}
       />
 
+      {areaDrawing && isHousingMode && <div className="hm-area-drawing-toolbar" role="region" aria-label="Khoanh vùng bất động sản">
+        <b>Khoanh vùng tìm bất động sản</b><p>Chạm bản đồ để thêm 3–24 đỉnh, nối theo thứ tự. {areaVertices.length}/24 đỉnh.</p>
+        {areaError&&<p role="alert">{areaError}</p>}
+        <div><button type="button" disabled={areaBusy||!areaVertices.length} onClick={()=>setAreaVertices(v=>v.slice(0,-1))}>Hoàn tác</button>
+          <button type="button" disabled={areaBusy||areaVertices.length<3} onClick={finishHousingArea}>{areaBusy?'Đang tìm…':'Tìm trong vùng'}</button>
+          <button type="button" onClick={()=>{clearHousingArea();setLeftOpen(true);}}>Hủy</button></div>
+      </div>}
       {localSeoSlug && (
         <div className="hm-local-seo-map-banner">
           <div>
@@ -3532,6 +3565,11 @@ export default function MapPage() {
           />
         )}
 
+        {isHousingMode&&!inEmbed&&<div className="hm-spatial-panel">
+          <button type="button" onClick={()=>{clearHousingArea();setAreaDrawing(true);setLeftOpen(false);}}>Vẽ vùng tìm bất động sản</button>
+          <HousingAreaResults result={areaResult} onClear={clearHousingArea}/>
+        </div>}
+        {!inEmbed&&<AreaProfile viewport={viewport}/>}
         {!inEmbed && <MapSavedViews activeLayers={activeLayers} validLayers={LAYERS.map(x=>x.type)} onRestoreLayers={setActiveLayers}/>}
         <TravelTimeDiscovery
           defaultCategory={isHousingMode ? 'bat-dong-san' : isFoodMode ? 'an-uong' : 'all'}
@@ -4100,6 +4138,7 @@ export default function MapPage() {
                 </div>
               )}
 
+              <RouteNearbyPlaces route={routeData}/>
               <div className="hm-route-source">
                 <span>ENGINE</span>
                 <b>{routeData.provider || 'OSRM'}</b>

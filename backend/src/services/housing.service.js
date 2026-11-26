@@ -1,5 +1,6 @@
 import { propertyDetailsSchema } from '../validators/propertyDetails.validators.js';
 import { pool } from '../database/pool.js';
+import { SERVICE_AREA_GEOJSON_STRING } from '../config/mapCoverage.js';
 
 const FPT_LNG = 105.52522;
 const FPT_LAT = 21.01354;
@@ -182,6 +183,12 @@ export async function listHousingListings(filters = {}, db = pool) {
     "(hl.expires_at IS NULL OR hl.expires_at > NOW())"
   ];
   const params = [];
+  // Internal-only polygon, supplied by validated POST area-search; not a query field.
+  if (filters.areaPolygon) {
+    params.push(filters.areaPolygon, SERVICE_AREA_GEOJSON_STRING);
+    conditions.push('ST_Covers(ST_SetSRID(ST_GeomFromGeoJSON($1),4326),p.location)');
+    conditions.push('ST_Intersects(p.location,ST_SetSRID(ST_GeomFromGeoJSON($2),4326))');
+  }
 
   if (filters.listingType) {
     params.push(filters.listingType);

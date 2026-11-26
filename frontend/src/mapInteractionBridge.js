@@ -230,6 +230,7 @@ function resolvePinnedMapFeature(map, point) {
 }
 
 function dispatchPin(map, payload) {
+  if(map.__holaAreaDrawing)return;
   if (typeof window === 'undefined' || !payload?.lngLat) return;
   const lng = Number(payload.lngLat.lng);
   const lat = Number(payload.lngLat.lat);
