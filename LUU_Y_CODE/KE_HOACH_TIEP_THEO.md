@@ -23,7 +23,8 @@
 | HOLA-P0-002 | CHUA_LAM (cần thiết bị/hạ tầng thật) | Nghiệm thu Nginx/TLS, PM2, API, cron, mobile Android/iOS, 3G/4G và Web Vitals | Checklist runbook hoàn tất, rủi ro P0 được xử lý và có người duyệt |
 | HOLA-P0-003 | CHO_DUYET | Rà WA-005 PR #92 và hợp đồng X-HUB; chỉ merge khi X-HUB chấp thuận dữ liệu/phân quyền/consent | PR đạt CI + nghiệm thu nguồn/đích, không có PII/GPS/token đưa ra frontend |
 | HOLA-P0-004 | DA_MERGE_CHUA_DEPLOY — [PR #108](https://github.com/hoanglamvu04/bandohoalac/pull/108), 9/9 checks PASS | CLI và Admin dùng cùng điều kiện kiểm toán BĐS công khai. Kiểm toán dữ liệu thật chờ ảnh kết quả từ chủ dự án sau khi chạy [lệnh trong runbook](../docs/PUBLIC_LAUNCH_P0_RUNBOOK.md#kiểm-toán-tiện-ích-và-bđs-trên-bản-sao-postgresql) | Ghi số tổng hợp trên bản sao; rà quyền ảnh, tin hết hạn, thiếu liên hệ và giá/diện tích |
-| HOLA-P0-005 | CHUA_LAM | Triage các PR đang mở về bảo mật, Cloudinary, auth, test tấn công; không merge hàng loạt | Mỗi PR đối chiếu base, schema, RBAC, tests/CodeQL; có quyết định merge/close và nhật ký |
+| HOLA-P0-005 | DANG_LAM — fix/p0-005-cron-fail-closed-20261126, issue #116 | Sửa legacy cron installer fail closed; kiểm thử giả lập, rà upload/WebP; đối chiếu PR #54/#57 trên main, không merge nguyên trạng | CI/Security PASS, backlog phần còn lại và VPS chưa nghiệm thu được ghi rõ |
+| HOLA-OPS-118 | CHO_QUAN_TRI_VIEN — issue #118 | Bật bảo vệ `main` trong GitHub Settings theo `docs/MAIN_BRANCH_PROTECTION_OPERATOR.md` | Có bằng chứng Ruleset active và branch protected; **chưa được bật bằng mã nguồn** |
 
 ## P1 — Hoàn thiện các phần sản phẩm chưa nghiệm thu full
 
