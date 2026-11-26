@@ -2,6 +2,12 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 27/11/2026 GMT+7 — P1: trạng thái #128/#129 và sửa race MapLibre
+
+- PR #128 đã merge `19b13daecdbf1215e58d635f59ed57267216b894`, 9/9 CI/Security PASS; chưa deploy. PR #129 đã retarget `main`; lần CI đầu 8/9 checks PASS, Playwright 69 PASS/1 FAIL tại ghim giá (run 45869287236), không merge khi còn đỏ.
+- Sửa vòng đời MapLibre: lấy danh sách mới nhất lúc load, không bỏ qua cập nhật source khi tile khác đang tải; khóa cập nhật chỉ trong lúc đổi style và phục hồi từ refs. Test kiểm tra GeoJSON thật và binding text-field của layer giá, không phụ thuộc tile cache đang tải. Chờ CI lại; chưa nghiệm thu production.
+
+
 ## 27/11/2026 GMT+7 — HOLA-P1-118 — thống kê tin có opt-in
 
 - PR #128 đã merge `main` `19b13daecdbf1215e58d635f59ed57267216b894`, **9/9 checks PASS**, chưa deploy. PR #129 retarget main, chưa merge tại lúc ghi.
