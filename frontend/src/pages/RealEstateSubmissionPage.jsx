@@ -107,12 +107,12 @@ export default function RealEstateSubmissionPage() {
   function saveDraft() {
     if (!user?.id) return;
     const { transactionType, propertyType, name, address, areaM2,
-      priceVnd, description } = form;
+      priceVnd, description, advertiserRole, depositAmount, electricityPricePerKwh, waterPricePerPersonMonth, parkingFeeMonthly, availableRooms } = form;
     const next = {
       version: 1,
       savedAt: Date.now(),
       form: { transactionType, propertyType, name, address, areaM2,
-        priceVnd, description },
+        priceVnd, description, advertiserRole, depositAmount, electricityPricePerKwh, waterPricePerPersonMonth, parkingFeeMonthly, availableRooms },
       position: { lat: position.lat, lng: position.lng }
     };
     try {

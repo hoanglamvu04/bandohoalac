@@ -47,6 +47,7 @@ import HousingNearbyPlaces from '../components/HousingNearbyPlaces.jsx';
 import HousingContactReveal from '../components/HousingContactReveal.jsx';
 import HousingCostCalculator from '../components/HousingCostCalculator.jsx';
 import HousingViewingRequest from '../components/HousingViewingRequest.jsx';
+import HousingMetricsChoice from '../components/HousingMetricsChoice.jsx';
 import { publicPlaceKey, trackXHubEvent } from '../lib/xhubAnalytics.js';
 
 function uniqueImages(values = []) {
@@ -765,6 +766,10 @@ export default function PlaceDetailV2() {
           advertiserRole={housingDetail.housing.advertiserRole}
           isDemo={String(place.slug || '').startsWith('demo-thach-that-2026-')}
         />
+      )}
+
+      {place.categorySlug === 'bat-dong-san' && housingDetail?.housing && !String(place.slug||'').startsWith('demo-thach-that-2026-') && (
+        <HousingMetricsChoice key={place.id} placeId={place.id}/>
       )}
 
       {place.categorySlug === 'bat-dong-san' && housingDetail?.housing?.viewingAvailable === true && (

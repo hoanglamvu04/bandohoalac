@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { hasHousingMetricsConsent } from '../lib/housingMetricsConsent.js';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5003/api').replace(/\/$/, '');
 let accessToken = null;
@@ -244,7 +245,7 @@ export function getHousingListing(placeId, options = {}) {
 // Sensitive contact is fetched only on an explicit, authenticated user click.
 export function getHousingContact(placeId, options = {}) {
   return unwrap(client.get('/housing/' + encodeURIComponent(placeId) + '/contact', {
-    headers: { 'Cache-Control': 'no-store' },
+    headers: { 'Cache-Control': 'no-store', ...(hasHousingMetricsConsent() ? {'X-Hola-Housing-Stats':'1'} : {}) },
     signal: options.signal
   }));
 }
@@ -966,3 +967,10 @@ export function runAdminFreshnessSweep(payload = {}) {
 
 
 export { API_URL };
+
+export function recordHousingDetailView(placeId){
+  if(!hasHousingMetricsConsent())return Promise.resolve();
+  return unwrap(client.post('/housing/'+encodeURIComponent(placeId)+'/detail-view',{},{
+    headers:{'X-Hola-Housing-Stats':'1'},skipRefreshRetry:true
+  }));
+}

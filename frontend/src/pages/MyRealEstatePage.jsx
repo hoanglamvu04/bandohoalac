@@ -210,6 +210,7 @@ export default function MyRealEstatePage() {
                   {item.areaM2 && <span><b>{item.areaM2} m²</b></span>}
                   {item.listingType==='RENT'&&<span>Phòng trống: <b>{item.availableRooms??'Chưa cập nhật'}</b></span>}
                   <span>30 ngày: <b>{item.viewingRequests30d??0}</b> yêu cầu xem · <b>{item.acceptedViewings30d??0}</b> đang ở trạng thái xác nhận</span>
+                  {item.detailViews30d!=null&&<span>30 ngày: <b>{item.detailViews30d}</b> lượt xem chi tiết · <b>{item.contactReveals30d}</b> lượt hiện số (có đồng ý thống kê; không phải người dùng duy nhất)</span>}
                 </div>
 
                 {active ? (

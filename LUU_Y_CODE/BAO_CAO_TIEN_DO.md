@@ -2,6 +2,15 @@
 
 > **Chốt kiểm tra:** 16:57 25/11/2026 GMT+7. Xác minh `main` tại `c02640c9ec5399c003f3e1a7fd9115921e5a25d5` sau [PR #113](https://github.com/hoanglamvu04/bandohoalac/pull/113). [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817673) và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817721) PASS trên head PR.
 
+## 27/11/2026 GMT+7 — HOLA-P1-118 — thống kê tin có opt-in
+
+- PR #128 đã merge `main` `19b13daecdbf1215e58d635f59ed57267216b894`, **9/9 checks PASS**, chưa deploy. PR #129 retarget main, chưa merge tại lúc ghi.
+- Nhánh `feat/p1-118-housing-consented-metrics-20261127` xếp sau #129, DANG_LAM, chưa CI/merge. Migration 330 tạo counters theo tin/ngày VN; mặc định tắt; DNT/GPC chặn cả UI/server. Chỉ số tổng hợp, không lưu visitor ID/phone/email/IP/GPS trong bảng; tách khỏi WA-005. Hạn mức POST, active publication, loại DEMO/import.
+- Dashboard riêng người đăng: lượt xem chi tiết và lần hiện số thành công có consent trong 30 ngày, cùng yêu cầu xem và lịch đã xác nhận. Không gọi unique visitors/giao dịch, không dùng ranking.
+- Bổ sung lựa chọn và điều khoản quyền riêng tư, dọn metrics 90 ngày/lịch cũ 180 ngày qua CLI prune (cần xác minh cron VPS), hiển thị dữ liệu tự khai trong admin review, giữ trường chi phí khi lưu nháp.
+- Tests backend SQL/consent/HTTP và Playwright opt-in/revoke. Chờ CI. Cần retarget main sau #129, merge khi đủ cổng xanh. Chưa chạy migration hoặc deploy, chưa KYC/phê duyệt xác minh chủ sở hữu.
+- Backlog P1 trước đây còn phụ thuộc dữ liệu/hạ tầng/thiết bị thật, WA-005 và P0 giữ nguyên.
+
 ## 27/11/2026 GMT+7 — HOLA-P1-115/116/117/118 — lịch xem và quản lý người quan tâm
 
 - Nhánh `feat/p1-115-117-118-housing-viewings-20261127` xếp sau PR #128 (head `eff3ade1b7aaf520fbc6aaa15f0a69a04c3f91a4`), DANG_LAM, chưa merge/deploy. Migration 320 additive.

@@ -17,7 +17,11 @@ export async function listMyPropertyListings(userId) {
             (SELECT COUNT(*)::int FROM housing_viewing_requests v WHERE v.place_id=p.id AND v.recipient_id=$1
               AND v.created_at>=NOW()-INTERVAL '30 days') AS viewing_requests_30d,
             (SELECT COUNT(*)::int FROM housing_viewing_requests v WHERE v.place_id=p.id AND v.recipient_id=$1
-              AND v.created_at>=NOW()-INTERVAL '30 days' AND v.status='ACCEPTED') AS accepted_viewings_30d
+              AND v.created_at>=NOW()-INTERVAL '30 days' AND v.status='ACCEPTED') AS accepted_viewings_30d,
+            (SELECT COALESCE(SUM(m.detail_views),0) FROM housing_daily_metrics m WHERE m.place_id=p.id
+              AND m.metric_day>=(NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date-29) AS detail_views_30d,
+            (SELECT COALESCE(SUM(m.contact_reveals),0) FROM housing_daily_metrics m WHERE m.place_id=p.id
+              AND m.metric_day>=(NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date-29) AS contact_reveals_30d
        FROM places p
        JOIN categories c ON c.id = p.category_id AND c.slug = 'bat-dong-san'
        JOIN housing_listings hl ON hl.place_id = p.id
@@ -44,7 +48,9 @@ export async function listMyPropertyListings(userId) {
     availableRooms: money(row.available_rooms),
     totalRooms: money(row.total_rooms),
     viewingRequests30d: Number(row.viewing_requests_30d)||0,
-    acceptedViewings30d: Number(row.accepted_viewings_30d)||0
+    acceptedViewings30d: Number(row.accepted_viewings_30d)||0,
+    detailViews30d: Number(row.detail_views_30d)||0,
+    contactReveals30d: Number(row.contact_reveals_30d)||0
   }));
 }
 

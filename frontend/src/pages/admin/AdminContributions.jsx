@@ -553,6 +553,12 @@ export default function AdminContributions() {
                     )} đ
                   </div>
                   <div>Liên hệ: {estate.contactName || item.userName} · {place.phone}</div>
+                  <div>Vai trò tự khai: {({OWNER:'Chủ nhà/chủ tài sản',BROKER:'Môi giới',MANAGER:'Đơn vị quản lý',OTHER:'Khác'})[estate.advertiserRole]||'Chưa cung cấp'} (không xác minh quyền sở hữu)</div>
+                  {estate.transactionType==='RENT'&&[
+                    ['Tiền cọc',estate.depositAmount,'đ'],['Điện',estate.electricityPricePerKwh,'đ/kWh'],
+                    ['Nước',estate.waterPricePerPersonMonth,'đ/người/tháng'],['Gửi xe',estate.parkingFeeMonthly,'đ/xe/tháng'],
+                    ['Phòng/căn còn trống',estate.availableRooms,'']
+                  ].map(([label,value,unit])=><div key={label}>{label}: {value==null?'Chưa cập nhật':new Intl.NumberFormat('vi-VN').format(value)+' '+unit}</div>)}
                   <div>{estate.publicContactConsent === true ? '✓ Đã đồng ý công khai liên hệ' : '⚠ Chưa có xác nhận công khai liên hệ'}</div>
                   {!!photos.length && <div>{estate.imageRightsConfirmed === true ? '✓ Đã xác nhận quyền ảnh' : '⚠ Chưa xác nhận quyền sử dụng ảnh'}</div>}
                   {!photos.length && <div>⚠ Tin chưa có ảnh minh họa</div>}
