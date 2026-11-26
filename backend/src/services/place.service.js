@@ -47,7 +47,7 @@ function mapRow(row) {
     slug: row.slug,
     description: row.description,
     address: row.address,
-    phone: row.phone,
+    phone: row.category_slug === 'bat-dong-san' ? null : row.phone,
     website: row.website,
     priceLevel: row.price_level,
     openingHours: row.opening_hours,

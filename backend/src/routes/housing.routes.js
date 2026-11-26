@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { getPublicMarketInsights, getPublicHousingAmenities } from '../controllers/housingInsights.controller.js';
 import {
   getHousing,
+  revealHousingContact,
   listHousing
 } from '../controllers/housing.controller.js';
 import { listMyHousing, manageMyHousing } from '../controllers/housingLifecycle.controller.js';
@@ -41,6 +42,14 @@ router.patch('/saved-searches/:id', authenticate,
   validateBody(updateSavedHousingStatusSchema), toggleMySavedHousingSearch);
 router.delete('/saved-searches/:id', authenticate, removeMySavedHousingSearch);
 router.get('/mine', authenticate, listMyHousing);
+const contactRevealLimiter = rateLimit({
+  windowMs: 60_000, limit: 12, standardHeaders: true, legacyHeaders: false,
+  keyGenerator: (req) => 'housing-member-' + req.user.id,
+  message: { error: 'Bạn đã xem quá nhiều số liên hệ. Hãy thử lại sau.' }
+});
+// Token+active session is resolved on every request; details are not sent on
+// any public endpoint and are never preloaded by the frontend.
+router.get('/:placeId/contact', authenticate, contactRevealLimiter, revealHousingContact);
 router.patch('/:placeId/manage', authenticate, requireAdminSecurity, validateBody(housingManageActionSchema), manageMyHousing);
 router.get('/:placeId', getHousing);
 

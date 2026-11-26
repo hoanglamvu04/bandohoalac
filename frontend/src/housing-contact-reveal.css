@@ -1,0 +1,38 @@
+.hm-housing-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #d6e5df;
+  background: #f5faf7;
+  border-radius: 16px;
+  color: #173c32;
+  margin: 12px 0;
+}
+.hm-housing-contact-person { display: flex; align-items: center; gap: 10px; }
+.hm-housing-contact-person svg { flex-shrink: 0; color: #237d62; }
+.hm-housing-contact-person div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.hm-housing-contact-person small, .hm-housing-contact-footnote {
+  font-size: 12px; color: #61796f; line-height: 1.5;
+}
+.hm-housing-contact-person strong { font-size: 14px; overflow-wrap: anywhere; }
+.hm-housing-contact-reveal { display: flex; flex-direction: column; gap: 8px; }
+.hm-housing-contact-reveal > button,
+.hm-housing-contact-reveal > a,
+.hm-housing-contact-revealed > a {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 42px; border-radius: 11px; border: 1px solid #176b50;
+  background: #176b50; color: #fff; font-size: 13px; font-weight: 700;
+  padding: 9px 12px; cursor: pointer; text-decoration: none;
+}
+.hm-housing-contact-reveal > button:disabled { opacity: .65; cursor: wait; }
+.hm-housing-contact-revealed { display: flex; flex-direction: column; gap: 5px; }
+.hm-housing-contact-revealed > small { color: #47695e; }
+.hm-housing-contact-note { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #6a5838; }
+.hm-housing-contact-error { color: #a33131; font-size: 12px; }
+.hm-housing-contact-footnote { margin: 0; }
+@media (max-width: 680px) {
+  .hm-housing-contact { margin: 8px 0; padding: 12px; }
+  .hm-housing-contact-reveal > button,
+  .hm-housing-contact-reveal > a { width: 100%; }
+}

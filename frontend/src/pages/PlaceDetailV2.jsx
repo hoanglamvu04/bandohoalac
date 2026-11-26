@@ -44,6 +44,7 @@ import SeoHead from '../components/SeoHead.jsx';
 import PlaceContributionPanel from '../components/PlaceContributionPanel.jsx';
 import PlaceReviews from '../components/PlaceReviews.jsx';
 import HousingNearbyPlaces from '../components/HousingNearbyPlaces.jsx';
+import HousingContactReveal from '../components/HousingContactReveal.jsx';
 import { publicPlaceKey, trackXHubEvent } from '../lib/xhubAnalytics.js';
 
 function uniqueImages(values = []) {
@@ -266,7 +267,7 @@ export default function PlaceDetailV2() {
     description: metaDescription,
     url: canonical,
     ...(place.address ? { address: place.address } : {}),
-    ...(place.phone ? { telephone: place.phone } : {}),
+    ...(place.categorySlug !== 'bat-dong-san' && place.phone ? { telephone: place.phone } : {}),
     ...(images.length ? { image: images.slice(0, 4) } : {}),
     ...(Number.isFinite(Number(place.lat)) && Number.isFinite(Number(place.lng)) ? {
       geo: {
@@ -440,7 +441,7 @@ export default function PlaceDetailV2() {
             <Heart size={17} fill={favorite ? 'currentColor' : 'none'} /> {favorite ? 'Đã lưu' : 'Lưu'}
           </button>
           <button type="button" onClick={sharePlace}><Share2 size={17} /> Chia sẻ</button>
-          {place.phone && <a href={'tel:' + place.phone}
+          {place.categorySlug !== 'bat-dong-san' && place.phone && <a href={'tel:' + place.phone}
             onClick={() => void trackXHubEvent('contact_click')}>
             <Phone size={17} /> Gọi</a>}
           {website && <a href={website} target="_blank" rel="noreferrer"><Globe2 size={17} /> Website</a>}
@@ -734,7 +735,7 @@ export default function PlaceDetailV2() {
                 <p><strong>Nước:</strong> {housingDetail.housing.waterPricePerPersonMonth ? formatHousingMoney(housingDetail.housing.waterPricePerPersonMonth) + '/người/tháng' : 'Chưa cập nhật'}</p>
                 <p><strong>Gửi xe:</strong> {housingDetail.housing.parkingFeeMonthly !== null ? formatHousingMoney(housingDetail.housing.parkingFeeMonthly) + '/tháng' : 'Chưa cập nhật'}</p>
                 <p><strong>Có phòng từ:</strong> {housingDetail.housing.availableFrom ? new Date(housingDetail.housing.availableFrom).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</p>
-                <p><strong>Zalo:</strong> {housingDetail.housing.contactZalo || 'Chưa cập nhật'}</p>
+
                 {housingDetail.housing.curfewNote && <p><strong>Giờ giấc:</strong> {housingDetail.housing.curfewNote}</p>}
                 {housingDetail.housing.availabilityNote && <p><strong>Tình trạng:</strong> {housingDetail.housing.availabilityNote}</p>}
               </div>
@@ -754,6 +755,15 @@ export default function PlaceDetailV2() {
       )}
 
       {place.categorySlug === 'bat-dong-san' && housingDetail?.housing && (
+        <HousingContactReveal
+          key={place.id}
+          placeId={place.id}
+          contactName={housingDetail.housing.contactName}
+          isDemo={String(place.slug || '').startsWith('demo-thach-that-2026-')}
+        />
+      )}
+
+      {place.categorySlug === 'bat-dong-san' && housingDetail?.housing && (
         <HousingNearbyPlaces key={place.id} placeId={place.id} />
       )}
 
@@ -762,7 +772,7 @@ export default function PlaceDetailV2() {
           <div className="place-v2-section-title"><Sparkles size={19} /><h2>Về địa điểm này</h2></div>
           <p>{place.description || 'Địa điểm này chưa có mô tả chi tiết. Bạn có thể đóng góp thêm thông tin để Hola Maps hữu ích hơn cho cộng đồng Hòa Lạc.'}</p>
           <div className="place-v2-contact-list">
-            {place.phone && <a href={'tel:' + place.phone}><Phone size={17} /> {place.phone}</a>}
+            {place.categorySlug !== 'bat-dong-san' && place.phone && <a href={'tel:' + place.phone}><Phone size={17} /> {place.phone}</a>}
             {website && <a href={website} target="_blank" rel="noreferrer"><Globe2 size={17} /> {place.website} <ExternalLink size={14} /></a>}
           </div>
         </section>

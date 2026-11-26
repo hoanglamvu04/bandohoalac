@@ -2,6 +2,15 @@
 
 > **Chốt kiểm tra:** 16:57 25/11/2026 GMT+7. Xác minh `main` tại `c02640c9ec5399c003f3e1a7fd9115921e5a25d5` sau [PR #113](https://github.com/hoanglamvu04/bandohoalac/pull/113). [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817673) và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817721) PASS trên head PR.
 
+## 26/11/2026 GMT+7 — HOLA-P1-112: ghim giá BĐS, liên hệ sau đăng nhập
+
+- **Baseline:** `main` `a034b2d75a061c6bf4c1f3d462522b611c715953` (PR #124 đã merge). Nhánh `feat/p1-112-housing-price-pins-contact-reveal-20261126`, **ĐANG LÀM — chờ CI/merge**, chưa deploy VPS.
+- **Ghim bản đồ:** trong HOLA HOUSING hiển thị giá thuê/bán bằng nhãn MapLibre, giữ gom cụm, click/hover như pin thường. Giá rỗng vẫn để biểu tượng mặc định; không áp giá sang lớp POI khác.
+- **Liên hệ:** API công khai BĐS không trả `phone` và `contactZalo` trong place/housing; API riêng `GET /api/housing/:placeId/contact` kiểm tra session, published+active+expiry, hạn mức 12 lượt/phút/tài khoản, no-store; demo không trả số giả. Frontend login rồi click mới gọi; có hủy request khi đổi tin/logout.
+- **Mở rộng:** thẻ trên map, trang chi tiết mới/cũ có người đăng và nút hiện số; giữ địa điểm không phải BĐS như hiện tại. Không tự đánh dấu chủ nhà đã xác minh.
+- **Tests:** bổ sung backend unit HTTP 401, data redaction và validation; Playwright ghim giá, ẩn số khi chưa login, click reveal khi login; tài liệu `docs/HOUSING_PRICE_PINS_CONTACT_REVEAL_P1_112.md`. **CI chưa có bằng chứng PASS ở thời điểm ghi.**
+- **Bàn giao:** kiểm thử PG16/PostGIS, Playwright, CodeQL/Security, merge nếu xanh, cập nhật trạng thái và hướng dẫn build/reload riêng HOLA Maps; không tự deploy hoặc thu thập PII.
+
 ## 26/11/2026 GMT+7 — HOLA-P1-111: mở seed demo trên production theo yêu cầu
 
 - **Yêu cầu:** chủ website chấp thuận đưa 30 tin giả (15 nhà trọ/phòng trọ) lên DB live phục vụ QA, công khai tên/giá/ảnh demo.

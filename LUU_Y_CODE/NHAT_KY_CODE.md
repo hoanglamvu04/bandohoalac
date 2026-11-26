@@ -2,6 +2,15 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 26/11/2026 GMT+7 — HOLA-P1-112 — BĐS ghim giá và contact reveal
+
+- **Baseline:** main `a034b2d75a061c6bf4c1f3d462522b611c715953`; PR #124 đã merge, #125 vẫn là PR tài liệu chờ CI ở thời điểm bắt đầu.
+- **Nhánh/trạng thái:** `feat/p1-112-housing-price-pins-contact-reveal-20261126` đang code/PR, chưa qua CI/merge, chưa triển khai VPS.
+- **Backend:** thêm service/contact controller/route có auth session, rate limit và no-store; BĐS công khai ẩn số điện thoại và Zalo, không ảnh hưởng contact POI khác. Demo 30 tin không có số điện thoại thật.
+- **Frontend:** MapLibre price badge cho BĐS trong mode housing, có selection/hover, cluster vẫn giữ; component `HousingContactReveal` trên popup và trang chi tiết, request chỉ phát sau click, hủy khi đổi tin/tài khoản.
+- **Tests:** tạo backend test redaction/401/expired/demo/validation và Playwright test ghim giá + login gate/reveal; tài liệu `docs/HOUSING_PRICE_PINS_CONTACT_REVEAL_P1_112.md`. Chưa có kết quả CI thật tại thời điểm ghi.
+- **Bàn giao:** xem PR/CI, sửa lỗi nếu có; merge khi xanh. Sau merge phải cập nhật LUU_Y_CODE và đưa lệnh VPS kéo/build/reload đúng tiến trình. Không tự SSH hoặc lấy số riêng từ production.
+
 ## 26/11/2026 GMT+7 — HOLA-P1-111: production opt-in cho 30 BĐS DEMO
 
 - **Trước:** `main` `e70b9ec672be0343f261ed5ef790d9e6d61d7e65`; code seed #122 đã merge. Chủ website yêu cầu xuất bản demo lên DB production để kiểm thử.

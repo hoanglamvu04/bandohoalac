@@ -30,6 +30,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import PlaceReviews from '../components/PlaceReviews.jsx';
 import PlaceContributionPanel from '../components/PlaceContributionPanel.jsx';
+import HousingContactReveal from '../components/HousingContactReveal.jsx';
 
 export default function PlaceDetail() {
   const { id } = useParams();
@@ -521,10 +522,18 @@ export default function PlaceDetail() {
             <span><small>Giờ hoạt động</small><b>{place.openingHours || 'Chưa cập nhật'}</b></span>
           </div>
 
-          <div className="detail-info-row">
-            <Phone size={18} />
-            <span><small>Điện thoại</small><b>{place.phone || 'Chưa cập nhật'}</b></span>
-          </div>
+          {place.categorySlug === 'bat-dong-san' ? (
+            <HousingContactReveal
+              key={place.id}
+              placeId={place.id}
+              isDemo={String(place.slug || '').startsWith('demo-thach-that-2026-')}
+            />
+          ) : (
+            <div className="detail-info-row">
+              <Phone size={18} />
+              <span><small>Điện thoại</small><b>{place.phone || 'Chưa cập nhật'}</b></span>
+            </div>
+          )}
 
           <div className="detail-info-row">
             <MapPin size={18} />

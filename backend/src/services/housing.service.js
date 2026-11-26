@@ -26,7 +26,7 @@ function mapHousingRow(row) {
     slug: row.slug,
     description: row.description,
     address: row.address,
-    phone: row.phone,
+    phone: null,
     website: row.website,
     priceLevel: row.price_level,
     openingHours: row.opening_hours,
@@ -69,7 +69,7 @@ function mapHousingRow(row) {
       allowsPets: row.allows_pets,
       curfewNote: row.curfew_note || null,
       availabilityNote: row.availability_note || null,
-      contactZalo: row.contact_zalo || null,
+      contactZalo: null,
       availableFrom: row.available_from || null,
       lastVerifiedAt: row.housing_last_verified_at || null,
       verificationSource: row.verification_source || 'COMMUNITY'

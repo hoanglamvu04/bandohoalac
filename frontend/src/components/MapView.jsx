@@ -42,6 +42,9 @@ const PLACE_CLUSTER_LABEL_ID = 'hm-place-cluster-count';
 const PLACE_POINT_LAYER_ID = 'hm-place-point';
 const PLACE_POINT_LABEL_LAYER_ID = 'hm-place-point-label';
 const PLACE_NAME_LABEL_LAYER_ID = 'hm-place-name-label';
+const PLACE_HOUSING_PRICE_LAYER_ID = 'hm-housing-price-label';
+const HOUSING_RENT_BADGE_ID = 'hm-housing-price-rent';
+const HOUSING_SALE_BADGE_ID = 'hm-housing-price-sale';
 
 const BUILDING_2D_LAYER_IDS = [
   'hola-overture-building',
@@ -281,15 +284,71 @@ function ensurePlaceMarkerImages(map) {
   }
 }
 
+function ensureHousingPriceBadges(map) {
+  if (typeof document === 'undefined') return;
+  for (const [id, color] of [
+    [HOUSING_RENT_BADGE_ID, '#17654c'],
+    [HOUSING_SALE_BADGE_ID, '#244e68']
+  ]) {
+    if (map.hasImage(id)) continue;
+    const canvas = document.createElement('canvas');
+    canvas.width = 100;
+    canvas.height = 56;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) continue;
+    ctx.beginPath();
+    ctx.moveTo(24, 4);
+    ctx.lineTo(76, 4);
+    ctx.quadraticCurveTo(96, 4, 96, 24);
+    ctx.lineTo(96, 32);
+    ctx.quadraticCurveTo(96, 52, 76, 52);
+    ctx.lineTo(24, 52);
+    ctx.quadraticCurveTo(4, 52, 4, 32);
+    ctx.lineTo(4, 24);
+    ctx.quadraticCurveTo(4, 4, 24, 4);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    map.addImage(id, ctx.getImageData(0, 0, 100, 56), {
+      pixelRatio: 2,
+      stretchX: [[25, 75]],
+      stretchY: [[24, 32]],
+      content: [15, 10, 85, 46]
+    });
+  }
+}
+
+export function housingMapPriceLabel(housing) {
+  if (!housing) return '';
+  const sale = housing.listingType === 'SALE';
+  const amount = Number(sale ? housing.totalPriceVnd : housing.monthlyRent);
+  if (!Number.isFinite(amount) || amount <= 0) return '';
+  const number = (value, digits = 1) =>
+    value.toLocaleString('vi-VN', { maximumFractionDigits: digits });
+  if (sale) {
+    if (amount >= 1e9) return number(amount / 1e9, 2) + ' tỷ';
+    if (amount >= 1e6) return number(amount / 1e6) + ' tr';
+    return number(amount, 0) + ' đ';
+  }
+  if (amount >= 1e6) return number(amount / 1e6) + ' tr/th';
+  if (amount >= 1e3) return number(amount / 1e3, 0) + 'k/th';
+  return number(amount, 0) + 'đ/th';
+}
+
 function emptyFeatureCollection() {
   return { type: 'FeatureCollection', features: [] };
 }
 
-function placeFeatureCollection(places = []) {
+function placeFeatureCollection(places = [], showHousingPrices = false) {
   return {
     type: 'FeatureCollection',
     features: places.map((place) => {
       const marker = categoryMarkerMeta(place.category);
+      const priceLabel = showHousingPrices && place.categorySlug === 'bat-dong-san'
+        ? housingMapPriceLabel(place.housing) : '';
 
       return {
         type: 'Feature',
@@ -304,7 +363,12 @@ function placeFeatureCollection(places = []) {
           category: place.category || 'Địa điểm',
           rating: Number(place.rating || 0),
           markerIcon: marker.id,
-          markerColor: marker.color
+          markerColor: marker.color,
+          ...(priceLabel ? {
+            priceLabel,
+            priceIcon: place.housing?.listingType === 'SALE'
+              ? HOUSING_SALE_BADGE_ID : HOUSING_RENT_BADGE_ID
+          } : {})
         }
       };
     })
@@ -339,12 +403,13 @@ function applyPlaceInteractionState(map, selectedPlaceId, hoveredPlaceId) {
   }
 }
 
-function addPlaceLayers(map, places = []) {
+function addPlaceLayers(map, places = [], showHousingPrices = false) {
   if (!map?.isStyleLoaded()) return;
 
   ensurePlaceMarkerImages(map);
+  ensureHousingPriceBadges(map);
 
-  const data = placeFeatureCollection(places);
+  const data = placeFeatureCollection(places, showHousingPrices);
   const source = map.getSource(PLACE_SOURCE_ID);
 
   if (source) {
@@ -458,7 +523,7 @@ function addPlaceLayers(map, places = []) {
       id: PLACE_POINT_LABEL_LAYER_ID,
       type: 'symbol',
       source: PLACE_SOURCE_ID,
-      filter: ['!', ['has', 'point_count']],
+      filter: ['all', ['!', ['has', 'point_count']], ['!', ['has', 'priceLabel']]],
       layout: {
         'icon-image': ['coalesce', ['get', 'markerIcon'], 'hm-marker-default'],
         'icon-size': [
@@ -483,13 +548,39 @@ function addPlaceLayers(map, places = []) {
     });
   }
 
+  // Price badges replace place pins only in the property layer. Text-fitting
+  // icon backgrounds use MapLibre sprite stretch metadata, not DOM markers.
+  if (!map.getLayer(PLACE_HOUSING_PRICE_LAYER_ID)) {
+    map.addLayer({
+      id: PLACE_HOUSING_PRICE_LAYER_ID,
+      type: 'symbol',
+      source: PLACE_SOURCE_ID,
+      filter: ['all', ['!', ['has', 'point_count']], ['has', 'priceLabel']],
+      layout: {
+        'icon-image': ['get', 'priceIcon'],
+        'icon-text-fit': 'both',
+        'icon-text-fit-padding': [5, 10, 5, 10],
+        'icon-allow-overlap': false,
+        'text-field': ['get', 'priceLabel'],
+        'text-font': ['Noto Sans Regular'],
+        'text-size': 13,
+        'text-allow-overlap': false
+      },
+      paint: {
+        'text-color': '#ffffff',
+        'text-halo-color': 'rgba(0,0,0,0.1)',
+        'text-halo-width': 0.5
+      }
+    });
+  }
+
   // Place names only appear when the user is close enough for them to be useful.
   if (!map.getLayer(PLACE_NAME_LABEL_LAYER_ID)) {
     map.addLayer({
       id: PLACE_NAME_LABEL_LAYER_ID,
       type: 'symbol',
       source: PLACE_SOURCE_ID,
-      filter: ['!', ['has', 'point_count']],
+      filter: ['all', ['!', ['has', 'point_count']], ['!', ['has', 'priceLabel']]],
       minzoom: 15.4,
       layout: {
         'text-field': ['get', 'name'],
@@ -1042,6 +1133,7 @@ function renderTripStops(map, stops = []) {
 
 export default function MapView({
   places = [],
+  showHousingPrices = false,
   selectedPlaceId,
   hoveredPlaceId,
   onSelectPlace,
@@ -1068,6 +1160,7 @@ export default function MapView({
   const latestRouteRef = useRef(route);
   const latestTripStopsRef = useRef([]);
   const latestPlacesRef = useRef([]);
+  const latestShowHousingPricesRef = useRef(showHousingPrices);
   const latestSelectPlaceRef = useRef(onSelectPlace);
   const latestHoverPlaceRef = useRef(onHoverPlace);
   const latestSelectStatusFeatureRef = useRef(onSelectStatusFeature);
@@ -1188,7 +1281,7 @@ export default function MapView({
         map.on('load', () => {
           addCoverage(map);
           addDataLayers(map, mapData);
-          addPlaceLayers(map, validPlaces);
+          addPlaceLayers(map, validPlaces, latestShowHousingPricesRef.current);
           applyPlaceInteractionState(
             map,
             latestSelectedPlaceIdRef.current,
@@ -1278,6 +1371,15 @@ export default function MapView({
         map.on('click', PLACE_POINT_LABEL_LAYER_ID, selectPlacePoint);
         map.on('mousemove', PLACE_POINT_LABEL_LAYER_ID, hoverPlacePoint);
         map.on('mouseleave', PLACE_POINT_LABEL_LAYER_ID, clearPlacePointHover);
+        map.on('click', PLACE_HOUSING_PRICE_LAYER_ID, selectPlacePoint);
+        map.on('mousemove', PLACE_HOUSING_PRICE_LAYER_ID, hoverPlacePoint);
+        map.on('mouseleave', PLACE_HOUSING_PRICE_LAYER_ID, clearPlacePointHover);
+        map.on('mouseenter', PLACE_HOUSING_PRICE_LAYER_ID, () => {
+          map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', PLACE_HOUSING_PRICE_LAYER_ID, () => {
+          map.getCanvas().style.cursor = '';
+        });
 
         map.on('mouseenter', PLACE_POINT_LABEL_LAYER_ID, () => {
           map.getCanvas().style.cursor = 'pointer';
@@ -1415,6 +1517,10 @@ export default function MapView({
   }, [validPlaces]);
 
   useEffect(() => {
+    latestShowHousingPricesRef.current = showHousingPrices;
+  }, [showHousingPrices]);
+
+  useEffect(() => {
     latestSelectPlaceRef.current = onSelectPlace;
   }, [onSelectPlace]);
 
@@ -1491,7 +1597,7 @@ export default function MapView({
 
         addCoverage(map);
         addDataLayers(map, latestMapDataRef.current);
-        addPlaceLayers(map, latestPlacesRef.current);
+        addPlaceLayers(map, latestPlacesRef.current, latestShowHousingPricesRef.current);
         applyPlaceInteractionState(
           map,
           latestSelectedPlaceIdRef.current,
@@ -1558,8 +1664,8 @@ export default function MapView({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !interactiveReady) return;
-    addPlaceLayers(map, validPlaces);
-  }, [validPlaces, interactiveReady]);
+    addPlaceLayers(map, validPlaces, showHousingPrices);
+  }, [validPlaces, showHousingPrices, interactiveReady]);
 
 
   useEffect(() => {

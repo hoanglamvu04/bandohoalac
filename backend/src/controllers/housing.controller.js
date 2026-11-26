@@ -1,5 +1,6 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/AppError.js';
+import { getHousingContactForMember } from '../services/housingContact.service.js';
 import {
   getHousingListingByPlaceId,
   listHousingListings
@@ -16,4 +17,12 @@ export const getHousing = asyncHandler(async (req, res) => {
   if (!item) throw new AppError('Không tìm thấy phòng trọ.', 404);
   res.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=600');
   res.json({ item });
+});
+
+export const revealHousingContact = asyncHandler(async (req, res) => {
+  const contact = await getHousingContactForMember(req.params.placeId);
+  res.set('Cache-Control', 'private, no-store');
+  res.set('Pragma', 'no-cache');
+  res.vary('Authorization');
+  res.json({ contact });
 });
