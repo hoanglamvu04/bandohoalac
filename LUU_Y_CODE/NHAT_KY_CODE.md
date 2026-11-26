@@ -2,6 +2,12 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 27/11/2026 GMT+7 — HOLA-P1-120 / HOLA-P2-121 — search, lưới giá, dòng tiền, góc nhìn
+
+- Stacked sau #131, nhánh `feat/roadmap-search-market-smart-map-20261127`, DANG_LAM. Bổ sung parser tiếng Việt deterministic có giới hạn (ngân sách có đơn vị, bán/thuê, FPT, tiện ích), hiển thị tiêu chí; không gọi AI hay bịa kết quả. Đồng bộ subtype/nội thất vào URL, API, saved search; không lọc lại bằng chuỗi có dấu sau backend.
+- Lưới giá 0.025 độ theo viewport, ô tối thiểu 5 mẫu, median giá chào bán/m² hoặc thuê/tháng, loại DEMO/import, click ô mở camera; không phải ranh giới hành chính. Migration 350 lưu snapshot tháng từ lần job thực sự chạy, không hồi tố; job prune hiện hữu gọi snapshot. Calculator đầu tư chỉ từ thông số người dùng, ghi rõ giả định.
+- Góc nhìn/lớp bản đồ lưu local browser do người dùng chủ động bấm, giới hạn 10, không đồng bộ tài khoản/GPS. Chưa polygon drawing/corridor routing hoặc kiểm thử thiết bị thật. Tests logic/SQL; CI chờ. Không deploy.
+
 ## 27/11/2026 GMT+7 — HOLA-P1-119 — Đợt 2–3: đặc điểm tài sản, lịch sử và gợi ý
 
 - Xác minh PR #129 merge `707db62988761d3d5f67ad2ca363d9d5bd853738`, PR #130 merge `e8b6d44e473c393fe7734de2cc7e23018c3d5a15`; cả hai 9/9 CI/Security PASS. Chưa xác minh deploy. 

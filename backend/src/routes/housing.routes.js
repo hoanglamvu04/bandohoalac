@@ -1,3 +1,4 @@
+import { getMarketGrid, getMarketTrend } from '../services/housingMarketGrid.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { getHousingHistory, getSimilarHousing } from '../services/housingDiscovery.service.js';
 import { Router } from 'express';
@@ -32,6 +33,13 @@ const housingInsightsLimiter = rateLimit({
   message: { error: 'Bạn đang tra cứu quá nhanh. Vui lòng thử lại sau.' }
 });
 
+router.get('/market-grid',housingInsightsLimiter,validateQuery(marketInsightsQuerySchema),asyncHandler(async(req,res)=>{
+ res.set('Cache-Control','public, max-age=60');res.json(await getMarketGrid(req.query));
+}));
+router.get('/market-trend',housingInsightsLimiter,validateQuery(marketInsightsQuerySchema),asyncHandler(async(req,res)=>{
+ if(req.query.west!==undefined)return res.status(400).json({error:'Xu hướng tháng chỉ áp dụng toàn vùng HOLA.'});
+ res.set('Cache-Control','public, max-age=60');res.json(await getMarketTrend(req.query));
+}));
 router.get('/market-insights', housingInsightsLimiter,
   validateQuery(marketInsightsQuerySchema), getPublicMarketInsights);
 router.get('/:placeId/amenities', housingInsightsLimiter,

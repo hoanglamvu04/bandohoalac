@@ -981,3 +981,10 @@ export function getHousingHistory(placeId,options={}){
 export function getSimilarHousing(placeId,options={}){
  return unwrap(client.get('/housing/'+encodeURIComponent(placeId)+'/similar',{signal:options.signal}));
 }
+
+export function getHousingMarketGrid(params,options={}){
+ return unwrap(client.get('/housing/market-grid',{params:cleanParams(params),signal:options.signal}));
+}
+export function getHousingMarketTrend(params,options={}){
+ return unwrap(client.get('/housing/market-trend',{params:cleanParams(params),signal:options.signal}));
+}
