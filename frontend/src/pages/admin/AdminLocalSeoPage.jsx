@@ -1,3 +1,4 @@
+import {filterSeoPages,isIndexEligible,seoAuditCsv} from '../../lib/localSeoAudit.js';
 import { useCallback, useEffect, useState } from 'react';
 import {
   AlertTriangle,
@@ -15,6 +16,7 @@ import {
   updateAdminLocalSeoPageStatus
 } from '../../services/api.js';
 import '../../local-seo-admin.css';
+import '../../spatial-discovery.css';
 
 const STATUS_LABELS = {
   DRAFT: 'Bản nháp',
@@ -34,6 +36,7 @@ function QualityMetric({ label, value, target, ready }) {
 export default function AdminLocalSeoPage() {
   const { showToast } = useToast();
   const [items, setItems] = useState([]);
+  const [query,setQuery]=useState(''),[statusFilter,setStatusFilter]=useState('ALL'),[gateFilter,setGateFilter]=useState('ALL');
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState('');
   const [error, setError] = useState('');
@@ -89,6 +92,13 @@ export default function AdminLocalSeoPage() {
 
   const readyCount = items.filter((item) => item.canPublish).length;
   const publishedCount = items.filter((item) => item.status === 'PUBLISHED').length;
+  const eligibleCount=items.filter(isIndexEligible).length;
+  const filtered=filterSeoPages(items,{query,status:statusFilter,gate:gateFilter});
+  function exportAudit(){
+    const url=URL.createObjectURL(new Blob([seoAuditCsv(filtered)],{type:'text/csv;charset=utf-8'}));
+    const a=document.createElement('a');a.href=url;a.download='hola-local-seo-audit-'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+    window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
 
   return (
     <main className="admin-page local-seo-admin page-container">
@@ -107,6 +117,7 @@ export default function AdminLocalSeoPage() {
         <article><small>Tổng landing page</small><b>{items.length}</b></article>
         <article><small>Đạt điều kiện xuất bản</small><b>{readyCount}</b></article>
         <article><small>Đang xuất bản</small><b>{publishedCount}</b></article>
+        <article><small>Đủ điều kiện index nội bộ</small><b>{eligibleCount}</b></article>
       </section>
 
       <div className="local-seo-admin-policy">
@@ -114,14 +125,21 @@ export default function AdminLocalSeoPage() {
         <p><b>Quality Gate đang bật.</b> Trang không đạt điều kiện sẽ không được trả HTML indexable và không xuất hiện trong sitemap, kể cả khi trạng thái trước đó là Published.</p>
       </div>
 
+      <section className="hm-spatial-panel" aria-label="Báo cáo kiểm tra SEO">
+        <p>Đây là điều kiện nội bộ, không phải bằng chứng Google đã index hay thứ hạng từ khóa. Chưa kết nối Search Console.</p>
+        <label>Tìm trang<input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Tên khu vực, slug, danh mục"/></label>
+        <label>Trạng thái<select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="ALL">Tất cả</option><option value="DRAFT">Nháp</option><option value="PUBLISHED">Xuất bản</option><option value="ARCHIVED">Lưu trữ</option></select></label>
+        <label>Quality gate<select value={gateFilter} onChange={e=>setGateFilter(e.target.value)}><option value="ALL">Tất cả</option><option value="READY">Đạt</option><option value="BLOCKED">Chưa đạt</option><option value="INDEX_ELIGIBLE">Đủ điều kiện index nội bộ</option><option value="BLOCKED_PUBLISHED">Published nhưng bị chặn index</option></select></label>
+        <button type="button" onClick={exportAudit} disabled={loading||!filtered.length}>Xuất CSV kiểm tra ({filtered.length})</button>
+      </section>
       {error && <div className="local-seo-admin-error"><AlertTriangle size={17} /> {error}</div>}
       {loading ? (
         <div className="local-seo-admin-empty">Đang kiểm tra dữ liệu địa điểm và điều kiện SEO...</div>
-      ) : !items.length ? (
-        <div className="local-seo-admin-empty">Chưa có landing page nào được cấu hình.</div>
+      ) : !filtered.length ? (
+        <div className="local-seo-admin-empty">Chưa có landing page phù hợp bộ lọc.</div>
       ) : (
         <section className="local-seo-admin-list">
-          {items.map((item) => {
+          {filtered.map((item) => {
             const quality = item.quality || {};
             const busy = busyId === String(item.id);
             return (
