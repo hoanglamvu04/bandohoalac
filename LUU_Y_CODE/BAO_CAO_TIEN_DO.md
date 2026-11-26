@@ -2,6 +2,22 @@
 
 > **Chốt kiểm tra:** 16:57 25/11/2026 GMT+7. Xác minh `main` tại `c02640c9ec5399c003f3e1a7fd9115921e5a25d5` sau [PR #113](https://github.com/hoanglamvu04/bandohoalac/pull/113). [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817673) và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817721) PASS trên head PR.
 
+## 26/11/2026 GMT+7 — HOLA-P0-004 + HOLA-P1-102 — kiểm toán bản sao & cụm ghim mobile
+
+- **Trạng thái:** ĐANG LÀM — nhánh `feat/p0-004-p1-102-audit-cluster-20261126` trên nhánh bảo mật #119; chờ CI/merge. Không chạy truy vấn dữ liệu production hoặc deploy VPS.
+- **P0-004 / Issue #115:** Bổ sung `verifyReadOnlyAuditCopy` kiểm tra xác nhận bản sao, transaction `READ ONLY`, tài khoản không phải quản trị và không có quyền INSERT/UPDATE/DELETE/TRUNCATE trên bảng chính. Runbook dừng ngay khi preflight không đạt. **Chưa có số liệu thực tế** — cần bản sao độc lập và tài khoản chỉ đọc do người vận hành xác minh.
+- **P1-102 / Issue #117:** Dùng MapLibre WebGL để gom ghim công khai gần nhau ở zoom thấp (cluster radius 48px, zoom ≤14), hiển thị số lượng, chạm mới phóng to; không tự đổi vị trí camera khi đóng chi tiết. Test Playwright với 65 ghim giả lập trên viewport mobile.
+- **Kiểm thử:** đã thêm backend unit preflight và frontend Playwright cluster; chờ CI/PostGIS, CodeQL. Test giả lập không thể chứng minh P95 hoặc trải nghiệm thiết bị Android/iOS thật.
+- **Phụ thuộc:** #119 cần merge trước; #118 bảo vệ branch và #115 audit dữ liệu thật còn chờ quản trị viên/DB copy. WA-005 #92 chưa được phê duyệt.
+
+## 26/11/2026 GMT+7 — HOLA-P0-005 / OPS-118 — Security (đang PR)
+
+- **Nhánh:** `fix/p0-005-cron-fail-closed-20261126`, PR chờ CI/merge, chưa triển khai VPS.
+- **Code:** sửa script legacy `scripts/install-backup-cron.sh` để thiếu crontab hoặc ghi cron thất bại trả lỗi; thêm Node tests giả lập crontab, không sửa cron máy chủ; hướng dẫn cấu hình bảo vệ `main`.
+- **Đối chiếu:** Cloudinary/main đã re-encode WebP trước upload; PR #54 và #57 cũ phải review riêng, không merge hàng loạt. Issue #116 vẫn theo dõi.
+- **Blocker:** Issue #118 cần GitHub admin bật branch protection; backup offsite và restore drill vẫn cần VPS, không có bằng chứng đã nghiệm thu.
+- **CI:** đang chờ kết quả, không coi PR đã merge.
+
 ## HOLA-P1-102 — Smart Map V4 (16:54 25/11/2026 GMT+7)
 
 - **Trạng thái:** [PR #113](https://github.com/hoanglamvu04/bandohoalac/pull/113) đã merge tại `c02640c9ec5399c003f3e1a7fd9115921e5a25d5`. Chưa triển khai VPS.

@@ -2,15 +2,21 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/bandohoalac}"
+# Cron entries are unquoted shell commands; refuse ambiguous or unsafe paths.
+if [[ "$APP_DIR" == *[[:space:]]* || "$APP_DIR" == *';'* ||
+      "$APP_DIR" == *'&'* || "$APP_DIR" == *'|'* || "$APP_DIR" == *'`'* ]]; then
+  echo "[backup] APP_DIR contains unsupported characters." >&2
+  exit 1
+fi
 MARKER="# HOLA_MAPS_NIGHTLY_BACKUP"
 
-mkdir -p "$APP_DIR/backend/backups"
-chmod 700 "$APP_DIR/backend/backups" || true
-
 if ! command -v crontab >/dev/null 2>&1; then
-  echo "[backup] crontab is unavailable; skipped." >&2
-  exit 0
+  echo "[backup] crontab is unavailable; backup scheduling is NOT installed." >&2
+  exit 1
 fi
+
+mkdir -p "$APP_DIR/backend/backups"
+chmod 700 "$APP_DIR/backend/backups"
 
 LINE="17 3 * * * cd $APP_DIR/backend && npm run db:backup >> $APP_DIR/backend/backups/backup.log 2>&1 $MARKER"
 
@@ -19,4 +25,8 @@ LINE="17 3 * * * cd $APP_DIR/backend && npm run db:backup >> $APP_DIR/backend/ba
   printf '%s\n' "$LINE"
 ) | crontab -
 
-echo "[backup] nightly verified backup schedule installed."
+if ! crontab -l | grep -Fq "$MARKER"; then
+  echo "[backup] Installation did not persist a cron entry." >&2
+  exit 1
+fi
+echo "[backup] nightly backup schedule installed (requires separate offsite/restore verification)."

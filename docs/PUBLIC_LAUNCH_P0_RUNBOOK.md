@@ -169,7 +169,7 @@ Property owner:
 
 ### Kiểm toán tiện ích và BĐS trên bản sao PostgreSQL
 
-Chỉ chạy khi đã có **bản sao PostgreSQL riêng được phép đọc** và URL kết nối của tài khoản chỉ đọc. Nếu chỉ có URL của cơ sở dữ liệu website đang dùng thì dừng ở bước này. Khối lệnh dành cho Bash trên VPS có Git và Node.js. Nó tải mã vào thư mục tạm, cài thư viện ở đó và hỏi URL bằng chế độ nhập ẩn.
+Chỉ chạy khi đã có **bản sao PostgreSQL riêng được phép đọc** và URL kết nối của tài khoản chỉ đọc. Mã sẽ kiểm tra role không có quyền ghi trên các bảng chính và transaction READ ONLY; xác nhận bản sao độc lập vẫn phải do người vận hành tự kiểm chứng. [Hướng dẫn preflight](POSTGRES_COPY_AUDIT_PREFLIGHT.md). Nếu chỉ có URL của cơ sở dữ liệu website đang dùng thì dừng ở bước này. Khối lệnh dành cho Bash trên VPS có Git và Node.js. Nó tải mã vào thư mục tạm, cài thư viện ở đó và hỏi URL bằng chế độ nhập ẩn.
 
 ```bash
 (
@@ -179,13 +179,19 @@ git clone --quiet --depth 1 https://github.com/hoanglamvu04/bandohoalac.git "$au
 cd "$audit_dir/hola/backend"
 npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 git rev-parse --short HEAD
+read -rp 'Xác nhận đây là DB SAO CHÉP riêng, role không có quyền ghi (nhập BAN_SAO_DOC_LAP_CHI_DOC): ' AUDIT_COPY_ACK
+if [ "$AUDIT_COPY_ACK" != "BAN_SAO_DOC_LAP_CHI_DOC" ]; then
+  echo 'Đã dừng: chưa xác nhận bản sao độc lập.'
+  exit 1
+fi
 read -rsp 'Nhập URL chỉ đọc của BẢN SAO PostgreSQL: ' DATABASE_URL
 printf '\n'
 test -n "$DATABASE_URL"
-NODE_ENV=development DATABASE_URL="$DATABASE_URL" node --input-type=module <<'NODE'
+NODE_ENV=development AUDIT_COPY_ACK="$AUDIT_COPY_ACK" DATABASE_URL="$DATABASE_URL" node --input-type=module <<'NODE'
 import pg from 'pg';
 import { auditHousingAmenities } from './src/scripts/auditHousingAmenities.js';
 import { buildPublicLaunchAudit } from './src/scripts/publicLaunchAudit.js';
+import { verifyReadOnlyAuditCopy } from './src/scripts/auditCopyPreflight.js';
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -196,6 +202,10 @@ try {
   client = await pool.connect();
   await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
   await client.query("SET LOCAL statement_timeout = '30s'");
+  // Fail closed for superusers, writable privileges or wrong transaction mode.
+  // Only the operator can verify the DB is truly an independent copy.
+  const preflight = await verifyReadOnlyAuditCopy(client, process.env.AUDIT_COPY_ACK);
+  console.log('=== CHẾ ĐỘ KIỂM TOÁN ===', preflight.auditMode);
   const quality = await buildPublicLaunchAudit(client);
   const amenities = await auditHousingAmenities(client);
   console.log('=== KIỂM TOÁN BĐS ===', quality.checkedAt);

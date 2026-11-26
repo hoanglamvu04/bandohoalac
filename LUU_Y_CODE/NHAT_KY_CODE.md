@@ -2,6 +2,24 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 26/11/2026 GMT+7 — HOLA-P0-004 / HOLA-P1-102 — preflight bản sao và marker clustering
+
+- **Trước:** main `de134e4c94bcad7bf91284d383cc7e5c67933f89`, nhánh bảo mật #119 đã sửa cron và đang chờ CI; hai đợt này được xếp trên cùng nhánh `feat/p0-004-p1-102-audit-cluster-20261126`.
+- **Code:** `backend/src/scripts/auditCopyPreflight.js`, `backend/tests/auditCopyPreflight.test.js`, runbook kiểm toán, `MapView.jsx` gom ghim WebGL, Playwright ghim dày và docs nghiệm thu mobile.
+- **Nghiệm thu mã nguồn:** chờ CI backend/PostGIS, Playwright, CodeQL, dependency và handoff. Không viết PASS trước khi có chứng cứ.
+- **Dữ liệu thật:** chưa chạy trên PostgreSQL copy; sẽ yêu cầu xác nhận bằng bản sao và tài khoản chỉ đọc, không gửi kết nối ra Git.
+- **Mobile thật:** chưa đo P50/P95/hardware, phải làm ở Android/iOS và mạng chậm.
+- **Bàn giao:** hoàn tất kiểm thử và merge sau #119; giữ issue #115, #117 mở cho các gate vận hành chưa có bằng chứng.
+
+## 26/11/2026 GMT+7 — HOLA-P0-005 — sửa fail-closed backup cron và tài liệu bảo vệ main
+
+- **Trước:** main `de134e4c94bcad7bf91284d383cc7e5c67933f89` CI/Security PASS, `main` chưa protected.
+- **Nhánh:** `fix/p0-005-cron-fail-closed-20261126`, PR/CI đang thực hiện.
+- **Mã:** `scripts/install-backup-cron.sh` (cron thiếu hoặc không lưu lịch = FAIL), `backend/tests/backupCronInstaller.test.js`, `docs/SECURITY_UPLOAD_CRON_REVIEW_P0_005.md` và `docs/MAIN_BRANCH_PROTECTION_OPERATOR.md`.
+- **Kiểm thử:** bổ sung test fake crontab, mất cron, idempotency; chờ CI thực tế. Không thao tác cron VPS thật.
+- **Phụ thuộc:** GitHub admin bật bảo vệ `main` (issue #118); PR #54/#57 review tiếp; restore drill/offsite chưa nghiệm thu.
+- **Bàn giao:** sau khi CI xanh mới merge; tiếp tục báo cáo #115 từ bản sao PostgreSQL và kiểm thử mobile #117.
+
 ## 16:57 25/11/2026 GMT+7 — HOLA-P1-102 / P0-004 / P1-109 — Xác nhận merge và lệnh kiểm toán
 
 - **Smart Map V4:** [PR #113](https://github.com/hoanglamvu04/bandohoalac/pull/113) đã merge tại `c02640c9ec5399c003f3e1a7fd9115921e5a25d5`; 9/9 checks PASS, 231 bài backend và 64 bài Playwright đều PASS. [CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817673) và [Security](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817721).
