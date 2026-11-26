@@ -30,7 +30,7 @@ test('backup installer replaces only its own job and preserves other entries', {
   const stub = path.join(bin, 'crontab');
   writeFileSync(stub, `#!/bin/sh
 if [ "$1" = "-l" ]; then cat "$CRON_STUB_STATE"; exit 0; fi
-if [ "$1" = "-" ]; then cat > "$CRON_STUB_STATE"; exit 0; fi
+if [ "$1" = "-" ]; then cat > "$CRON_STUB_STATE.next" && mv "$CRON_STUB_STATE.next" "$CRON_STUB_STATE"; exit $?; fi
 exit 2
 `, { mode: 0o755 });
   try {
