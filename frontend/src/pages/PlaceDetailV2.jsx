@@ -1,3 +1,4 @@
+import {PublicBusinessCatalog} from '../components/BusinessCatalog.jsx';
 import HousingDiscoveryDetails from '../components/HousingDiscoveryDetails.jsx';
 import { useEffect, useMemo, useState } from 'react';
 import '../place-trust.css';
@@ -876,6 +877,7 @@ export default function PlaceDetailV2() {
         <PlaceReviews placeId={place.id} />
         <PlaceContributionPanel place={place} onChanged={() => {}} />
       </section>
+      {place.categorySlug!=='bat-dong-san'&&place.isPartner&&<PublicBusinessCatalog placeId={place.id} user={user}/>}
     </main>
   );
 }

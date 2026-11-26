@@ -23,7 +23,7 @@ export function RouteNearbyPlaces({route}){
  <label>Danh mục <select value={category} onChange={e=>{setCategory(e.target.value);setResult(null);}} disabled={busy}><option value="">Tất cả tiện ích</option><option value="an-uong">Ăn uống</option><option value="cafe">Cà phê</option><option value="y-te">Y tế</option><option value="nhien-lieu-sac">Nhiên liệu / sạc</option></select></label>
  <button type="button" onClick={search} disabled={busy||coordinates.length>4000}>{busy?'Đang tìm…':'Tìm dọc tuyến'}</button>
  {coordinates.length>4000&&<p>Tuyến quá chi tiết; hãy tìm trên chặng ngắn hơn.</p>}
- {error&&<p role="alert">{error}</p>}{result&&<><p>{result.items.length} địa điểm{result.hasMore?' đầu tiên':''}</p><ul>{result.items.map(x=><li key={x.id}><Link to={'/places/'+x.id}>{x.name}</Link> · {x.distanceMeters} m</li>)}</ul></>}
+ {error&&<p role="alert">{error}</p>}{result&&<><p>{result.items.length} địa điểm{result.hasMore?' đầu tiên':''}</p><ul>{result.items.map(x=><li key={x.id}><Link to={'/place/'+x.id}>{x.name}</Link> · {x.distanceMeters} m</li>)}</ul></>}
  </details>;
 }
 
@@ -45,5 +45,13 @@ export function AreaProfile({viewport}){
 
 export function HousingAreaResults({result,onClear}){
  if(!result)return null;
- return <div className="hm-spatial-panel"><b>Kết quả khoanh vùng · {result.meta?.total??result.items.length} tin</b><p>Hiển thị tối đa 30 tin phù hợp bộ lọc lúc tra cứu.</p><button type="button" onClick={onClear}>Xóa vùng</button><ul>{result.items.map(x=><li key={x.id}><Link to={'/places/'+x.id}>{x.name}</Link></li>)}</ul>{result.items.length===0&&<p>Chưa có tin phù hợp.</p>}</div>;
+ return <div className="hm-spatial-panel"><b>Kết quả khoanh vùng · {result.meta?.total??result.items.length} tin</b><p>Hiển thị tối đa 30 tin phù hợp bộ lọc lúc tra cứu.</p><button type="button" onClick={onClear}>Xóa vùng</button><ul>{result.items.map(x=><li key={x.id}><Link to={'/place/'+x.id}>{x.name}</Link></li>)}</ul>{result.items.length===0&&<p>Chưa có tin phù hợp.</p>}</div>;
+}
+
+export function LocalActivityFeed({mapData}){
+ const items=(mapData?.features||[]).filter(f=>['EVENT','ALERT','FLOOD','ROAD_CLOSURE'].includes(f.properties?.layerType))
+ .slice(0,30);
+ return <details className="hm-spatial-panel"><summary>Sự kiện và cảnh báo địa phương</summary><p>Từ lớp dữ liệu bản đồ đang tải. Không phải danh sách đầy đủ hay cảnh báo thời gian thực.</p>
+ {!items.length&&<p>Chưa có mục phù hợp trong các lớp đang tải.</p>}
+ <ul>{items.map((f,i)=>{const x=f.properties||{};return <li key={String(f.id||i)+'-'+i}><b>{x.name||'Thông tin địa phương'}</b> · {x.layerType}<br/><small>{x.sourceLabel||'Chưa có nhãn nguồn'} · {x.verificationStatus==='VERIFIED'?'Đã xác minh theo hệ thống':'Chưa có xác minh'}{x.validUntil?' · đến '+new Date(x.validUntil).toLocaleString('vi-VN'):''}</small></li>;})}</ul></details>;
 }

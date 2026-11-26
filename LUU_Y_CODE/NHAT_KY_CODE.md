@@ -6,6 +6,10 @@
 ### HOLA-P2-122 — Spatial discovery (27/11/2026)
 - Code: POST housing area-search, polygon validity/area cap and service-area clipping predicate; click-drawn 3–24 vertices, cancellation, separate results (normal map markers retained). Route corridor on existing OSRM geometry, public POI only, 200/500/1000 m, length/vertex caps. Viewport profile by published POI categories. No stored GPS or analytics; no claims of administrative coverage or exact detour. Tests added; CI pending. No migration, no production deploy. Real mobile and data-source acceptance still required.
 
+
+### HOLA-P2-123 — Business services and local activity (27/11/2026)
+- Migration 360: catalog and private appointment requests. Only published non-housing active partners with existing owner authority can manage; no auto-verification, payments, phone/email or X-HUB transfer. Public catalog, customer request/cancel, owner inbox/accept/decline/cancel and 30-day aggregate counts; request throttling. Appointment is a request, not a guaranteed slot. Map panel shows existing loaded events/alerts with provenance status. Correct spatial result detail path to /place/:id. Tests added; CI pending. Full real-world partner permission/retention policy and mobile evidence still needed. No production deploy.
+
 ## 27/11/2026 GMT+7 — HOLA-P1-120 / HOLA-P2-121 — search, lưới giá, dòng tiền, góc nhìn
 
 - Stacked sau #131, nhánh `feat/roadmap-search-market-smart-map-20261127`, DANG_LAM. Bổ sung parser tiếng Việt deterministic có giới hạn (ngân sách có đơn vị, bán/thuê, FPT, tiện ích), hiển thị tiêu chí; không gọi AI hay bịa kết quả. Đồng bộ subtype/nội thất vào URL, API, saved search; không lọc lại bằng chuỗi có dấu sau backend.
