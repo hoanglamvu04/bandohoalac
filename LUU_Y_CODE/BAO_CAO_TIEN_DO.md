@@ -2,6 +2,14 @@
 
 > **Chốt kiểm tra:** 16:57 25/11/2026 GMT+7. Xác minh `main` tại `c02640c9ec5399c003f3e1a7fd9115921e5a25d5` sau [PR #113](https://github.com/hoanglamvu04/bandohoalac/pull/113). [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817673) và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817721) PASS trên head PR.
 
+## 27/11/2026 GMT+7 — HOLA-P1-113/114/116 — chi phí thuê và vai trò người đăng
+
+- Baseline `main` `d81074a0836773099ea4232d1b19edba1f9f4428` sau PR #127. Nhánh `feat/p1-113-114-116-housing-rental-details-20261127`: DANG_LAM, chờ CI/merge, chưa deploy.
+- Bổ sung đơn giá thuê, tiền cọc, điện/nước/xe, số phòng trống tự khai vào form gửi duyệt; lưu vào các cột có sẵn sau duyệt; migration additive chỉ thêm advertiser_role, không xác minh chủ sở hữu. API public chỉ thêm vai trò; không trả phone/Zalo.
+- Calculator trang chi tiết RENT dựa trên đơn giá công khai, nhập số người/điện/xe, tách 0 khỏi thiếu dữ liệu; hiển thị ngày người đăng xác nhận riêng khỏi HOLA verification.
+- Test validator, phép tính và Playwright mobile bổ sung, chưa có kết quả CI. Chưa hoàn tất lịch xem, CRM lead, thống kê hoặc cập nhật số phòng trên tin cũ.
+- Bàn giao: kiểm tra PG16/PostGIS, frontend build/E2E và Security; tiếp tục P1-115/117/118. Không chạy migration VPS hoặc WA-005; P0, dữ liệu thật và thiết bị thật vẫn chờ.
+
 ## 26/11/2026 GMT+7 — HOLA-P1-112: ghim giá BĐS, liên hệ sau đăng nhập
 
 - **Đã merge:** [PR #126](https://github.com/hoanglamvu04/bandohoalac/pull/126) vào `main` SHA `9880919a514d36b0855cc44c979cb8356ac8220c`, **9/9 CI/Security checks PASS** trên head PR (frontend build, Playwright 67/67, backend PG16/PostGIS, CodeQL, security, dependency, shell, repository safety, handoff). **DA_MERGE_CHUA_DEPLOY** — chưa pull/build/reload VPS.

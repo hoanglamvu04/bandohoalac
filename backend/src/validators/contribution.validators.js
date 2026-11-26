@@ -27,11 +27,22 @@ export const realEstateSubmissionSchema = z.object({
   totalPriceVnd: z.coerce.number().int().positive().max(1000000000000000).optional(),
   monthlyRentVnd: z.coerce.number().int().positive().max(100000000).optional(),
   contactName: z.string().trim().min(2).max(120),
+  advertiserRole: z.enum(['OWNER','BROKER','MANAGER','OTHER']).optional(),
+  depositAmount: z.number().int().min(0).max(100000000).optional(),
+  electricityPricePerKwh: z.number().int().min(0).max(100000).optional(),
+  waterPricePerPersonMonth: z.number().int().min(0).max(100000000).optional(),
+  parkingFeeMonthly: z.number().int().min(0).max(100000000).optional(),
+  availableRooms: z.number().int().min(0).max(10000).optional(),
   publicContactConsent: z.literal(true, {
     errorMap: () => ({ message: 'Bạn cần đồng ý công khai thông tin liên hệ khi tin được duyệt.' })
   }),
   imageRightsConfirmed: z.boolean().optional()
 }).superRefine((value, ctx) => {
+  if (value.transactionType === 'SALE') {
+    for (const field of ['depositAmount','electricityPricePerKwh','waterPricePerPersonMonth','parkingFeeMonthly','availableRooms']) {
+      if (value[field] !== undefined) ctx.addIssue({ code:'custom', path:[field], message:'Chỉ áp dụng cho tin cho thuê.' });
+    }
+  }
   if (value.transactionType === 'SALE' && value.monthlyRentVnd !== undefined) {
     ctx.addIssue({ code: 'custom', message: 'Giá thuê không áp dụng cho tin cần bán.', path: ['monthlyRentVnd'] });
   }

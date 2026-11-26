@@ -3953,6 +3953,7 @@ export default function MapPage() {
                   key={selectedPlace.id}
                   placeId={selectedPlace.id}
                   contactName={selectedPlace.housing.contactName}
+                  advertiserRole={selectedPlace.housing.advertiserRole}
                   isDemo={String(selectedPlace.slug || '').startsWith('demo-thach-that-2026-')}
                 />
               )}

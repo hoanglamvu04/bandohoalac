@@ -7,7 +7,9 @@ import '../housing-contact-reveal.css';
 
 // Only an authenticated, explicit button click requests the contact endpoint.
 // No private number is sent with public listings or held in local storage.
-export default function HousingContactReveal({ placeId, contactName, isDemo = false }) {
+const ROLE_LABELS = { OWNER:'Chủ nhà / chủ tài sản', BROKER:'Môi giới', MANAGER:'Đơn vị quản lý / cho thuê', OTHER:'Khác' };
+
+export default function HousingContactReveal({ placeId, contactName, advertiserRole, isDemo = false }) {
   const { user } = useAuth();
   const location = useLocation();
   const [revealed, setRevealed] = useState(null);
@@ -69,6 +71,7 @@ export default function HousingContactReveal({ placeId, contactName, isDemo = fa
         <div>
           <small>Người đăng / người cho thuê</small>
           <strong>{displayName}</strong>
+          {!isDemo && ROLE_LABELS[advertiserRole] && <small>{ROLE_LABELS[advertiserRole]} · Tự khai, chưa xác minh</small>}
         </div>
       </div>
       <div className="hm-housing-contact-reveal">

@@ -1,0 +1,6 @@
+.hm-rental-cost p,.hm-rental-cost small{font-size:.85rem;line-height:1.5}
+.hm-rental-inputs,.hm-rental-totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+.hm-rental-inputs label{display:grid;gap:5px;font-size:.85rem;font-weight:600}
+.hm-rental-inputs input{width:100%;min-width:0;box-sizing:border-box;padding:9px;border:1px solid #8d9a9d;border-radius:8px;background:transparent;color:inherit;font:inherit}
+.hm-rental-cost dl{margin:12px 0}.hm-rental-cost dl>div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #8d9a9d40;font-size:.9rem}
+.hm-rental-cost dd{margin:0;text-align:right;font-weight:600}.hm-rental-totals>div{display:grid;gap:4px;padding:10px;border:1px solid #8d9a9d66;border-radius:9px}.hm-rental-totals strong{font-size:1.1rem;color:inherit}

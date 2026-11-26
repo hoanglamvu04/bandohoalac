@@ -45,6 +45,7 @@ import PlaceContributionPanel from '../components/PlaceContributionPanel.jsx';
 import PlaceReviews from '../components/PlaceReviews.jsx';
 import HousingNearbyPlaces from '../components/HousingNearbyPlaces.jsx';
 import HousingContactReveal from '../components/HousingContactReveal.jsx';
+import HousingCostCalculator from '../components/HousingCostCalculator.jsx';
 import { publicPlaceKey, trackXHubEvent } from '../lib/xhubAnalytics.js';
 
 function uniqueImages(values = []) {
@@ -744,6 +745,7 @@ export default function PlaceDetailV2() {
               <div className="place-v2-housing-verified">
                 <ShieldCheck size={14} /> {housingFreshness(housingDetail.housing.lastVerifiedAt)}
                 {housingDetail.housing.verificationSource === 'PARTNER' ? ' · HOLA Partner xác minh' : ''}
+                {housingDetail.housing.lastConfirmedAt && <span> · Người đăng xác nhận còn hiệu lực: {new Date(housingDetail.housing.lastConfirmedAt).toLocaleDateString('vi-VN', { timeZone:'Asia/Ho_Chi_Minh' })}</span>}
               </div>
             </>
           ) : (
@@ -759,8 +761,13 @@ export default function PlaceDetailV2() {
           key={place.id}
           placeId={place.id}
           contactName={housingDetail.housing.contactName}
+          advertiserRole={housingDetail.housing.advertiserRole}
           isDemo={String(place.slug || '').startsWith('demo-thach-that-2026-')}
         />
+      )}
+
+      {place.categorySlug === 'bat-dong-san' && housingDetail?.housing?.listingType === 'RENT' && (
+        <HousingCostCalculator key={place.id} housing={housingDetail.housing} />
       )}
 
       {place.categorySlug === 'bat-dong-san' && housingDetail?.housing && (

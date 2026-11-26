@@ -32,6 +32,12 @@ const INITIAL_FORM = {
   priceVnd: '',
   description: '',
   contactName: '',
+  advertiserRole: '',
+  depositAmount: '',
+  electricityPricePerKwh: '',
+  waterPricePerPersonMonth: '',
+  parkingFeeMonthly: '',
+  availableRooms: '',
   phone: ''
 };
 
@@ -229,11 +235,17 @@ export default function RealEstateSubmissionPage() {
         propertyType: form.propertyType,
         areaM2: area,
         contactName: form.contactName.trim(),
+        ...(form.advertiserRole ? { advertiserRole: form.advertiserRole } : {}),
         publicContactConsent,
         imageRightsConfirmed,
         ...(form.transactionType === 'SALE'
           ? { totalPriceVnd: price }
-          : { monthlyRentVnd: price })
+          : {
+            monthlyRentVnd: price,
+            ...Object.fromEntries(['depositAmount','electricityPricePerKwh','waterPricePerPersonMonth','parkingFeeMonthly','availableRooms']
+              .filter((key) => form[key] !== '')
+              .map((key) => [key, Number(form[key])]))
+          })
       };
       const result = await createContribution({
         type: 'CREATE_PLACE',
@@ -386,6 +398,19 @@ export default function RealEstateSubmissionPage() {
                     placeholder={form.transactionType === 'SALE' ? '3500000000' : '2500000'} />
                   {formatMoney(form.priceVnd) && <small className="estate-money-preview">Tương đương: {formatMoney(form.priceVnd)}{form.transactionType === 'RENT' ? '/tháng' : ''}</small>}
                 </label>
+                {form.transactionType === 'RENT' && [
+                  ['depositAmount','Tiền cọc (VND)',100000000],
+                  ['electricityPricePerKwh','Điện (VND/kWh)',100000],
+                  ['waterPricePerPersonMonth','Nước (VND/người/tháng)',100000000],
+                  ['parkingFeeMonthly','Gửi xe (VND/xe/tháng)',100000000],
+                  ['availableRooms','Số phòng hoặc căn còn trống',10000]
+                ].map(([key,label,max]) => (
+                  <label key={key}>{label}
+                    <input name={key} type="number" min="0" max={max} step="1" inputMode="numeric"
+                      value={form[key]} onChange={updateField} placeholder="Chưa cập nhật" />
+                    <small>Để trống nếu chưa biết; nhập 0 nếu miễn phí hoặc không còn phòng.</small>
+                  </label>
+                ))}
                 <label className="estate-full">
                   Thông tin mô tả (không bắt buộc)
                   <textarea name="description" maxLength={2000} rows={4} value={form.description}
@@ -400,6 +425,16 @@ export default function RealEstateSubmissionPage() {
                 <div><h2>Liên hệ và hình ảnh</h2><p>Người kiểm duyệt có thể liên hệ để kiểm tra thông tin trước khi đăng.</p></div>
               </div>
               <div className="estate-form-grid">
+                <label className="estate-full">
+                  Vai trò người đăng (tự khai, không phải xác minh quyền sở hữu)
+                  <select name="advertiserRole" value={form.advertiserRole} onChange={updateField}>
+                    <option value="">Chưa cung cấp</option>
+                    <option value="OWNER">Chủ nhà / chủ tài sản</option>
+                    <option value="BROKER">Môi giới</option>
+                    <option value="MANAGER">Đơn vị quản lý / cho thuê</option>
+                    <option value="OTHER">Khác</option>
+                  </select>
+                </label>
                 <label>
                   Tên người liên hệ
                   <input name="contactName" required minLength={2} maxLength={120} value={form.contactName}
@@ -441,7 +476,7 @@ export default function RealEstateSubmissionPage() {
                     onChange={(event) => setPublicContactConsent(event.target.checked)}
                     required
                   />
-                  <span>Tôi đồng ý để HOLA Maps <strong>công khai tên liên hệ và số điện thoại</strong> trên tin bất động sản sau khi quản trị viên duyệt. Tôi đã đọc <Link to="/quyen-rieng-tu">chính sách quyền riêng tư</Link>.</span>
+                  <span>Tôi đồng ý để HOLA Maps <strong>hiển thị tên liên hệ công khai và cho thành viên đã đăng nhập chủ động xem số điện thoại</strong> trên tin bất động sản sau khi quản trị viên duyệt. Tôi đã đọc <Link to="/quyen-rieng-tu">chính sách quyền riêng tư</Link>.</span>
                 </label>
                 {photos.length > 0 && (
                   <label className="estate-consent">
