@@ -2,6 +2,15 @@
 
 > **Chốt kiểm tra:** 16:57 25/11/2026 GMT+7. Xác minh `main` tại `c02640c9ec5399c003f3e1a7fd9115921e5a25d5` sau [PR #113](https://github.com/hoanglamvu04/bandohoalac/pull/113). [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817673) và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817721) PASS trên head PR.
 
+## 26/11/2026 GMT+7 — HOLA-P1-110: 30 bất động sản DEMO huyện Thạch Thất cũ
+
+- **Baseline:** `main` `18cf197b2368828377f5cecc1efbb2535a8b8748` sau [PR #121](https://github.com/hoanglamvu04/bandohoalac/pull/121), CI/Security trên PR #121 PASS. Nhánh: `feat/p1-110-thach-that-demo-30-20261126`; **ĐANG LÀM, chờ PR/CI/merge**, chưa chạy seed lên VPS.
+- **Seed:** 30 tin mô phỏng BĐS, gồm 15 phòng trọ cho thuê và 15 tài sản khác (10 bán/5 thuê), toàn bộ có giá, diện tích, tọa độ khu vực minh họa, chú thích DEMO và 4 ảnh Unsplash minh họa mỗi tin (120 image records).
+- **Mã:** fixture `backend/src/database/thachThatDemoData.js`; runner `backend/src/scripts/seedThachThatDemo.js` và scripts npm preview/seed/clean; tests `backend/tests/thachThatDemoSeed.test.js`; hướng dẫn `docs/DEMO_THACH_THAT_30.md`.
+- **An toàn:** guard từ chối NODE_ENV production, DB không rõ tên staging/test, thiếu xác nhận; chỉ demo source+external ID+slug mới được xóa; transaction rollback và idempotency. Số điện thoại 000... không hợp lệ, ảnh/vị trí/giá hoàn toàn minh họa.
+- **Kiểm thử:** đã bổ sung unit và PG16/PostGIS integration, **CI chờ chạy**. Ảnh bên ngoài chưa nghiệm thu tải thành công trên staging; chưa có DB staging được cấp để chạy thật.
+- **Bàn giao:** chỉ khi CI xanh mới merge; người vận hành tạo DB staging tách biệt, migrate, seed và mở bản đồ/chi tiết theo hướng dẫn, xóa demo sau test. Không dùng mẫu giả để tính số liệu thị trường/SEO/production.
+
 ## 26/11/2026 GMT+7 — BÀN GIAO 3 ĐỢT: P0-005 / P0-004 / P1-102
 
 - **Đã merge:** [PR #120](https://github.com/hoanglamvu04/bandohoalac/pull/120) vào `main` SHA `086c91ac5e543a983da8e444a4709d19e1e13aeb`, **9/9 checks PASS** trên head PR, gồm backend PG16/PostGIS, frontend build, Playwright E2E, CodeQL, dependency, shell, safety và LUU_Y_CODE. [PR #119](https://github.com/hoanglamvu04/bandohoalac/pull/119) đóng **không merge** vì nội dung đã có đầy đủ trong #120; E2E #119 bị giữ ở bước cài Chromium của runner.

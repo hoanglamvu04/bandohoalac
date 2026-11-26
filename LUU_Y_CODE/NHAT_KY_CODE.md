@@ -2,6 +2,16 @@
 
 **Nguyên tắc append-only:** mục mới thêm trên đầu, **không xóa/sửa mất mục cũ**. Nếu báo cáo trước sai, thêm mục đính chính kèm đường dẫn Git/CI. Không ghi dữ liệu cá nhân, secret, log VPS có token hoặc ảnh người dùng.
 
+## 26/11/2026 GMT+7 — HOLA-P1-110: tạo mã seed DEMO 30 BĐS Thạch Thất cũ
+
+- **Trước:** main `18cf197b2368828377f5cecc1efbb2535a8b8748` sau PR #121, đã đọc AGENTS.md/5 file LUU_Y_CODE và schema+migrations housing.
+- **Nhánh/trạng thái:** `feat/p1-110-thach-that-demo-30-20261126`, code đang PR, CI/merge chưa xác minh.
+- **Dữ liệu:** 15 phòng trọ khép kín 19–32m², giá 1,9–3,6 triệu/tháng; 10 BĐS bán và 5 cho thuê khác; tất cả ảnh Unsplash minh họa, 4 ảnh/tin, tên/giá rõ DEMO, tọa độ mô phỏng theo khu vực huyện Thạch Thất cũ. Không đại diện căn nhà thật.
+- **Code:** `thachThatDemoData.js`, `seedThachThatDemo.js` (preview/apply/clean, guard production/DB name/confirmation, SQL UPSERT theo external ID, giao dịch), `thachThatDemoSeed.test.js` unit + integration, `backend/package.json`, `docs/DEMO_THACH_THAT_30.md`.
+- **Tests:** đã viết ca số lượng, ảnh, tiền, vị trí, guard và database idempotency/cleanup; **chưa có kết quả CI ở thời điểm này**.
+- **Chưa làm:** không deploy/seed VPS, không có ảnh tải trực tiếp đã xác minh, không biết database staging đã tồn tại. Cần test staging độc lập và ghi kết quả thật.
+- **Bàn giao:** merge sau CI, cập nhật trạng thái LUU_Y_CODE sau merge, QA trên staging và xóa demo an toàn sau test.
+
 ## 26/11/2026 GMT+7 — Xác nhận merge 3 đợt HOLA-P0-005 / P0-004 / P1-102
 
 - **Mã:** [PR #120](https://github.com/hoanglamvu04/bandohoalac/pull/120) merge vào main `086c91ac5e543a983da8e444a4709d19e1e13aeb`; toàn bộ 9/9 checks head PR PASS, gồm Backend migrate and test (PostGIS), Frontend build/E2E, CodeQL và security gates.

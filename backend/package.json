@@ -20,7 +20,10 @@
     "test": "node --test tests/*.test.js",
     "db:seed:admin": "node src/database/seedAdmin.js",
     "import:overture:places": "node src/scripts/importOverturePlaces.js",
-    "images:backfill-variants": "node src/scripts/backfillPlaceImageVariants.js"
+    "images:backfill-variants": "node src/scripts/backfillPlaceImageVariants.js",
+    "demo:thachthat:preview": "node src/scripts/seedThachThatDemo.js --preview",
+    "demo:thachthat:seed": "node src/scripts/seedThachThatDemo.js --apply",
+    "demo:thachthat:clean": "node src/scripts/seedThachThatDemo.js --clean"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
