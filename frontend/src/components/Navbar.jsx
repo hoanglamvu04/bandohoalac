@@ -5,7 +5,6 @@ import {
   Building2,
   ChevronDown,
   ChevronRight,
-  Compass,
   Download,
   LogOut,
   MapPinned,
@@ -13,7 +12,6 @@ import {
   Plus,
   Search,
   ShieldCheck,
-  Trophy,
   UserRound,
   UtensilsCrossed
 } from 'lucide-react';
@@ -27,9 +25,10 @@ import {
 } from '../services/api.js';
 
 const navItems = [
-  { to: '/kham-pha', label: 'Khám phá', icon: Compass },
-  { to: '/leaderboard', label: 'Cộng đồng', icon: Trophy },
-  { to: '/gop-y', label: 'Góp ý', icon: BadgeCheck }
+  { to: '/kham-pha', label: 'Khám phá', compact: 'explore' },
+  { to: '/leaderboard', label: 'Cộng đồng', compact: 'secondary' },
+  { to: '/doi-tac', label: 'Đối tác', compact: 'secondary' },
+  { to: '/gop-y', label: 'Góp ý', compact: 'secondary' }
 ];
 
 const mapNavItems = [
@@ -70,6 +69,7 @@ export default function Navbar() {
   const location = useLocation();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [mapMenuOpen, setMapMenuOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [mobileAccountOpen, setMobileAccountOpen] = useState(false);
   const [homeSearch, setHomeSearch] = useState('');
   const [homeHeaderScrolled, setHomeHeaderScrolled] = useState(false);
@@ -84,6 +84,7 @@ export default function Navbar() {
   );
   const notificationRef = useRef(null);
   const mapMenuRef = useRef(null);
+  const moreMenuRef = useRef(null);
   const mobileAccountRef = useRef(null);
   const desktopAccountRef = useRef(null);
 
@@ -176,19 +177,35 @@ export default function Navbar() {
         setMapMenuOpen(false);
       }
 
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
+        setMoreMenuOpen(false);
+      }
+
       const insideMobileAccount = mobileAccountRef.current?.contains(event.target);
       const insideDesktopAccount = desktopAccountRef.current?.contains(event.target);
       if (!insideMobileAccount && !insideDesktopAccount) {
         setMobileAccountOpen(false);
       }
     }
+    function onKeyDown(event) {
+      if (event.key !== 'Escape' || !moreMenuRef.current?.contains(document.activeElement)) return;
+      if (moreMenuRef.current.querySelector('[aria-expanded="true"]')) {
+        setMoreMenuOpen(false);
+        moreMenuRef.current.querySelector('button')?.focus();
+      }
+    }
     document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
   }, []);
 
   useEffect(() => {
     setNotificationsOpen(false);
     setMapMenuOpen(false);
+    setMoreMenuOpen(false);
     setMobileAccountOpen(false);
   }, [location.pathname, location.search]);
 
@@ -338,7 +355,7 @@ export default function Navbar() {
         </form>
       )}
 
-      <nav className="desktop-nav premium-desktop-nav compact-primary-nav">
+      <nav className="desktop-nav premium-desktop-nav compact-primary-nav" aria-label="Điều hướng chính">
         <div className="nav-map-switcher" ref={mapMenuRef}>
           <button
             type="button"
@@ -347,7 +364,6 @@ export default function Navbar() {
             aria-expanded={mapMenuOpen}
             aria-haspopup="menu"
           >
-            <MapPinned size={16}/>
             Bản đồ
             <ChevronDown className="nav-map-chevron" size={13}/>
           </button>
@@ -403,15 +419,40 @@ export default function Navbar() {
           )}
         </div>
 
-        {navItems.map(({to,label,icon:Icon}) => (
+        {navItems.map(({to,label,compact}) => (
           <NavLink
             key={to}
             to={to}
-            className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'}
+            className={({isActive}) => 'nav-link nav-primary-' + compact + (isActive ? ' active' : '')}
           >
-            <Icon size={16}/>{label}
+            {label}
           </NavLink>
         ))}
+        <div className="nav-more-switcher" ref={moreMenuRef}>
+          <button
+            type="button"
+            className="nav-link nav-more-trigger"
+            aria-expanded={moreMenuOpen}
+            aria-controls="desktop-nav-more"
+            onClick={() => setMoreMenuOpen((value) => !value)}
+          >
+            Thêm <ChevronDown size={13} />
+          </button>
+          {moreMenuOpen && (
+            <div className="nav-more-menu" id="desktop-nav-more">
+              {navItems.map(({to,label,compact}) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={'nav-more-option nav-more-' + compact}
+                  onClick={() => setMoreMenuOpen(false)}
+                >
+                  {label}
+                </NavLink>
+              ))}
+            </div>
+          )}
+        </div>
       </nav>
 
       <div className="nav-actions premium-nav-actions compact-nav-actions">
@@ -423,7 +464,7 @@ export default function Navbar() {
         </Link>
 
         {!installed && installPrompt && (
-          <button className="nav-install compact-install-button" type="button" onClick={installApp}>
+          <button className="nav-install compact-install-button" type="button" aria-label="Cài app" title="Cài ứng dụng" onClick={installApp}>
             <Download size={16} />
             <span>Cài app</span>
           </button>

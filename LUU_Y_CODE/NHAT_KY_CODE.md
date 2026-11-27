@@ -260,3 +260,7 @@
 - Git evidence: #136, #138, #139, #140, #141 merged with CI 9/9; latest confirmed main at start of readiness work: 45b444fa9660556cefba6f59f91624b30e9ec766. #142 open (f87776b), CI pending when this PR created; readiness is stacked on it. No production deploy or VPS tests performed.
 - Added `scripts/release-smoke.mjs`, mock tests in `backend/tests/release-smoke.test.js`, `docs/RELEASE_7_WAVES_RUNBOOK.md`, and `LUU_Y_CODE/ROADMAP_7_WAVES.md` (36-item audit). Read-only anonymous checks, no response body/credential logging; empty sample explicitly incomplete. CI pending for new tests.
 - Remaining: batch edit/moderation with rollback, unified relevance/evaluation, area follow/recommendation, full feed, device/load and restore drill, real role/source verification, VNU anchor, draft editorial/data gates, long-term growth analytics. External rights/integrations still blocked. Do not claim full production acceptance; retarget and merge only after checks.
+
+
+## 27/11/2026 GMT+7 — HOLA-P1-135 — Desktop header V4
+- Theo yêu cầu chủ dự án, sửa `frontend/src/components/Navbar.jsx`, `frontend/src/main.jsx`, thêm `frontend/src/header-desktop-v4.css` và `frontend/e2e/desktop-header-v4.spec.js`. CSS desktop riêng, không đổi API hay dữ liệu; More dùng điều hướng thật và Escape, BĐS còn trong map menu nhỏ, giữ mobile. Baseline `526f774f7a721ff45906dd64de49c74e3e23625d`; nhánh `fix/desktop-header-v4-20261127`, PR/CI chưa có kết quả tại lúc ghi. Kiểm tra build, Playwright toàn bộ, Security; nếu pass merge có bằng chứng. Chưa deploy.

@@ -192,3 +192,10 @@ Các mục P1 trước đây và P0 blockers giữ nguyên; không coi việc me
 - Git evidence: #136, #138, #139, #140, #141 merged with CI 9/9; latest confirmed main at start of readiness work: 45b444fa9660556cefba6f59f91624b30e9ec766. #142 open (f87776b), CI pending when this PR created; readiness is stacked on it. No production deploy or VPS tests performed.
 - Added `scripts/release-smoke.mjs`, mock tests in `backend/tests/release-smoke.test.js`, `docs/RELEASE_7_WAVES_RUNBOOK.md`, and `LUU_Y_CODE/ROADMAP_7_WAVES.md` (36-item audit). Read-only anonymous checks, no response body/credential logging; empty sample explicitly incomplete. CI pending for new tests.
 - Remaining: batch edit/moderation with rollback, unified relevance/evaluation, area follow/recommendation, full feed, device/load and restore drill, real role/source verification, VNU anchor, draft editorial/data gates, long-term growth analytics. External rights/integrations still blocked. Do not claim full production acceptance; retarget and merge only after checks.
+
+
+## HOLA-P1-135 — Desktop header V4 (27/11/2026 GMT+7)
+| ID | Trạng thái | Phạm vi | Tiêu chí nghiệm thu |
+|---|---|---|---|
+| HOLA-P1-135 | DANG_LAM — nhánh `fix/desktop-header-v4-20261127` | Header desktop 72px, logo trái, menu chữ một dòng, Đối tác, nút Đóng góp viền/Đăng tin BĐS xanh, More compact, giữ mobile và map safe-area | CI build/E2E/Security xanh; 761/800/980/1024/1180/1280/1440/1920px không chồng lấn; More accessible; test map/mobile và đối chiếu ảnh màn hình thật trước nghiệm thu. |
+- Không thay đổi WA-005, dữ liệu, backend hoặc ưu tiên P0. Chưa deploy VPS.

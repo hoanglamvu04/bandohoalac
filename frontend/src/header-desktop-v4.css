@@ -1,0 +1,256 @@
+/* HOLA-P1-135 — Desktop header only. Keep the existing mobile and map safe-area
+   contracts; the App ResizeObserver measures the actual header height. */
+@media (min-width: 761px) {
+  .navbar.reference-navbar.compact-product-navbar.balanced-product-navbar {
+    --desktop-logo-width: min(var(--brand-header-desktop-width, 198px), 194px);
+    box-sizing: border-box;
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    min-height: 72px !important;
+    height: 72px !important;
+    padding: 0 clamp(20px, 2.4vw, 52px) !important;
+    gap: clamp(12px, 1.6vw, 28px) !important;
+    background: #fff !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+    overflow: visible;
+  }
+
+  .navbar.reference-navbar.compact-product-navbar .premium-brand.brand-official {
+    min-width: 0 !important;
+    width: var(--desktop-logo-width) !important;
+    flex: 0 0 var(--desktop-logo-width) !important;
+    height: 50px !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .brand-official-lockup,
+  .navbar.reference-navbar.compact-product-navbar .brand-logo-main {
+    width: var(--desktop-logo-width) !important;
+    max-width: var(--desktop-logo-width) !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .brand-official-lockup {
+    height: 50px !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .brand-logo-main {
+    height: auto !important;
+    max-height: 48px !important;
+  }
+
+  .navbar.reference-navbar.compact-product-navbar .compact-primary-nav {
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
+    margin: 0 auto !important;
+    gap: clamp(3px, .55vw, 10px) !important;
+    flex-wrap: nowrap;
+    overflow: visible !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .compact-primary-nav .nav-link {
+    position: relative;
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    align-items: center;
+    justify-content: center;
+    width: auto !important;
+    min-width: 0 !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    padding: 0 10px !important;
+    border: 0;
+    border-radius: 8px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #334155 !important;
+    white-space: nowrap !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    gap: 5px !important;
+    text-decoration: none;
+    transform: none !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .compact-primary-nav .nav-link:hover,
+  .navbar.reference-navbar.compact-product-navbar .compact-primary-nav .nav-link[aria-expanded="true"] {
+    background: #f1f5f9 !important;
+    color: #145fc3 !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .compact-primary-nav .nav-link.active {
+    color: #145fc3 !important;
+    background: transparent !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .compact-primary-nav .nav-link.active::after {
+    content: "";
+    position: absolute;
+    display: block !important;
+    height: 2px !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: -15px !important;
+    background: #176cdb !important;
+  }
+
+  .navbar.reference-navbar.compact-product-navbar .compact-nav-actions {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px !important;
+    margin: 0 !important;
+  }
+  /* Desktop partner entry lives in the primary nav (mobile fallback unchanged). */
+  .navbar.reference-navbar.compact-product-navbar .compact-nav-actions .nav-partner-entry {
+    display: none !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .compact-nav-actions :is(.nav-cta, .nav-estate-entry, .nav-login) {
+    box-sizing: border-box;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 12px !important;
+    gap: 6px !important;
+    border: 1px solid #d9e2ec !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    color: #334155 !important;
+    white-space: nowrap !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    text-decoration: none;
+    transform: none !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .compact-nav-actions :is(.nav-cta, .nav-login):hover {
+    background: #f1f5f9 !important;
+    color: #145fc3 !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .compact-nav-actions .nav-estate-entry {
+    background: #1467d5 !important;
+    color: #fff !important;
+    border-color: #1467d5 !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .compact-nav-actions .nav-estate-entry:hover {
+    background: #1159bd !important;
+    border-color: #1159bd !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .compact-nav-actions :is(.compact-install-button, .nav-notification-button) {
+    box-sizing: border-box;
+    flex: 0 0 36px;
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+    justify-content: center;
+    border: 1px solid transparent !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: #475569 !important;
+    box-shadow: none !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .compact-install-button span {
+    display: none;
+  }
+  .navbar.reference-navbar.compact-product-navbar .compact-nav-actions .compact-account-button {
+    box-sizing: border-box;
+    min-width: 0 !important;
+    width: auto !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 4px !important;
+    gap: 4px !important;
+    border: 1px solid transparent !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: #475569 !important;
+    box-shadow: none !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .compact-nav-actions .compact-account-button .nav-user-avatar {
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 50% !important;
+    font-weight: 700 !important;
+    font-size: 12px !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .compact-nav-actions :is(.compact-install-button, .nav-notification-button, .compact-account-button):hover,
+  .navbar.reference-navbar.compact-product-navbar .compact-nav-actions .compact-account-button[aria-expanded="true"] {
+    background: #f1f5f9 !important;
+    color: #145fc3 !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar :is(a, button):focus-visible {
+    outline: 2px solid #1467d5;
+    outline-offset: 2px;
+  }
+
+  .nav-more-switcher {
+    position: relative;
+    display: none;
+    flex: 0 0 auto;
+  }
+  .nav-more-trigger { cursor: pointer; }
+  .nav-more-menu {
+    position: absolute;
+    z-index: 2200;
+    top: calc(100% + 10px);
+    right: 0;
+    min-width: 174px;
+    padding: 6px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, .12);
+  }
+  .nav-more-option {
+    display: flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 0 10px;
+    color: #334155;
+    border-radius: 6px;
+    white-space: nowrap;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .nav-more-option:hover, .nav-more-option.active {
+    background: #eff6ff;
+    color: #145fc3;
+  }
+  .nav-more-explore { display: none; }
+}
+
+@media (min-width: 761px) and (max-width: 1180px) {
+  .navbar.reference-navbar.compact-product-navbar.balanced-product-navbar {
+    --desktop-logo-width: min(var(--brand-header-desktop-width, 198px), 174px);
+    padding-inline: 18px !important;
+    gap: 12px !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .compact-primary-nav .nav-primary-secondary {
+    display: none !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .nav-more-switcher { display: flex; }
+  .navbar.reference-navbar.compact-product-navbar .compact-nav-actions { gap: 6px !important; }
+}
+@media (min-width: 761px) and (max-width: 1020px) {
+  /* Keep the existing BĐS submission path in the map dropdown at compact sizes. */
+  .navbar.reference-navbar.compact-product-navbar .compact-nav-actions .nav-estate-entry {
+    display: none !important;
+  }
+}
+@media (min-width: 761px) and (max-width: 900px) {
+  .navbar.reference-navbar.compact-product-navbar.balanced-product-navbar {
+    --desktop-logo-width: min(var(--brand-header-desktop-width, 198px), 148px);
+    padding-inline: 12px !important;
+    gap: 8px !important;
+  }
+  .navbar.reference-navbar.compact-product-navbar .compact-primary-nav .nav-primary-explore {
+    display: none !important;
+  }
+  .nav-more-explore { display: flex; }
+}
+@media (max-width: 760px) {
+  .nav-more-switcher { display: none !important; }
+}
