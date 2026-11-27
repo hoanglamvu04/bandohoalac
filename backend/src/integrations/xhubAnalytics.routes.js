@@ -57,7 +57,9 @@ export function createXHubAnalyticsRouter({
   publicHost,
   baseUrl,
   send,
-  allowLocalhost = false
+  allowLocalhost = false,
+  localEnabled = false,
+  localIngest = null
 } = {}) {
   const router = Router();
   let bridge = null;
@@ -70,7 +72,11 @@ export function createXHubAnalyticsRouter({
       // Fail closed if source has not been provisioned. Never log secrets.
     }
   }
-  const available = Boolean(bridge);
+  // WA-005's consented local aggregate source takes precedence when enabled.
+  // Preserve the existing WA-002 push bridge exactly when WA-005 is disabled.
+  // Never send the same browser batch to both channels.
+  const canCollectLocally = localEnabled === true && typeof localIngest === 'function';
+  const available = canCollectLocally || Boolean(bridge);
   const limiter = rateLimit({
     windowMs: 60 * 1000,
     limit: 25,
@@ -104,7 +110,16 @@ export function createXHubAnalyticsRouter({
       return res.status(400).json({ error: 'Invalid analytics event batch.' });
     }
     return next();
-  }, (req, res) => bridge(req, res));
+  }, async (req, res) => {
+    if (!canCollectLocally) return bridge(req, res);
+    try {
+      await localIngest(req.body);
+      return res.status(202).json({ accepted: true });
+    } catch {
+      // Fail closed if migration/DB/collector is not yet available.
+      return res.status(503).json({ error: 'Analytics source unavailable.' });
+    }
+  });
 
   return router;
 }

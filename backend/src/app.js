@@ -24,6 +24,7 @@ import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 import { observeApiRequests } from './services/softLaunchMetrics.service.js';
 import { publicReady } from './controllers/operations.controller.js';
 import { createXHubAnalyticsRouter } from './integrations/xhubAnalytics.routes.js';
+import { createWa005PullAnalyticsRouter } from './integrations/wa005PullAnalytics.routes.js';
 import { developerApiGateway } from './middleware/developerApi.js';
 import { resolveCorsOrigin, resolvePublicApiCorsOrigin } from './config/cors.js';
 
@@ -121,6 +122,15 @@ export function createApp() {
   // Fixed-cardinality, anonymous request metrics for soft-launch operations.
   app.use(observeApiRequests);
 
+  // WA-005 is backend-to-backend only: mounted BEFORE app-wide browser CORS,
+  // parsers and request logging; neither credentials nor aggregate data can be
+  // accessed by browser sessions. No source/key means HTTP 503.
+  const wa005Pull = createWa005PullAnalyticsRouter({
+    enabled: process.env.XHUB_PULL_BANDOHOALAC_ENABLED === 'true',
+    readKey: process.env.XHUB_PULL_BANDOHOALAC_KEY
+  });
+  app.use('/api/xhub/v1/analytics', wa005Pull.router);
+
   const appCors = cors({ origin: resolveCorsOrigin, credentials: true });
   const publicApiCors = cors({
     origin: resolvePublicApiCorsOrigin,
@@ -162,9 +172,11 @@ export function createApp() {
     approved: process.env.XHUB_WEB_ANALYTICS_APPROVED === 'true',
     siteId: process.env.XHUB_WEB_ANALYTICS_SITE_ID,
     siteToken: process.env.XHUB_WEB_ANALYTICS_SITE_TOKEN,
-    publicHost: process.env.XHUB_WEB_ANALYTICS_PUBLIC_HOST,
+    publicHost: process.env.XHUB_WEB_ANALYTICS_PUBLIC_HOST || 'maps.dothihoalac.vn',
     baseUrl: process.env.XHUB_WEB_ANALYTICS_BASE_URL || undefined,
-    allowLocalhost: env.nodeEnv !== 'production'
+    allowLocalhost: env.nodeEnv !== 'production',
+    localEnabled: wa005Pull.configured,
+    localIngest: wa005Pull.ingest
   }));
 
   app.get('/api/health', (_req, res) => {
