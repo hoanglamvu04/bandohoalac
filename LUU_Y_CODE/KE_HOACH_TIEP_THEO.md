@@ -173,3 +173,10 @@ Các mục P1 trước đây và P0 blockers giữ nguyên; không coi việc me
 - Reuse existing Data Trust scores, duplicate/image scanners, history/rollback and permissions. Add combined issue/priority/category/accent-insensitive search, selected/current queue CSV (formula neutralization, no contact fields), explicit sample scope; no bulk destructive or auto-verification action.
 - Community: explicit bounded viewport activity fetch independent of enabled map layers, type filtering, expiration/status checks, deduplication and source labels; moderated Q&A from #136. No event creation workflow or notification subscription added in this PR.
 - Tests added for filtering/export and feed bounds/expiry; CI pending at PR creation. No migration or VPS action. Physical verification, full-coverage audits and per-event submission remain follow-up.
+
+
+### 2026-11-27 — HOLA-P1-133 SEO, PWA and aggregate search operations
+- Migration 380 adds two rental SEO drafts (FPT uses the existing verified campus anchor; VNU remains blocked until a confirmed anchor). No auto-publish. Rental SEO gate requires active, non-demo, structured, available rental inventory and the existing editorial quality checks; housing phone redaction on local API and detail HTML. Existing region/category draft content remains unchanged.
+- PWA v6 caches only static offline page/manifest/icon, clears previous HOLA caches, no personalized navigation/API/media cache or forced reload; rental shortcut. Expanded client noindex for account/editor/embed routes.
+- Admin Operations counts keyword-bearing HTTP requests by existing places/housing route group in the existing rolling window; no terms, identifiers or new persistent tracking. Counts are not unique users or transactions; no Search Console or WA-005 connection.
+- Added migration/SEO/privacy/metrics tests. CI pending at creation; VPS migration and publication remain unexecuted.

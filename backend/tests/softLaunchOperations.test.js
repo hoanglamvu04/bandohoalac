@@ -103,3 +103,14 @@ test('public live/ready routes respond and operational metrics require authentic
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test('search-demand metrics retain only a bounded count, not query contents',()=>{
+ const stats=createSoftLaunchMetrics({now:()=>1000});
+ stats.record({path:'/api/places',statusCode:200,durationMs:1,searchRequest:true});
+ stats.record({path:'/api/housing',statusCode:400,durationMs:1,searchRequest:true});
+ stats.record({path:'/api/admin',statusCode:200,durationMs:1,searchRequest:true});
+ const report=stats.snapshot();
+ assert.equal(report.total.searchRequests,2);
+ assert.equal(report.total.successfulSearchRequests,1);
+ assert.equal(report.groups.find(x=>x.group==='housing').searchRequests,1);
+});

@@ -128,6 +128,17 @@ export default function AdminOperations() {
         <article><ShieldCheck /><small>Bộ nhớ heap API</small><strong>{data ? number(data.heapUsedMb) + ' MB' : '—'}</strong></article>
       </section>
 
+      {summary?.searchRequests != null && <section className="soft-launch-ops-table">
+        <div className="soft-launch-ops-table-head"><div><span className="eyebrow">SEARCH DEMAND</span><h2>Yêu cầu tìm kiếm trong {data.metrics.windowMinutes || 15} phút</h2></div></div>
+        <div className="soft-launch-ops-launch-counts">
+          <div><small>Tổng request tìm kiếm</small><b>{number(summary.searchRequests)}</b></div>
+          <div><small>Request thành công</small><b>{number(summary.successfulSearchRequests)}</b></div>
+          <div><small>Địa điểm</small><b>{number(data.metrics.groups?.find(item=>item.group==='places')?.searchRequests || 0)}</b></div>
+          <div><small>Bất động sản</small><b>{number(data.metrics.groups?.find(item=>item.group==='housing')?.searchRequests || 0)}</b></div>
+        </div>
+        <p className="soft-launch-ops-note">Đếm request HTTP có từ khóa, không phải số người, giao dịch hay số lượt tìm kiếm duy nhất. Không lưu từ khóa, IP hoặc ID; số liệu đặt lại khi restart API.</p>
+      </section>}
+
       {totalCount < 25 && data && (
         <p className="soft-launch-ops-note">
           Mới có {number(totalCount)} request trong khung theo dõi. Dữ liệu còn ít,

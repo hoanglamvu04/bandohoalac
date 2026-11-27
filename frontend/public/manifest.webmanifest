@@ -32,6 +32,11 @@
       "name": "Cộng đồng Explorer",
       "short_name": "Cộng đồng",
       "url": "/leaderboard"
+    },
+    {
+      "name": "Tìm phòng trọ và nhà thuê",
+      "short_name": "Nhà thuê",
+      "url": "/map?vertical=housing&category=bat-dong-san&listingType=RENT"
     }
   ]
 }
