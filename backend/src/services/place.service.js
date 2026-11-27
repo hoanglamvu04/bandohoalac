@@ -934,7 +934,7 @@ export async function listPublishedPlacesByUser(userId, { limit = 100 } = {}, cl
      LEFT JOIN categories c ON c.id = p.category_id
      WHERE p.created_by = $1
        AND p.status = 'PUBLISHED'
-     ORDER BY p.created_at DESC
+     ORDER BY p.created_at DESC, p.id DESC
      LIMIT $2`,
     [userId, safeLimit]
   );
