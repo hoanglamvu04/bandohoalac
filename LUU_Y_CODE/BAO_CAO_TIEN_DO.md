@@ -228,3 +228,9 @@
 
 ## 27/11/2026 GMT+7 — HOLA-P1-130 — Smart Map V7
 - #136 merged 4207d9f (9/9 PASS), #138 stacked base ffa91dadc82db97c653d78123b389747f117f024 đang CI. Lớp lưới giá địa lý MapLibre từ aggregate hiện hữu, minimum sample 5, màu đồng nhất sidebar, xóa khi đổi loại giao dịch/tài sản; phục hồi khi đổi nền map. Không hiển thị giá từng cá nhân hoặc tự tạo mẫu; không phải quy hoạch. Bộ lọc nhanh Housing/Food, truy cập công cụ tìm vùng sẵn có; chia sẻ góc nhìn đã lưu qua URL allowlist (không query text, GPS, token), camera validation. Tests logic bổ sung; CI pending. Không migration/deploy; performance/device benchmark cần môi trường thật.
+
+
+### 2026-11-27 — HOLA-P1-131 Data Intelligence V6 / HOLA-P1-132 Community area feed
+- Reuse existing Data Trust scores, duplicate/image scanners, history/rollback and permissions. Add combined issue/priority/category/accent-insensitive search, selected/current queue CSV (formula neutralization, no contact fields), explicit sample scope; no bulk destructive or auto-verification action.
+- Community: explicit bounded viewport activity fetch independent of enabled map layers, type filtering, expiration/status checks, deduplication and source labels; moderated Q&A from #136. No event creation workflow or notification subscription added in this PR.
+- Tests added for filtering/export and feed bounds/expiry; CI pending at PR creation. No migration or VPS action. Physical verification, full-coverage audits and per-event submission remain follow-up.
