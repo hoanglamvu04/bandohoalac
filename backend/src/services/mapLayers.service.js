@@ -68,7 +68,8 @@ export async function listMapFeatures({ types = [], west, south, east, north } =
     "mf.status = 'ACTIVE'",
     '(mf.valid_from IS NULL OR mf.valid_from <= NOW())',
     '(mf.valid_until IS NULL OR mf.valid_until >= NOW())',
-    'ST_Intersects(mf.geometry, service_area.geom)'
+    'ST_Intersects(mf.geometry, service_area.geom)',
+    "(NOT (mf.properties ? 'communityEventProposalId') OR EXISTS (SELECT 1 FROM community_event_proposals ep JOIN places p ON p.id=ep.place_id WHERE ep.feature_id=mf.id AND ep.status='APPROVED' AND ep.ends_at>NOW() AND p.status='PUBLISHED' AND ST_Equals(p.location,mf.geometry)))"
   ];
 
   if (normalized.length) {

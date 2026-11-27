@@ -119,6 +119,7 @@ function contributionPhotos(item) {
 }
 
 import { AdminCommunityTools } from '../../components/CommunityTools.jsx';
+import { AdminReviewWorkflows } from '../../components/ReviewWorkflows.jsx';
 export default function AdminContributions() {
   const { showToast } = useToast();
   const { user } = useAuth();
@@ -403,6 +404,7 @@ export default function AdminContributions() {
       </div>
 
       {status==='PENDING'&&['ADMIN','MODERATOR'].includes(user?.role)&&<AdminCommunityTools/>}
+      {status==='PENDING'&&['ADMIN','MODERATOR'].includes(user?.role)&&<AdminReviewWorkflows user={user}/>}
       {status === 'PENDING' && (
         <div className="quality-policy-banner">
           <ShieldCheck size={20} />

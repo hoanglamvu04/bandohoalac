@@ -76,5 +76,5 @@ export function LocalActivityFeed({mapData,viewport}){
  {areaData&&<button type="button" onClick={()=>setAreaData(null)}>Về lớp đang hiển thị</button>}
  {error&&<p role="alert">{error}</p>}
  {!items.length&&<p>Chưa có thông tin phù hợp trong dữ liệu hiện có.</p>}
- <ul>{items.map((f,i)=>{const x=f.properties||{};return <li key={String(f.id||i)+'-'+i}><b>{x.name||'Thông tin địa phương'}</b> · {ACTIVITY_LABELS[x.layerType]}<br/><small>{x.sourceLabel||'Chưa có nhãn nguồn'} · {x.verificationStatus==='VERIFIED'?'Đã xác minh theo hệ thống':'Chưa có xác minh'}{x.validUntil?' · đến '+new Date(x.validUntil).toLocaleString('vi-VN'):''}</small></li>;})}</ul></details>;
+ <ul>{items.map((f,i)=>{const x=f.properties||{};return <li key={String(f.id||i)+'-'+i}><b>{x.name||'Thông tin địa phương'}</b> · {ACTIVITY_LABELS[x.layerType]}<br/><small>{x.sourceLabel||'Chưa có nhãn nguồn'} · {x.verificationStatus==='VERIFIED'?'Đã xác minh theo hệ thống':'Chưa có xác minh'}{x.eventStartsAt?' · bắt đầu '+new Date(x.eventStartsAt).toLocaleString('vi-VN'):''}{x.validUntil?' · đến '+new Date(x.validUntil).toLocaleString('vi-VN'):''}</small></li>;})}</ul></details>;
 }
