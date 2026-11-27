@@ -25,7 +25,7 @@ Thư mục `LUU_Y_CODE/` là sổ bàn giao chung giữa chủ dự án, lập t
 
 [Roadmap 7 đợt (36 hạng mục)](ROADMAP_7_WAVES.md) — đợt nâng cấp trước; đối chiếu tình trạng thực tế.
 
-**Roadmap kỹ thuật tiếp theo:** [HOLA Core Intelligence V2 — 10 đợt / 60 hạng mục](ROADMAP_CORE_INTELLIGENCE_V2.md). Bắt đầu từ HOLA-P1-135.01, thực hiện theo thứ tự 1 → 2 → 3 → 10 → 4–9; P0 an toàn áp dụng xuyên suốt. Đọc roadmap này trước các việc nâng cấp backend/database/thuật toán, cập nhật ID con và bằng chứng trong mỗi PR.
+**Roadmap kỹ thuật tiếp theo:** [HOLA Core Intelligence V2 — 10 đợt / 60 hạng mục](ROADMAP_CORE_INTELLIGENCE_V2.md). Bắt đầu từ HOLA-P1-301.01, thực hiện theo thứ tự 1 → 2 → 3 → 10 → 4–9; P0 an toàn áp dụng xuyên suốt. Đọc roadmap này trước các việc nâng cấp backend/database/thuật toán, cập nhật ID con và bằng chứng trong mỗi PR.
 
 ## Định nghĩa trạng thái
 
