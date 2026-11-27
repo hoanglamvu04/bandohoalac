@@ -178,6 +178,7 @@ function addDiscoveryFilters({ conditions, params, q, category, minRating }) {
       ' OR ' + CATEGORY_SEARCH_SQL + " LIKE '%' || " + foldedQuery + " || '%'" +
       ' OR word_similarity(' + foldedQuery + ', ' + PLACE_SEARCH_TEXT_SQL + ') >= 0.42' +
       ' OR similarity(' + PLACE_NAME_SEARCH_SQL + ', ' + foldedQuery + ') >= 0.28' +
+      " OR (c.slug IS DISTINCT FROM 'bat-dong-san' AND EXISTS (SELECT 1 FROM partner_services svc JOIN place_partners pp ON pp.place_id=svc.place_id AND pp.status='ACTIVE' WHERE svc.place_id=p.id AND svc.active=true AND lower(public.hola_unaccent(svc.title)) LIKE '%' || " + foldedQuery + " || '%'))" +
       ')'
     );
   }

@@ -1,3 +1,4 @@
+import { readSearchPreferences, normalizeSearchPreferences, rememberSearch, SEARCH_PREFS_KEY, SEARCH_CATEGORIES } from '../lib/searchPreferences.js';
 import { parseHousingIntent } from '../lib/housingIntent.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -122,6 +123,11 @@ export default function MapSearchV2() {
   const [error, setError] = useState('');
   const [open, setOpen] = useState(false);
   const requestRef = useRef(0);
+  const rootRef = useRef(null);
+  const [preferences,setPreferences]=useState(()=>{try{return readSearchPreferences(window.localStorage);}catch{return normalizeSearchPreferences({});}});
+  function changePreferences(next){const v=normalizeSearchPreferences(next);setPreferences(v);try{window.localStorage.setItem(SEARCH_PREFS_KEY,JSON.stringify(v));}catch{/* storage unavailable */}}
+  function remember(value){if(preferences.remember)changePreferences(rememberSearch(preferences,value));}
+  useEffect(()=>{function dismiss(e){if(rootRef.current&&!rootRef.current.contains(e.target))setOpen(false);}document.addEventListener('pointerdown',dismiss);return()=>document.removeEventListener('pointerdown',dismiss);},[]);
 
   const topResults = useMemo(() => results.slice(0, 8), [results]);
   const verticalIntent = useMemo(() => inferVerticalIntent(query), [query]);
@@ -138,6 +144,7 @@ export default function MapSearchV2() {
 
   useEffect(() => {
     const needle = query.trim();
+    const requestId = ++requestRef.current;
     if (needle.length < 2) {
       setResults([]);
       setMeta(null);
@@ -146,7 +153,6 @@ export default function MapSearchV2() {
       return undefined;
     }
 
-    const requestId = ++requestRef.current;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setLoading(true);
@@ -169,12 +175,12 @@ export default function MapSearchV2() {
           data = await getPlaces({ q: needle, limit: 40 }, { signal: controller.signal });
         }
 
-        if (requestId !== requestRef.current) return;
+        if (controller.signal.aborted || requestId !== requestRef.current) return;
         setResults(Array.isArray(data?.items) ? data.items : []);
         setMeta(data?.meta || null);
         setOpen(true);
       } catch (searchError) {
-        if (searchError?.name !== 'AbortError' && requestId === requestRef.current) {
+        if (!controller.signal.aborted && searchError?.name !== 'AbortError' && requestId === requestRef.current) {
           setResults([]);
           setMeta(null);
           setOpen(true);
@@ -222,6 +228,8 @@ export default function MapSearchV2() {
       next.delete('category');
     }
 
+    remember(query);
+    requestRef.current++;
     setQuery('');
     setResults([]);
     setMeta(null);
@@ -231,6 +239,8 @@ export default function MapSearchV2() {
 
   function chooseResult(item) {
     if (!item) return;
+    remember(query);
+    requestRef.current++;
     void trackXHubEvent('search_used');
     setOpen(false);
 
@@ -252,30 +262,37 @@ export default function MapSearchV2() {
     next.set('place', String(item.id));
     next.delete('q');
 
-    if (verticalIntent === 'housing') {
+    if (item?.categorySlug === 'bat-dong-san' || verticalIntent === 'housing') {
       next.set('vertical', 'housing');
       next.set('category', 'bat-dong-san');
-    } else if (verticalIntent === 'food') {
+    } else if (['cafe','an-uong'].includes(item?.categorySlug) || verticalIntent === 'food') {
       next.set('vertical', 'food');
       if (item?.categorySlug === 'cafe') next.set('category', 'cafe');
       else if (item?.categorySlug === 'an-uong') next.set('category', 'an-uong');
     }
 
+    if (item?.categorySlug && !['cafe','an-uong','bat-dong-san'].includes(item.categorySlug)) {
+      next.delete('vertical'); next.set('category',item.categorySlug);
+    }
     setParams(next, { replace: true });
   }
 
   return (
-    <div className="hm-search-v2-wrap">
+    <div className="hm-search-v2-wrap" ref={rootRef}>
       <div className={open ? 'hm-search-v2 active' : 'hm-search-v2'}>
         <Search size={19} />
         <input
           value={query}
-          onFocus={() => query.trim().length >= 2 && setOpen(true)}
+          onFocus={() => setOpen(true)}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && verticalIntent) {
+            if(event.key==='Escape'){setOpen(false);return;}
+            if (event.key === 'Enter' && (verticalIntent || activeVertical==='housing')) {
               event.preventDefault();
-              openVertical(verticalIntent);
+              openVertical(verticalIntent || 'housing');
+            } else if(event.key==='Enter'&&query.trim().length>=2&&!requiresUserLocation(query)){
+              event.preventDefault();remember(query);requestRef.current++;
+              const next=new URLSearchParams(params);next.set('q',query.trim());next.delete('place');setParams(next,{replace:true});setOpen(false);
             }
           }}
           placeholder={activeVertical === 'housing'
@@ -291,6 +308,12 @@ export default function MapSearchV2() {
         )}
       </div>
 
+      {open && query.trim().length < 2 && <div className="hm-search-v2-dropdown hm-search-preferences">
+        <strong>Tìm kiếm nhanh</strong>
+        <div className="hm-search-chips">{SEARCH_CATEGORIES.filter(([key])=>preferences.categories.includes(key)).map(([key,label])=><button type="button" key={key} onClick={()=>{const next=new URLSearchParams(params);next.delete('q');next.delete('place');next.set('category',key);if(key==='bat-dong-san')next.set('vertical','housing');else if(['an-uong','cafe'].includes(key))next.set('vertical','food');else next.delete('vertical');setParams(next,{replace:true});setOpen(false);}}>{label}</button>)}</div>
+        {preferences.history.length>0&&<><small>Tìm kiếm gần đây</small><div className="hm-search-chips">{preferences.history.map(s=><button type="button" key={s} onClick={()=>setQuery(s)}>{s}</button>)}</div><button type="button" onClick={()=>changePreferences({...preferences,history:[]})}>Xóa lịch sử</button></>}
+        <details><summary>Tùy chọn trên thiết bị</summary><label><input type="checkbox" checked={preferences.remember} onChange={e=>changePreferences({...preferences,remember:e.target.checked,history:e.target.checked?preferences.history:[]})}/> Lưu tối đa 8 từ khóa khi chủ động tìm/chọn kết quả</label><p>Không gửi lịch sử/sở thích lên máy chủ. Có thể xóa bất cứ lúc nào.</p><div className="hm-search-chips">{SEARCH_CATEGORIES.map(([key,label])=><button type="button" key={key} aria-pressed={preferences.categories.includes(key)} onClick={()=>changePreferences({...preferences,categories:preferences.categories.includes(key)?preferences.categories.filter(x=>x!==key):[...preferences.categories,key].slice(0,5)})}>{label}</button>)}</div></details>
+      </div>}
       {open && query.trim().length >= 2 && (
         <div className="hm-search-v2-dropdown">
           {verticalIntent && (
