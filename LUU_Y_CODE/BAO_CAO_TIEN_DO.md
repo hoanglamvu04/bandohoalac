@@ -241,3 +241,9 @@
 - PWA v6 caches only static offline page/manifest/icon, clears previous HOLA caches, no personalized navigation/API/media cache or forced reload; rental shortcut. Expanded client noindex for account/editor/embed routes.
 - Admin Operations counts keyword-bearing HTTP requests by existing places/housing route group in the existing rolling window; no terms, identifiers or new persistent tracking. Counts are not unique users or transactions; no Search Console or WA-005 connection.
 - Added migration/SEO/privacy/metrics tests. CI pending at creation; VPS migration and publication remain unexecuted.
+
+
+### 2026-11-27 — HOLA-P1-128/132 follow-up: advertiser role review and event proposals
+- Migration 390 adds private moderated request workflows; owner-only eligible advertiser requests, ADMIN-only approval with explicit offline identity/role checks, no document upload, expiry 90 days and revocation. Public status returns only role/review state, not legal title or KYC; changes in ownership/role/account/listing invalidate the badge.
+- Members can submit upcoming public events at existing published non-housing places, source URL required, bounded schedule and duplicate/rate limits; ADMIN/MODERATOR review with explicit source check and no self-approval. Only approved event creates EVENT map feature, revoke archives it; unpublished/moved venue hides it. No automated source fetching or invented events.
+- Added owner/detail/admin UI and PostgreSQL integration/validation tests. Real identity/source verification requires staff SOP and evidence outside this system. No production action. CI pending at creation.

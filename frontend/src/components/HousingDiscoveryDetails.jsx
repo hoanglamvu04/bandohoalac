@@ -6,6 +6,7 @@ import {detailRows} from '../lib/propertyDetails.js';
 const money=(value)=>value==null?'Chưa có':new Intl.NumberFormat('vi-VN').format(value)+' đ';
 const STATUS={AVAILABLE:'Còn phòng',LIMITED:'Sắp hết',FULL:'Hết phòng',UNKNOWN:'Chưa xác nhận'};
 import { PublicRoomCatalog } from './CommunityTools.jsx';
+import { AdvertiserReviewBadge } from './ReviewWorkflows.jsx';
 export default function HousingDiscoveryDetails({placeId,housing}){
  const [opened,setOpened]=useState(false),[data,setData]=useState(null),[error,setError]=useState('');
  const rows=detailRows(housing.details||{});
@@ -28,6 +29,7 @@ export default function HousingDiscoveryDetails({placeId,housing}){
   return()=>controller.abort();
  },[opened,placeId]);
  return <section className="place-v2-card" data-testid="housing-discovery-details">
+  {housing.advertiserRole&&<AdvertiserReviewBadge placeId={placeId}/>}
   <PublicRoomCatalog placeId={placeId} count={housing.roomTypeCount}/>
   <div className="place-v2-section-title"><h2>Đặc điểm & lịch sử giá chào</h2></div>
   {rows.length?<dl className="place-v2-housing-detail-grid">{rows.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>:<p>Chưa có đặc điểm chi tiết do người đăng cung cấp.</p>}

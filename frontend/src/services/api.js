@@ -1016,3 +1016,13 @@ export const submitPlaceQA=(id,payload)=>unwrap(client.post(ct('/places/'+encode
 export const reportPlaceQA=(id,pid,reason)=>unwrap(client.post(ct('/places/'+encodeURIComponent(id)+'/qa/'+encodeURIComponent(pid)+'/report'),{reason}));
 export const getQAQueue=()=>unwrap(client.get(ct('/admin/qa')));
 export const reviewPlaceQA=(id,action)=>unwrap(client.patch(ct('/admin/qa/'+encodeURIComponent(id)),{action}));
+
+export const getAdvertiserStatus=id=>unwrap(client.get(ct('/housing/'+encodeURIComponent(id)+'/advertiser-status')));
+export const getMyAdvertiserReview=id=>unwrap(client.get(ct('/housing/'+encodeURIComponent(id)+'/advertiser-review')));
+export const requestAdvertiserReview=id=>unwrap(client.post(ct('/housing/'+encodeURIComponent(id)+'/advertiser-review'),{}));
+export const getAdvertiserReviewQueue=()=>unwrap(client.get(ct('/admin/advertiser-reviews')));
+export const reviewAdvertiserRole=(id,payload)=>unwrap(client.patch(ct('/admin/advertiser-reviews/'+encodeURIComponent(id)),payload));
+export const getMyEventProposals=id=>unwrap(client.get(ct('/places/'+encodeURIComponent(id)+'/event-proposals')));
+export const submitCommunityEvent=(id,payload)=>unwrap(client.post(ct('/places/'+encodeURIComponent(id)+'/event-proposals'),payload));
+export const getCommunityEventQueue=()=>unwrap(client.get(ct('/admin/events')));
+export const reviewCommunityEvent=(id,payload)=>unwrap(client.patch(ct('/admin/events/'+encodeURIComponent(id)),payload));

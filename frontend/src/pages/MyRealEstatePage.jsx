@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import '../real-estate-management.css';
 import HousingViewingsManager from '../components/HousingViewingsManager.jsx';
 import { RoomCatalogManager } from '../components/CommunityTools.jsx';
+import { AdvertiserReviewRequest } from '../components/ReviewWorkflows.jsx';
 
 const STATUS_LABEL = {
   ACTIVE: 'Đang hiển thị',
@@ -223,6 +224,7 @@ export default function MyRealEstatePage() {
                         : 'Cần xác nhận lại trước ' + until.toLocaleDateString('vi-VN'))
                         : 'Tin cũ chưa có hạn xác nhận, bạn vẫn có thể chủ động xác nhận.'}
                     </div>
+                    {!isStale&&<AdvertiserReviewRequest placeId={item.id}/>}
                     {item.listingType==='RENT'&&['HOUSE','APARTMENT'].includes(item.propertyType)&&<RoomCatalogManager item={item} onChanged={load}/>}
                     {item.listingType==='RENT'&&!item.roomTypeCount&&<div className="estate-manager-price-form">
                       <label htmlFor={'rooms-'+item.id}>Số phòng/căn còn trống (tự khai)</label>

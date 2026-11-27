@@ -1,4 +1,5 @@
 import { PlaceQA } from '../components/CommunityTools.jsx';
+import { EventProposalForm } from '../components/ReviewWorkflows.jsx';
 import {PublicBusinessCatalog} from '../components/BusinessCatalog.jsx';
 import HousingDiscoveryDetails from '../components/HousingDiscoveryDetails.jsx';
 import { useEffect, useMemo, useState } from 'react';
@@ -879,6 +880,7 @@ export default function PlaceDetailV2() {
         <PlaceContributionPanel place={place} onChanged={() => {}} />
       </section>
       {place.categorySlug!=='bat-dong-san'&&<PlaceQA placeId={place.id} user={user}/>}
+      {place.categorySlug!=='bat-dong-san'&&<EventProposalForm placeId={place.id} user={user}/>}
       {place.categorySlug!=='bat-dong-san'&&place.isPartner&&<PublicBusinessCatalog placeId={place.id} user={user}/>}
     </main>
   );
