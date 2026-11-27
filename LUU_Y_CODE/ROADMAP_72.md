@@ -14,7 +14,7 @@
 | 08 | Số tầng/phòng/hướng/mặt tiền/đường vào | NEW_PR | #131 property_details; dữ liệu tự khai, không xác minh. |
 | 09 | Pháp lý tự khai/đã xác minh | PARTIAL | #131 enum tự khai; không có xác minh hồ sơ pháp lý thật. |
 | 10 | Lọc nội thất/tiện nghi/giờ giấc/đối tượng | PARTIAL | #131/132 subtype, furnishings, amenities; thiếu toàn bộ lọc giờ giấc/đối tượng. |
-| 11 | Một tòa nhiều loại phòng/inventory một pin | MISSING | Cần mô hình building–unit type–inventory, lifecycle và migration test. |
+| 11 | Một tòa nhiều loại phòng/inventory một pin | PARTIAL | #136 bảng loại phòng chờ duyệt, một ghim và giá đại diện, tồn phòng tổng hợp; chưa có từng căn/đặt phòng hoặc lọc từng loại và cập nhật tồn tức thời. |
 | 12 | Lịch sử giá và tình trạng phòng | NEW_PR | #131 history trigger; không hồi tố. Cần nghiệm thu migration trên DB thật. |
 | 13 | Tìm không dấu và sửa lỗi | PARTIAL | Postgres hola_unaccent, tìm kiếm cũ và #132 parser; typo recovery đầy đủ chưa làm. |
 | 14 | Tìm theo nhu cầu tự nhiên | NEW_PR | #132 parser quy tắc có giới hạn; không phải LLM. |
@@ -53,7 +53,7 @@
 | 47 | Thống kê hiệu quả doanh nghiệp | PARTIAL | #134 30-day request counts, voucher dashboard cũ; chưa toàn funnel/attribution. |
 | 48 | Yêu cầu tư vấn/đặt lịch | NEW_PR | #134 service appointment request + private inbox, không thanh toán. |
 | 49 | Feed cộng đồng địa phương | PARTIAL | #134 danh sách sự kiện/cảnh báo từ mapData đang tải; chưa feed bài cộng đồng đầy đủ. |
-| 50 | Hỏi đáp POI | MISSING | Cần Q&A schema, moderation, report, antispam. |
+| 50 | Hỏi đáp POI | NEW_PR | #136 hỏi/trả lời chờ duyệt, báo cáo, hàng chờ admin/mod, giới hạn gửi; cần nghiệm thu runtime. |
 | 51 | Sự kiện địa phương | PARTIAL | EVENT layer + #134 list; cần event submission/review, nguồn thực tế. |
 | 52 | Đánh giá/ảnh | EXISTING | PlaceReviews/Contribution/HALO; quyền ảnh phải kiểm tra. |
 | 53 | Hạng/nhiệm vụ cộng tác | EXISTING | Reputation, leaderboard, missions. |
@@ -78,7 +78,9 @@
 | 72 | Gói dữ liệu/API đối tác | PARTIAL | Developer API/embed/public integration cũ; chưa gói trả phí, SLA và cấp quyền dữ liệu tổng hợp. |
 
 ## Cổng nghiệm thu chung
-- Merge theo thứ tự #132 → #133 → #134 → #135 sau CI/Security thành công (đối chiếu head SHA). Không bypass gate.
-- Backup/restore, migration 310–360, rollback và test trên staging/DB bản sao. Chỉ chủ dự án triển khai VPS theo AGENTS.md. Không seed DEMO vào production.
+- #132–135 đã merge sau CI/Security 9/9 thành công. #136 mới tạo, còn chờ CI/Security. Không bypass gate.
+- Backup/restore, migration 310–370, rollback và test trên staging/DB bản sao. Chỉ chủ dự án triển khai VPS theo AGENTS.md. Không seed DEMO vào production.
 - Chưa có xác minh live, thiết bị vật lý, đủ mẫu dữ liệu, hợp đồng 80Land, feed DTHL/KTHL, Search Console, AI provider, thu tiền hoặc chấp thuận WA-005.
-- Ưu tiên sau khi CI: #11 building/inventory; #03 KYC; #50 Q&A; #70 quảng cáo BĐS riêng; #13–15 relevance/typo; #19–20 overlay; kế hoạch import nguồn chính thức và QA staging. Các mục phụ thuộc không đánh dấu hoàn thành.
+- Ưu tiên sau khi CI: #11 lọc và tồn phòng theo loại; #03 KYC; #50 nghiệm thu Q&A; #70 quảng cáo BĐS riêng; #13–15 relevance/typo; #19–20 overlay; kế hoạch import nguồn chính thức và QA staging. Các mục phụ thuộc không đánh dấu hoàn thành.
+
+- 27/11: #137 merged; #136 migration fix and same-room filter pending CI, no deployment.

@@ -118,6 +118,7 @@ function contributionPhotos(item) {
   return assets.map((asset) => asset?.url || asset?.secureUrl).filter(Boolean);
 }
 
+import { AdminCommunityTools } from '../../components/CommunityTools.jsx';
 export default function AdminContributions() {
   const { showToast } = useToast();
   const { user } = useAuth();
@@ -401,6 +402,7 @@ export default function AdminContributions() {
         </div>
       </div>
 
+      {status==='PENDING'&&['ADMIN','MODERATOR'].includes(user?.role)&&<AdminCommunityTools/>}
       {status === 'PENDING' && (
         <div className="quality-policy-banner">
           <ShieldCheck size={20} />

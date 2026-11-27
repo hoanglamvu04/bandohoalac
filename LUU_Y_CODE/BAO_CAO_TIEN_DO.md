@@ -211,3 +211,9 @@
 - **Production:** chưa triển khai / triển khai có bằng chứng / nghiệm thu có bằng chứng: …
 - **Chặn / rủi ro:** …
 - **Việc tiếp theo:** … (phải đối chiếu với kế hoạch).
+
+
+## 27/11/2026 GMT+7 — HOLA-P1-128 — #136 / room search and moderated QA
+- Main baseline eb35db9faa9bc2b4281b13b8fab8be4288b244f7, #137 merged. PR #136 created 23 files for room catalog and moderated POI Q&A. Head 37b9ea68abf849984b575e8a509274cb16992005: Backend migrate and test FAIL (migration 370 syntax at CASE/END; 8/9 other checks passed). Reconciled Sidebar V6, fixed parenthesized CASE, prevented null property type, serialized per-author QA limits, refresh expiry on approved inventory.
+- Same-room price/area/availability filtering in search and saved-search matching, SQL regression. Pin/sort still representative; no real-time booking. Migration 370 has never merged; fix only on PR. CI re-run pending; no VPS deployment.
+- Seven-wave IDs: P1-128 Housing/QA, P1-129 Smart Search, P1-130 Smart Map, P1-131 Data Intelligence, P2-132 Community, P2-133 SEO/PWA, P0-134 readiness. External source/KYC, devices and staging remain separate gates.

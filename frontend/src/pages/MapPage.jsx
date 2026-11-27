@@ -489,7 +489,7 @@ function formatHousingSalePrice(value) {
 function formatHousingPrice(housing) {
   return housing?.listingType === 'SALE'
     ? formatHousingSalePrice(housing.totalPriceVnd)
-    : formatHousingRent(housing?.monthlyRent);
+    : (housing?.roomTypeCount>0?'Từ ':'')+formatHousingRent(housing?.monthlyRent);
 }
 
 function realEstatePropertyLabel(type) {
