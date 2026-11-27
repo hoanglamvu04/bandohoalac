@@ -89,11 +89,23 @@ function placeMapFilterSql(pageAlias = 's', placeAlias = 'p') {
     '(' + pageAlias + '.map_supported = FALSE OR ST_Intersects(' + placeAlias + '.location, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326)))'
   ].join(' AND ');
 }
+// Housing SEO pages represent real rental inventory only. Generic area pages
+// must not accidentally include stale or unstructured housing records.
+export function localSeoHousingGateSql(pageAlias = 's', categoryAlias = 'c', placeAlias = 'p') {
+  return '(' + categoryAlias + ".slug IS DISTINCT FROM 'bat-dong-san' OR (" +
+    pageAlias + ".category_slug = 'bat-dong-san' AND EXISTS (SELECT 1 FROM housing_listings seo_hl WHERE " +
+    'seo_hl.place_id = ' + placeAlias + ".id AND seo_hl.listing_type = 'RENT' " +
+    "AND seo_hl.property_type IN ('HOUSE','APARTMENT') AND seo_hl.monthly_rent > 0 " +
+    "AND seo_hl.listing_status = 'ACTIVE' AND seo_hl.expires_at > NOW() " +
+    "AND seo_hl.availability_status IN ('AVAILABLE','LIMITED') AND seo_hl.available_rooms > 0 " +
+    "AND " + placeAlias + ".external_source IS NULL AND " + placeAlias + ".slug NOT LIKE 'demo-thach-that-2026-%')))";
+}
 function categoryFilterSql(pageAlias = 's', categoryAlias = 'c') {
   return [
     '(' + pageAlias + '.category_slug IS NULL OR ' + categoryAlias + '.slug = ' + pageAlias + '.category_slug)',
     '(cardinality(' + pageAlias + '.include_category_slugs) = 0 OR ' + categoryAlias + '.slug = ANY(' + pageAlias + '.include_category_slugs))',
-    '(cardinality(' + pageAlias + '.exclude_category_slugs) = 0 OR NOT (' + categoryAlias + '.slug = ANY(' + pageAlias + '.exclude_category_slugs)))'
+    '(cardinality(' + pageAlias + '.exclude_category_slugs) = 0 OR NOT (' + categoryAlias + '.slug = ANY(' + pageAlias + '.exclude_category_slugs)))',
+    localSeoHousingGateSql(pageAlias, categoryAlias)
   ].join(' AND ');
 }
 
@@ -221,7 +233,7 @@ async function loadPagePlaces(row, client = pool) {
     name: item.name,
     description: item.description || '',
     address: item.address || '',
-    phone: item.phone || null,
+    phone: item.category_slug === 'bat-dong-san' ? null : item.phone || null,
     website: item.website || null,
     priceLevel: item.price_level || null,
     openingHours: item.opening_hours || null,

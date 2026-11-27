@@ -241,7 +241,9 @@ test('Local SEO: all five starter pages remain drafts until inventory and map qu
     'quan-an-thach-that',
     'check-in-quoc-oai',
     'homestay-ba-vi',
-    'dich-vu-quanh-dai-hoc-fpt'
+    'dich-vu-quanh-dai-hoc-fpt',
+    'phong-tro-quanh-dai-hoc-fpt',
+    'phong-tro-quanh-dai-hoc-quoc-gia'
   ];
   const { rows } = await pool.query(
     'SELECT slug, status, map_supported FROM local_seo_pages WHERE slug = ANY($1::text[]) ORDER BY slug',
@@ -397,4 +399,9 @@ test('SEO: public demo is noindex and does not promote fictitious telephone or P
   assert.match(html, /KHÔNG PHẢI TIN THẬT/);
   assert.doesNotMatch(html, /application\/ld\+json/);
   assert.doesNotMatch(html, /href="tel:/);
+});
+
+test('SEO renderer redacts structured phone for housing even if input contains a value', () => {
+  const html = renderPlaceSeoPage({id:77,slug:'housing-test',name:'Test rental',categorySlug:'bat-dong-san',phone:'0987654321',lat:21.01,lng:105.52});
+  assert.doesNotMatch(html,/0987654321/);
 });

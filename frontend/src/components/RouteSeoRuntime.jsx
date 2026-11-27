@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import SeoHead from './SeoHead.jsx';
+import { isPrivateRoute } from '../lib/routeIndexPolicy.js';
 
 const ROUTE_META = {
   '/': {
@@ -52,21 +53,6 @@ const ROUTE_META = {
     description: 'Tìm hiểu nguồn dữ liệu, quy trình cập nhật và cách Hola Maps xác minh thông tin địa điểm.'
   }
 };
-
-function isPrivateRoute(pathname) {
-  return (
-    pathname.startsWith('/admin') ||
-    pathname.startsWith('/partner') ||
-    pathname.startsWith('/profile') ||
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/register') ||
-    pathname.startsWith('/verify') ||
-    pathname === '/map' ||
-    pathname === '/halo' ||
-    pathname.startsWith('/embed') ||
-    pathname.startsWith('/picker')
-  );
-}
 
 export default function RouteSeoRuntime() {
   const location = useLocation();

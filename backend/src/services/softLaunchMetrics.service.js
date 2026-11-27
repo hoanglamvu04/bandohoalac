@@ -36,7 +36,7 @@ export function createSoftLaunchMetrics({
   // 64 samples per group per slot, even during a traffic spike.
   const stores = new Map(GROUPS.map((key) => [key, Array(windowMinutes).fill(null)]));
 
-  function record({ path, statusCode, durationMs }) {
+  function record({ path, statusCode, durationMs, searchRequest = false }) {
     const group = routeGroup(path);
     if (!group) return;
     const epochMinute = Math.floor(now() / 60_000);
@@ -49,7 +49,7 @@ export function createSoftLaunchMetrics({
       let bucket = slots[slotIndex];
       if (!bucket || bucket.minute !== epochMinute) {
         bucket = {
-          minute: epochMinute, requests: 0, clientErrors: 0,
+          minute: epochMinute, requests: 0, searchRequests: 0, successfulSearchRequests: 0, clientErrors: 0,
           serverErrors: 0, rateLimited: 0, aborted: 0,
           slow: 0, samples: []
         };
@@ -57,6 +57,10 @@ export function createSoftLaunchMetrics({
       }
 
       bucket.requests += 1;
+      if (searchRequest === true && ['places', 'housing'].includes(group)) {
+        bucket.searchRequests += 1;
+        if (status >= 200 && status < 300) bucket.successfulSearchRequests += 1;
+      }
       if (status >= 400 && status < 500) bucket.clientErrors += 1;
       if (status >= 500 && status <= 599) bucket.serverErrors += 1;
       if (status === 429) bucket.rateLimited += 1;
@@ -76,7 +80,7 @@ export function createSoftLaunchMetrics({
 
   function snapshotGroup(key, currentMinute) {
     const combined = {
-      group: key, requests: 0, clientErrors: 0, serverErrors: 0,
+      group: key, requests: 0, searchRequests: 0, successfulSearchRequests: 0, clientErrors: 0, serverErrors: 0,
       rateLimited: 0, aborted: 0, slow: 0, sampledRequests: 0,
       p95Ms: null, errorRatePct: 0
     };
@@ -85,6 +89,8 @@ export function createSoftLaunchMetrics({
       if (!bucket || bucket.minute > currentMinute ||
           bucket.minute <= currentMinute - windowMinutes) continue;
       combined.requests += bucket.requests;
+      combined.searchRequests += bucket.searchRequests;
+      combined.successfulSearchRequests += bucket.successfulSearchRequests;
       combined.clientErrors += bucket.clientErrors;
       combined.serverErrors += bucket.serverErrors;
       combined.rateLimited += bucket.rateLimited;
@@ -127,6 +133,8 @@ export const softLaunchMetrics = createSoftLaunchMetrics();
 export function observeApiRequests(req, res, next) {
   const path = req.path;
   if (routeGroup(path) === null) return next();
+  // Count request types only; never keep or return the search term.
+  const searchRequest = req.method === 'GET' && ['/api/places', '/api/places/bounds', '/api/housing'].includes(path) && typeof req.query?.q === 'string' && req.query.q.trim().length > 0;
   const started = process.hrtime.bigint();
   let recorded = false;
 
@@ -134,7 +142,7 @@ export function observeApiRequests(req, res, next) {
     if (recorded) return;
     recorded = true;
     const durationMs = Number(process.hrtime.bigint() - started) / 1e6;
-    softLaunchMetrics.record({ path, statusCode, durationMs });
+    softLaunchMetrics.record({ path, statusCode, durationMs, searchRequest });
   }
 
   res.once('finish', () => finish(res.statusCode));
