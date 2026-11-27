@@ -47,6 +47,7 @@ test('Smart Discovery V3 calculates real driving-time results and opens a map pi
   const requests = await stubSite(page);
   await page.goto('/map', { waitUntil: 'domcontentloaded' });
 
+  await page.getByRole('button', { name: 'Công cụ', exact: true }).click();
   const panel = page.getByTestId('travel-time-discovery');
   await expect(panel).toBeVisible();
   expect(requests).toHaveLength(0); // no eager OSRM requests
@@ -75,6 +76,7 @@ test('Mobile discovery reports OSRM outages without inventing driving durations'
   const toggle = page.locator('.hm-mobile-list-toggle');
   await expect(toggle).toBeVisible();
   await toggle.click();
+  await page.getByRole('button', { name: 'Công cụ', exact: true }).click();
   const panel = page.getByTestId('travel-time-discovery');
   await expect(panel).toBeVisible();
   await panel.getByRole('button', { name: /Khám phá theo phút lái xe/ }).click();

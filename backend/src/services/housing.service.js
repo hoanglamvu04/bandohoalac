@@ -232,20 +232,28 @@ export async function listHousingListings(filters = {}, db = pool) {
     );
   }
 
-  const numericFilters = [
-    ['minRent', 'hl.monthly_rent >='],
-    ['maxRent', 'hl.monthly_rent <='],
-    ['minPrice', 'hl.total_price_vnd >='],
-    ['maxPrice', 'hl.total_price_vnd <='],
-    ['minArea', 'hl.area_m2 >='],
-    ['maxArea', 'hl.area_m2 <='],
-    ['minAvailableRooms', 'hl.available_rooms >=']
+  // Price and area must match the SAME room type.
+  const roomCriteria = [
+    ['minRent','hl.monthly_rent',"(rt->>'monthlyRentVnd')::numeric",'>='],
+    ['maxRent','hl.monthly_rent',"(rt->>'monthlyRentVnd')::numeric",'<='],
+    ['minArea','hl.area_m2',"(rt->>'areaM2')::numeric",'>='],
+    ['maxArea','hl.area_m2',"(rt->>'areaM2')::numeric",'<=']
   ];
-
-  for (const [key, operator] of numericFilters) {
-    if (filters[key] === undefined) continue;
+  const legacy = [], rooms = [];
+  for(const [key,column,roomColumn,operator] of roomCriteria) {
+    if(filters[key]===undefined)continue;
     params.push(Number(filters[key]));
-    conditions.push(operator + ' $' + params.length);
+    const ref='$'+params.length;
+    legacy.push(column+' '+operator+' '+ref);
+    rooms.push(roomColumn+' '+operator+' '+ref);
+  }
+  if(rooms.length){
+    if(booleanValue(filters.availableOnly)===true)rooms.push("(rt->>'availableRooms')::int>0");
+    conditions.push("((COALESCE(jsonb_array_length(hl.room_types),0)=0 AND "+legacy.join(' AND ')+") OR EXISTS (SELECT 1 FROM jsonb_array_elements(hl.room_types) rt WHERE "+rooms.join(' AND ')+"))");
+  }
+  for(const [key,operator] of [['minPrice','hl.total_price_vnd >='],['maxPrice','hl.total_price_vnd <='],['minAvailableRooms','hl.available_rooms >=']]){
+    if(filters[key]===undefined)continue;
+    params.push(Number(filters[key]));conditions.push(operator+' $'+params.length);
   }
 
   if (filters.maxDistanceFpt !== undefined) {

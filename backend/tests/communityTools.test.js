@@ -20,3 +20,9 @@ test('QA submissions cannot self-publish, choose invalid parents or pass unknown
  assert.equal(qaReportSchema.safeParse({reason:'PRIVATE_INFO'}).success,true);
  assert.equal(qaReviewSchema.safeParse({action:'PUBLISH_ALL'}).success,false);
 });
+
+import {listHousingListings} from '../src/services/housing.service.js';
+test('room criteria match one type; availability applies to the matching type',async()=>{
+ const db={query:async(sql,args)=>{assert.match(sql,/EXISTS \(SELECT 1 FROM jsonb_array_elements\(hl.room_types\) rt WHERE/);assert.ok(sql.includes("(rt->>'monthlyRentVnd')::numeric <= $1"));assert.ok(sql.includes("(rt->>'areaM2')::numeric >= $2"));assert.ok(sql.includes("(rt->>'availableRooms')::int>0"));assert.deepEqual(args.slice(0,2),[3000000,25]);return {rows:[]};}};
+ await listHousingListings({maxRent:'3000000',minArea:'25',availableOnly:'true'},db);
+});

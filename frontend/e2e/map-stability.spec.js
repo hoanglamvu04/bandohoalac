@@ -279,3 +279,55 @@ test('mobile place dismissal preserves camera and does not reopen the fallback c
   expect(Math.abs(cameraAfterClose.zoom - cameraAtClose.zoom)).toBeLessThan(0.01);
   await expect(page.locator('.hm-mobile-place-fallback')).toHaveCount(0);
 });
+
+
+test('sidebar defaults to results with separate tool and layer panes', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await stubApi(page);
+  await page.goto('/map?vertical=food', { waitUntil: 'domcontentloaded' });
+  const rail = page.getByRole('complementary', { name: 'Danh sách địa điểm' });
+  const results = rail.locator('#hm-sidebar-places'), toolPane = rail.locator('#hm-sidebar-tools'), layers = rail.locator('#hm-sidebar-layers');
+  const tabs = rail.getByRole('navigation', { name: 'Nội dung bản đồ' });
+  await expect(results).toBeVisible();
+  await expect(toolPane).toBeHidden();
+  await expect(layers).toBeHidden();
+  expect((await results.boundingBox()).height).toBeGreaterThan(300);
+  await tabs.getByRole('button', { name: 'Công cụ', exact: true }).click();
+  await expect(toolPane).toBeVisible();
+  await expect(results).toBeHidden();
+  await expect(toolPane.getByText('Hồ sơ vùng đang xem', { exact: true })).toBeVisible();
+  await tabs.getByRole('button', { name: 'Lớp bản đồ', exact: true }).click();
+  await expect(layers).toBeVisible();
+  await expect(toolPane).toBeHidden();
+  const firstLayer = layers.locator('.hm-layer-card').first();
+  const before = await firstLayer.getAttribute('aria-pressed');
+  await firstLayer.click();
+  await expect(firstLayer).toHaveAttribute('aria-pressed', before === 'true' ? 'false' : 'true');
+  await tabs.getByRole('button', { name: 'Địa điểm', exact: true }).click();
+  await expect(results).toBeVisible();
+  await expect(layers).toBeHidden();
+});
+
+test('mobile tool pane expands and a background pin closes the sheet', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await stubApi(page);
+  await page.goto('/map?vertical=food', { waitUntil: 'domcontentloaded' });
+  const rail = page.getByRole('complementary', { name: 'Danh sách địa điểm' });
+  const tabs = rail.getByRole('navigation', { name: 'Nội dung bản đồ' });
+  await expect(rail).toHaveClass(/open/);
+  await expect(rail.locator('#hm-sidebar-places')).toBeVisible();
+  await tabs.getByRole('button', { name: 'Công cụ', exact: true }).click();
+  await expect(rail).toHaveClass(/sheet-full/);
+  await expect(rail.locator('#hm-sidebar-places')).toBeHidden();
+  await expect(rail.locator('#hm-sidebar-tools')).toBeVisible();
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('hola-map-pin', { detail: { lat: 21.01354, lng: 105.52522, title: 'Ghim QA', source: 'map-click' } })));
+  await expect(rail).not.toHaveClass(/\bopen\b/);
+  await page.locator('.hm-mobile-list-toggle').click();
+  await expect(rail).toHaveClass(/open/);
+  await expect(page.locator('.hm-pin-card')).toBeHidden();
+  await tabs.getByRole('button', { name: 'Địa điểm', exact: true }).click();
+  await expect(rail.locator('#hm-sidebar-places')).toBeVisible();
+  const box = await rail.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(390);
+});

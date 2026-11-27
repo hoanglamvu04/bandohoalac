@@ -82,3 +82,5 @@
 - Backup/restore, migration 310–370, rollback và test trên staging/DB bản sao. Chỉ chủ dự án triển khai VPS theo AGENTS.md. Không seed DEMO vào production.
 - Chưa có xác minh live, thiết bị vật lý, đủ mẫu dữ liệu, hợp đồng 80Land, feed DTHL/KTHL, Search Console, AI provider, thu tiền hoặc chấp thuận WA-005.
 - Ưu tiên sau khi CI: #11 lọc và tồn phòng theo loại; #03 KYC; #50 nghiệm thu Q&A; #70 quảng cáo BĐS riêng; #13–15 relevance/typo; #19–20 overlay; kế hoạch import nguồn chính thức và QA staging. Các mục phụ thuộc không đánh dấu hoàn thành.
+
+- 27/11: #137 merged; #136 migration fix and same-room filter pending CI, no deployment.

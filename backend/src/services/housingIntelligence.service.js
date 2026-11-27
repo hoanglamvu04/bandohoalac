@@ -142,10 +142,19 @@ export async function generateSavedHousingAlerts(db = pool) {
           AND (NOT (s.filters ? 'furnishing') OR hl.property_details->>'furnishing' = s.filters->>'furnishing')
           AND (NOT (s.filters ? 'minPrice') OR hl.total_price_vnd >= (s.filters->>'minPrice')::numeric)
           AND (NOT (s.filters ? 'maxPrice') OR hl.total_price_vnd <= (s.filters->>'maxPrice')::numeric)
-          AND (NOT (s.filters ? 'minRent') OR hl.monthly_rent >= (s.filters->>'minRent')::numeric)
-          AND (NOT (s.filters ? 'maxRent') OR hl.monthly_rent <= (s.filters->>'maxRent')::numeric)
-          AND (NOT (s.filters ? 'minArea') OR hl.area_m2 >= (s.filters->>'minArea')::numeric)
-          AND (NOT (s.filters ? 'maxArea') OR hl.area_m2 <= (s.filters->>'maxArea')::numeric)
+          AND (
+            (COALESCE(jsonb_array_length(hl.room_types),0)=0
+              AND (NOT (s.filters ? 'minRent') OR hl.monthly_rent >= (s.filters->>'minRent')::numeric)
+              AND (NOT (s.filters ? 'maxRent') OR hl.monthly_rent <= (s.filters->>'maxRent')::numeric)
+              AND (NOT (s.filters ? 'minArea') OR hl.area_m2 >= (s.filters->>'minArea')::numeric)
+              AND (NOT (s.filters ? 'maxArea') OR hl.area_m2 <= (s.filters->>'maxArea')::numeric))
+            OR EXISTS(SELECT 1 FROM jsonb_array_elements(hl.room_types) rt WHERE
+              (NOT (s.filters ? 'minRent') OR (rt->>'monthlyRentVnd')::numeric >= (s.filters->>'minRent')::numeric)
+              AND (NOT (s.filters ? 'maxRent') OR (rt->>'monthlyRentVnd')::numeric <= (s.filters->>'maxRent')::numeric)
+              AND (NOT (s.filters ? 'minArea') OR (rt->>'areaM2')::numeric >= (s.filters->>'minArea')::numeric)
+              AND (NOT (s.filters ? 'maxArea') OR (rt->>'areaM2')::numeric <= (s.filters->>'maxArea')::numeric)
+              AND (COALESCE(s.filters->>'availableOnly','false')<>'true' OR (rt->>'availableRooms')::int>0))
+          )
           AND (NOT (s.filters ? 'availability') OR hl.availability_status = s.filters->>'availability')
           AND (NOT (s.filters ? 'availableOnly') OR s.filters->>'availableOnly' = 'false'
                OR (hl.availability_status IN ('AVAILABLE','LIMITED')

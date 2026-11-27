@@ -132,6 +132,7 @@ test('Housing Sprint 2 compares 2 public listings with price/m² and FPT distanc
   await page.goto('/map?vertical=housing&category=bat-dong-san',
     { waitUntil: 'domcontentloaded' });
 
+  await page.getByRole('button', { name: 'Công cụ', exact: true }).click();
   const panel = page.getByTestId('housing-intelligence');
   await expect(panel).toBeVisible();
   await panel.getByRole('button', { name: /So sánh & theo dõi tin mới/ }).click();
@@ -155,6 +156,7 @@ test('Authenticated housing filters can be saved, paused, reapplied and removed'
   const calls = await stubHousing(page, true);
   await page.goto('/map?vertical=housing&category=bat-dong-san&listingType=SALE',
     { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Công cụ', exact: true }).click();
   const panel = page.getByTestId('housing-intelligence');
   await expect(panel).toBeVisible();
   await panel.getByRole('button', { name: /So sánh & theo dõi tin mới/ }).click();
@@ -170,6 +172,7 @@ test('Authenticated housing filters can be saved, paused, reapplied and removed'
   await expect(panel.getByText('Đã tạm dừng')).toBeVisible();
   await panel.getByRole('button', { name: 'Áp dụng' }).click();
   await expect(page).toHaveURL(/listingType=SALE/);
+  await page.getByRole('button', { name: 'Công cụ', exact: true }).click();
   await panel.getByRole('button', { name: 'Xóa bộ lọc Đất FPT dưới 2 tỷ' }).click();
   await expect(panel.getByText('Bạn chưa lưu bộ lọc nào.')).toBeVisible();
   expect(calls.savedOperations.map((c) => c.method)).toEqual(['POST','PATCH','DELETE']);
@@ -180,6 +183,7 @@ test('Market + location intelligence works on approved property data without GPS
   const requests = await stubHousing(page);
   await page.goto('/map?vertical=housing&category=bat-dong-san',
     { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Công cụ', exact: true }).click();
   const panel = page.getByTestId('housing-intelligence');
   await panel.getByRole('button', { name: /So sánh & theo dõi tin mới/ }).click();
   await panel.getByRole('button', { name: 'Xem thống kê giá/m²' }).click();
@@ -205,6 +209,7 @@ test('Housing map searches the actual viewport on demand using spatial query', a
   const calls = await stubHousing(page);
   await page.goto('/map?vertical=housing&category=bat-dong-san&listingType=SALE',
     { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Công cụ', exact: true }).click();
   const panel = page.getByTestId('housing-intelligence');
   await expect(panel).toBeVisible();
   await panel.getByRole('button', { name: /So sánh & theo dõi tin mới/ }).click();

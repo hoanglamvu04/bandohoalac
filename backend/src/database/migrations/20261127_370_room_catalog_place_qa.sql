@@ -32,12 +32,12 @@ BEGIN
  ORDER BY CASE WHEN (t->>'availableRooms')::int>0 THEN 0 ELSE 1 END,(t->>'monthlyRentVnd')::bigint,n LIMIT 1;
  SELECT SUM((t->>'totalRooms')::int),SUM((t->>'availableRooms')::int)
  INTO total_count,available_count FROM jsonb_array_elements(NEW.room_types) AS a(t);
- IF NEW.listing_type<>'RENT' OR NEW.property_type NOT IN ('HOUSE','APARTMENT')
+ IF NEW.listing_type IS DISTINCT FROM 'RENT' OR NEW.property_type IS NULL OR NEW.property_type NOT IN ('HOUSE','APARTMENT')
  OR NEW.monthly_rent IS DISTINCT FROM (representative->>'monthlyRentVnd')::bigint
  OR NEW.deposit_amount IS DISTINCT FROM (representative->>'depositVnd')::bigint
  OR NEW.area_m2 IS DISTINCT FROM (representative->>'areaM2')::numeric
  OR NEW.total_rooms IS DISTINCT FROM total_count OR NEW.available_rooms IS DISTINCT FROM available_count
- OR NEW.availability_status IS DISTINCT FROM CASE WHEN available_count>0 THEN 'AVAILABLE' ELSE 'FULL' END THEN
+ OR NEW.availability_status IS DISTINCT FROM (CASE WHEN available_count>0 THEN 'AVAILABLE' ELSE 'FULL' END) THEN
    RAISE EXCEPTION 'Use reviewed room catalog to update inventory and representative price';
  END IF;
  RETURN NEW;

@@ -14,6 +14,12 @@
 ### HOLA-P2-124 — SEO readiness, content assistant and price review (27/11/2026)
 - #129, #130 and #131 merged; #131 workflow CI/Security completed success and all safety steps passed; check-run summary still returned inconsistent status. #132–135 stacked/pending final CI and merge at time of writing. New: asking-price reference (same-type nearby non-demo inventory, minimum 8 samples; review only), local rules draft from entered fields (no model, no contact), admin SEO filter/internal eligibility and formula-safe CSV, avoid redrawing selection on unrelated MapView rerenders. Tests added. Full 72-item audit in ROADMAP_72.md; do not claim complete/live. External provider approvals, actual sources, room-type inventory, KYC, Q&A, paid product and physical-device evidence remain open. No VPS deploy.
 
+## 27/11/2026 GMT+7 — HOLA-P1-127 — Sidebar V6 (desktop/mobile)
+
+- Baseline `main` `ea41ffd49f8412cfc8b47d614d11ad59884bcd3e`. Người dùng báo đã dọn demo; ảnh VPS trước đó Health/Ready OK, không suy diễn nghiệm thu toàn site. PR #136 vẫn mở, Backend CI FAIL, tách khỏi UI PR.
+- Chia sidebar thành Địa điểm/Công cụ/Lớp bản đồ; ưu tiên list, giữ virtual scrolling, bộ lọc, công cụ Housing/travel/area/saved views và lớp dữ liệu. Tools/layers có vùng cuộn riêng, compact mobile sheet, clear free pin khi mở danh sách hoặc chọn POI; bridge nhận diện layer ghim giá/cluster thực tế. Không đổi API/database/consent.
+- Sửa test Housing/Travel để mở tab công cụ; thêm desktop/mobile regression tests về tab, layer toggle và foreground pin. CI chưa xác nhận. Không deploy VPS; nghiệm thu thực tế ở 390px và desktop, kiểm tra scroll/pin/consent. Các backlog khác giữ nguyên.
+
 ## 27/11/2026 GMT+7 — HOLA-P1-120 / HOLA-P2-121 — search, lưới giá, dòng tiền, góc nhìn
 
 - Stacked sau #131, nhánh `feat/roadmap-search-market-smart-map-20261127`, DANG_LAM. Bổ sung parser tiếng Việt deterministic có giới hạn (ngân sách có đơn vị, bán/thuê, FPT, tiện ích), hiển thị tiêu chí; không gọi AI hay bịa kết quả. Đồng bộ subtype/nội thất vào URL, API, saved search; không lọc lại bằng chuỗi có dấu sau backend.
@@ -207,7 +213,7 @@
 - **Việc tiếp theo:** … (phải đối chiếu với kế hoạch).
 
 
-## 27/11/2026 — ROADMAP #136 (P2-125/P2-126)
-- Đã xác nhận #129, #130, #131, #132, #133, #134, #135 đã merge; main trước PR này: ea41ffd49f8412cfc8b47d614d11ad59884bcd3e. CI/Security #132–135 đều 9/9 thành công; #131 hai workflow thành công, safety gate tất cả steps pass (check-run summary từng trả in_progress/success).
-- Code mới: migration 370, danh sách loại phòng cùng một tin/ghim; giá đại diện thấp nhất loại còn phòng, tổng phòng trống; yêu cầu thay đổi giá và tồn phải qua ADMIN/MODERATOR, chặn cập nhật cũ phá tính nhất quán, hủy lịch tương lai khi hết phòng. Chưa lọc từng loại, chưa quản lý từng căn hoặc tồn realtime. Hỏi đáp POI phi BĐS, chờ duyệt, báo cáo, hàng chờ kiểm duyệt, không lộ ID/email tác giả trong API công khai, giới hạn gửi.
-- Trạng thái: code mới mở PR, chờ CI, không deploy/migrate VPS. Ma trận 72 cập nhật #11 PARTIAL, #50 NEW_PR. Kiểm tra lại cả DB thật, thiết bị, moderation, dữ liệu và hợp đồng; chưa hoàn thành 72/72. Các mục KYC, nguồn quy hoạch/GTFS, 80Land, WA-005, Search Console, AI và thu tiền vẫn phụ thuộc phê duyệt/nguồn/cấu hình. Không tự khai xác minh hoặc gọi external API thiếu quyền.
+## 27/11/2026 GMT+7 — HOLA-P1-128 — #136 / room search and moderated QA
+- Main baseline eb35db9faa9bc2b4281b13b8fab8be4288b244f7, #137 merged. PR #136 created 23 files for room catalog and moderated POI Q&A. Head 37b9ea68abf849984b575e8a509274cb16992005: Backend migrate and test FAIL (migration 370 syntax at CASE/END; 8/9 other checks passed). Reconciled Sidebar V6, fixed parenthesized CASE, prevented null property type, serialized per-author QA limits, refresh expiry on approved inventory.
+- Same-room price/area/availability filtering in search and saved-search matching, SQL regression. Pin/sort still representative; no real-time booking. Migration 370 has never merged; fix only on PR. CI re-run pending; no VPS deployment.
+- Seven-wave IDs: P1-128 Housing/QA, P1-129 Smart Search, P1-130 Smart Map, P1-131 Data Intelligence, P2-132 Community, P2-133 SEO/PWA, P0-134 readiness. External source/KYC, devices and staging remain separate gates.

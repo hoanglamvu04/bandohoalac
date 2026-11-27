@@ -62,7 +62,7 @@ export async function reviewRooms(request,actor,action){
    owner(row,q.user_id);
    if(Number(row.room_catalog_version)!==q.base_version)throw new AppError('Yêu cầu cũ; từ chối và đề nghị gửi lại.',409);
    const x=projectRoomTypes(q.types),t=x.representative;
-   await client.query("UPDATE housing_listings SET room_types=$2::jsonb,room_catalog_version=room_catalog_version+1,monthly_rent=$3,deposit_amount=$4,area_m2=$5,total_rooms=$6,available_rooms=$7,availability_status=$8,updated_at=NOW() WHERE place_id=$1",[q.place_id,JSON.stringify(x.types),t.monthlyRentVnd,t.depositVnd,t.areaM2,x.totalRooms,x.availableRooms,x.availabilityStatus]);
+   await client.query("UPDATE housing_listings SET room_types=$2::jsonb,room_catalog_version=room_catalog_version+1,monthly_rent=$3,deposit_amount=$4,area_m2=$5,total_rooms=$6,available_rooms=$7,availability_status=$8,last_confirmed_at=NOW(),expires_at=NOW()+INTERVAL '30 days',updated_at=NOW() WHERE place_id=$1",[q.place_id,JSON.stringify(x.types),t.monthlyRentVnd,t.depositVnd,t.areaM2,x.totalRooms,x.availableRooms,x.availabilityStatus]);
    await client.query("UPDATE places SET price_level=$2,updated_at=NOW() WHERE id=$1",[q.place_id,'Từ '+new Intl.NumberFormat('vi-VN').format(t.monthlyRentVnd)+' đ/tháng']);
    if(x.availableRooms===0)await client.query("UPDATE housing_viewing_requests SET status='CANCELLED',updated_at=NOW() WHERE place_id=$1 AND starts_at>NOW() AND status IN ('PENDING','ACCEPTED')",[q.place_id]);
   }
@@ -89,6 +89,7 @@ export async function publicQA(place){
 }
 export async function submitQA(place,user,input){
  return withTransaction(async client=>{
+  await client.query('SELECT id FROM users WHERE id=$1 FOR UPDATE',[user]);
   await qaPlace(client,place,true);
   const parent=input.parentId||null;
   if(parent){

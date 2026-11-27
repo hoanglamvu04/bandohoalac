@@ -1,5 +1,6 @@
 import { useEffect,useRef,useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ChartNoAxesColumnIncreasing, ChevronDown, TriangleAlert } from 'lucide-react';
 import { searchRouteCorridor,getMapAreaSummary } from '../services/api.js';
 import '../spatial-discovery.css';
 
@@ -40,7 +41,7 @@ export function AreaProfile({viewport}){
   }catch(e){if(id===sequence.current)setError(e.response?.data?.error||'Hãy phóng to khu vực cần xem.');}
   finally{if(id===sequence.current)setBusy(false);}
  }
- return <details className="hm-spatial-panel"><summary>Hồ sơ vùng đang xem</summary><p>Đếm địa điểm công khai theo danh mục trong khung bản đồ tại lúc tra cứu.</p><button type="button" onClick={load} disabled={busy||!viewport}>{busy?'Đang tải…':'Thống kê vùng này'}</button>{error&&<p role="alert">{error}</p>}{result&&<><p>{result.notice}</p><ul>{result.items.map(x=><li key={x.slug}>{x.name}: <b>{x.count}</b></li>)}</ul></>}</details>;
+ return <details className="hm-spatial-panel"><summary className="hm-tool-summary"><span className="hm-tool-symbol"><ChartNoAxesColumnIncreasing size={18}/></span><span><strong>Hồ sơ vùng đang xem</strong><small>Thống kê địa điểm trong khu vực</small></span><ChevronDown size={16} className="hm-tool-chevron"/></summary><p>Đếm địa điểm công khai theo danh mục trong khung bản đồ tại lúc tra cứu.</p><button type="button" onClick={load} disabled={busy||!viewport}>{busy?'Đang tải…':'Thống kê vùng này'}</button>{error&&<p role="alert">{error}</p>}{result&&<><p>{result.notice}</p><div className="hm-area-summary-grid">{result.items.map(x=><div key={x.slug}><span>{x.name}</span><b>{x.count}</b></div>)}</div></>}</details>;
 }
 
 export function HousingAreaResults({result,onClear}){
@@ -51,7 +52,7 @@ export function HousingAreaResults({result,onClear}){
 export function LocalActivityFeed({mapData}){
  const items=(mapData?.features||[]).filter(f=>['EVENT','ALERT','FLOOD','ROAD_CLOSURE'].includes(f.properties?.layerType))
  .slice(0,30);
- return <details className="hm-spatial-panel"><summary>Sự kiện và cảnh báo địa phương</summary><p>Từ lớp dữ liệu bản đồ đang tải. Không phải danh sách đầy đủ hay cảnh báo thời gian thực.</p>
+ return <details className="hm-spatial-panel"><summary className="hm-tool-summary"><span className="hm-tool-symbol amber"><TriangleAlert size={18}/></span><span><strong>Sự kiện và cảnh báo địa phương</strong><small>Thông tin từ các lớp đang bật</small></span><ChevronDown size={16} className="hm-tool-chevron"/></summary><p>Từ lớp dữ liệu bản đồ đang tải. Không phải danh sách đầy đủ hay cảnh báo thời gian thực.</p>
  {!items.length&&<p>Chưa có mục phù hợp trong các lớp đang tải.</p>}
  <ul>{items.map((f,i)=>{const x=f.properties||{};return <li key={String(f.id||i)+'-'+i}><b>{x.name||'Thông tin địa phương'}</b> · {x.layerType}<br/><small>{x.sourceLabel||'Chưa có nhãn nguồn'} · {x.verificationStatus==='VERIFIED'?'Đã xác minh theo hệ thống':'Chưa có xác minh'}{x.validUntil?' · đến '+new Date(x.validUntil).toLocaleString('vi-VN'):''}</small></li>;})}</ul></details>;
 }

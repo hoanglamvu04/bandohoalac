@@ -11,7 +11,7 @@ export function PublicRoomCatalog({placeId,count}){
  const [data,setData]=useState(null),[error,setError]=useState('');
  useEffect(()=>{let live=true;setData(null);setError('');if(count>0)getPublicRoomTypes(placeId).then(x=>{if(live)setData(x);}).catch(e=>{if(live)setError(message(e));});return()=>{live=false;};},[placeId,count]);
  if(!count)return null;
- return <section className="ct-panel"><h3>Danh sách loại phòng</h3><p>Giá đại diện trên bản đồ là giá thấp nhất trong loại còn phòng; nếu hết phòng là giá thấp nhất của bảng. Bộ lọc cũ dùng giá và diện tích đại diện.</p>{error?<p role="alert">{error}</p>:data?<RoomTable types={data.types}/>:<p>Đang tải…</p>}<small>Thông tin do người đăng cung cấp, được duyệt công khai; không phải xác minh pháp lý.</small></section>;
+ return <section className="ct-panel"><h3>Danh sách loại phòng</h3><p>Giá đại diện trên bản đồ là giá thấp nhất trong loại còn phòng; nếu hết phòng là giá thấp nhất của bảng. Bộ lọc giá và diện tích kiểm tra cùng một loại phòng. Ghim và sắp xếp vẫn dùng giá đại diện; xem bảng để biết phòng phù hợp.</p>{error?<p role="alert">{error}</p>:data?<RoomTable types={data.types}/>:<p>Đang tải…</p>}<small>Thông tin do người đăng cung cấp, được duyệt công khai; không phải xác minh pháp lý.</small></section>;
 }
 const fields=[['label','Tên loại phòng','text'],['areaM2','Diện tích (m²)','number'],['monthlyRentVnd','Giá thuê/tháng (đ)','number'],['depositVnd','Cọc (đ, có thể bỏ trống)','number'],['totalRooms','Tổng phòng','number'],['availableRooms','Còn trống','number']];
 export function RoomCatalogManager({item,onChanged}){
