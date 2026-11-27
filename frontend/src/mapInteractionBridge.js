@@ -6,6 +6,10 @@ const MAP_KEY = '__HOLA_MAP_INSTANCE__';
 const INTERACTIVE_LAYER_IDS = [
   'hm-place-clusters',
   'hm-place-cluster-point-label',
+  'hm-place-cluster-circle',
+  'hm-place-cluster-count',
+  'hm-place-point-label',
+  'hm-housing-price-label',
   'hm-place-name-label',
   'hm-road-closure-report-point',
   'hm-flood-report-point',

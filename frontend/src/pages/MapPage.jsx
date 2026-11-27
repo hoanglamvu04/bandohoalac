@@ -547,7 +547,8 @@ export default function MapPage() {
       const filters=Object.fromEntries(Object.entries(housingRequestParams({includeQuery:true})).filter(([k,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>[k,String(v)]));
       const result=await searchHousingArea({points:areaVertices,filters});
       if(id!==areaRequestRef.current)return;
-      setAreaResult(result);setAreaDrawing(false);setLeftOpen(true);
+      setAreaResult(result);setAreaDrawing(false);setSidebarTab('tools');setLeftOpen(true);
+      if (isMobileMapViewport()) setMobileSheetLevel('full');
     }catch(e){if(id===areaRequestRef.current)setAreaError(e.response?.data?.error||'Vùng tìm kiếm chưa hợp lệ.');}
     finally{if(id===areaRequestRef.current)setAreaBusy(false);}
   }
@@ -583,7 +584,7 @@ export default function MapPage() {
       ? true
       : !window.matchMedia('(max-width: 760px)').matches
   );
-  const [layersExpanded, setLayersExpanded] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState('places');
   const [userLocation, setUserLocation] = useState(null);
   const [placeScope, setPlaceScope] = useState('viewport');
   const [placeScopeLoading, setPlaceScopeLoading] = useState(false);
@@ -861,7 +862,7 @@ export default function MapPage() {
 
   useEffect(() => {
     const node = placeListRef.current;
-    if (!node || !leftOpen) return undefined;
+    if (!node || !leftOpen || sidebarTab !== 'places') return undefined;
 
     const updateHeight = () => setListViewportHeight(node.clientHeight || 600);
     updateHeight();
@@ -874,7 +875,11 @@ export default function MapPage() {
     const observer = new ResizeObserver(updateHeight);
     observer.observe(node);
     return () => observer.disconnect();
-  }, [leftOpen]);
+  }, [leftOpen, sidebarTab]);
+
+  useEffect(() => {
+    setSidebarTab('places');
+  }, [regionId, category, minRating, query, openNow, sortMode, verticalMode, housingFilterSignature]);
 
   useEffect(() => {
     // Vertical navigation should immediately reveal the discovery list instead
@@ -1533,6 +1538,28 @@ export default function MapPage() {
     [places, selectedId]
   );
 
+  // Keep just one foreground surface on mobile.
+  useEffect(() => {
+    if (leftOpen && isMobileMapViewport()) window.dispatchEvent(new Event('hola-map-pin-clear'));
+  }, [leftOpen]);
+  useEffect(() => {
+    if (selectedPlace) window.dispatchEvent(new Event('hola-map-pin-clear'));
+  }, [selectedPlace?.id]);
+  useEffect(() => {
+    function foregroundPin(event) {
+      const detail = event.detail;
+      if (!isMobileMapViewport() || !Number.isFinite(detail?.lat) ||
+          !Number.isFinite(detail?.lng) || routeDestination || tripPlannerOpen) return;
+      setLeftOpen(false);
+      if (selectedId != null) {
+        setSelectedId(null);
+        syncDiscoveryParams({ place: null });
+      }
+    }
+    window.addEventListener('hola-map-pin', foregroundPin);
+    return () => window.removeEventListener('hola-map-pin', foregroundPin);
+  }, [selectedId, routeDestination, tripPlannerOpen, searchParams]);
+
   // The list can now hold thousands of paged records. Keep MapLibre's GeoJSON
   // source lean by sending only places in the current viewport plus selection.
   const mapPlaces = useMemo(() => {
@@ -1589,7 +1616,7 @@ export default function MapPage() {
   }, [selectedId, user?.id]);
 
   useEffect(() => {
-    if (selectedId === null || selectedId === undefined || !leftOpen) return undefined;
+    if (selectedId === null || selectedId === undefined || !leftOpen || sidebarTab !== 'places') return undefined;
 
     const selectedIndex = sidebarPlaces.findIndex(
       (place) => String(place.id) === String(selectedId)
@@ -1618,7 +1645,7 @@ export default function MapPage() {
     }
 
     return undefined;
-  }, [selectedId, leftOpen, sidebarPlaces, visiblePlaceCount, virtualRowHeight]);
+  }, [selectedId, leftOpen, sidebarTab, sidebarPlaces, visiblePlaceCount, virtualRowHeight]);
 
   useEffect(() => {
     if (!selectedImages.length) {
@@ -2250,17 +2277,22 @@ export default function MapPage() {
       window.matchMedia('(max-width: 760px)').matches;
   }
 
-  function toggleDiscoveryPanel() {
-    if (!isMobileMapViewport()) {
-      setLeftOpen((value) => !value);
-      return;
-    }
+  function chooseSidebarTab(tab) {
+    setSidebarTab(tab);
+    if (tab !== 'places' && isMobileMapViewport()) setMobileSheetLevel('full');
+  }
 
-    setLeftOpen((value) => {
-      const next = !value;
-      if (next) setMobileSheetLevel('half');
-      return next;
-    });
+  function toggleDiscoveryPanel() {
+    const next = !leftOpen;
+    if (next && isMobileMapViewport()) {
+      setMobileSheetLevel(sidebarTab === 'places' ? 'half' : 'full');
+      window.dispatchEvent(new Event('hola-map-pin-clear'));
+      if (!routeDestination && !tripPlannerOpen && selectedId != null) {
+        setSelectedId(null);
+        syncDiscoveryParams({ place: null });
+      }
+    }
+    setLeftOpen(next);
   }
 
   function startSheetDrag(event) {
@@ -3316,6 +3348,7 @@ export default function MapPage() {
                   <button type="button" className="hm-filter-results-button"
                     onClick={() => {
                       setFilterMenuOpen(false);
+                      setSidebarTab('places');
                       setLeftOpen(true);
                       setMobileSheetLevel('half');
                     }}>
@@ -3514,7 +3547,7 @@ export default function MapPage() {
         aria-label="Danh sách địa điểm"
         className={
           (leftOpen ? 'hm-left-panel open ' : 'hm-left-panel ') +
-          'sheet-' + mobileSheetLevel
+          'sheet-' + mobileSheetLevel + ' hm-sidebar-v6'
         }
       >
         <button
@@ -3547,15 +3580,23 @@ export default function MapPage() {
           </button>
         </div>
 
-        {isHousingMode && (
-          <Link className="hm-housing-publish-link" to={housingSubmissionLink}>
-            <Plus size={16} />
-            <span>Đăng bán hoặc cho thuê bất động sản</span>
-            <ChevronRight size={16} />
-          </Link>
-        )}
-
-        {isHousingMode && (
+        <nav className="hm-sidebar-tabs" aria-label="Nội dung bản đồ">
+          {[
+            { id: 'places', label: 'Địa điểm', Icon: MapPin },
+            { id: 'tools', label: 'Công cụ', Icon: SlidersHorizontal },
+            { id: 'layers', label: 'Lớp bản đồ', Icon: Layers }
+          ].map(({ id, label, Icon }) => (
+            <button key={id} type="button" className={sidebarTab === id ? 'active' : ''}
+              aria-pressed={sidebarTab === id} aria-controls={'hm-sidebar-' + id}
+              onClick={() => chooseSidebarTab(id)}>
+              <Icon size={16} aria-hidden="true" /><span>{label}</span>
+            </button>
+          ))}
+        </nav>
+        <section id="hm-sidebar-tools" className="hm-sidebar-tools hm-sidebar-pane"
+          aria-label="Công cụ bản đồ" hidden={sidebarTab !== 'tools'}>
+          <div className="hm-sidebar-intro"><strong>Khám phá thông minh</strong><p>Chọn công cụ phù hợp với nhu cầu của bạn.</p></div>
+          {isHousingMode && (
           <HousingIntelligencePanel
             user={user}
             places={sidebarPlaces}
@@ -3565,8 +3606,8 @@ export default function MapPage() {
           />
         )}
 
-        {isHousingMode&&!inEmbed&&<div className="hm-spatial-panel">
-          <button type="button" onClick={()=>{clearHousingArea();setAreaDrawing(true);setLeftOpen(false);}}>Vẽ vùng tìm bất động sản</button>
+        {isHousingMode&&!inEmbed&&<div className="hm-spatial-panel hm-sidebar-area-tool">
+          <button className="hm-sidebar-draw-button" type="button" onClick={()=>{clearHousingArea();setAreaDrawing(true);setLeftOpen(false);}}><MapIcon size={18}/> Vẽ vùng tìm bất động sản <ChevronRight size={16}/></button>
           <HousingAreaResults result={areaResult} onClear={clearHousingArea}/>
         </div>}
         {!inEmbed&&<AreaProfile viewport={viewport}/>}
@@ -3580,8 +3621,17 @@ export default function MapPage() {
             void trackXHubEvent('search_used');
           }}
         />
+        </section>
 
-        <section className="hm-panel-section hm-place-results">
+        <section id="hm-sidebar-places" className="hm-panel-section hm-place-results hm-sidebar-pane"
+          aria-label="Kết quả địa điểm" hidden={sidebarTab !== 'places'}>
+        {isHousingMode && (
+          <Link className="hm-housing-publish-link" to={housingSubmissionLink}>
+            <Plus size={16} />
+            <span>Đăng bán hoặc cho thuê bất động sản</span>
+            <ChevronRight size={16} />
+          </Link>
+        )}
           <div className="hm-section-title">
             <span>
               {query.trim()
@@ -3835,24 +3885,12 @@ export default function MapPage() {
           </div>
         </section>
 
-        <section className={layersExpanded ? 'hm-panel-section hm-layer-section expanded' : 'hm-panel-section hm-layer-section collapsed'}>
-          <button
-            type="button"
-            className="hm-layer-section-toggle"
-            onClick={() => setLayersExpanded((value) => !value)}
-            aria-expanded={layersExpanded}
-          >
-            <span className="hm-layer-section-copy">
-              <b>LỚP DỮ LIỆU</b>
-              <small>{activeLayers.length} lớp đang hiển thị</small>
-            </span>
-            <span className="hm-layer-section-meta">
-              <b>{activeLayers.length}/{LAYERS.length}</b>
-              <ChevronDown size={16} />
-            </span>
-          </button>
-
-          {layersExpanded && (
+        <section id="hm-sidebar-layers" className="hm-panel-section hm-layer-section expanded hm-sidebar-pane"
+          aria-label="Lớp bản đồ" hidden={sidebarTab !== 'layers'}>
+          <div className="hm-sidebar-intro hm-sidebar-layer-intro">
+            <div><strong>Lớp dữ liệu</strong><p>Bật hoặc tắt lớp hiển thị trên bản đồ.</p></div>
+            <span>{activeLayers.length}/{LAYERS.length}</span>
+          </div>
             <div className="hm-layer-grid">
               {LAYERS.map(({ type, label, icon: Icon, tone }) => {
                 const active = activeLayers.includes(type);
@@ -3861,6 +3899,7 @@ export default function MapPage() {
                     key={type}
                     type="button"
                     className={active ? 'hm-layer-card active ' + tone : 'hm-layer-card ' + tone}
+                    aria-pressed={active}
                     onClick={() => toggleLayer(type)}
                   >
                     <span className="hm-layer-icon"><Icon size={17} /></span>
@@ -3873,7 +3912,6 @@ export default function MapPage() {
                 );
               })}
             </div>
-          )}
         </section>
       </aside>
 

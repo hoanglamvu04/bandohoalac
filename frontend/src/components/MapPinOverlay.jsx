@@ -27,8 +27,13 @@ export default function MapPinOverlay() {
       });
     };
 
+    const clearPin = () => setPin(null);
     window.addEventListener('hola-map-pin', handlePin);
-    return () => window.removeEventListener('hola-map-pin', handlePin);
+    window.addEventListener('hola-map-pin-clear', clearPin);
+    return () => {
+      window.removeEventListener('hola-map-pin', handlePin);
+      window.removeEventListener('hola-map-pin-clear', clearPin);
+    };
   }, []);
 
   useEffect(() => {
