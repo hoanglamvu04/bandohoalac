@@ -3625,7 +3625,7 @@ export default function MapPage() {
           <HousingAreaResults result={areaResult} onClear={clearHousingArea}/>
         </div>}
         {!inEmbed&&<AreaProfile viewport={viewport}/>}
-        {!inEmbed&&<LocalActivityFeed mapData={mapData}/>}
+        {!inEmbed&&<LocalActivityFeed mapData={mapData} viewport={viewport}/>}
         {!inEmbed && <MapSavedViews activeLayers={activeLayers} validLayers={LAYERS.map(x=>x.type)} onRestoreLayers={setActiveLayers}/>}
         <TravelTimeDiscovery
           defaultCategory={isHousingMode ? 'bat-dong-san' : isFoodMode ? 'an-uong' : 'all'}

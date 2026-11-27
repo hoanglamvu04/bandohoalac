@@ -7,3 +7,12 @@
 .data-trust-triage-badge.tier-high { background:#fff5e8; color:#88521b; border-color:#e9cb9b; }
 .data-trust-triage-badge.tier-medium { background:#edf4ff; color:#315f8c; border-color:#b8d0ee; }
 .data-trust-triage-badge.tier-low { background:#eef5ef; color:#315f46; border-color:#c5dac9; }
+
+.hola-quality-filters {display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.hola-quality-filters label{display:grid;gap:4px;font-size:12px;min-width:140px}
+.hola-quality-filters input,.hola-quality-filters select{width:100%;max-width:260px;border:1px solid #dbe3ec;padding:8px;border-radius:8px;background:var(--surface,#fff);color:inherit;font:inherit}
+.hola-quality-queue-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0}
+.hola-quality-queue-actions span{font-size:12px;margin-right:auto}
+.hola-quality-queue-actions button{border:1px solid #dbe3ec;border-radius:8px;padding:8px;background:var(--surface,#fff);color:inherit}
+.hola-quality-queue-actions button:disabled{opacity:.45}
+.hola-quality-select{display:flex;align-items:center;gap:4px;font-size:11px;align-self:start}

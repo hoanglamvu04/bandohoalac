@@ -25,6 +25,7 @@ import {
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 import '../../data-trust-admin.css';
+import { filterQualityQueue, qualityQueueCsv } from '../../lib/qualityQueue.js';
 
 const TRIAGE_LABELS = {
   CRITICAL: 'Ưu tiên khẩn',
@@ -84,6 +85,10 @@ export default function AdminDataTrust() {
   const [approvedCtv, setApprovedCtv] = useState([]);
   const [ctvs, setCtvs] = useState([]);
   const [filter, setFilter] = useState('ALL');
+  const [queuePriority, setQueuePriority] = useState('ALL');
+  const [queueQuery, setQueueQuery] = useState('');
+  const [queueCategory, setQueueCategory] = useState('ALL');
+  const [queueIds, setQueueIds] = useState([]);
   const [selected, setSelected] = useState(null);
   const [revisions, setRevisions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -120,11 +125,22 @@ export default function AdminDataTrust() {
 
   useEffect(() => { load(); }, [isAdmin]);
 
-  const qualityItems = useMemo(() => {
-    const items = quality?.items || [];
-    if (filter === 'ALL') return items;
-    return items.filter((item) => item.issues?.includes(filter));
-  }, [quality, filter]);
+  const qualityItems = useMemo(() => filterQualityQueue(quality?.items, {
+    issue: filter, priority: queuePriority, query: queueQuery, category: queueCategory
+  }), [quality, filter, queuePriority, queueQuery, queueCategory]);
+  const queueCategories = useMemo(() => [...new Set((quality?.items || []).map(item => item.categorySlug).filter(Boolean))].sort(), [quality]);
+  const selectedQueue = qualityItems.filter(item => queueIds.includes(String(item.id)));
+  useEffect(() => { setQueueIds([]); }, [quality, filter, queuePriority, queueQuery, queueCategory]);
+  function exportQueue() {
+    const rows = selectedQueue.length ? selectedQueue : qualityItems;
+    if (!rows.length) return;
+    const url = URL.createObjectURL(new Blob([qualityQueueCsv(rows)], { type: 'text/csv;charset=utf-8' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'hola-data-quality-queue.csv';
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 
   const risky = useMemo(
     () => pending.filter((item) => Number(item.riskScore || 0) >= 40).sort((a, b) => Number(b.riskScore) - Number(a.riskScore)),
@@ -232,11 +248,11 @@ export default function AdminDataTrust() {
           <section className="data-trust-section">
             <div className="data-trust-section-head">
               <div><span className="eyebrow">DATA QUALITY</span><h2>Địa điểm cần làm mới</h2></div>
-              <div className="quality-filter-row">
-                <button className={filter === 'ALL' ? 'active' : ''} onClick={() => setFilter('ALL')}>Tất cả</button>
-                {['MISSING_IMAGES', 'MISSING_HOURS', 'STALE_PLACE', 'NEVER_VERIFIED',
-                  'STALE_IMAGES', 'INCOMPLETE_PROPERTY_PROFILE', 'MISSING_PROPERTY_PRICE',
-                  'PROPERTY_EXPIRED', 'PROPERTY_NOT_ACTIVE'].map((key) => <button key={key} className={filter === key ? 'active' : ''} onClick={() => setFilter(key)}>{ISSUE_LABELS[key]}</button>)}
+              <div className="quality-filter-row hola-quality-filters">
+                <label>Tìm địa điểm<input type="search" value={queueQuery} placeholder="Tên, ID, khu vực" onChange={event => setQueueQuery(event.target.value)} /></label>
+                <label>Vấn đề<select value={filter} onChange={event => setFilter(event.target.value)}><option value="ALL">Tất cả vấn đề</option>{Object.entries(ISSUE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+                <label>Ưu tiên<select value={queuePriority} onChange={event => setQueuePriority(event.target.value)}><option value="ALL">Tất cả mức</option>{Object.entries(TRIAGE_LABELS).map(([key,label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+                <label>Danh mục<select value={queueCategory} onChange={event => setQueueCategory(event.target.value)}><option value="ALL">Tất cả danh mục</option>{queueCategories.map(key => <option key={key} value={key}>{key}</option>)}</select></label>
               </div>
             </div>
 
@@ -247,9 +263,18 @@ export default function AdminDataTrust() {
               {' '}{summary.triageCounts?.MEDIUM || 0} cần rà soát.
               Không đại diện toàn bộ hệ thống nếu việc kiểm tra mới chỉ lấy mẫu.
             </p>}
+            <div className="hola-quality-queue-actions">
+              <span>{qualityItems.length} / {quality?.items?.length || 0} mục trong hàng chờ đã tải · Đã chọn {selectedQueue.length}</span>
+              <button type="button" disabled={!qualityItems.length} onClick={() => setQueueIds(qualityItems.map(item => String(item.id)))}>Chọn kết quả</button>
+              <button type="button" disabled={!queueIds.length} onClick={() => setQueueIds([])}>Bỏ chọn</button>
+              <button type="button" disabled={!qualityItems.length} onClick={exportQueue}>Xuất CSV {selectedQueue.length ? 'đã chọn' : 'đã lọc'}</button>
+            </div>
+            <p className="data-trust-triage-summary">Bộ lọc và xuất CSV chỉ áp dụng cho hàng chờ đã tải; không tự động xác minh hoặc thay đổi dữ liệu.</p>
+            {!qualityItems.length && <p>Không có mục phù hợp bộ lọc.</p>}
             <div className="quality-place-list">
               {qualityItems.map((place) => (
                 <article key={place.id}>
+                  <label className="hola-quality-select"><input type="checkbox" checked={queueIds.includes(String(place.id))} aria-label={'Chọn ' + place.name} onChange={event => setQueueIds(ids => event.target.checked ? [...ids, String(place.id)] : ids.filter(id => id !== String(place.id)))} /> Chọn</label>
                   <div className="quality-score"><b>{place.qualityScore}</b><small>/100</small></div>
                   <div className="quality-place-copy">
                     <small>{place.category || 'Chưa phân loại'} · #{place.id}</small>

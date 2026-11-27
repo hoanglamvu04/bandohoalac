@@ -1,7 +1,8 @@
 import { useEffect,useRef,useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChartNoAxesColumnIncreasing, ChevronDown, TriangleAlert } from 'lucide-react';
-import { searchRouteCorridor,getMapAreaSummary } from '../services/api.js';
+import { searchRouteCorridor,getMapAreaSummary,getMapLayers } from '../services/api.js';
+import { ACTIVITY_TYPES, ACTIVITY_LABELS, localActivityItems, validActivityBounds } from '../lib/localActivity.js';
 import '../spatial-discovery.css';
 
 export function RouteNearbyPlaces({route}){
@@ -49,10 +50,31 @@ export function HousingAreaResults({result,onClear}){
  return <div className="hm-spatial-panel"><b>Kết quả khoanh vùng · {result.meta?.total??result.items.length} tin</b><p>Hiển thị tối đa 30 tin phù hợp bộ lọc lúc tra cứu.</p><button type="button" onClick={onClear}>Xóa vùng</button><ul>{result.items.map(x=><li key={x.id}><Link to={'/place/'+x.id}>{x.name}</Link></li>)}</ul>{result.items.length===0&&<p>Chưa có tin phù hợp.</p>}</div>;
 }
 
-export function LocalActivityFeed({mapData}){
- const items=(mapData?.features||[]).filter(f=>['EVENT','ALERT','FLOOD','ROAD_CLOSURE'].includes(f.properties?.layerType))
- .slice(0,30);
- return <details className="hm-spatial-panel"><summary className="hm-tool-summary"><span className="hm-tool-symbol amber"><TriangleAlert size={18}/></span><span><strong>Sự kiện và cảnh báo địa phương</strong><small>Thông tin từ các lớp đang bật</small></span><ChevronDown size={16} className="hm-tool-chevron"/></summary><p>Từ lớp dữ liệu bản đồ đang tải. Không phải danh sách đầy đủ hay cảnh báo thời gian thực.</p>
- {!items.length&&<p>Chưa có mục phù hợp trong các lớp đang tải.</p>}
- <ul>{items.map((f,i)=>{const x=f.properties||{};return <li key={String(f.id||i)+'-'+i}><b>{x.name||'Thông tin địa phương'}</b> · {x.layerType}<br/><small>{x.sourceLabel||'Chưa có nhãn nguồn'} · {x.verificationStatus==='VERIFIED'?'Đã xác minh theo hệ thống':'Chưa có xác minh'}{x.validUntil?' · đến '+new Date(x.validUntil).toLocaleString('vi-VN'):''}</small></li>;})}</ul></details>;
+export function LocalActivityFeed({mapData,viewport}){
+ const [kind,setKind]=useState('ALL'),[areaData,setAreaData]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const request=useRef(null);
+ useEffect(()=>()=>request.current?.abort(),[]);
+ async function loadArea(){
+   const bounds=validActivityBounds(viewport);
+   if(!bounds){setError('Hãy phóng to khu vực muốn xem.');return;}
+   request.current?.abort();
+   const controller=new AbortController();request.current=controller;setBusy(true);setError('');
+   try{
+     const data=await getMapLayers({types:ACTIVITY_TYPES,bounds},{signal:controller.signal});
+     if(!controller.signal.aborted){
+       if(data?.type!=='FeatureCollection')throw new Error('Invalid activity response');
+       setAreaData(data);
+     }
+   }catch(e){if(!controller.signal.aborted)setError('Không tải được thông tin khu vực. Vui lòng thử lại.');}
+   finally{if(!controller.signal.aborted)setBusy(false);}
+ }
+ const items=localActivityItems(areaData||mapData,kind);
+ return <details className="hm-spatial-panel"><summary className="hm-tool-summary"><span className="hm-tool-symbol amber"><TriangleAlert size={18}/></span><span><strong>Sự kiện và cảnh báo địa phương</strong><small>Bảng tin theo khu vực bản đồ</small></span><ChevronDown size={16} className="hm-tool-chevron"/></summary>
+ <div className="hm-activity-toolbar"><button type="button" onClick={loadArea} disabled={busy}>{busy?'Đang tải…':'Tải tin trong vùng đang xem'}</button>
+ <label>Loại tin<select value={kind} onChange={event=>setKind(event.target.value)}><option value="ALL">Tất cả</option>{ACTIVITY_TYPES.map(type=><option key={type} value={type}>{ACTIVITY_LABELS[type]}</option>)}</select></label></div>
+ <p>{areaData?'Theo vùng tại thời điểm bấm tải, kể cả lớp đang tắt.':'Từ các lớp đang hiển thị.'} Hiển thị tối đa 30 mục; không phải nguồn cảnh báo thời gian thực.</p>
+ {areaData&&<button type="button" onClick={()=>setAreaData(null)}>Về lớp đang hiển thị</button>}
+ {error&&<p role="alert">{error}</p>}
+ {!items.length&&<p>Chưa có thông tin phù hợp trong dữ liệu hiện có.</p>}
+ <ul>{items.map((f,i)=>{const x=f.properties||{};return <li key={String(f.id||i)+'-'+i}><b>{x.name||'Thông tin địa phương'}</b> · {ACTIVITY_LABELS[x.layerType]}<br/><small>{x.sourceLabel||'Chưa có nhãn nguồn'} · {x.verificationStatus==='VERIFIED'?'Đã xác minh theo hệ thống':'Chưa có xác minh'}{x.validUntil?' · đến '+new Date(x.validUntil).toLocaleString('vi-VN'):''}</small></li>;})}</ul></details>;
 }

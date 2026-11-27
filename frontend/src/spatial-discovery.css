@@ -5,3 +5,5 @@
 .hm-spatial-panel ul{margin:8px 0;padding-left:19px;max-height:210px;overflow:auto;overflow-wrap:anywhere}.hm-spatial-panel a{color:#196b4c}
 .hm-area-drawing-toolbar{position:absolute;z-index:150;bottom:calc(72px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(440px,calc(100% - 24px));background:#fff;color:#173c2d;box-shadow:0 4px 24px #163f2733;border:1px solid #b9d4c6;border-radius:12px;padding:12px;font-size:13px;line-height:1.4}
 .hm-area-drawing-toolbar p{margin:4px 0}.hm-area-drawing-toolbar div{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+
+.hm-activity-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.hm-activity-toolbar label{display:grid;gap:4px;font-size:12px}.hm-activity-toolbar select{padding:7px;border:1px solid #dbe3ec;border-radius:8px;background:#fff;color:#223144}
