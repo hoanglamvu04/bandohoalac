@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import { Bookmark, ChevronDown } from 'lucide-react';
 import {getHolaMapInstance} from '../mapInteractionBridge.js';
 import {readSavedViews,validateSavedView,VIEW_KEY} from '../lib/mapSavedViews.js';
 
@@ -25,7 +26,7 @@ export default function MapSavedViews({activeLayers,validLayers,onRestoreLayers}
   onRestoreLayers(item.layers.filter(x=>validLayers.includes(x)));
   map.jumpTo({center:[item.lng,item.lat],zoom:item.zoom});setError('');
  }
- return <details className="hm-housing-intel" data-testid="saved-map-views"><summary className="hm-housing-intel-heading"><strong>Góc nhìn bản đồ đã lưu</strong></summary>
+ return <details className="hm-housing-intel" data-testid="saved-map-views"><summary className="hm-housing-intel-heading hm-tool-summary"><span className="hm-tool-symbol"><Bookmark size={18}/></span><span><strong>Góc nhìn bản đồ đã lưu</strong><small>Quay lại khu vực yêu thích</small></span><ChevronDown size={16} className="hm-tool-chevron"/></summary>
   <div className="hm-housing-intel-body">
    <small>Chỉ lưu góc nhìn và lớp dữ liệu khi bạn chủ động bấm lưu. Lưu trên trình duyệt này, không đồng bộ tài khoản hoặc gửi máy chủ.</small>
    <form onSubmit={save}><label>Tên góc nhìn<input maxLength={60} required value={name} onChange={e=>setName(e.target.value)}/></label>
