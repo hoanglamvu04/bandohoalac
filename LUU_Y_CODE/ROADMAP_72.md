@@ -84,3 +84,9 @@
 - Ưu tiên sau khi CI: #11 lọc và tồn phòng theo loại; #03 KYC; #50 nghiệm thu Q&A; #70 quảng cáo BĐS riêng; #13–15 relevance/typo; #19–20 overlay; kế hoạch import nguồn chính thức và QA staging. Các mục phụ thuộc không đánh dấu hoàn thành.
 
 - 27/11: #137 merged; #136 migration fix and same-room filter pending CI, no deployment.
+
+
+### 27/11/2026 (GMT+7) — HOLA-P0-134: seven-wave readiness
+- Git evidence: #136, #138, #139, #140, #141 merged with CI 9/9; latest confirmed main at start of readiness work: 45b444fa9660556cefba6f59f91624b30e9ec766. #142 open (f87776b), CI pending when this PR created; readiness is stacked on it. No production deploy or VPS tests performed.
+- Added `scripts/release-smoke.mjs`, mock tests in `backend/tests/release-smoke.test.js`, `docs/RELEASE_7_WAVES_RUNBOOK.md`, and `LUU_Y_CODE/ROADMAP_7_WAVES.md` (36-item audit). Read-only anonymous checks, no response body/credential logging; empty sample explicitly incomplete. CI pending for new tests.
+- Remaining: batch edit/moderation with rollback, unified relevance/evaluation, area follow/recommendation, full feed, device/load and restore drill, real role/source verification, VNU anchor, draft editorial/data gates, long-term growth analytics. External rights/integrations still blocked. Do not claim full production acceptance; retarget and merge only after checks.
