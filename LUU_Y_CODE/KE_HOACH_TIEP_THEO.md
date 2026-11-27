@@ -150,3 +150,8 @@ Các mục P1 trước đây và P0 blockers giữ nguyên; không coi việc me
 
 | HOLA-P1-120 | DANG_LAM | Parser, subtype/furnishing, market grid + monthly snapshots, dòng tiền; chờ CI + cron thực tế. |
 | HOLA-P2-121 | DANG_LAM | Lưu góc nhìn/layers local, không GPS/đồng bộ; chờ CI. |
+
+
+## 27/11/2026 GMT+7 — HOLA-P1-129 — Smart Search V6
+- Baseline main eb35db9faa9bc2b4281b13b8fab8be4288b244f7; #136 sửa migration/room match đang CI, PR này độc lập. Tận dụng pg_trgm và Smart Rank V3, bổ sung one-edit typo score, search active partner service title qua POI, chọn kết quả theo danh mục, Enter/Escape/outside dismissal và stale request guard.
+- Tùy chọn lưu tối đa 8 từ khóa mặc định tắt; chặn chuỗi liên hệ/toạ độ hiển nhiên, xóa history, chọn tối đa 5 danh mục yêu thích thủ công; dữ liệu local device, không truyền sang X-HUB. Không có AI/cá nhân hóa theo hành vi. Tests bổ sung, CI chưa xác nhận. Không migration/deploy. Tiêu chí: exact/typo/relevance, service visibility, navigation, privacy, regression.

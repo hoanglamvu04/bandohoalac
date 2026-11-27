@@ -152,3 +152,22 @@ test('OSRM duration rankings are fastest first and are never replaced by paid pl
   assert.deepEqual(result.items.map(x => x.id), [12, 11]);
   assert.deepEqual(result.items.map(x => x.durationSeconds), [140, 310]);
 });
+
+import {oneEditApart} from '../src/services/smartDiscoveryRanking.service.js';
+import {normalizeSearchPreferences,rememberSearch,safeHistoryText} from '../../frontend/src/lib/searchPreferences.js';
+test('typo ranking retains exact-match advantage and handles transposition',()=>{
+ assert.equal(oneEditApart('hoalac','hoalca'),true);
+ assert.equal(oneEditApart('fpt','fptt'),false);
+ const opts={query:'quann cafe'};
+ assert.ok(discoveryScore({name:'Quan cafe'},opts)>discoveryScore({name:'Cafe'},opts));
+ assert.ok(discoveryScore({name:'Quann cafe'},opts)>discoveryScore({name:'Quan cafe'},opts));
+});
+test('search preferences are explicit, bounded, and do not remember coordinates/contact strings',()=>{
+ const p=normalizeSearchPreferences({remember:false,history:['quán ăn'],categories:['cafe','bad','cafe']});
+ assert.deepEqual(p,{remember:false,history:[],categories:['cafe']});
+ assert.equal(safeHistoryText('0912345678'),false);
+ assert.equal(safeHistoryText('21.01354,105.52522'),false);
+ assert.equal(safeHistoryText('cafe gần tôi'),false);
+ assert.deepEqual(rememberSearch({...p,remember:true},'cà phê').history,['cà phê']);
+ assert.deepEqual(rememberSearch(p,'cà phê').history,[]);
+});

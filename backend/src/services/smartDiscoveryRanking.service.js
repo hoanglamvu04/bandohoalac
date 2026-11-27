@@ -12,6 +12,16 @@ function normalizeText(input) {
     .trim();
 }
 
+export function oneEditApart(a,b) {
+  if(a.length<4||b.length<4||Math.abs(a.length-b.length)>1||a===b)return false;
+  if(a.length===b.length){
+    const diffs=[];for(let i=0;i<a.length;i++)if(a[i]!==b[i])diffs.push(i);
+    return diffs.length===1||(diffs.length===2&&diffs[1]===diffs[0]+1&&a[diffs[0]]===b[diffs[1]]&&a[diffs[1]]===b[diffs[0]]);
+  }
+  const [short,long]=a.length<b.length?[a,b]:[b,a];
+  let i=0;while(i<short.length&&short[i]===long[i])i++;
+  return short.slice(i)===long.slice(i+1);
+}
 function lexicalMatch(text, query) {
   if (!text || !query) return 0;
   if (text === query) return 140;
@@ -20,8 +30,9 @@ function lexicalMatch(text, query) {
 
   const terms = [...new Set(query.split(' ').filter((v) => v.length > 1))];
   if (!terms.length) return 0;
-  const matched = terms.filter((term) => text.includes(term));
-  return 70 * (matched.length / terms.length);
+  const words=text.split(' ').filter(w=>w.length>1).slice(0,64);
+  const match=terms.reduce((score,term)=>score+(text.includes(term)?1:words.some(word=>oneEditApart(term,word))?0.65:0),0);
+  return 70*(match/terms.length);
 }
 
 export function discoveryScore(item, {

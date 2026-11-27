@@ -211,3 +211,8 @@
 - **Production:** chưa triển khai / triển khai có bằng chứng / nghiệm thu có bằng chứng: …
 - **Chặn / rủi ro:** …
 - **Việc tiếp theo:** … (phải đối chiếu với kế hoạch).
+
+
+## 27/11/2026 GMT+7 — HOLA-P1-129 — Smart Search V6
+- Baseline main eb35db9faa9bc2b4281b13b8fab8be4288b244f7; #136 sửa migration/room match đang CI, PR này độc lập. Tận dụng pg_trgm và Smart Rank V3, bổ sung one-edit typo score, search active partner service title qua POI, chọn kết quả theo danh mục, Enter/Escape/outside dismissal và stale request guard.
+- Tùy chọn lưu tối đa 8 từ khóa mặc định tắt; chặn chuỗi liên hệ/toạ độ hiển nhiên, xóa history, chọn tối đa 5 danh mục yêu thích thủ công; dữ liệu local device, không truyền sang X-HUB. Không có AI/cá nhân hóa theo hành vi. Tests bổ sung, CI chưa xác nhận. Không migration/deploy. Tiêu chí: exact/typo/relevance, service visibility, navigation, privacy, regression.
