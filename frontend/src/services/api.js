@@ -1003,3 +1003,16 @@ export const getBusinessInbox=(id)=>unwrap(client.get('/business/places/'+encode
 export const actBusinessRequest=(id,action)=>unwrap(client.patch('/business/requests/'+encodeURIComponent(id),{action}));
 
 export const getHousingPriceReference=(id,options={})=>unwrap(client.get('/housing/'+encodeURIComponent(id)+'/price-reference',{signal:options.signal}));
+
+const ct=(path)=>'/community-tools'+path;
+export const getPublicRoomTypes=id=>unwrap(client.get(ct('/housing/'+encodeURIComponent(id)+'/rooms')));
+export const getOwnRoomTypes=id=>unwrap(client.get(ct('/housing/'+encodeURIComponent(id)+'/manage')));
+export const submitRoomTypes=(id,payload)=>unwrap(client.post(ct('/housing/'+encodeURIComponent(id)+'/proposals'),payload));
+export const cancelRoomTypes=(id,rid)=>unwrap(client.delete(ct('/housing/'+encodeURIComponent(id)+'/proposals/'+encodeURIComponent(rid))));
+export const getRoomQueue=()=>unwrap(client.get(ct('/admin/rooms')));
+export const reviewRoomTypes=(id,action)=>unwrap(client.patch(ct('/admin/rooms/'+encodeURIComponent(id)),{action}));
+export const getPlaceQA=id=>unwrap(client.get(ct('/places/'+encodeURIComponent(id)+'/qa')));
+export const submitPlaceQA=(id,payload)=>unwrap(client.post(ct('/places/'+encodeURIComponent(id)+'/qa'),payload));
+export const reportPlaceQA=(id,pid,reason)=>unwrap(client.post(ct('/places/'+encodeURIComponent(id)+'/qa/'+encodeURIComponent(pid)+'/report'),{reason}));
+export const getQAQueue=()=>unwrap(client.get(ct('/admin/qa')));
+export const reviewPlaceQA=(id,action)=>unwrap(client.patch(ct('/admin/qa/'+encodeURIComponent(id)),{action}));

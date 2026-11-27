@@ -333,9 +333,10 @@ export function housingMapPriceLabel(housing) {
     if (amount >= 1e6) return number(amount / 1e6) + ' tr';
     return number(amount, 0) + ' đ';
   }
-  if (amount >= 1e6) return number(amount / 1e6) + ' tr/th';
-  if (amount >= 1e3) return number(amount / 1e3, 0) + 'k/th';
-  return number(amount, 0) + 'đ/th';
+  const prefix=housing.roomTypeCount>0?'Từ ':'';
+  if (amount >= 1e6) return prefix+number(amount / 1e6) + ' tr/th';
+  if (amount >= 1e3) return prefix+number(amount / 1e3, 0) + 'k/th';
+  return prefix+number(amount, 0) + 'đ/th';
 }
 
 function emptyFeatureCollection() {
