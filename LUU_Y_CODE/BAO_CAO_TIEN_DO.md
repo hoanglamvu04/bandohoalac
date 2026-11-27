@@ -3,6 +3,14 @@
 > **Chốt kiểm tra:** 16:57 25/11/2026 GMT+7. Xác minh `main` tại `c02640c9ec5399c003f3e1a7fd9115921e5a25d5` sau [PR #113](https://github.com/hoanglamvu04/bandohoalac/pull/113). [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817673) và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817721) PASS trên head PR.
 
 
+## 16:04 27/11/2026 GMT+7 — HOLA Core Intelligence V2: mở roadmap kỹ thuật (tài liệu, chưa code)
+
+- Baseline xác minh `main` `526f774f7a721ff45906dd64de49c74e3e23625d`; PR #143 đã merge vào commit này. Các 7 đợt trước đã có code merge; không xác nhận đã nghiệm thu production. Người dùng báo trải nghiệm có vẻ OK, chưa có log smoke/backup/restore/load/device để xác nhận.
+- Lập [ROADMAP_CORE_INTELLIGENCE_V2.md](ROADMAP_CORE_INTELLIGENCE_V2.md): 10 đợt, 60 ID con, phạm vi, phụ thuộc, nghiệm thu, P0 gates. Trạng thái mới CHUA_LAM; nền chức năng cũ cần đối chiếu, không làm lại.
+- Thứ tự nền tảng 1→2→3→10, sau đó 4→5→6→7→8→9. Không đổi stack hoặc tự cài Redis/microservices; 90% backend/DB/thuật toán/test, 10% admin cần thiết.
+- Docs-only PR đang được tạo; không sửa ứng dụng/schema/workflow, không chạy migration, seed, triển khai hay đo load. CI của PR tài liệu cần xác minh trước merge. WA-005 #92 và P0 blockers cũ giữ nguyên; không coi tất cả backlog đã hoàn thành.
+
+
 ### HOLA-P2-122 — Spatial discovery (27/11/2026)
 - Code: POST housing area-search, polygon validity/area cap and service-area clipping predicate; click-drawn 3–24 vertices, cancellation, separate results (normal map markers retained). Route corridor on existing OSRM geometry, public POI only, 200/500/1000 m, length/vertex caps. Viewport profile by published POI categories. No stored GPS or analytics; no claims of administrative coverage or exact detour. Tests added; CI pending. No migration, no production deploy. Real mobile and data-source acceptance still required.
 
@@ -259,3 +267,7 @@
 - Baseline main `526f774f7a721ff45906dd64de49c74e3e23625d`; #143 merged, main CI/Security successful. New branch `fix/desktop-header-v4-20261127` in progress; PR/CI pending at writing. Desktop 72px, single-line text navigation, partner in navigation, blue property CTA, outlined contribution, compact install/notification/account, More menu at <=1180px, narrower layouts preserve posting through map menu. No changes to mobile paths, backend, auth or migrations. New Playwright tests cover 761–1920px signed-in with install action, secondary menu/Escape and mobile regression. CI and real-browser visual acceptance not yet verified; no VPS deployment.
 
 - PR #145 first CI: Vite build succeeded, CSS performance budget failed (121 KiB gzip > 120 KiB); Security Scan and backend passed, frontend E2E skipped. Consolidated superseded desktop rules in header-clean-v2.css and header-balanced-v3.css; V4 owns desktop geometry, retained dropdown/mobile rules, made install-event test deterministic. Budget unchanged; rerun CI pending. No deployment.
+
+
+## 27/11/2026 17:05 GMT+7 — Đồng bộ roadmap V2 với #145
+- Main `509b077d56685f861a62ad5c4b9d5303a9a4afe6` đã merge #145 Desktop header V4 (HOLA-P1-135). PR #144 trước đồng bộ có 9/9 CI PASS nhưng xung đột ba file LUU_Y_CODE do #145 cập nhật. Giữ nguyên toàn bộ lịch sử #145, chuyển ID mới V2 sang HOLA-P1-301–309 và HOLA-P0-310 để không trùng; giữ đúng 60 hạng mục, thứ tự 1→2→3→10→4–9. #144 chờ CI lại sau đồng bộ. Hạng mục tiếp theo HOLA-P1-301.01; chưa triển khai production.

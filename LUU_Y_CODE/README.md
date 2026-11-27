@@ -23,6 +23,10 @@ Thư mục `LUU_Y_CODE/` là sổ bàn giao chung giữa chủ dự án, lập t
 
 [Ma trận ROADMAP_72](ROADMAP_72.md) — đối chiếu 72 hạng mục với bằng chứng code, thiếu sót và điều kiện nghiệm thu; kiểm tra PR/CI trước khi cập nhật.
 
+[Roadmap 7 đợt (36 hạng mục)](ROADMAP_7_WAVES.md) — đợt nâng cấp trước; đối chiếu tình trạng thực tế.
+
+**Roadmap kỹ thuật tiếp theo:** [HOLA Core Intelligence V2 — 10 đợt / 60 hạng mục](ROADMAP_CORE_INTELLIGENCE_V2.md). Bắt đầu từ HOLA-P1-301.01, thực hiện theo thứ tự 1 → 2 → 3 → 10 → 4–9; P0 an toàn áp dụng xuyên suốt. Đọc roadmap này trước các việc nâng cấp backend/database/thuật toán, cập nhật ID con và bằng chứng trong mỗi PR.
+
 ## Định nghĩa trạng thái
 
 - **CHƯA LÀM**: chưa triển khai, mới là ý tưởng/kế hoạch.
