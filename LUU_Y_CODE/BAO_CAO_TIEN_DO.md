@@ -257,3 +257,5 @@
 
 ## 27/11/2026 GMT+7 — HOLA-P1-135 — Desktop header V4
 - Baseline main `526f774f7a721ff45906dd64de49c74e3e23625d`; #143 merged, main CI/Security successful. New branch `fix/desktop-header-v4-20261127` in progress; PR/CI pending at writing. Desktop 72px, single-line text navigation, partner in navigation, blue property CTA, outlined contribution, compact install/notification/account, More menu at <=1180px, narrower layouts preserve posting through map menu. No changes to mobile paths, backend, auth or migrations. New Playwright tests cover 761–1920px signed-in with install action, secondary menu/Escape and mobile regression. CI and real-browser visual acceptance not yet verified; no VPS deployment.
+
+- PR #145 first CI: Vite build succeeded, CSS performance budget failed (121 KiB gzip > 120 KiB); Security Scan and backend passed, frontend E2E skipped. Consolidated superseded desktop rules in header-clean-v2.css and header-balanced-v3.css; V4 owns desktop geometry, retained dropdown/mobile rules, made install-event test deterministic. Budget unchanged; rerun CI pending. No deployment.

@@ -264,3 +264,5 @@
 
 ## 27/11/2026 GMT+7 — HOLA-P1-135 — Desktop header V4
 - Theo yêu cầu chủ dự án, sửa `frontend/src/components/Navbar.jsx`, `frontend/src/main.jsx`, thêm `frontend/src/header-desktop-v4.css` và `frontend/e2e/desktop-header-v4.spec.js`. CSS desktop riêng, không đổi API hay dữ liệu; More dùng điều hướng thật và Escape, BĐS còn trong map menu nhỏ, giữ mobile. Baseline `526f774f7a721ff45906dd64de49c74e3e23625d`; nhánh `fix/desktop-header-v4-20261127`, PR/CI chưa có kết quả tại lúc ghi. Kiểm tra build, Playwright toàn bộ, Security; nếu pass merge có bằng chứng. Chưa deploy.
+
+- PR #145 first CI: Vite build succeeded, CSS performance budget failed (121 KiB gzip > 120 KiB); Security Scan and backend passed, frontend E2E skipped. Consolidated superseded desktop rules in header-clean-v2.css and header-balanced-v3.css; V4 owns desktop geometry, retained dropdown/mobile rules, made install-event test deterministic. Budget unchanged; rerun CI pending. No deployment.

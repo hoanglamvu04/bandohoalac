@@ -199,3 +199,5 @@ Các mục P1 trước đây và P0 blockers giữ nguyên; không coi việc me
 |---|---|---|---|
 | HOLA-P1-135 | DANG_LAM — nhánh `fix/desktop-header-v4-20261127` | Header desktop 72px, logo trái, menu chữ một dòng, Đối tác, nút Đóng góp viền/Đăng tin BĐS xanh, More compact, giữ mobile và map safe-area | CI build/E2E/Security xanh; 761/800/980/1024/1180/1280/1440/1920px không chồng lấn; More accessible; test map/mobile và đối chiếu ảnh màn hình thật trước nghiệm thu. |
 - Không thay đổi WA-005, dữ liệu, backend hoặc ưu tiên P0. Chưa deploy VPS.
+
+- PR #145 first CI: Vite build succeeded, CSS performance budget failed (121 KiB gzip > 120 KiB); Security Scan and backend passed, frontend E2E skipped. Consolidated superseded desktop rules in header-clean-v2.css and header-balanced-v3.css; V4 owns desktop geometry, retained dropdown/mobile rules, made install-event test deterministic. Budget unchanged; rerun CI pending. No deployment.

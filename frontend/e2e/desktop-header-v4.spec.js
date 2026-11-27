@@ -15,14 +15,10 @@ for (const width of [1920, 1440, 1280, 1180, 1024, 980, 800, 761]) {
   test('desktop header stays in one row at ' + width + 'px with all member actions', async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await mockMember(page);
-    await page.addInitScript(() => {
-      window.addEventListener('load', () => {
-        window.dispatchEvent(new Event('beforeinstallprompt', { cancelable: true }));
-      });
-    });
     await page.goto('/');
     const header = page.locator('.navbar');
-    await expect(header.getByRole('button', { name: 'Mở tài khoản' }).first()).toBeVisible();
+    await expect(header.locator('.compact-account-button')).toBeVisible();
+    await page.evaluate(() => window.dispatchEvent(new Event('beforeinstallprompt', { cancelable: true })));
     await expect(header.locator('.compact-install-button')).toBeVisible();
     await expect(header.locator('.nav-cta')).toBeVisible();
     if (width > 1020) await expect(header.locator('.nav-estate-entry')).toBeVisible();
