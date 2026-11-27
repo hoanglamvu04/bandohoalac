@@ -1094,3 +1094,6 @@ body.map-route-active .hm-sidebar-v6 .hm-layer-grid { margin:0!important;padding
   body.map-route-active:has(.hm-workspace .hm-sidebar-v6.open) .hm-workspace .hm-place-inspector.discovery-v3,
   body.map-route-active:has(.hm-workspace .hm-place-inspector.discovery-v3) .hm-pin-card { display:none!important; }
 }
+
+/* Smart Map V7 — compact quick filters, matching sidebar V6. */
+.hm-sidebar-quick-actions{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 10px;flex:0 0 auto}.hm-sidebar-quick-actions button,.hm-market-overlay-actions button{min-height:32px;border:1px solid #dce7df;color:#325f4d;background:#f5f8f6;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:700;cursor:pointer}.hm-sidebar-quick-actions button[aria-pressed=true]{background:#17624b;color:#fff;border-color:#17624b}.hm-market-overlay-actions{display:flex;flex-wrap:wrap;gap:5px}.hm-market-overlay-actions small{flex-basis:100%}@media(max-width:760px){.hm-sidebar-v6.sheet-peek .hm-sidebar-quick-actions{display:none}.hm-sidebar-quick-actions button{min-height:30px;padding:4px 7px}}

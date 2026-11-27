@@ -1,3 +1,4 @@
+import { marketOverlay } from '../lib/marketOverlay.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, LocateFixed, RefreshCcw } from 'lucide-react';
 import * as maplibre from 'maplibre-gl';
@@ -1148,7 +1149,18 @@ function renderAreaSelection(map,points=[]){
  map.addLayer({id:'hm-area-outline',type:'line',source:'hola-area-selection',filter:['!=',['geometry-type'],'Point'],paint:{'line-color':'#188657','line-width':3,'line-dasharray':[2,1]}});
  map.addLayer({id:'hm-area-vertex',type:'circle',source:'hola-area-selection',filter:['==',['geometry-type'],'Point'],paint:{'circle-color':'#188657','circle-radius':5,'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
 }
+function renderMarketOverlay(map,grid){
+ const data=marketOverlay(grid),id='hola-market-overlay';
+ const source=map.getSource(id);
+ if(source){source.setData(data);return;}
+ if(!data.features.length)return;
+ map.addSource(id,{type:'geojson',data});
+ const before=map.getLayer(PLACE_CLUSTER_CIRCLE_ID)?PLACE_CLUSTER_CIRCLE_ID:undefined;
+ map.addLayer({id:'hm-market-fill',type:'fill',source:id,paint:{'fill-color':['get','color'],'fill-opacity':0.32}},before);
+ map.addLayer({id:'hm-market-outline',type:'line',source:id,paint:{'line-color':['get','color'],'line-width':1.3,'line-opacity':0.75}},before);
+}
 export default function MapView({
+  marketGrid=null,
   areaDrawing=false,
   areaVertices=[],
   onAreaPoint,
@@ -1181,6 +1193,11 @@ export default function MapView({
     if(placeStyleReadyRef.current)renderAreaSelection(map,areaVertices);
   },[areaDrawing,areaVertices]);
   const placeStyleReadyRef = useRef(false);
+  const latestMarketGridRef=useRef(marketGrid);
+  useEffect(()=>{
+    latestMarketGridRef.current=marketGrid;
+    if(mapRef.current&&placeStyleReadyRef.current)renderMarketOverlay(mapRef.current,marketGrid);
+  },[marketGrid]);
   const maplibreRef = useRef(null);
   const containerRef = useRef(null);
   const userMarkerRef = useRef(null);
@@ -1314,6 +1331,7 @@ export default function MapView({
           renderAreaSelection(map,areaRef.current.points);
           addCoverage(map);
           addDataLayers(map, latestMapDataRef.current);
+          renderMarketOverlay(map,latestMarketGridRef.current);
           addPlaceLayers(map, latestPlacesRef.current, latestShowHousingPricesRef.current);
           applyPlaceInteractionState(
             map,
@@ -1640,6 +1658,7 @@ export default function MapView({
         renderAreaSelection(map,areaRef.current.points);
         addCoverage(map);
         addDataLayers(map, latestMapDataRef.current);
+          renderMarketOverlay(map,latestMarketGridRef.current);
         addPlaceLayers(map, latestPlacesRef.current, latestShowHousingPricesRef.current);
         applyPlaceInteractionState(
           map,
