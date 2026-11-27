@@ -201,3 +201,7 @@ Các mục P1 trước đây và P0 blockers giữ nguyên; không coi việc me
 - Không thay đổi WA-005, dữ liệu, backend hoặc ưu tiên P0. Chưa deploy VPS.
 
 - PR #145 first CI: Vite build succeeded, CSS performance budget failed (121 KiB gzip > 120 KiB); Security Scan and backend passed, frontend E2E skipped. Consolidated superseded desktop rules in header-clean-v2.css and header-balanced-v3.css; V4 owns desktop geometry, retained dropdown/mobile rules, made install-event test deterministic. Budget unchanged; rerun CI pending. No deployment.
+
+
+## 27/11/2026 GMT+7 — HOLA-P1-135: xác nhận merge Desktop Header V4
+- PR [#145](https://github.com/hoanglamvu04/bandohoalac/pull/145) đã merge vào main `509b077d56685f861a62ad5c4b9d5303a9a4afe6`; head PR `71f0a315a2a4137e51be58732f462e43e6ba5a69`. [CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45976614688) và [Security](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45976614596) PASS 9/9 checks; Playwright 83/83 PASS (10 test header mới), CSS budget <=120 KiB gzip PASS. Đã xác nhận main import header-desktop-v4.css và Navbar.jsx có More menu. Trạng thái DA_MERGE_CHUA_XAC_MINH_DEPLOY. Không đổi backend/migration, chưa truy cập VPS. Bước tiếp: chủ dự án cập nhật frontend, Ctrl+F5, kiểm tra trực tiếp desktop và mobile; nếu đã chạy đủ migration đợt trước, không cần restart API. P0 và WA-005 giữ nguyên.
