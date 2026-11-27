@@ -46,7 +46,7 @@ const PROPERTY_TYPES = {
 };
 
 export default function HousingIntelligencePanel({
-  user, places = [], currentFilters = {}, viewport = null, onApplySavedSearch
+  user, places = [], currentFilters = {}, viewport = null, onApplySavedSearch, onMarketGridChange
 }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState([]);
@@ -407,7 +407,7 @@ export default function HousingIntelligencePanel({
           <p className="hm-intel-hint">{market.disclaimer}</p>
         </div>}
 
-        <HousingMarketExplorer viewport={viewport} filters={currentFilters}/>
+        <HousingMarketExplorer viewport={viewport} filters={currentFilters} onOverlay={onMarketGridChange}/>
         <RentalInvestmentCalculator/>
         <div className="hm-intel-divider" />
         <div className="hm-intel-section-head"><strong>Tiện ích quanh bất động sản</strong><MapPinned size={15}/></div>

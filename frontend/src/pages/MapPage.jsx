@@ -1,3 +1,4 @@
+import { decodeSharedMapView } from '../lib/mapSavedViews.js';
 import { SUBTYPES, FURNISHINGS } from '../lib/propertyDetails.js';
 import { AreaProfile,HousingAreaResults,RouteNearbyPlaces,LocalActivityFeed } from '../components/SpatialDiscovery.jsx';
 import { searchHousingArea } from '../services/api.js';
@@ -72,7 +73,7 @@ import {
   removeFavorite
 } from '../services/api.js';
 import { LOCAL_BASEMAP_OPTIONS as BASEMAP_OPTIONS } from '../localBasemap.js';
-import { focusHolaMapPoint } from '../mapInteractionBridge.js';
+import { focusHolaMapPoint, getHolaMapInstance } from '../mapInteractionBridge.js';
 import { publicPlaceKey, trackXHubEvent } from '../lib/xhubAnalytics.js';
 import { getBestBrowserLocation } from '../utils/geolocation.js';
 import { distanceMeters, formatOpenStatus, isPlaceOpenNow } from '../utils/placeDiscovery.js';
@@ -578,6 +579,15 @@ export default function MapPage() {
   const [basemapMode, setBasemapMode] = useState('streets');
   const [mapData, setMapData] = useState({ type: 'FeatureCollection', features: [] });
   const [viewport, setViewport] = useState(null);
+  const [marketGrid,setMarketGrid]=useState(null);
+  const sharedViewRef=useRef('');
+  const sharedViewParam=searchParams.get('mapView')||'';
+  useEffect(()=>{
+    if(!sharedViewParam){sharedViewRef.current='';return;}
+    if(!viewport||inEmbed||sharedViewRef.current===sharedViewParam)return;
+    const v=decodeSharedMapView(sharedViewParam),map=getHolaMapInstance();
+    if(v&&map?.getContainer()?.isConnected){sharedViewRef.current=sharedViewParam;map.jumpTo({center:[v.lng,v.lat],zoom:v.zoom});}
+  },[viewport,sharedViewParam,inEmbed]);
   const [dataLoading, setDataLoading] = useState(false);
   const [leftOpen, setLeftOpen] = useState(() =>
     typeof window === 'undefined'
@@ -654,6 +664,7 @@ export default function MapPage() {
   const discoverySort = isHousingMode ? sortMode : '';
   const housingListingType = searchParams.get('listingType') || '';
   const housingPropertyType = searchParams.get('propertyType') || '';
+  useEffect(()=>{setMarketGrid(null);},[isHousingMode,housingListingType,housingPropertyType]);
   const housingSubtype = searchParams.get('subtype') || '';
   const housingFurnishing = searchParams.get('furnishing') || '';
   const housingMinArea = searchParams.get('minArea') || '';
@@ -2930,6 +2941,7 @@ export default function MapPage() {
       aria-label="Bản đồ và danh sách địa điểm Hòa Lạc"
     >
       <MapView
+        marketGrid={isHousingMode?marketGrid:null}
         areaDrawing={areaDrawing}
         areaVertices={areaVertices}
         onAreaPoint={(point)=>{if(!areaBusy)setAreaVertices(previous=>previous.length>=24?previous:[...previous,point]);}}
@@ -3596,12 +3608,14 @@ export default function MapPage() {
         <section id="hm-sidebar-tools" className="hm-sidebar-tools hm-sidebar-pane"
           aria-label="Công cụ bản đồ" hidden={sidebarTab !== 'tools'}>
           <div className="hm-sidebar-intro"><strong>Khám phá thông minh</strong><p>Chọn công cụ phù hợp với nhu cầu của bạn.</p></div>
+          {marketGrid&&<button type="button" className="hm-sidebar-draw-button" onClick={()=>setMarketGrid(null)}>Tắt lớp lưới giá</button>}
           {isHousingMode && (
           <HousingIntelligencePanel
             user={user}
             places={sidebarPlaces}
             currentFilters={housingRequestParams({ includeQuery: true })}
             viewport={viewport}
+            onMarketGridChange={setMarketGrid}
             onApplySavedSearch={applySavedHousingFilters}
           />
         )}
@@ -3632,6 +3646,12 @@ export default function MapPage() {
             <ChevronRight size={16} />
           </Link>
         )}
+          {!inEmbed && <div className="hm-sidebar-quick-actions" aria-label="Bộ lọc nhanh">
+            {isHousingMode?<><button type="button" aria-pressed={housingListingType==='RENT'} onClick={()=>handleHousingFilterChange('listingType',housingListingType==='RENT'?null:'RENT')}>Cho thuê</button>
+              <button type="button" aria-pressed={housingListingType==='SALE'} onClick={()=>handleHousingFilterChange('listingType',housingListingType==='SALE'?null:'SALE')}>Cần bán</button>
+              {housingListingType!=='SALE'&&<button type="button" aria-pressed={housingAvailableOnly} onClick={()=>handleHousingFilterChange('availableOnly',housingAvailableOnly?null:'true')}>Còn phòng</button>}
+              <button type="button" onClick={()=>{chooseSidebarTab('tools');setLeftOpen(true);}}>Tìm trong vùng</button></>:isFoodMode?<><button type="button" aria-pressed={category==='an-uong'} onClick={()=>handleCategoryChange(category==='an-uong'?'all':'an-uong')}>Quán ăn</button><button type="button" aria-pressed={category==='cafe'} onClick={()=>handleCategoryChange(category==='cafe'?'all':'cafe')}>Cà phê</button><button type="button" aria-pressed={openNow} onClick={handleOpenNowToggle}>Đang mở</button></>:<button type="button" onClick={()=>{chooseSidebarTab('tools');setLeftOpen(true);}}>Khám phá khu vực</button>}
+          </div>}
           <div className="hm-section-title">
             <span>
               {query.trim()

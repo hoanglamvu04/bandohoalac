@@ -224,3 +224,7 @@
 - Tùy chọn lưu tối đa 8 từ khóa mặc định tắt; chặn chuỗi liên hệ/toạ độ hiển nhiên, xóa history, chọn tối đa 5 danh mục yêu thích thủ công; dữ liệu local device, không truyền sang X-HUB. Không có AI/cá nhân hóa theo hành vi. Tests bổ sung, CI chưa xác nhận. Không migration/deploy. Tiêu chí: exact/typo/relevance, service visibility, navigation, privacy, regression.
 
 - #136 đã merge `4207d9f` sau 9/9 CI/Security PASS; đồng bộ main và chạy lại CI.
+
+
+## 27/11/2026 GMT+7 — HOLA-P1-130 — Smart Map V7
+- #136 merged 4207d9f (9/9 PASS), #138 stacked base ffa91dadc82db97c653d78123b389747f117f024 đang CI. Lớp lưới giá địa lý MapLibre từ aggregate hiện hữu, minimum sample 5, màu đồng nhất sidebar, xóa khi đổi loại giao dịch/tài sản; phục hồi khi đổi nền map. Không hiển thị giá từng cá nhân hoặc tự tạo mẫu; không phải quy hoạch. Bộ lọc nhanh Housing/Food, truy cập công cụ tìm vùng sẵn có; chia sẻ góc nhìn đã lưu qua URL allowlist (không query text, GPS, token), camera validation. Tests logic bổ sung; CI pending. Không migration/deploy; performance/device benchmark cần môi trường thật.

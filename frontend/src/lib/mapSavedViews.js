@@ -12,3 +12,18 @@ export function readSavedViews(storage){
   try{const rows=JSON.parse(storage.getItem(VIEW_KEY)||'[]');return Array.isArray(rows)?rows.map(validateSavedView).filter(Boolean).slice(0,10):[];}
   catch{return [];}
 }
+
+export function decodeSharedMapView(value){
+ if(typeof value!=='string'||value.length>70||!/^\d+(?:\.\d+)?,\d+(?:\.\d+)?,\d+(?:\.\d+)?$/.test(value))return null;
+ const [lng,lat,zoom]=value.split(',').map(Number);
+ return validateSavedView({id:'shared',name:'Shared view',lng,lat,zoom,layers:[]});
+}
+const SHARE_FILTERS=['vertical','category','listingType','propertyType','subtype','furnishing','minRent','maxRent','minPrice','maxPrice','minArea','maxArea','availability','availableOnly','privateBathroom','parking','maxDistanceFpt','sort','open','rating'];
+export function shareMapViewPath(view,search=''){
+ const v=validateSavedView(view);if(!v)return null;
+ const source=new URLSearchParams(search),out=new URLSearchParams();
+ for(const key of SHARE_FILTERS){const value=source.get(key);if(value&&/^[A-Za-z0-9_.,-]{1,80}$/.test(value))out.set(key,value);}
+ // Share only an explicitly saved camera, not browser GPS, search text, selected contact, or tokens.
+ out.set('mapView',[v.lng.toFixed(5),v.lat.toFixed(5),v.zoom.toFixed(1)].join(','));
+ return '/map?'+out.toString();
+}

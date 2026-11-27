@@ -1,13 +1,15 @@
+import { marketColor } from '../lib/marketOverlay.js';
 import {useRef,useState,useEffect} from 'react';
 import {getHousingMarketGrid,getHousingMarketTrend} from '../services/api.js';
 import {focusHolaMapPoint} from '../mapInteractionBridge.js';
 import '../housing-market-explorer.css';
 
 const vnd=v=>v==null?'Chưa đủ mẫu':new Intl.NumberFormat('vi-VN').format(v)+' đ';
-export default function HousingMarketExplorer({viewport,filters}){
+export default function HousingMarketExplorer({viewport,filters,onOverlay}){
  const [data,setData]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const request=useRef(null);
  useEffect(()=>()=>request.current?.abort(),[]);
+ useEffect(()=>{request.current?.abort();setData(null);setBusy(false);setError('');},[filters.listingType,filters.propertyType]);
  async function load(){
   request.current?.abort();const c=new AbortController();request.current=c;setBusy(true);setError('');setData(null);
   try{
@@ -22,7 +24,7 @@ export default function HousingMarketExplorer({viewport,filters}){
  const lo=cells.length?Math.min(...cells.map(x=>x.median)):0,hi=cells.length?Math.max(...cells.map(x=>x.median)):0;
  const minX=cells.length?Math.min(...cells.map(x=>x.col)):0,maxX=cells.length?Math.max(...cells.map(x=>x.col)):0;
  const minY=cells.length?Math.min(...cells.map(x=>x.row)):0,maxY=cells.length?Math.max(...cells.map(x=>x.row)):0;
- const colors=['#2d775a','#78a772','#e5bd69','#bd7254'];
+
  return <section className="hm-market-explorer" data-testid="housing-market-explorer">
   <strong>Lưới giá theo khu vực & xu hướng tháng</strong>
   <p>Chỉ dùng tin công khai có giá và diện tích hợp lệ. Không tính DEMO.</p>
@@ -32,11 +34,12 @@ export default function HousingMarketExplorer({viewport,filters}){
    <small>{data.grid.listingType==='SALE'?'Giá chào bán / m²':'Giá thuê chào / tháng'} · từ {data.grid.minSample} tin/ô</small>
    {cells.length?<><div className="hm-market-grid" style={{gridTemplateColumns:'repeat('+Math.max(1,maxX-minX+1)+',minmax(16px,1fr))',gridTemplateRows:'repeat('+Math.max(1,maxY-minY+1)+',minmax(16px,1fr))'}}>
     {cells.map(cell=><button key={cell.col+':'+cell.row} type="button"
-      style={{gridColumn:cell.col-minX+1,gridRow:maxY-cell.row+1,background:colors[Math.min(3,Math.floor(hi===lo?0:(cell.median-lo)/(hi-lo)*4))]}}
+      style={{gridColumn:cell.col-minX+1,gridRow:maxY-cell.row+1,background:marketColor(cell.median,lo,hi)}}
       title={vnd(cell.median)+' · '+cell.sampleCount+' tin'}
       aria-label={'Ô giá '+vnd(cell.median)+', '+cell.sampleCount+' tin; mở bản đồ'}
       onClick={()=>focusHolaMapPoint({lng:(cell.col+.5)*data.grid.cellDegrees,lat:(cell.row+.5)*data.grid.cellDegrees,zoom:14})}/>)}
    </div><div className="hm-market-legend"><span>{vnd(lo)}</span><span>{vnd(hi)}</span></div><small>Bắc ở trên · bấm ô để mở khu vực. Lưới tổng hợp không phải nền bản đồ quy hoạch.</small></>:<p>Chưa có ô đủ số mẫu.</p>}
+   {cells.length>0&&onOverlay&&<div className="hm-market-overlay-actions"><button type="button" onClick={()=>onOverlay(data.grid)}>Hiện lớp giá trên bản đồ</button> <button type="button" onClick={()=>onOverlay(null)}>Tắt lớp giá</button><small>Ô màu dùng cùng thang giá tại lần tra cứu này; di chuyển bản đồ và tải lại để cập nhật.</small></div>}
    <small>{data.grid.disclaimer}</small>
    <h4>Giá chào trung vị theo tháng, toàn vùng (đ/m²{data.trend.listingType==='RENT'?'/tháng':''})</h4>
    {data.trend.items?.length?<table className="hm-intel-table"><thead><tr><th>Tháng</th><th>Số tin</th><th>Trung vị</th></tr></thead><tbody>{data.trend.items.map(x=><tr key={x.month}><td>{x.month}</td><td>{x.sampleCount}</td><td>{vnd(x.medianVndM2)}</td></tr>)}</tbody></table>:<p>Chưa có ảnh chụp dữ liệu tháng. Không tạo lịch sử giả.</p>}
