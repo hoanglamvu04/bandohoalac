@@ -8,25 +8,31 @@ function money(value) {
   return value === null || value === undefined ? null : Number(value);
 }
 
-export async function listMyPropertyListings(userId) {
-  const { rows } = await pool.query(
+export async function listMyPropertyListings(userId, db = pool) {
+  const { rows } = await db.query(
     `SELECT p.id, p.name, p.slug, p.address, p.status AS place_status,
             p.updated_at, hl.listing_type, hl.listing_status, hl.expires_at,
             hl.last_confirmed_at, hl.property_type, hl.total_price_vnd,
             hl.monthly_rent, hl.area_m2, hl.available_rooms, hl.total_rooms,jsonb_array_length(hl.room_types) AS room_type_count,
-            (SELECT COUNT(*)::int FROM housing_viewing_requests v WHERE v.place_id=p.id AND v.recipient_id=$1
-              AND v.created_at>=NOW()-INTERVAL '30 days') AS viewing_requests_30d,
-            (SELECT COUNT(*)::int FROM housing_viewing_requests v WHERE v.place_id=p.id AND v.recipient_id=$1
-              AND v.created_at>=NOW()-INTERVAL '30 days' AND v.status='ACCEPTED') AS accepted_viewings_30d,
-            (SELECT COALESCE(SUM(m.detail_views),0) FROM housing_daily_metrics m WHERE m.place_id=p.id
-              AND m.metric_day>=(NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date-29) AS detail_views_30d,
-            (SELECT COALESCE(SUM(m.contact_reveals),0) FROM housing_daily_metrics m WHERE m.place_id=p.id
-              AND m.metric_day>=(NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date-29) AS contact_reveals_30d
+            v.viewing_requests_30d,v.accepted_viewings_30d,
+            m.detail_views_30d,m.contact_reveals_30d
        FROM places p
        JOIN categories c ON c.id = p.category_id AND c.slug = 'bat-dong-san'
        JOIN housing_listings hl ON hl.place_id = p.id
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int AS viewing_requests_30d,
+                COUNT(*) FILTER (WHERE vr.status='ACCEPTED')::int AS accepted_viewings_30d
+         FROM housing_viewing_requests vr
+         WHERE vr.place_id=p.id AND vr.recipient_id=$1 AND vr.created_at>=NOW()-INTERVAL '30 days'
+       ) v ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT COALESCE(SUM(dm.detail_views),0) AS detail_views_30d,
+                COALESCE(SUM(dm.contact_reveals),0) AS contact_reveals_30d
+         FROM housing_daily_metrics dm
+         WHERE dm.place_id=p.id AND dm.metric_day>=(NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date-29
+       ) m ON TRUE
       WHERE p.created_by = $1 AND hl.property_type IS NOT NULL
-      ORDER BY p.created_at DESC LIMIT 100`,
+      ORDER BY p.created_at DESC,p.id DESC LIMIT 100`,
     [userId]
   );
 

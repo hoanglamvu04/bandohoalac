@@ -21,11 +21,11 @@
 
 | ID con | Hạng mục | Yêu cầu thực hiện | Trạng thái V2 |
 |---|---|---|---|
-| HOLA-P1-301.01 | Kiểm toán database, quan hệ bảng và ràng buộc dữ liệu | Kiểm kê schema/migrations, FK/UNIQUE/CHECK, orphan và invariant nghiệp vụ; ghi lỗi theo mức độ, không tự xóa dữ liệu. | CHUA_LAM |
-| HOLA-P1-301.02 | Tối ưu index PostgreSQL/PostGIS và truy vấn phổ biến | Đo selectivity, index thừa/thiếu, truy vấn spatial; lập migration additive và kiểm tra lock/index size. | CHUA_LAM |
-| HOLA-P1-301.03 | Phân tích truy vấn chậm bằng EXPLAIN ANALYZE | Chạy trên DB kiểm thử, ưu tiên read-only; không chạy ANALYZE cho write ở production. | CHUA_LAM |
-| HOLA-P1-301.04 | Tối ưu connection pool, statement timeout | Chốt ngân sách kết nối theo tài nguyên VPS; timeout, queue, rollback/cleanup và load test. | CHUA_LAM |
-| HOLA-P1-301.05 | Bảng tổng hợp thống kê | Chọn materialized/aggregate theo phép đo, cập nhật idempotent, đối chiếu source, freshness/retention. | CHUA_LAM |
+| HOLA-P1-301.01 | Kiểm toán database, quan hệ bảng và ràng buộc dữ liệu | Kiểm kê schema/migrations, FK/UNIQUE/CHECK, orphan và invariant nghiệp vụ; ghi lỗi theo mức độ, không tự xóa dữ liệu. | DANG_LAM — DB foundation PR, còn CI/staging |
+| HOLA-P1-301.02 | Tối ưu index PostgreSQL/PostGIS và truy vấn phổ biến | Đo selectivity, index thừa/thiếu, truy vấn spatial; lập migration additive và kiểm tra lock/index size. | DANG_LAM — DB foundation PR, còn CI/staging |
+| HOLA-P1-301.03 | Phân tích truy vấn chậm bằng EXPLAIN ANALYZE | Chạy trên DB kiểm thử, ưu tiên read-only; không chạy ANALYZE cho write ở production. | DANG_LAM — DB foundation PR, còn CI/staging |
+| HOLA-P1-301.04 | Tối ưu connection pool, statement timeout | Chốt ngân sách kết nối theo tài nguyên VPS; timeout, queue, rollback/cleanup và load test. | DANG_LAM — DB foundation PR, còn CI/staging |
+| HOLA-P1-301.05 | Bảng tổng hợp thống kê | Chọn materialized/aggregate theo phép đo, cập nhật idempotent, đối chiếu source, freshness/retention. | DANG_LAM — DB foundation PR, còn CI/staging |
 | HOLA-P1-301.06 | Phân trang cursor | Keyset sort ổn định có tie-breaker, validation cursor, tương thích API cũ, chống lọt bản ghi khi cập nhật. | CHUA_LAM |
 
 ### Đợt 2 — Backend Performance Engine (`HOLA-P1-302`)
@@ -191,3 +191,10 @@
 ## 5. Việc bắt đầu tiếp theo
 
 Nhận `HOLA-P1-301.01`: kiểm toán database/migrations/indexes và ràng buộc hiện hữu; báo cáo phát hiện có file/line, mức độ, nguyên nhân, đề xuất và test. Lập baseline staging trước tối ưu. Đồng thời xác minh các cổng P0: backup độc lập, restore, cron/worker, CI/security và dữ liệu thật. Nếu không có môi trường/credential để đo, chỉ hoàn thành phần audit tĩnh và ghi rõ blocker; không ghi đã đo hiệu năng.
+
+
+
+## 27/11/2026 GMT+7 — HOLA-P1-301.01–.06 — Database Intelligence first slice
+- Main baseline 509b077, roadmap #144 reconciled at 0930078c43ac4e596dd2126d90d2ca282e1de719; #145 retains ID HOLA-P1-135. Static audit: historical migration replay including FPT republish, no migration lock, no connection acquisition timeout, rollback masking, missing candidate geography/owner indexes and repeated aggregates. See docs/CORE_DATABASE_AUDIT_V2.md for evidence/limits.
+- Added migrationPlan.js and dedicated migration session advisory lock/dry SHA256 plan (legacy replay unchanged; no fabricated ledger). Configurable bounded pool/acquisition, optional timeouts, original transaction error preservation; read-only metadata/FK/index/EXPLAIN tool with staging-only ANALYZE guard. Migration 400 adds geography GiST and owner/date/id index with lock/statement caps. Owner metrics single aggregate per relation and stable tie-breaker. Added unit and PG integration tests; CI pending. No production deploy, no live DB measurement.
+- .01 static audit + catalog tool partial, .02 index candidate migration pending CI/staging, .03 probe tool partial, .04 pool/transaction implementation pending CI/tuning, .05 query aggregate optimization partial (no new persistent aggregate table), .06 deterministic owner order only (cursor remains CHUA_LAM). Next: verify CI, obtain isolated staging audit/backup baseline and implement explicit migration ledger adoption/cursor without breaking contracts. Existing P0/WA-005 unchanged.

@@ -23,7 +23,9 @@
     "images:backfill-variants": "node src/scripts/backfillPlaceImageVariants.js",
     "demo:thachthat:preview": "node src/scripts/seedThachThatDemo.js --preview",
     "demo:thachthat:seed": "node src/scripts/seedThachThatDemo.js --apply",
-    "demo:thachthat:clean": "node src/scripts/seedThachThatDemo.js --clean"
+    "demo:thachthat:clean": "node src/scripts/seedThachThatDemo.js --clean",
+    "db:migrate:plan": "node src/database/migrate.js --plan",
+    "ops:db:audit": "node src/scripts/auditDatabase.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
