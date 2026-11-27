@@ -1,9 +1,13 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { listMyPropertyListings, managePropertyListing } from '../services/housingLifecycle.service.js';
+import { listMyPropertyListings, listMyPropertyListingsPage, managePropertyListing } from '../services/housingLifecycle.service.js';
 import { auditContextFromRequest, writeAuditLog } from '../services/audit.service.js';
 
 export const listMyHousing = asyncHandler(async (req, res) => {
   res.set('Cache-Control', 'private, no-store');
+  // Preserve the old response for callers not opting into cursor pagination.
+  if(req.query.limit!==undefined||req.query.cursor!==undefined){
+    return res.json(await listMyPropertyListingsPage(req.user.id,req.query));
+  }
   res.json({ items: await listMyPropertyListings(req.user.id) });
 });
 
