@@ -3,6 +3,13 @@
 > **Chốt kiểm tra:** 16:57 25/11/2026 GMT+7. Xác minh `main` tại `c02640c9ec5399c003f3e1a7fd9115921e5a25d5` sau [PR #113](https://github.com/hoanglamvu04/bandohoalac/pull/113). [Hola Maps CI](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817673) và [Security Scan](https://github.com/hoanglamvu04/bandohoalac/actions/runs/45589817721) PASS trên head PR.
 
 
+## 16:04 27/11/2026 GMT+7 — HOLA Core Intelligence V2: mở roadmap kỹ thuật (tài liệu, chưa code)
+
+- Baseline xác minh `main` `526f774f7a721ff45906dd64de49c74e3e23625d`; PR #143 đã merge vào commit này. Các 7 đợt trước đã có code merge; không xác nhận đã nghiệm thu production. Người dùng báo trải nghiệm có vẻ OK, chưa có log smoke/backup/restore/load/device để xác nhận.
+- Lập [ROADMAP_CORE_INTELLIGENCE_V2.md](ROADMAP_CORE_INTELLIGENCE_V2.md): 10 đợt, 60 ID con, phạm vi, phụ thuộc, nghiệm thu, P0 gates. Trạng thái mới CHUA_LAM; nền chức năng cũ cần đối chiếu, không làm lại.
+- Thứ tự nền tảng 1→2→3→10, sau đó 4→5→6→7→8→9. Không đổi stack hoặc tự cài Redis/microservices; 90% backend/DB/thuật toán/test, 10% admin cần thiết.
+- Docs-only PR đang được tạo; không sửa ứng dụng/schema/workflow, không chạy migration, seed, triển khai hay đo load. CI của PR tài liệu cần xác minh trước merge. WA-005 #92 và P0 blockers cũ giữ nguyên; không coi tất cả backlog đã hoàn thành.
+
 ### HOLA-P2-122 — Spatial discovery (27/11/2026)
 - Code: POST housing area-search, polygon validity/area cap and service-area clipping predicate; click-drawn 3–24 vertices, cancellation, separate results (normal map markers retained). Route corridor on existing OSRM geometry, public POI only, 200/500/1000 m, length/vertex caps. Viewport profile by published POI categories. No stored GPS or analytics; no claims of administrative coverage or exact detour. Tests added; CI pending. No migration, no production deploy. Real mobile and data-source acceptance still required.
 
