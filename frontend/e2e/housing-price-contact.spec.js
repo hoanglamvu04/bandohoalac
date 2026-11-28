@@ -85,6 +85,18 @@ test('housing map shows real price badge and anonymous visitor gets login gate, 
   }, { timeout:20000 }).toBe('2,9 tr/th');
   await page.getByText('Nhà trọ test tại Thạch Hòa').first().click();
   await expect(page.getByRole('link', { name:'Đăng nhập để hiện số' })).toBeVisible();
+  await expect.poll(async () => {
+    try {
+      return await page.evaluate(() => {
+        const map = window.__HOLA_MAP_INSTANCE__;
+        const filter = map?.getFilter('hm-housing-price-selected-label');
+        return Boolean(map?.hasImage('hm-housing-price-selected')
+          && map.getPaintProperty('hm-housing-price-label','text-color') === '#1e293b'
+          && map.getPaintProperty('hm-housing-price-selected-label','text-color') === '#ffffff'
+          && JSON.stringify(filter).includes('"4683"'));
+      });
+    } catch { return false; }
+  }, { timeout: 15000 }).toBe(true);
   expect(calls.count).toBe(0);
   await expect(page.getByText('0912345678')).toHaveCount(0);
 });

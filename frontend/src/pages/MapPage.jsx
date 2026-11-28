@@ -3096,7 +3096,7 @@ export default function MapPage() {
               title="Bộ lọc"
             >
               <SlidersHorizontal size={15} />
-              <span>Bộ lọc</span>
+              <span>{isHousingMode ? 'Giá & bộ lọc' : 'Bộ lọc'}</span>
               {advancedFilterCount > 0 && (
                 <b className="hm-filter-count">{advancedFilterCount}</b>
               )}
@@ -3376,6 +3376,7 @@ export default function MapPage() {
             type="button"
             onClick={openRoadStatusReport}
             title="Báo ngập, đường cấm hoặc sự cố"
+            aria-label="Báo ngập, đường cấm hoặc sự cố"
           >
             <TriangleAlert size={16} />
             <span>Báo tình trạng</span>
@@ -3579,7 +3580,7 @@ export default function MapPage() {
         </button>
         <div className="hm-panel-heading">
           <div>
-            <span>{isHousingMode ? 'HOLA HOUSING' : isFoodMode ? 'HOLA FOOD' : 'HOLA MAPS ENGINE'}</span>
+            <span>{isHousingMode ? 'HOLA HOUSING' : isFoodMode ? 'HOLA FOOD' : 'KHÁM PHÁ HÒA LẠC'}</span>
             <h1>{isHousingMode ? 'Bất động sản trên bản đồ' : isFoodMode ? 'Ăn uống trên bản đồ' : 'Bản đồ Hòa Lạc'}</h1>
           </div>
           <button
@@ -4218,7 +4219,7 @@ export default function MapPage() {
         leftOpen && mobileSheetLevel === 'full'
           ? 'hm-basemap-switcher panel-open'
           : 'hm-basemap-switcher'
-      }>
+      } role="group" aria-label="Nền bản đồ">
         {BASEMAP_OPTIONS.map((option) => {
           const Icon = option.id === 'satellite'
             ? Satellite
@@ -4235,6 +4236,7 @@ export default function MapPage() {
               className={(basemapMode === option.id ? 'active ' : '') + 'basemap-' + option.id}
               onClick={() => setBasemapMode(option.id)}
               title={option.description}
+              aria-pressed={basemapMode === option.id}
             >
               <span><Icon size={17} /></span>
               <b>{option.label}</b>
@@ -4243,7 +4245,7 @@ export default function MapPage() {
         })}
       </div>
 
-      <div className="hm-map-legend">
+      <div className="hm-map-legend" aria-label="Chú giải bản đồ">
         <span><i className="flood" /> Ngập</span>
         <span><i className="closure" /> Đường cấm</span>
         <span><i className="alert" /> Cảnh báo</span>
