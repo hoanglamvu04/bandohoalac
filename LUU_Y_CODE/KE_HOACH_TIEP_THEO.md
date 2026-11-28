@@ -239,3 +239,8 @@ Các mục P1 trước đây và P0 blockers giữ nguyên; không coi việc me
 ## 27/11/2026 GMT+7 — HOLA-P1-301.06 — Cursor owner housing (follow-up)
 - Stacked on #147, API `/api/housing/mine?limit=50&cursor=...` adds opt-in keyset with exact microseconds/bigint, strict owner scope and nextCursor; old `/mine` response remains unchanged. No OFFSET in new path, no raw boundary in items, no auth/data mutation. Existing frontend stays compatible; other lists not migrated. No additional migration; uses migration 400 owner index from #147.
 - Added pure and PG integration tests for malformed/repeated inputs, tie-break/microseconds, new inserts between pages, cross-owner and legacy limit/order. CI pending; actual DB load/staging performance not verified. Docs CORE_OWNER_CURSOR_API.md. Next: safe migration ledger adoption on staging, then remaining DB audit/aggregate/perf baseline. No VPS deployment.
+
+
+## 28/11/2026 GMT+7 — HOLA-P1-301.06 — sửa CI PR #148
+- Đối chiếu main e2a72ab: #147 đã merge, CI và Security PASS; chưa xác minh deploy/staging. PR #148 head 1ad8b67: backend 214 PASS/14 FAIL (run 45981152831), SyntaxError tại housingLifecycle.service.js:78 do nội dung hàm quản lý tin bị chèn vào chuỗi SQL LIMIT. Frontend build/E2E, Security PASS.
+- Khôi phục nguyên hàm quản lý tin từ main, nối đúng placeholder LIMIT theo số tham số; giữ owner scope, tie-breaker và response cũ. Chờ CI mới; không merge khi lỗi. Sau đó tiếp tục migration ledger, aggregate và staging audit. Không thay đổi VPS/dữ liệu.
