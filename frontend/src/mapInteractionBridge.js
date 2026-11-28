@@ -10,6 +10,7 @@ const INTERACTIVE_LAYER_IDS = [
   'hm-place-cluster-count',
   'hm-place-point-label',
   'hm-housing-price-label',
+  'hm-housing-price-selected-label',
   'hm-place-name-label',
   'hm-road-closure-report-point',
   'hm-flood-report-point',

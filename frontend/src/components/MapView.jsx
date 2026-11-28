@@ -46,6 +46,8 @@ const PLACE_NAME_LABEL_LAYER_ID = 'hm-place-name-label';
 const PLACE_HOUSING_PRICE_LAYER_ID = 'hm-housing-price-label';
 const HOUSING_RENT_BADGE_ID = 'hm-housing-price-rent';
 const HOUSING_SALE_BADGE_ID = 'hm-housing-price-sale';
+const HOUSING_SELECTED_BADGE_ID = 'hm-housing-price-selected';
+const PLACE_HOUSING_SELECTED_LAYER_ID = 'hm-housing-price-selected-label';
 
 const BUILDING_2D_LAYER_IDS = [
   'hola-overture-building',
@@ -287,9 +289,10 @@ function ensurePlaceMarkerImages(map) {
 
 function ensureHousingPriceBadges(map) {
   if (typeof document === 'undefined') return;
-  for (const [id, color] of [
-    [HOUSING_RENT_BADGE_ID, '#17654c'],
-    [HOUSING_SALE_BADGE_ID, '#244e68']
+  for (const [id, fill, stroke] of [
+    [HOUSING_RENT_BADGE_ID, '#ffffff', '#b9c8db'],
+    [HOUSING_SALE_BADGE_ID, '#ffffff', '#b9c8db'],
+    [HOUSING_SELECTED_BADGE_ID, '#1467d5', '#ffffff']
   ]) {
     if (map.hasImage(id)) continue;
     const canvas = document.createElement('canvas');
@@ -308,9 +311,9 @@ function ensureHousingPriceBadges(map) {
     ctx.lineTo(4, 24);
     ctx.quadraticCurveTo(4, 4, 24, 4);
     ctx.closePath();
-    ctx.fillStyle = color;
+    ctx.fillStyle = fill;
     ctx.fill();
-    ctx.strokeStyle = '#ffffff';
+    ctx.strokeStyle = stroke;
     ctx.lineWidth = 4;
     ctx.stroke();
     map.addImage(id, ctx.getImageData(0, 0, 100, 56), {
@@ -381,6 +384,15 @@ function applyPlaceInteractionState(map, selectedPlaceId, hoveredPlaceId) {
   if (!map?.getSource(PLACE_SOURCE_ID)) return;
 
   try {
+    // A separate, filtered WebGL symbol gives the selected price a blue
+    // background. No GeoJSON re-clustering or DOM marker allocation on hover.
+    if (map.getLayer(PLACE_HOUSING_SELECTED_LAYER_ID)) {
+      const filter = ['all', ['!', ['has', 'point_count']], ['has', 'priceLabel'],
+        ['==', ['get', 'placeId'], String(selectedPlaceId ?? '')]];
+      if (JSON.stringify(map.getFilter(PLACE_HOUSING_SELECTED_LAYER_ID)) !== JSON.stringify(filter)) {
+        map.setFilter(PLACE_HOUSING_SELECTED_LAYER_ID, filter);
+      }
+    }
     map.removeFeatureState({ source: PLACE_SOURCE_ID });
 
     if (selectedPlaceId !== undefined && selectedPlaceId !== null) {
@@ -572,10 +584,32 @@ function addPlaceLayers(map, places = [], showHousingPrices = false) {
         'text-allow-overlap': true
       },
       paint: {
-        'text-color': '#ffffff',
-        'text-halo-color': 'rgba(0,0,0,0.1)',
-        'text-halo-width': 0.5
+        'text-color': '#1e293b',
+        'text-halo-width': 0
       }
+    });
+  }
+
+  // The base symbol stays interactive underneath the identical selected
+  // symbol (both allow overlap); only its visual treatment changes.
+  if (!map.getLayer(PLACE_HOUSING_SELECTED_LAYER_ID)) {
+    map.addLayer({
+      id: PLACE_HOUSING_SELECTED_LAYER_ID,
+      type: 'symbol',
+      source: PLACE_SOURCE_ID,
+      filter: ['all', ['!', ['has', 'point_count']], ['has', 'priceLabel'],
+        ['==', ['get', 'placeId'], '']],
+      layout: {
+        'icon-image': HOUSING_SELECTED_BADGE_ID,
+        'icon-text-fit': 'both',
+        'icon-text-fit-padding': [5, 10, 5, 10],
+        'icon-allow-overlap': true,
+        'text-field': ['get', 'priceLabel'],
+        'text-font': ['Noto Sans Regular'],
+        'text-size': 13,
+        'text-allow-overlap': true
+      },
+      paint: { 'text-color': '#ffffff', 'text-halo-width': 0 }
     });
   }
 
@@ -2057,9 +2091,10 @@ export default function MapView({
         </button>
       )}
 
-      <button className="hm-locate" type="button" onClick={locateUser} disabled={locating}>
+      <button className="hm-locate" type="button" onClick={locateUser} disabled={locating}
+        aria-label={locating ? 'Đang lấy GPS…' : 'Vị trí của tôi'} title="Vị trí của tôi">
         <LocateFixed size={18} />
-        {locating ? 'Đang lấy GPS…' : 'Vị trí của tôi'}
+        <span>{locating ? 'Đang lấy GPS…' : 'Vị trí của tôi'}</span>
       </button>
 
       {locationNotice && (
