@@ -19,7 +19,7 @@ import {
 import { authenticate, requireAdminSecurity } from '../middleware/auth.js';
 import { validateQuery, validateBody } from '../validators/validate.js';
 import {
-  housingListQuerySchema, housingManageActionSchema,
+  housingListQuerySchema, housingManageActionSchema, ownerListingPageQuerySchema,
   createSavedHousingSchema, updateSavedHousingStatusSchema,
   housingCompareQuerySchema, savedHousingSearchIdSchema,
   marketInsightsQuerySchema, housingAmenitiesQuerySchema, createHousingViewingSchema, manageHousingViewingSchema
@@ -59,7 +59,7 @@ router.post('/saved-searches', authenticate,
 router.patch('/saved-searches/:id', authenticate,
   validateBody(updateSavedHousingStatusSchema), toggleMySavedHousingSearch);
 router.delete('/saved-searches/:id', authenticate, removeMySavedHousingSearch);
-router.get('/mine', authenticate, listMyHousing);
+router.get('/mine', authenticate, validateQuery(ownerListingPageQuerySchema), listMyHousing);
 const viewingLimiter=rateLimit({windowMs:60_000,limit:10,standardHeaders:true,legacyHeaders:false,
   keyGenerator:req=>'housing-viewing-'+req.user.id,
   message:{error:'Bạn thao tác lịch xem quá nhanh. Vui lòng thử lại.'}});

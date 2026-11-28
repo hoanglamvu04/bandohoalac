@@ -4,6 +4,12 @@ import { z } from 'zod';
 const numericString = z.string().regex(/^\d+(\.\d+)?$/, 'Must be a non-negative number');
 const booleanString = z.enum(['true', 'false']);
 
+// Optional on the legacy owner route. Repeated/array values are rejected.
+export const ownerListingPageQuerySchema = z.object({
+  limit: z.string().regex(/^(?:[1-9]|[1-9]\d|100)$/).optional(),
+  cursor: z.string().min(1).max(160).regex(/^[A-Za-z0-9_-]+$/).optional()
+});
+
 export const housingListQuerySchema = z.object({
   q: z.string().trim().max(160).optional(),
   minRent: numericString.optional(),
